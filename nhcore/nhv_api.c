@@ -483,6 +483,9 @@ fill_obj(struct obj *otmp, nhv_obj *o)
         o->flags |= NHV_OBJ_CONTAINER;
     if (otmp->lamplit)
         o->flags |= NHV_OBJ_LIT;
+    o->worn = (unsigned) otmp->owornmask;
+    o->armcat = (otmp->oclass == ARMOR_CLASS) ? objects[otmp->otyp].oc_armcat
+                                              : -1;
     Snprintf(o->name, sizeof o->name, "%s", doname(otmp));
 }
 
@@ -610,7 +613,33 @@ nhv_mon_name(int mndx)
 {
     if (mndx < LOW_PM || mndx >= NUMMONS)
         return "";
-    return mons[mndx].pmnames[NEUTRAL];
+    /* some monsters only have male/female names */
+    if (mons[mndx].pmnames[NEUTRAL])
+        return mons[mndx].pmnames[NEUTRAL];
+    if (mons[mndx].pmnames[MALE])
+        return mons[mndx].pmnames[MALE];
+    return mons[mndx].pmnames[FEMALE] ? mons[mndx].pmnames[FEMALE] : "";
+}
+
+NHV_API int
+nhv_num_monsters(void)
+{
+    return NUMMONS;
+}
+
+NHV_API int
+nhv_mon_info(int mndx, nhv_moninfo *out)
+{
+    int g;
+
+    memset(out, 0, sizeof *out);
+    if (mndx < LOW_PM || mndx >= NUMMONS)
+        return 0;
+    out->size = mons[mndx].msize;
+    g = mndx + GLYPH_MON_MALE_OFF;
+    out->tile = glyphmap[g].tileidx;
+    out->sym = def_monsyms[(int) mons[mndx].mlet].sym;
+    return 1;
 }
 
 NHV_API const char *

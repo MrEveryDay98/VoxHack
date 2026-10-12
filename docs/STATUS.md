@@ -13,13 +13,15 @@ To rebuild after code changes: `tools/clang64.sh 'sh tools/deploy.sh'`
 | WASD + mouse | Move freely. Time crawls (~12% speed) while you stand still and speeds up to full as you move. |
 | Left click | Attack the monster within reach nearest your crosshair. Costs one action of time. |
 | Shift + left click | Fire quivered ammo where you look. |
-| Right click | Context action: open/close a door, take the stairs you stand on, pick up items, chat. |
-| Shift + right click | Menu of everything you can do at the square you're looking at. |
-| E | Action menu for the selected hotbar item. |
+| Right click (tap) | The obvious action for what you point at: open/close a door, take stairs, pick up, drink from a fountain, chat with a peaceful monster. |
+| Right click (hold) | Action wheel for what you point at. Move the mouse toward an action and let go. Let go in the middle to cancel. |
+| E (tap / hold) | The same, for the selected hotbar item. |
 | Q | Drop the selected hotbar item. |
 | Space | Wait/search one turn. |
-| I | Inventory (click an item for its action menu). |
+| I | Inventory, with equipment slots: click a filled slot for its actions, or an empty one to equip something. |
 | Z | Toggle the large overhead pixel map. |
+
+Hotbar: slot 1 is the wielded weapon, slot 2 the alternate weapon, slot 3 is a spacer, then the rest of the inventory.
 
 Direction prompts (zap, throw, apply, digâ€¦) are answered automatically with where you are
 looking: look steeply down for `>` (down), up for `<`.
@@ -36,8 +38,17 @@ pathfinding when they can't see you.
   - Time runs at about 12% while you stand still and up to 100% as you walk.
   - Actions run time at full speed for as long as they take in NetHack: about 0.75 s per action.
   - Change the minimum with the `nhv_time_min` setting.
-- **Monster size:** `/scale <factor> <monster name>`, e.g. `/scale 1.5 jackal`. `/scale` lists
-  your settings.
+- **Monster size:** in the editor world, press E for the monster editor:
+  - every monster and feature (tree, fountain, throne, sink, grave, altar) is listed, with a
+    live turning preview on a 1-node grid (the bright 3×3 square is one map square);
+  - a scale slider, "reset to default", and a hitbox toggle;
+  - scales are saved for all worlds right away;
+  - in game, `/scale <factor> <monster name>` does the same.
+- Trees and furniture are extruded sprites. Trees also have an invisible collision box filling
+  their square, because NetHack treats trees as solid.
+- Boulders are solid; walking into one tries to push it. Messages about bumping into things are
+  hidden.
+- Sprites have NetHack's built-in drop shadows removed.
 
 ## Prefab editor
 Double-click `NetHack Voxel Prefab Editor.bat`. It's a creative world with one build cell per

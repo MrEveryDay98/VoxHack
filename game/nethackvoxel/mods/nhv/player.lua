@@ -84,6 +84,50 @@ local function clamp_to_hero(player)
 	teleport(player, vector.new(x, pos.y, z))
 end
 
+-- direction the player is trying to walk (from the movement keys)
+local function intended_dir(player)
+	local c = player:get_player_control()
+	local f = (c.up and 1 or 0) - (c.down and 1 or 0)
+	local r = (c.right and 1 or 0) - (c.left and 1 or 0)
+	if f == 0 and r == 0 then
+		return nil
+	end
+	local yaw = player:get_look_horizontal()
+	local fx, fz = -math.sin(yaw), math.cos(yaw)
+	local rx, rz = math.cos(yaw), math.sin(yaw)
+	local v = vector.new(fx * f + rx * r, 0, fz * f + rz * r)
+	return vector.normalize(v)
+end
+
+-- Walking into a boulder (which is solid) tries to push it.
+local push_next = 0
+local function try_push(player)
+	local dir = intended_dir(player)
+	if not dir or core.get_us_time() < push_next then
+		return false
+	end
+	local h = player_mod.hero
+	local pos = player:get_pos()
+	for _, e in pairs(nhv.mobs.objs) do
+		if e.boulder and e.x and math.abs(e.x - h.x) <= 1 and math.abs(e.y - h.y) <= 1
+				and not (e.x == h.x and e.y == h.y) and e.obj:get_pos() then
+			local bp = e.obj:get_pos()
+			local w = e.h * 0.45
+			-- gap between the player's body and the boulder's box
+			local gx = math.max(0, math.abs(bp.x - pos.x) - w - 0.35)
+			local gz = math.max(0, math.abs(bp.z - pos.z) - w - 0.35)
+			local to = vector.normalize(vector.new(bp.x - pos.x, 0, bp.z - pos.z))
+			if gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.6 then
+				push_next = core.get_us_time() + 400000
+				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
+					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
+				return true
+			end
+		end
+	end
+	return false
+end
+
 local function step(player)
 	local h = player_mod.hero
 	if not h or not nh.ready() then
@@ -92,11 +136,23 @@ local function step(player)
 	if core.get_us_time() < player_mod.grace_until then
 		return
 	end
+	if try_push(player) then
+		return
+	end
 	local pos = player:get_pos()
 	local tx, ty = U.pos_to_tile(pos)
 	if tx == h.x and ty == h.y then
+		player_mod.ahead = nil
 		return
 	end
+	-- after pushing a boulder the hero is a square ahead of the body;
+	-- give the body a moment to walk in before syncing back
+	local ahead = player_mod.ahead
+	if ahead and tx == ahead.from_x and ty == ahead.from_y
+			and core.get_us_time() < ahead.t_end then
+		return
+	end
+	player_mod.ahead = nil
 	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 or not U.in_map(tx, ty) then
 		clamp_to_hero(player)
 		return
@@ -148,6 +204,11 @@ nh.on_snapshot(function(snap, action)
 
 	if level_changed or not prev then
 		teleport(player, U.tile_center(h.x, h.y))
+	elseif action and action.kind == "push" then
+		if h.x == action.tx and h.y == action.ty then
+			player_mod.ahead = {from_x = action.from_x, from_y = action.from_y,
+				t_end = core.get_us_time() + 1500000}
+		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
 			clamp_to_hero(player) -- refused

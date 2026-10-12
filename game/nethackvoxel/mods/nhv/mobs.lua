@@ -156,6 +156,9 @@ function mobs.refresh_sizes()
 		end
 	end
 	nhv.sim.sync()
+	if nhv.nh.snap then
+		mobs.update(nhv.nh.snap, false)
+	end
 end
 
 -- only refresh which monsters are perceived (cheap, every step a
@@ -198,10 +201,23 @@ local function update_objects(snap)
 					end
 				end
 				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h) then
-					e.obj:set_properties(sprite_props(map.mem_tile[i], h))
+					local props = sprite_props(map.mem_tile[i], h)
+					if name == "boulder" then
+						-- boulders are solid; pushing into one tries to roll it
+						local w = h * 0.45
+						props.collide_with_objects = true
+						props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}
+					else
+						props.collide_with_objects = false
+						props.collisionbox = {0, 0, 0, 0, 0, 0}
+					end
+					e.obj:set_properties(props)
 					e.obj:set_pos(pos)
 					e.tile, e.h = map.mem_tile[i], h
 					e.spin = (h == OBJ_H)
+				end
+				if e then
+					e.x, e.y, e.boulder = tx, ty, name == "boulder"
 				end
 			end
 		end
@@ -220,7 +236,7 @@ end
 -- remembered cmap glyphs drawn as sprites; true = lies flat (traps)
 local FEATURES = {
 	S_altar = false, S_grave = false, S_throne = false, S_sink = false,
-	S_fountain = false, S_engroom = true, S_engrcorr = true,
+	S_fountain = false, S_tree = false, S_engroom = true, S_engrcorr = true,
 }
 -- traps are the '^' cmap symbols (plus webs)
 local function is_trap(name, gi)
@@ -251,7 +267,7 @@ local function update_features(snap)
 					if e and not e.obj:get_pos() then
 						e = nil
 					end
-					local h = flat and 2.4 or 1.8
+					local h = flat and 2.4 or (nhv.scale.feature_height(name) or 1.8)
 					local pos = U.tile_center(tx, ty,
 						flat and (U.STAND_Y + 0.02) or (U.STAND_Y + h / 2))
 					if not e then
@@ -261,7 +277,7 @@ local function update_features(snap)
 							mobs.feats[i] = e
 						end
 					end
-					if e and e.tile ~= map.mem_tile[i] then
+					if e and (e.tile ~= map.mem_tile[i] or e.h ~= h) then
 						local props = sprite_props(map.mem_tile[i], h)
 						props.pointable = false
 						e.obj:set_properties(props)
@@ -269,7 +285,7 @@ local function update_features(snap)
 						if flat then
 							e.obj:set_rotation(vector.new(math.pi / 2, 0, 0))
 						end
-						e.tile, e.flat = map.mem_tile[i], flat
+						e.tile, e.flat, e.h = map.mem_tile[i], flat, h
 					end
 				end
 			end

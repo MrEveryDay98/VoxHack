@@ -245,6 +245,14 @@ nh.on_request(function(req)
 		nh.answer_text("")
 		return true
 	end
+	-- queued answers (e.g. which hand a ring goes on)
+	for k, aa in ipairs(ui.auto_answers) do
+		if req.prompt:find(aa.pattern) then
+			table.remove(ui.auto_answers, k)
+			nh.answer_key(aa.key)
+			return true
+		end
+	end
 	-- direction prompts are answered by where you are looking
 	if req.kind == "key" and req.prompt:lower():find("direction") then
 		local player = nhv.player.get()
@@ -421,10 +429,85 @@ local CLASS_NAMES = {
 	[OC.VENOM] = "Venoms",
 }
 
+-- Equipment slots (like Minecraft's armor slots): one per place NetHack
+-- lets you wear or wield something. mask = owornmask bit.
+local W = {
+	ARM = 0x1, ARMC = 0x2, ARMH = 0x4, ARMS = 0x8, ARMG = 0x10, ARMF = 0x20,
+	ARMU = 0x40, WEP = 0x100, QUIVER = 0x200, SWAPWEP = 0x400, AMUL = 0x10000,
+	RINGL = 0x20000, RINGR = 0x40000, TOOL = 0x80000,
+}
+-- armcat values: SUIT 0, SHIELD 1, HELM 2, GLOVES 3, BOOTS 4, CLOAK 5, SHIRT 6
+local EQUIP = {
+	{id = "amulet", label = "Amulet", mask = W.AMUL, col = 0, row = 0, oclass = OC.AMULET, put = "P"},
+	{id = "helm", label = "Helmet", mask = W.ARMH, col = 1, row = 0, armcat = 2},
+	{id = "eyes", label = "Eyewear", mask = W.TOOL, col = 2, row = 0, eyewear = true, put = "P"},
+	{id = "cloak", label = "Cloak", mask = W.ARMC, col = 0, row = 1, armcat = 5},
+	{id = "suit", label = "Body armor", mask = W.ARM, col = 1, row = 1, armcat = 0},
+	{id = "shirt", label = "Shirt", mask = W.ARMU, col = 2, row = 1, armcat = 6},
+	{id = "gloves", label = "Gloves", mask = W.ARMG, col = 0, row = 2, armcat = 3},
+	{id = "shield", label = "Shield", mask = W.ARMS, col = 2, row = 2, armcat = 1},
+	{id = "lring", label = "Left ring", mask = W.RINGL, col = 0, row = 3, oclass = OC.RING, put = "P", hand = "l"},
+	{id = "boots", label = "Boots", mask = W.ARMF, col = 1, row = 3, armcat = 4},
+	{id = "rring", label = "Right ring", mask = W.RINGR, col = 2, row = 3, oclass = OC.RING, put = "P", hand = "r"},
+	{id = "wep", label = "Weapon", mask = W.WEP, col = 0, row = 4.3, weapon = true},
+	{id = "alt", label = "Alternate", mask = W.SWAPWEP, col = 1, row = 4.3, weapon = true},
+	{id = "quiver", label = "Quiver", mask = W.QUIVER, col = 2, row = 4.3, quiver = true},
+}
+local EQUIP_BY_ID = {}
+for _, e in ipairs(EQUIP) do
+	EQUIP_BY_ID[e.id] = e
+end
+
+local function has_mask(o, m)
+	return (o.worn or 0) % (m * 2) >= m
+end
+
+local function fits(slot, o)
+	if slot.armcat then
+		return o.oclass == OC.ARMOR and o.armcat == slot.armcat
+	elseif slot.oclass then
+		return o.oclass == slot.oclass
+	elseif slot.eyewear then
+		local n = o.name:lower()
+		return o.oclass == OC.TOOL and (n:find("blindfold") or n:find("towel") or n:find("lenses")) ~= nil
+	elseif slot.weapon then
+		return o.oclass == OC.WEAPON or o.oclass == OC.TOOL
+	elseif slot.quiver then
+		return o.oclass == OC.WEAPON or o.oclass == OC.GEM or o.oclass == OC.ROCK
+	end
+	return false
+end
+
+local function equipped(slot, inv)
+	for _, o in ipairs(inv) do
+		if has_mask(o, slot.mask) then
+			return o
+		end
+	end
+end
+
 local function inventory_formspec(inv)
-	local fs = {head(16, 11), "label[0.5,0.5;Inventory  (click an item for actions)]"}
-	local x, y = 0.5, 1.0
-	local col_w = 7.6
+	local fs = {head(19, 11), "label[0.4,0.5;Equipment]",
+		"label[5.6,0.5;Inventory  (click an item for actions)]",
+		"box[0.3,0.9;4.9,9.6;#00000060]"}
+	-- equipment panel
+	for _, slot in ipairs(EQUIP) do
+		local x, y = 0.55 + slot.col * 1.55, 1.1 + slot.row * 1.75
+		local o = equipped(slot, inv)
+		if o then
+			fs[#fs + 1] = ("item_image_button[%f,%f;1.3,1.3;%s;eq_%s;]"):format(x, y,
+				nhv_tiles.item(o.tile), slot.id)
+			fs[#fs + 1] = ("tooltip[eq_%s;%s]"):format(slot.id, E(slot.label .. ": " .. o.name))
+		else
+			fs[#fs + 1] = ("button[%f,%f;1.3,1.3;eq_%s;]"):format(x, y, slot.id)
+			fs[#fs + 1] = ("tooltip[eq_%s;%s (empty)]"):format(slot.id, E(slot.label))
+		end
+		fs[#fs + 1] = ("label[%f,%f;%s]"):format(x, y + 1.45,
+			core.colorize("#B0B0B0", E(slot.label)))
+	end
+	-- inventory list
+	local x, y = 5.6, 1.0
+	local col_w = 6.7
 	local last_class
 	for _, o in ipairs(inv) do
 		if o.oclass ~= last_class then
@@ -445,36 +528,103 @@ local function inventory_formspec(inv)
 		if #name > 52 then
 			name = name:sub(1, 50) .. ".."
 		end
-		fs[#fs + 1] = ("button[%f,%f;6.7,0.7;inv_%d;%s]"):format(x + 0.8, y, o.invlet:byte(), E(name))
+		-- left-aligned text over an invisible button
+		fs[#fs + 1] = ("image_button[%f,%f;5.8,0.7;blank.png;inv_%d;]"):format(x + 0.8, y, o.invlet:byte())
+		fs[#fs + 1] = ("label[%f,%f;%s]"):format(x + 0.9, y + 0.35, E(name))
 		fs[#fs + 1] = ("tooltip[inv_%d;%s]"):format(o.invlet:byte(), E(o.name))
 		y = y + 0.75
 	end
 	if #inv == 0 then
-		fs[#fs + 1] = "label[0.5,1.5;Not carrying anything.]"
+		fs[#fs + 1] = "label[5.6,1.5;Not carrying anything.]"
 	end
 	return table.concat(fs)
 end
 
--- Hotbar mirrors the inventory (first slots = first items).
+-- clicking an empty equipment slot: choose something that fits
+local function show_equip_choices(slot)
+	local inv = (nh.snap and nh.snap.inventory) or {}
+	local items = {}
+	for _, o in ipairs(inv) do
+		if fits(slot, o) and (slot.weapon or slot.quiver or (o.worn or 0) == 0) then
+			items[#items + 1] = o
+		end
+	end
+	ui.equip_slot, ui.equip_items = slot, items
+	local h = 2.2 + math.max(1, #items) * 0.85
+	local fs = {head(10, h), ("label[0.5,0.6;%s]"):format(E(slot.label .. ": choose an item"))}
+	for k, o in ipairs(items) do
+		local yy = 1.1 + (k - 1) * 0.85
+		fs[#fs + 1] = ("item_image[0.5,%f;0.75,0.75;%s]"):format(yy, nhv_tiles.item(o.tile))
+		fs[#fs + 1] = ("button[1.4,%f;8,0.75;pick_%d;%s]"):format(yy, k, E(o.invlet .. " - " .. o.name))
+	end
+	if #items == 0 then
+		fs[#fs + 1] = "label[0.5,1.4;You have nothing that goes here.]"
+	end
+	show("nhv:equip", table.concat(fs))
+end
+
+-- answers to follow-up questions, e.g. which hand for a ring
+ui.auto_answers = {}
+
+local function equip_item(slot, o)
+	local cur
+	for _, it in ipairs(nh.snap.inventory) do
+		if has_mask(it, W.WEP) then
+			cur = it
+		end
+	end
+	local keys
+	if slot.armcat then
+		keys = "W" .. o.invlet
+	elseif slot.put then
+		keys = slot.put .. o.invlet
+		if slot.hand then
+			table.insert(ui.auto_answers, {pattern = "ring%-finger", key = slot.hand})
+		end
+	elseif slot.id == "wep" then
+		keys = "w" .. o.invlet
+	elseif slot.id == "alt" then
+		-- NetHack only swaps: wield it, swap it to the off hand, re-wield
+		keys = "w" .. o.invlet .. "x"
+			.. ((cur and cur.invlet ~= o.invlet) and ("w" .. cur.invlet) or "")
+	elseif slot.quiver then
+		keys = "Q" .. o.invlet
+	end
+	if keys then
+		nhv.clock.act(keys, {kind = "equip"})
+	end
+end
+
+-- Hotbar: slot 1 = wielded weapon, slot 2 = alternate weapon, slot 3 is
+-- left empty as a divider, then the rest of the inventory.
+local function stack_for(o)
+	local st = ItemStack(nhv_tiles.item(o.tile))
+	st:set_count(math.max(1, math.min(o.quan, 65535)))
+	local meta = st:get_meta()
+	meta:set_string("description", o.invlet .. " - " .. o.name)
+	meta:set_string("nhv_invlet", o.invlet)
+	meta:set_string("count_meta", o.quan > 1 and tostring(o.quan) or "")
+	return st
+end
+
 local function sync_hotbar(player, inv)
 	local pinv = player:get_inventory()
-	pinv:set_size("main", 32)
+	pinv:set_size("main", 40)
 	pinv:set_size("craft", 0)
 	local list = {}
-	for i, o in ipairs(inv) do
-		if i > 32 then
-			break
-		end
-		local st = ItemStack(nhv_tiles.item(o.tile))
-		st:set_count(math.max(1, math.min(o.quan, 65535)))
-		local meta = st:get_meta()
-		meta:set_string("description", o.invlet .. " - " .. o.name)
-		meta:set_string("nhv_invlet", o.invlet)
-		meta:set_string("count_meta", o.quan > 1 and tostring(o.quan) or "")
-		list[i] = st
-	end
-	for i = #list + 1, 32 do
+	for i = 1, 40 do
 		list[i] = ItemStack("")
+	end
+	local n = 4
+	for _, o in ipairs(inv) do
+		if has_mask(o, W.WEP) then
+			list[1] = stack_for(o)
+		elseif has_mask(o, W.SWAPWEP) then
+			list[2] = stack_for(o)
+		elseif n <= 40 then
+			list[n] = stack_for(o)
+			n = n + 1
+		end
 	end
 	pinv:set_list("main", list)
 end
@@ -486,6 +636,36 @@ nh.on_snapshot(function(snap)
 	end
 	player:set_inventory_formspec(inventory_formspec(snap.inventory))
 	sync_hotbar(player, snap.inventory)
+end)
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname == "" then
+		for k in pairs(fields) do
+			local id = k:match("^eq_(%w+)$")
+			if id and EQUIP_BY_ID[id] then
+				local slot = EQUIP_BY_ID[id]
+				local o = equipped(slot, (nh.snap and nh.snap.inventory) or {})
+				if o then
+					ui.show_item_menu(o.invlet)
+				else
+					show_equip_choices(slot)
+				end
+				return true
+			end
+		end
+	elseif formname == "nhv:equip" then
+		for k in pairs(fields) do
+			local n = k:match("^pick_(%d+)$")
+			if n and ui.equip_items and ui.equip_items[tonumber(n)] then
+				close("nhv:equip")
+				if nh.ready() then
+					equip_item(ui.equip_slot, ui.equip_items[tonumber(n)])
+				end
+				return true
+			end
+		end
+		return true
+	end
 end)
 
 -- ---------------------------------------------------------------- item menu

@@ -125,7 +125,7 @@ local storage = core.get_mod_storage()
 
 local function area_bounds()
 	local last = editor.origin(#prefabs.SLOTS)
-	return vector.new(-8, BASE_Y - 4, -8),
+	return vector.new(-52, BASE_Y - 4, -56),
 		vector.new(PER_ROW * SPACING + 8, BASE_Y + H + 8, last.z + ROW_SPACING + 8)
 end
 
@@ -146,9 +146,37 @@ local function lay_ground(minp, maxp)
 	vm:write_to_map(true)
 end
 
+-- feature cells show the sprite the game draws there (unless built)
+local CELL_SPRITES = {
+	tree = {"S_tree", 1290}, fountain = {"S_fountain", 1313}, altar = {"S_altar", 1307},
+	throne = {"S_throne", 1311}, sink = {"S_sink", 1312}, grave = {"S_grave", 1310},
+}
+core.register_entity("nhv:editor_cellsprite", {
+	initial_properties = {
+		visual = "wielditem", wield_item = nhv_tiles.item(0), physical = false,
+		pointable = false, static_save = false,
+	},
+})
+
+local function sprite_cell(slot)
+	local cs = CELL_SPRITES[slot]
+	if not cs then
+		return
+	end
+	local o = slot_origin(slot)
+	local h = nhv.scale.feature_height(cs[1]) or 2
+	local obj = core.add_entity(vector.new(o.x + 1, o.y + prefabs.FLOOR + 0.5 + h / 2, o.z + 1),
+		"nhv:editor_cellsprite")
+	if obj then
+		obj:set_properties({wield_item = nhv_tiles.item(cs[2]),
+			visual_size = {x = h / 2, y = h / 2, z = h / 2}})
+	end
+end
+
 local function setup_world()
 	lay_ground(area_bounds())
 	for _, s in ipairs(prefabs.SLOTS) do
+		sprite_cell(s[1])
 		decorate_cell(s[1])
 		if storage:get_string("built_" .. s[1]) == "" then
 			write_cell(s[1])
@@ -274,7 +302,7 @@ core.register_on_joinplayer(function(player)
 	inv:set_size("main", 32)
 	build_palette()
 	player:set_inventory_formspec(palette_formspec())
-	core.chat_send_player(name, "Prefab editor. I = block palette, K = toggle flying. "
+	core.chat_send_player(name, "Prefab editor. I = block palette, E = monster editor, K = toggle flying. "
 		.. "/prefab save when done. /prefab list, /prefab goto <slot>, /prefab reset <slot>.")
 	-- float until the editor area exists (nothing to stand on before)
 	player:set_physics_override({gravity = 0})

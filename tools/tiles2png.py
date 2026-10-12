@@ -13,6 +13,52 @@ import sys
 from PIL import Image
 
 BACKGROUND = (71, 108, 108)  # tile background colour -> transparent
+BLACK = (0, 0, 0)
+
+
+def remove_drop_shadow(rows, palette):
+    """NetHack's tiles draw a drop shadow in black to the lower right of
+    each figure. Black pixels are grouped into connected regions; a region
+    is shadow when most of its pixels have no coloured (non-black,
+    non-background) pixel to their right. Black that belongs to the art
+    (outlines, eyes, black creatures) has colour beside it and stays."""
+    h, w = len(rows), len(rows[0])
+
+    def kind(x, y):
+        rgb = palette[rows[y][x]]
+        if rgb == BACKGROUND:
+            return "bg"
+        return "black" if rgb == BLACK else "color"
+
+    def colour_right(x, y):
+        return any(kind(xx, y) == "color" for xx in range(x + 1, w))
+
+    out = [list(r) for r in rows]
+    bg_char = next(k for k, v in palette.items() if v == BACKGROUND)
+    figure = sum(1 for yy in range(h) for xx in range(w) if kind(xx, yy) != "bg")
+    seen = set()
+    for y in range(h):
+        for x in range(w):
+            if (x, y) in seen or kind(x, y) != "black":
+                continue
+            comp, stack = [], [(x, y)]
+            seen.add((x, y))
+            while stack:
+                cx, cy = stack.pop()
+                comp.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in seen                             and kind(nx, ny) == "black":
+                        seen.add((nx, ny))
+                        stack.append((nx, ny))
+            open_right = sum(1 for cx, cy in comp if not colour_right(cx, cy))
+            # a black region that is most of the sprite is the creature
+            # itself (black monsters), not its shadow
+            if len(comp) > 0.5 * figure and len(comp) > 12:
+                continue
+            if open_right >= 0.7 * len(comp):
+                for cx, cy in comp:
+                    out[cy][cx] = bg_char
+    return ["".join(r) for r in out]
 
 
 def parse_tile_file(path):
@@ -55,6 +101,16 @@ def tile_image(palette, rows):
     return img
 
 
+TERRAIN_WORDS = ("wall", "door", "floor", "corridor", "stone", "dark part",
+                 "ice", "lava", "pool", "water", "air", "cloud", "drawbridge",
+                 "bars", "stair", "ladder", "zap", "beam", "swallow",
+                 "explosion", "boom", "shield", "valid position", "poison cloud")
+
+
+def is_terrain(name):
+    return any(w in name for w in TERRAIN_WORDS)
+
+
 def statue_of(img):
     out = img.copy()
     px = out.load()
@@ -79,6 +135,10 @@ def main():
         palette, tiles = parse_tile_file(os.path.join(share, fname))
         for name, rows in tiles:
             names.append(name)
+            # sprites lose their drop shadow; terrain tiles (used as node
+            # textures) keep theirs
+            if fname != "other.txt" or not is_terrain(name):
+                rows = remove_drop_shadow(rows, palette)
             images.append(tile_image(palette, rows))
         if fname == "monsters.txt":
             nmon = len(tiles)

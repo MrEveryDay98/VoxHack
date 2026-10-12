@@ -171,7 +171,8 @@ local DEFAULTS = {
 	throne = function() return room("nhv:floor") end,
 	sink = function() return room("nhv:floor") end,
 	grave = function() return room("nhv:floor") end,
-	tree = function() return room("nhv:floor", "nhv:tree") end,
+	-- the tree itself is a sprite; the barrier gives it NetHack's solidity
+	tree = function() return room("nhv:floor", "nhv:b_barrier") end,
 	iron_bars = function() return room("nhv:floor", "nhv:bars") end,
 	pool = function() return room("nhv:water") end,
 	water = function() return room("nhv:waterwall", "nhv:waterwall") end,

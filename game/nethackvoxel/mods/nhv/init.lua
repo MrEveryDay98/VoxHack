@@ -18,7 +18,9 @@ dofile(path .. "prefabs.lua")
 if nhv.EDITOR then
 	dofile(path .. "nh.lua") -- glyph helpers only; no game is started
 	dofile(path .. "terrain.lua")
+	dofile(path .. "scale.lua")
 	dofile(path .. "editor.lua")
+	dofile(path .. "monsteredit.lua")
 	return
 end
 dofile(path .. "nh.lua")
@@ -57,6 +59,7 @@ dofile(path .. "player.lua")
 dofile(path .. "hud.lua")
 dofile(path .. "ui.lua")
 dofile(path .. "actions.lua")
+dofile(path .. "wheel.lua")
 dofile(path .. "loop.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists

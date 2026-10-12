@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 2
+#define NHV_API_VERSION 3
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -229,6 +229,11 @@ typedef struct nhv_obj {
     int glyph, tile;
     int flags;      /* NHV_OBJ_* */
     int weight;
+    unsigned worn;  /* owornmask: W_ARM 0x1, W_ARMC 0x2, W_ARMH 0x4, W_ARMS 0x8,
+                       W_ARMG 0x10, W_ARMF 0x20, W_ARMU 0x40, W_WEP 0x100,
+                       W_QUIVER 0x200, W_SWAPWEP 0x400, W_AMUL 0x10000,
+                       W_RINGL 0x20000, W_RINGR 0x40000, W_TOOL 0x80000 */
+    int armcat;     /* armor category (ARM_SUIT..ARM_SHIRT) or -1 */
     char name[160]; /* doname() */
 } nhv_obj;
 
@@ -257,7 +262,16 @@ NHV_API int nhv_tile_count(void);
 /* Name of the cmap symbol S_* index ("vwall", "room", "dnstair" ...). */
 NHV_API const char *nhv_cmap_name(int symidx);
 NHV_API const char *nhv_mon_name(int mndx);
-NHV_API const char *nhv_obj_name(int otyp); /* actual (unidentified-safe? no: true) name */
+NHV_API const char *nhv_obj_name(int otyp); /* true (identified) name */
+
+/* Static monster data; works without a running game. */
+typedef struct nhv_moninfo {
+    int size;       /* MZ_TINY .. MZ_GIGANTIC */
+    int tile;       /* tile of its (male) glyph */
+    int sym;        /* class symbol */
+} nhv_moninfo;
+NHV_API int nhv_num_monsters(void);
+NHV_API int nhv_mon_info(int mndx, nhv_moninfo *out);
 
 /* ------------------------------------------------------------ free movement
  * In free-movement mode the host owns physical positions. Monsters stop

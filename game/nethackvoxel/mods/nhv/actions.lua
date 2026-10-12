@@ -2,13 +2,15 @@
 --
 --   Left click        attack the monster in reach nearest your crosshair
 --   Shift+left click  fire your quivered ammo where you look
---   Right click       interact: open/close doors, use stairs, pick up
---   Shift+right click list everything you can do on/at a square
---   E (aux1)          actions for the selected hotbar item
+--   Right click       tap: the obvious action for what you point at
+--                     (open a door, take the stairs, pick up, chat...)
+--                     hold: action wheel for it - move the mouse toward
+--                     an action and let go
+--   E (aux1)          same, for the selected hotbar item
 --   Q (drop)          drop the selected hotbar item
 --   Space (jump)      wait/search for one turn
 --   Z (zoom)          toggle the large overhead map
---   I                 inventory
+--   I                 inventory and equipment
 
 local U = nhv.util
 local nh = nhv.nh
@@ -17,19 +19,41 @@ nhv.actions = actions
 
 local OC = U.OCLASS
 
-local function msg(t)
-	nhv.hud.message(t)
-end
-
 local function hero()
 	return nh.snap and nh.snap.hero
 end
 
 local function busy()
-	if not nh.ready() then
-		return true
+	return not nh.ready()
+end
+
+-- an action: {label=, keys=} where keys are what nh.act() takes
+local function act(label, keys)
+	return {label = label, keys = keys}
+end
+
+local function ext(name, ...)
+	local k = {{key = "#"}, {text = name}}
+	for _, extra in ipairs({...}) do
+		k[#k + 1] = extra
 	end
-	return false
+	return k
+end
+
+-- actions that only show information take no game time
+local function info_act(label, keys)
+	return {label = label, keys = keys, free = true}
+end
+
+function actions.run(a, info)
+	if not a or busy() then
+		return
+	end
+	if a.free then
+		nh.act(a.keys, info or {kind = "info"})
+	else
+		nhv.clock.act(a.keys, info or {kind = "action"})
+	end
 end
 
 -- ---------------------------------------------------------------- attacking
@@ -80,10 +104,10 @@ function actions.attack(player, prefer_id)
 	end
 	local t = attack_target(player, prefer_id)
 	if t then
-		nhv.clock.act({{key = "#"}, {text = "nhvattack " .. t.id}}, {kind = "attack"})
+		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
 	else
 		-- a swing at nothing still takes the time a swing takes
-		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "swing"})
+		nhv.clock.act(ext("nhvtick"), {kind = "swing"})
 	end
 end
 
@@ -99,18 +123,31 @@ function actions.fire(player)
 	nhv.clock.act("f", {kind = "fire"})
 end
 
--- ---------------------------------------------------------------- squares
-local function square_of_pointed(pointed)
-	if pointed and pointed.type == "node" then
-		-- the node you point at, nudged toward the face you hit
-		local p = vector.multiply(vector.add(pointed.under, pointed.above), 0.5)
-		return U.pos_to_tile(p)
-	elseif pointed and pointed.type == "object" then
-		local pos = pointed.ref:get_pos()
-		if pos then
-			return U.pos_to_tile(pos)
+-- ---------------------------------------------------------------- pointing
+-- What the player is pointing at: {kind = "mon"|"square", tx, ty, mon}
+function actions.pointed(player)
+	local eye = vector.add(player:get_pos(), vector.new(0, 1.6, 0))
+	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 6))
+	for pt in core.raycast(eye, to, true, false) do
+		if pt.type == "object" and pt.ref ~= player then
+			local ent = pt.ref:get_luaentity()
+			if ent and ent.name == "nhv:mon" and ent.nh_key then
+				local e = nhv.mobs.mons[ent.nh_key]
+				if e then
+					return {kind = "mon", tx = e.x, ty = e.y, mon = e}
+				end
+			elseif ent and ent.name == "nhv:obj" then
+				local tx, ty = U.pos_to_tile(pt.ref:get_pos())
+				return {kind = "square", tx = tx, ty = ty}
+			end
+		elseif pt.type == "node" then
+			local p = vector.multiply(vector.add(pt.under, pt.above), 0.5)
+			local tx, ty = U.pos_to_tile(p)
+			return {kind = "square", tx = tx, ty = ty}
 		end
 	end
+	local h = hero()
+	return {kind = "square", tx = h.x, ty = h.y}
 end
 
 local function square_info(tx, ty)
@@ -125,12 +162,16 @@ local function square_info(tx, ty)
 	}
 end
 
+local function has_bit(v, b)
+	return v % (b * 2) >= b
+end
+
 local function door_closed(door)
-	return door % (U.D_CLOSED * 2) >= U.D_CLOSED or door % (U.D_LOCKED * 2) >= U.D_LOCKED
+	return has_bit(door, U.D_CLOSED) or has_bit(door, U.D_LOCKED)
 end
 
 local function door_open(door)
-	return door % (U.D_ISOPEN * 2) >= U.D_ISOPEN
+	return has_bit(door, U.D_ISOPEN)
 end
 
 local function stair_key(sq)
@@ -142,249 +183,168 @@ local function stair_key(sq)
 	end
 end
 
--- everything you can do at a square: list of {label=, keys=}
-local function square_actions(tx, ty)
+-- Actions for what is pointed at: returns list, primary (may be nil)
+function actions.context(player)
 	local h = hero()
-	local sq = square_info(tx, ty)
-	local acts = {}
-	local function add(label, keys)
-		acts[#acts + 1] = {label = label, keys = keys}
-	end
-	local dx, dy = tx - h.x, ty - h.y
-	if dx == 0 and dy == 0 then
-		local sk = stair_key(sq)
-		if sk == ">" then
-			add("Go down", ">")
-		elseif sk == "<" then
-			add("Go up", "<")
-		end
-		add("Pick up", ",")
-		add("Look here", ":")
-		local c = sq.cmap or ""
-		if c == "S_fountain" then
-			add("Drink from the fountain", "q")
-			add("Dip into the fountain", {{key = "#"}, {text = "dip"}})
-		elseif c == "S_sink" then
-			add("Drink from the sink", "q")
-			add("Kick the sink", "\4.")
-		elseif c == "S_altar" then
-			add("Offer a sacrifice", {{key = "#"}, {text = "offer"}})
-			add("Drop items on the altar (identify B/U/C)", "D")
-		elseif c == "S_throne" then
-			add("Sit on the throne", {{key = "#"}, {text = "sit"}})
-		end
-		add("Search (1 turn)", "s")
-		add("Rest (20 turns)", "20s")
-		add("Sit", {{key = "#"}, {text = "sit"}})
-		add("Pray", {{key = "#"}, {text = "pray"}})
-		add("Loot a container here", {{key = "#"}, {text = "loot"}})
-		add("Engrave", "E")
-		add("Look at your surroundings (discoveries)", "\\")
-		add("Show attributes (^X)", "\24")
-		add("Save and quit", "S")
-		return acts
-	end
-	if math.abs(dx) > 1 or math.abs(dy) > 1 then
-		return acts
-	end
-	local key = U.dir_key(dx, dy)
-	if sq.typ == U.TYP.DOOR then
-		if door_closed(sq.door) then
-			add("Open the door", "o" .. key)
-			add("Kick the door", "\4" .. key)
-			add("Force the lock", {{key = "#"}, {text = "force"}})
-			add("Check for traps", {{key = "#"}, {text = "untrap"}, {key = key}})
-		elseif door_open(sq.door) then
-			add("Close the door", "c" .. key)
-		end
-	end
-	if sq.mon then
-		add("Fight", "F" .. key)
-		add("Chat", {{key = "#"}, {text = "chat"}, {key = key}})
-	end
-	add("Kick", "\4" .. key)
-	add("Search around you", "s")
-	return acts
-end
-
-local function run_keys(keys, info, secs)
-	nhv.clock.act(keys, info or {kind = "interact"})
-end
-
--- Right click: the most likely action for what you point at.
-function actions.interact(player, pointed, menu)
-	if busy() then
-		return
-	end
-	local h = hero()
-	local tx, ty = square_of_pointed(pointed)
-	if not tx then
-		tx, ty = h.x, h.y
-	end
-	-- pointing at the floor of a far square while standing next to it is
-	-- usually meant for the square you are on
+	local p = actions.pointed(player)
+	local tx, ty = p.tx, p.ty
+	-- far away squares: act on your own square
 	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 then
 		tx, ty = h.x, h.y
 	end
-	if menu then
-		actions.show_square_menu(tx, ty)
-		return
-	end
 	local sq = square_info(tx, ty)
-	if tx == h.x and ty == h.y then
-		local sk = stair_key(sq)
-		if sk then
-			run_keys(sk, {kind = "stairs"})
-		elseif sq.has_obj then
-			run_keys(",", {kind = "pickup"})
-		else
-			actions.show_square_menu(tx, ty)
+	local list, primary = {}, nil
+	local function add(a, is_primary)
+		list[#list + 1] = a
+		if is_primary and not primary then
+			primary = a
 		end
-		return
 	end
 	local key = U.dir_key(tx - h.x, ty - h.y)
-	if sq.typ == U.TYP.DOOR and door_closed(sq.door) then
-		run_keys("o" .. key, {kind = "door"})
-	elseif sq.typ == U.TYP.DOOR and door_open(sq.door) and not sq.mon and not sq.has_obj then
-		run_keys("c" .. key, {kind = "door"})
-	elseif sq.mon then
-		run_keys({{key = "#"}, {text = "chat"}, {key = key}}, {kind = "chat"})
-	else
-		actions.show_square_menu(tx, ty)
-	end
-end
+	local mon = p.kind == "mon" and p.mon or sq.mon
 
-function actions.show_square_menu(tx, ty)
-	local acts = square_actions(tx, ty)
-	if #acts == 0 then
-		return
+	if mon and (tx ~= h.x or ty ~= h.y) then
+		local peaceful = mon.mon and U.has(mon.mon.flags, U.MON_PEACEFUL)
+		add(act("Chat", ext("chat", {key = key})), peaceful)
+		add(act("Fight", ext("nhvattack " .. (mon.id or 0))))
+		add(act("Fire at it", "f" .. key))
+		add(act("Throw at it", "t"))
+		return list, primary
 	end
-	actions.square_acts = acts
-	local E = core.formspec_escape
-	local h = 1.6 + #acts * 0.8
-	local fs = {("formspec_version[6]size[9,%f]bgcolor[#000000C0;true]"):format(h),
-		"label[0.5,0.6;What do you want to do?]"}
-	for k, a in ipairs(acts) do
-		fs[#fs + 1] = ("button[0.5,%f;8,0.7;sq_%d;%s]"):format(1.1 + (k - 1) * 0.8, k, E(a.label))
-	end
-	local player = nhv.player.get()
-	core.show_formspec(player:get_player_name(), "nhv:square", table.concat(fs))
-end
 
-core.register_on_player_receive_fields(function(player, formname, fields)
-	if formname ~= "nhv:square" then
-		return
+	if tx == h.x and ty == h.y then
+		local sk = stair_key(sq)
+		if sk == ">" then
+			add(act("Go down", ">"), true)
+		elseif sk == "<" then
+			add(act("Go up", "<"), true)
+		end
+		if sq.has_obj then
+			add(act("Pick up", ","), true)
+			add(info_act("Look here", ":"))
+		end
+		local c = sq.cmap or ""
+		if c == "S_fountain" then
+			add(act("Drink", "q"), true)
+			add(act("Dip", ext("dip")))
+		elseif c == "S_sink" then
+			add(act("Drink", "q"), true)
+			add(act("Kick sink", "\4."))
+		elseif c == "S_altar" then
+			add(act("Offer", ext("offer")), true)
+			add(act("Drop on altar", "D"))
+		elseif c == "S_throne" then
+			add(act("Sit on throne", ext("sit")), true)
+		elseif c == "S_grave" then
+			add(act("Dig up grave", "a"))
+		end
+		add(act("Search", "s"))
+		add(act("Rest 20 turns", "20s"))
+		add(act("Pray", ext("pray")))
+		add(act("Sit", ext("sit")))
+		add(act("Loot", ext("loot")))
+		add(act("Engrave", "E"))
+		add(info_act("Attributes", "\24"))
+		add(act("Save & quit", "S"))
+		return list, primary
 	end
-	for k in pairs(fields) do
-		local n = k:match("^sq_(%d+)$")
-		if n and actions.square_acts then
-			local a = actions.square_acts[tonumber(n)]
-			core.close_formspec(player:get_player_name(), "nhv:square")
-			if a and nh.ready() then
-				run_keys(a.keys, {kind = "square"})
-			end
+
+	if sq.typ == U.TYP.DOOR then
+		if door_closed(sq.door) then
+			add(act("Open", "o" .. key), true)
+			add(act("Kick", "\4" .. key))
+			add(act("Force lock", ext("force")))
+			add(act("Untrap", ext("untrap", {key = key})))
+		elseif door_open(sq.door) then
+			add(act("Close", "c" .. key), true)
+			add(act("Kick", "\4" .. key))
 		end
 	end
-	return true
-end)
+	if sq.has_obj then
+		add(act("Kick object", "\4" .. key))
+	end
+	add(act("Search", "s"))
+	add(act("Kick", "\4" .. key))
+	return list, primary
+end
 
 -- ---------------------------------------------------------------- items
 local function lname(o)
 	return o.name:lower()
 end
 
-function actions.item_actions(o)
-	local acts = {}
-	local function add(label, keys)
-		acts[#acts + 1] = {label = label, keys = keys}
+-- item actions: list, primary
+function actions.item_context(o)
+	local list, primary = {}, nil
+	local function add(label, keys, is_primary)
+		local a = act(label, keys)
+		list[#list + 1] = a
+		if is_primary and not primary then
+			primary = a
+		end
 	end
 	local worn = U.has(o.flags, U.OBJ.WORN)
 	local wielded = U.has(o.flags, U.OBJ.WIELDED)
+	local alt = U.has(o.flags, U.OBJ.ALTWEP)
 	local c = o.oclass
+	local inv = o.invlet
+	if wielded or alt then
+		add("Swap weapons", "x", true)
+	end
 	if c == OC.WEAPON then
 		if not wielded then
-			add("Wield", "w")
+			add("Wield", "w" .. inv, true)
 		end
-		add("Throw (where you look)", "t")
-		add("Put in quiver", "Q")
-		add("Fire from quiver (where you look)", "f")
+		add("Throw", "t" .. inv)
+		add("Quiver", "Q" .. inv)
+		add("Fire", "f")
 	elseif c == OC.ARMOR then
-		add(worn and "Take off" or "Wear", worn and "T" or "W")
+		add(worn and "Take off" or "Wear", (worn and "T" or "W") .. inv, true)
 	elseif c == OC.RING or c == OC.AMULET then
-		add(worn and "Remove" or "Put on", worn and "R" or "P")
+		add(worn and "Remove" or "Put on", (worn and "R" or "P") .. inv, true)
 	elseif c == OC.TOOL then
-		add("Apply / use (where you look)", "a")
+		add("Apply", "a" .. inv, true)
 		if lname(o):match("blindfold") or lname(o):match("towel") or lname(o):match("lenses") then
-			add(worn and "Remove" or "Put on", worn and "R" or "P")
+			add(worn and "Remove" or "Put on", (worn and "R" or "P") .. inv)
 		end
 		if not wielded then
-			add("Wield", "w")
-		end
-		if U.has(o.flags, U.OBJ.CONTAINER) then
-			add("Look inside / put in / take out", "a")
+			add("Wield", "w" .. inv)
 		end
 	elseif c == OC.FOOD then
-		add("Eat", "e")
+		add("Eat", "e" .. inv, true)
 	elseif c == OC.POTION then
-		add("Quaff", "q")
-		add("Throw (where you look)", "t")
+		add("Quaff", "q" .. inv, true)
+		add("Throw", "t" .. inv)
 	elseif c == OC.SCROLL or c == OC.SPBOOK then
-		add("Read", "r")
+		add("Read", "r" .. inv, true)
 	elseif c == OC.WAND then
-		add("Zap (where you look)", "z")
-		add("Engrave with it", "E")
-		add("Apply (break it!)", "a")
+		add("Zap", "z" .. inv, true)
+		add("Engrave", "E" .. inv)
+		add("Break", "a" .. inv)
 	elseif c == OC.GEM or c == OC.ROCK then
-		add("Throw (where you look)", "t")
-		add("Put in quiver", "Q")
+		add("Throw", "t" .. inv, true)
+		add("Quiver", "Q" .. inv)
 	end
 	if wielded then
-		add("Stop wielding (bare hands)", {{key = "w"}, {key = "-"}})
+		add("Unwield", "w-")
 	end
-	add("Drop", "d")
-	add("Name this type of object", {{key = "#"}, {text = "call"}})
-	add("Adjust (change its letter)", {{key = "#"}, {text = "adjust"}})
-	return acts
+	add("Drop", "d" .. inv)
+	add("Name type", {{key = "#"}, {text = "call"}, {menu = "o"}, {key = inv}})
+	add("Adjust letter", {{key = "#"}, {text = "adjust"}, {key = inv}})
+	return list, primary
+end
+
+-- legacy names used by the inventory screen
+function actions.item_actions(o)
+	return (actions.item_context(o))
 end
 
 function actions.do_item_action(player, o, a)
-	if not nh.ready() then
-		return
-	end
-	local keys = a.keys
-	if type(keys) == "string" then
-		-- "w" + "-" style actions already carry their argument
-		if keys == "f" then
-			keys = {{key = "f"}}
-		else
-			keys = {{key = keys}, {key = o.invlet}}
-		end
-		if #a.keys > 1 then
-			keys = {}
-			for ch in a.keys:gmatch(".") do
-				keys[#keys + 1] = {key = ch}
-			end
-			keys[#keys + 1] = {key = o.invlet}
-		end
-	else
-		local k2 = {}
-		for _, k in ipairs(keys) do
-			k2[#k2 + 1] = k
-		end
-		-- extended commands that act on an item ask for it next
-		if keys[1].key == "#" and (keys[2].text == "call" or keys[2].text == "adjust") then
-			-- #call asks what kind of thing to name: answer "the type"
-			if keys[2].text == "call" then
-				k2[#k2 + 1] = {menu = "o"}
-			end
-			k2[#k2 + 1] = {key = o.invlet}
-		end
-		keys = k2
-	end
-	nhv.clock.act(keys, {kind = "item"})
+	actions.run(a, {kind = "item"})
 end
 
 -- ---------------------------------------------------------------- hooking up
+-- left click: attack (right click and E are handled by the wheel)
 local function on_use(itemstack, user, pointed)
 	if user and user:is_player() then
 		if user:get_player_control().sneak then
@@ -399,14 +359,11 @@ local function on_use(itemstack, user, pointed)
 	return nil
 end
 
-local function on_place(itemstack, placer, pointed)
-	if placer and placer:is_player() then
-		actions.interact(placer, pointed, placer:get_player_control().sneak)
-	end
+local function noop()
 	return nil
 end
 
-local function on_drop(itemstack, dropper)
+local function on_drop(itemstack)
 	local invlet = itemstack:get_meta():get_string("nhv_invlet")
 	if invlet ~= "" and nh.ready() then
 		nhv.clock.act({{key = "d"}, {key = invlet}}, {kind = "drop"})
@@ -414,27 +371,19 @@ local function on_drop(itemstack, dropper)
 	return itemstack
 end
 
-local overrides = {
-	on_use = on_use,
-	on_place = on_place,
-	on_secondary_use = on_place,
-	on_drop = on_drop,
-	range = 5,
-}
-
 core.override_item("", {
-	on_use = on_use,
-	on_place = on_place,
-	on_secondary_use = on_place,
-	range = 5,
+	on_use = on_use, on_place = noop, on_secondary_use = noop, range = 5,
 	tool_capabilities = {full_punch_interval = 0.3, max_drop_level = 0,
 		groupcaps = {}, damage_groups = {}},
 })
 for i = 0, nhv_tiles.count - 1 do
-	core.override_item(nhv_tiles.item(i), overrides)
+	core.override_item(nhv_tiles.item(i), {
+		on_use = on_use, on_place = noop, on_secondary_use = noop,
+		on_drop = on_drop, range = 5,
+	})
 end
 
--- keys without item callbacks: watch the controls for presses
+-- keys without item callbacks
 local prev = {}
 core.register_globalstep(function()
 	local player = nhv.player.get()
@@ -445,20 +394,13 @@ core.register_globalstep(function()
 	local function pressed(k)
 		return ctl[k] and not prev[k]
 	end
-	if pressed("aux1") then
-		local st = player:get_wielded_item()
-		local invlet = st:get_meta():get_string("nhv_invlet")
-		if invlet ~= "" then
-			nhv.ui.show_item_menu(invlet)
-		end
-	end
-	if pressed("jump") and nh.ready() then
+	if pressed("jump") and nh.ready() and not nhv.clock.busy() then
 		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "wait"})
 	end
 	if pressed("zoom") then
 		nhv.hud.toggle_map()
 	end
-	prev = {aux1 = ctl.aux1, jump = ctl.jump, zoom = ctl.zoom}
+	prev = {jump = ctl.jump, zoom = ctl.zoom}
 end)
 
 return actions

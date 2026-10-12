@@ -230,9 +230,31 @@ core.register_globalstep(function(dtime)
 	end
 end)
 
+-- Messages about bumping into things make no sense with free movement:
+-- your body just collides. Lua patterns, matched against the message.
+local SILENCED = {
+	"^You stop%.", "in your way", "^You move right into", "^Pardon me",
+	"^You try to move the boulder", "^Perhaps that's why you cannot move",
+	"^There is a boulder in your way", "^You cannot pass", "^You are carrying too much to get through",
+	"^You don't have enough room to maneuver", "^You can't move diagonally",
+	"^Your body is too large to fit", "^You try to squeeze",
+	"^There is an obstacle there", "^You harmlessly attack thin air",
+	"^You already found a monster", "^There's a .* in the way",
+	"^You hear a monster behind the boulder",
+}
+
+function hud.silenced(text)
+	for _, pat in ipairs(SILENCED) do
+		if text:find(pat) then
+			return true
+		end
+	end
+	return false
+end
+
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
-		if ev.kind == "message" or ev.kind == "raw" then
+		if (ev.kind == "message" or ev.kind == "raw") and not hud.silenced(ev.text) then
 			hud.message(ev.text)
 		end
 	end
