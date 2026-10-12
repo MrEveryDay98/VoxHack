@@ -31,7 +31,10 @@ local function build_entries()
 		entries[#entries + 1] = {kind = "feat", key = cmap, name = name, tile = tiles[cmap]}
 	end
 	table.sort(entries, function(a, b) return a.name < b.name end)
-	local ok = core.nh_load()
+	local ok, err = core.nh_load()
+	if not ok then
+		core.log("error", "[nhv] monster editor: could not load nethack.dll: " .. tostring(err))
+	end
 	if ok then
 		for mndx = 0, (core.nh_num_monsters() or 0) - 1 do
 			local mi = core.nh_mon_info(mndx)
@@ -41,6 +44,8 @@ local function build_entries()
 			end
 		end
 	end
+	core.log("action", ("[nhv] monster editor: %d entries (num=%s, mon0=%s)"):format(#entries,
+		tostring(core.nh_num_monsters()), "-"))
 end
 
 local function base_height(e)

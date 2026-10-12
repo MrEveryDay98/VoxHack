@@ -53,6 +53,18 @@ pathfinding when they can't see you.
 - Your body is never teleported for blocked moves; if NetHack refuses a square, it quietly
   retries until the square is free.
 
+## Projectiles
+- **Monster missiles** (arrows, daggers, spears, venom, potions) fly through the world instead
+  of resolving on the grid.
+  - They move at game-time speed, so they crawl while you stand still and you can step aside.
+  - If one reaches your body, NetHack still rolls to hit; a miss shows a rising "Dodged!" and
+    the missile flies on.
+  - Missiles also hit monsters in their path, and drop where they stop.
+- **Archers** and other ranged attackers keep 2.5–4.5 squares away. They can shoot from any
+  angle with a clear line of sight, not only the eight grid directions.
+- **Containers and corpses:** chests, large boxes and ice boxes face you instead of spinning;
+  corpses lie flat.
+
 ## Sprites (moddable)
 All sprites and tile textures come from one sprite sheet:
 `game/nethackvoxel/mods/nhv_tiles/textures/nhv_tiles.png`.
@@ -88,7 +100,8 @@ New game with NetHack's role menus; walking (time frozen while standing still); 
 melee kills; pet follows; inventory and item menus; y/n prompts; save on close and restore.
 
 ## Not yet verified or not built
-- Dodgeable projectiles, plus a "Dodged!" text when NetHack's roll misses (next).
+- **Projectiles:** only thrown and shot missiles fly physically (arrows, daggers, spit venom,
+  potions). Wand zaps and breath weapons still resolve on NetHack's grid.
 - Monsters following the green path markers.
 - Level changes (stairs) are coded but untested.
 - Death and end screens are coded but untested.

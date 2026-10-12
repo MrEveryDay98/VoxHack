@@ -46,6 +46,10 @@ nh.on_snapshot(function(snap)
 	world.ledger = snap.hero.ledger
 	if changed then
 		nhv.sim.clear()
+		if nhv.missiles then
+			nhv.missiles.clear()
+			core.nh_clear_missiles()
+		end
 		nhv.terrain.build_all(snap.map)
 	else
 		nhv.terrain.update(snap.map)
@@ -60,6 +64,7 @@ dofile(path .. "hud.lua")
 dofile(path .. "ui.lua")
 dofile(path .. "actions.lua")
 dofile(path .. "wheel.lua")
+dofile(path .. "missiles.lua")
 dofile(path .. "loop.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists

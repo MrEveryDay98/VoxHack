@@ -8,6 +8,8 @@
 #include "hack.h"
 #include "nhv_internal.h"
 
+extern glyph_map glyphmap[MAX_GLYPH];
+
 boolean nhv_freemove = FALSE;
 
 #define MAXSTATES 512
@@ -193,11 +195,162 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
             f.flags |= NHV_MF_HIDER;
         if (m->mundetected)
             f.flags |= NHV_MF_HIDDEN;
+        if (!m->mpeaceful && nhv_mon_keeps_distance(m))
+            f.flags |= NHV_MF_KEEPAWAY;
         if (n < max)
             buf[n] = f;
         n++;
     }
     return n;
+}
+
+/* ---------------------------------------------------------------- missiles
+ * Missiles monsters throw at the hero are kept here (as free objects)
+ * while the host flies them through the world. */
+#define MAXMISSILES 64
+static struct nhv_flying {
+    unsigned pid;
+    struct obj *obj;
+    unsigned mon_id;
+    coordxy lx, ly;     /* launch square */
+    int range;
+    boolean fresh;      /* not yet reported to the host */
+} missiles[MAXMISSILES];
+static unsigned next_pid = 1;
+
+void
+nhv_missile_launch(
+    struct monst *mon, struct obj *obj, coordxy x, coordxy y, int range)
+{
+    int i;
+
+    for (i = 0; i < MAXMISSILES; i++)
+        if (!missiles[i].obj) {
+            missiles[i].pid = next_pid++;
+            missiles[i].obj = obj;
+            missiles[i].mon_id = mon ? mon->m_id : 0;
+            missiles[i].lx = x, missiles[i].ly = y;
+            missiles[i].range = range;
+            missiles[i].fresh = TRUE;
+            return;
+        }
+    /* no room: it just drops where it was thrown from */
+    nhv_missile_lands(obj, x, y);
+}
+
+static struct nhv_flying *
+missile_by_pid(unsigned pid)
+{
+    int i;
+
+    for (i = 0; i < MAXMISSILES; i++)
+        if (missiles[i].obj && missiles[i].pid == pid)
+            return &missiles[i];
+    return (struct nhv_flying *) 0;
+}
+
+static void
+missile_event(const char *what, unsigned pid)
+{
+    char buf[64];
+
+    Sprintf(buf, "%s %u", what, pid);
+    nhv_push_event(NHV_EV_MISSILE, 0, buf);
+}
+
+/* #nhvmhit pid: the missile reached the hero's body */
+int
+donhvmhit(void)
+{
+    struct nhv_flying *f = missile_by_pid((unsigned) nhv_cmd_args[0]);
+    int r;
+
+    if (!f)
+        return ECMD_OK;
+    r = nhv_missile_hits_hero(mon_by_id(f->mon_id), f->obj, f->lx, f->ly);
+    if (r == 0) {
+        missile_event("miss", f->pid); /* dodged: it flies on */
+    } else {
+        missile_event(r == 1 ? "hit" : "stop", f->pid);
+        f->obj = 0;
+    }
+    return ECMD_OK;
+}
+
+/* #nhvmhitm pid m_id: the missile reached a monster's body */
+int
+donhvmhitm(void)
+{
+    struct nhv_flying *f = missile_by_pid((unsigned) nhv_cmd_args[0]);
+    struct monst *m = mon_by_id((unsigned) nhv_cmd_args[1]);
+
+    if (!f)
+        return ECMD_OK;
+    if (m && nhv_missile_hits_mon(m, f->obj, f->range)) {
+        missile_event("stop", f->pid);
+        f->obj = 0;
+    } else {
+        missile_event("pass", f->pid);
+    }
+    return ECMD_OK;
+}
+
+/* #nhvmland pid x y: the missile came down on square <x,y> */
+int
+donhvmland(void)
+{
+    struct nhv_flying *f = missile_by_pid((unsigned) nhv_cmd_args[0]);
+    coordxy x = (coordxy) nhv_cmd_args[1], y = (coordxy) nhv_cmd_args[2];
+
+    if (!f)
+        return ECMD_OK;
+    if (!isok(x, y))
+        x = f->lx, y = f->ly;
+    nhv_missile_lands(f->obj, x, y);
+    f->obj = 0;
+    missile_event("land", f->pid);
+    return ECMD_OK;
+}
+
+NHV_API int
+nhv_get_missiles(nhv_missile *buf, int max)
+{
+    int i, n = 0;
+
+    if (nhv_state() != NHV_WAITING)
+        return 0;
+    for (i = 0; i < MAXMISSILES && n < max; i++) {
+        struct nhv_flying *f = &missiles[i];
+
+        if (!f->obj || !f->fresh)
+            continue;
+        f->fresh = FALSE;
+        memset(&buf[n], 0, sizeof buf[n]);
+        buf[n].pid = f->pid;
+        buf[n].mon_id = f->mon_id;
+        buf[n].x = f->lx, buf[n].y = f->ly;
+        buf[n].range = f->range;
+        buf[n].otyp = f->obj->otyp;
+        buf[n].glyph = obj_to_glyph(f->obj, rn2_on_display_rng);
+        buf[n].tile = glyphmap[buf[n].glyph].tileidx;
+        n++;
+    }
+    return n;
+}
+
+/* forget missiles still in flight (e.g. after a level change) */
+NHV_API void
+nhv_clear_missiles(void)
+{
+    int i;
+
+    if (nhv_state() != NHV_WAITING)
+        return;
+    for (i = 0; i < MAXMISSILES; i++)
+        if (missiles[i].obj) {
+            obfree(missiles[i].obj, (struct obj *) 0);
+            missiles[i].obj = 0;
+        }
 }
 
 /* runs on the game thread (see nhv_call) */

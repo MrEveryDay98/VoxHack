@@ -31,7 +31,7 @@ local REPATH = 1.5       -- turns between path recomputations
 local MF = {
 	TAME = 0x001, PEACEFUL = 0x002, FLEE = 0x004, CANMOVE = 0x008,
 	SEES_U = 0x010, GRID = 0x020, VISIBLE = 0x040, CONFUSED = 0x080,
-	HIDER = 0x100, HIDDEN = 0x200,
+	HIDER = 0x100, HIDDEN = 0x200, KEEPAWAY = 0x400,
 }
 sim.MF = MF
 
@@ -291,6 +291,17 @@ local function think(e, map, dturns, hp, hero)
 	if has(e.flags, MF.FLEE) and hp then
 		local away = vector.add(e.pos, vector.multiply(vector.direction(hp, e.pos), 3))
 		move_toward(e, map, away, dist, 0, hp)
+		return
+	end
+	if has(e.flags, MF.SEES_U) and hp and has(e.flags, MF.KEEPAWAY) then
+		-- archers and the like hang back, between about 2.5 and 4.5 squares
+		local d = flat_dist(e.pos, hp)
+		if d < 2.5 * TILE then
+			local away = vector.add(e.pos, vector.multiply(vector.direction(hp, e.pos), 3))
+			move_toward(e, map, away, dist, 0, hp)
+		elseif d > 4.5 * TILE then
+			move_toward(e, map, hp, dist, 4 * TILE, hp)
+		end
 		return
 	end
 	if has(e.flags, MF.SEES_U) and hp then

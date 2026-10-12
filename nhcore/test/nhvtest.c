@@ -19,6 +19,7 @@ drain_events(void)
         switch (ev.kind) {
         case NHV_EV_MESSAGE: printf("MSG: %s\n", ev.text); break;
         case NHV_EV_RAW: printf("RAW: %s\n", ev.text); break;
+        case NHV_EV_MISSILE: printf("MISSILE: %s\n", ev.text); break;
         case NHV_EV_TEXT_BEGIN: printf("TEXT [%s] {\n", ev.text); break;
         case NHV_EV_TEXT_LINE: printf("  | %s\n", ev.text); break;
         case NHV_EV_TEXT_END: printf("}\n"); break;
@@ -110,6 +111,22 @@ send_arg(const char *a)
                 nhv_send_key('#'), nhv_send_text(buf);
             }
         }
+    } else if (!strcmp(a, "missiles")) {
+        /* list new missiles; the first one reaches the hero */
+        nhv_missile ms[16];
+        int n = nhv_get_missiles(ms, 16), k;
+        char buf[64];
+
+        for (k = 0; k < n; k++)
+            printf("  MISSILE pid=%u from mon %u at %d,%d otyp=%d tile=%d\n",
+                   ms[k].pid, ms[k].mon_id, ms[k].x, ms[k].y, ms[k].otyp,
+                   ms[k].tile);
+        if (n > 0) {
+            sprintf(buf, "nhvmhit %u", ms[0].pid);
+            nhv_send_key('#'), nhv_send_text(buf);
+        } else {
+            nhv_send_key('#'), nhv_send_text("nhvtick");
+        }
     } else if (!strncmp(a, "step:", 5)) {
         unsigned id; int x, y;
         if (sscanf(a + 5, "%u,%d,%d", &id, &x, &y) == 3)
@@ -131,11 +148,16 @@ main(int argc, char **argv)
         fprintf(stderr, "usage: nhvtest datadir userdir [inputs...]\n");
         return 2;
     }
+    /* NHVTEST_WIZARD=1: debug mode (for #wizgenesis etc.) */
     if (nhv_start(argv[1], argv[2],
-                  "OPTIONS=role:valkyrie,race:human,gender:female,"
-                  "align:neutral,!autopickup,pettype:cat,!tutorial,!legacy,"
-                  "!splash_screen,suppress_alert:3.4.3",
-                  "tester") != 0) {
+                  getenv("NHVTEST_WIZARD")
+                  ? "OPTIONS=role:barbarian,race:human,gender:male,"
+                    "align:neutral,!autopickup,pettype:none,!tutorial,!legacy,"
+                    "!splash_screen,suppress_alert:3.4.3,playmode:debug"
+                  : "OPTIONS=role:valkyrie,race:human,gender:female,"
+                    "align:neutral,!autopickup,pettype:cat,!tutorial,!legacy,"
+                    "!splash_screen,suppress_alert:3.4.3",
+                  getenv("NHVTEST_WIZARD") ? "wizard" : "tester") != 0) {
         fprintf(stderr, "nhv_start failed\n");
         return 1;
     }

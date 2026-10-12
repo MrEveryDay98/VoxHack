@@ -6,6 +6,7 @@
 #include "nhv_internal.h"
 
 extern glyph_map glyphmap[MAX_GLYPH]; /* display.c / tile.c */
+static void ensure_mons(void);
 
 /* ------------------------------------------------------------ sync state */
 static CRITICAL_SECTION cs;
@@ -611,6 +612,7 @@ nhv_cmap_name(int symidx)
 NHV_API const char *
 nhv_mon_name(int mndx)
 {
+    ensure_mons();
     if (mndx < LOW_PM || mndx >= NUMMONS)
         return "";
     /* some monsters only have male/female names */
@@ -621,9 +623,20 @@ nhv_mon_name(int mndx)
     return mons[mndx].pmnames[FEMALE] ? mons[mndx].pmnames[FEMALE] : "";
 }
 
+/* NetHack fills mons[] when a game starts; for static queries before
+   that (the editor), fill it ourselves */
+static void
+ensure_mons(void)
+{
+    if (!mons[LOW_PM].pmnames[NEUTRAL] && !mons[LOW_PM].pmnames[MALE]
+        && game_state == NHV_NOT_STARTED)
+        monst_globals_init();
+}
+
 NHV_API int
 nhv_num_monsters(void)
 {
+    ensure_mons();
     return NUMMONS;
 }
 
@@ -633,6 +646,7 @@ nhv_mon_info(int mndx, nhv_moninfo *out)
     int g;
 
     memset(out, 0, sizeof *out);
+    ensure_mons();
     if (mndx < LOW_PM || mndx >= NUMMONS)
         return 0;
     out->size = mons[mndx].msize;

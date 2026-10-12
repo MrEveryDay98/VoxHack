@@ -170,6 +170,8 @@ end
 
 -- ---------------------------------------------------------------- objects
 local OBJ_H = 0.8
+-- objects that face you instead of spinning
+local BILLBOARD = {["chest"] = true, ["large box"] = true, ["ice box"] = true}
 local BOULDER_H = 2.6
 
 local function update_objects(snap)
@@ -188,12 +190,17 @@ local function update_objects(snap)
 				end
 				local h = OBJ_H
 				local name = core.nh_obj_name(gi.index) or ""
+				local flat = gi.kind == "body"
 				if gi.kind == "statue" then
 					h = 2.0
 				elseif name == "boulder" then
 					h = BOULDER_H
+				elseif flat then
+					h = 1.4 -- corpses lie on the floor
+				elseif BILLBOARD[name] then
+					h = 1.4
 				end
-				local pos = U.tile_center(tx, ty, U.STAND_Y + h / 2)
+				local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03) or (U.STAND_Y + h / 2))
 				if not e then
 					local obj = core.add_entity(pos, "nhv:obj")
 					if obj then
@@ -215,7 +222,12 @@ local function update_objects(snap)
 					e.obj:set_properties(props)
 					e.obj:set_pos(pos)
 					e.tile, e.h = map.mem_tile[i], h
-					e.spin = (h == OBJ_H)
+					-- small items spin; chests and boxes face you; corpses lie flat
+					e.flat = flat
+					e.spin = (h == OBJ_H) and not BILLBOARD[name]
+					if flat then
+						e.obj:set_rotation(vector.new(math.pi / 2, math.random() * math.pi * 2, 0))
+					end
 				end
 				if e then
 					e.x, e.y, e.boulder = tx, ty, name == "boulder"
@@ -346,7 +358,9 @@ core.register_globalstep(function(dtime)
 		end
 	end
 	for _, e in pairs(mobs.objs) do
-		if e.spin and e.obj:get_pos() then
+		if e.flat then -- luacheck: ignore 542
+			-- lies still
+		elseif e.spin and e.obj:get_pos() then
 			e.obj:set_yaw((clock_t * 0.8) % (2 * math.pi))
 		elseif e.obj:get_pos() and ppos then
 			local pos = e.obj:get_pos()

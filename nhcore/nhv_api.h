@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 3
+#define NHV_API_VERSION 4
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -115,7 +115,8 @@ enum nhv_event_kind {
     NHV_EV_RAW,         /* raw_print output (errors, early messages) */
     NHV_EV_LEVEL_CHANGE,/* hero arrived on a different level */
     NHV_EV_BELL,
-    NHV_EV_DELAY        /* animation frame boundary (delay_output) */
+    NHV_EV_DELAY,       /* animation frame boundary (delay_output) */
+    NHV_EV_MISSILE      /* missile outcome: "hit|miss|stop|pass|land <pid>" */
 };
 
 typedef struct nhv_event {
@@ -299,6 +300,7 @@ NHV_API void nhv_set_monstates(const nhv_monstate *states, int n);
 #define NHV_MF_CONFUSED 0x080
 #define NHV_MF_HIDER    0x100
 #define NHV_MF_HIDDEN   0x200
+#define NHV_MF_KEEPAWAY 0x400  /* prefers to fight from a distance */
 
 typedef struct nhv_monfull {
     unsigned id;
@@ -317,6 +319,23 @@ NHV_API int nhv_get_all_monsters(nhv_monfull *buf, int max);
  * synchronously on the game thread. Returns 1 moved, 0 refused, -1 the
  * monster is gone (e.g. died in a trap). */
 NHV_API int nhv_move_monster(unsigned id, int x, int y);
+
+/* Missiles monsters throw at the hero don't resolve on the grid: they are
+ * handed to the host, which flies them and reports the outcome with
+ * "#nhvmhit pid" (reached the hero), "#nhvmhitm pid m_id" (reached a
+ * monster) or "#nhvmland pid x y" (came down). Each produces an
+ * NHV_EV_MISSILE event; "miss" means the to-hit roll failed (dodged) and
+ * the missile keeps flying. */
+typedef struct nhv_missile {
+    unsigned pid;
+    unsigned mon_id;    /* thrower, 0 if none */
+    int x, y;           /* launch square */
+    int range;          /* squares */
+    int otyp, glyph, tile;
+} nhv_missile;
+/* missiles launched since the last call */
+NHV_API int nhv_get_missiles(nhv_missile *buf, int max);
+NHV_API void nhv_clear_missiles(void);
 
 #ifdef __cplusplus
 }
