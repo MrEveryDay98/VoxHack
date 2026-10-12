@@ -80,6 +80,7 @@ function nh.start(name)
 		core.log("error", "[nhv] could not start NetHack: " .. tostring(err))
 		return false, err
 	end
+	core.nh_set_freemove(true)
 	nh.state = "busy"
 	return true
 end
@@ -103,6 +104,21 @@ local function take_snapshot()
 	nh.snap_serial = nh.snap_serial + 1
 	snap.serial = nh.snap_serial
 	return snap
+end
+
+-- Re-read the game state while NetHack is waiting (e.g. after monsters
+-- changed squares) and notify listeners.
+function nh.refresh()
+	if nh.state ~= "waiting" then
+		return
+	end
+	local snap = take_snapshot()
+	if snap then
+		nh.snap = snap
+		for _, fn in ipairs(nh.listeners) do
+			fn(snap, {kind = "refresh"})
+		end
+	end
 end
 
 -- Send keys for an action. keys: string (each char a key) or list of

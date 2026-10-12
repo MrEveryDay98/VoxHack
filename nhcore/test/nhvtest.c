@@ -89,7 +89,33 @@ send_arg(const char *a)
         nhv_send_menu(a + 5);
     else if (!strcmp(a, "esc"))
         nhv_send_key('\033');
-    else if (!strcmp(a, "save"))
+    else if (!strcmp(a, "free"))
+        nhv_set_freemove(1), nhv_send_key('#'), nhv_send_text("nhvtick");
+    else if (!strncmp(a, "tick", 4))
+        nhv_send_key('#'), nhv_send_text("nhvtick");
+    else if (!strncmp(a, "mstep:", 6) || !strncmp(a, "hmove:", 6)) {
+        /* relative: first monster / hero moves by dx,dy */
+        int dx, dy;
+        nhv_hero h;
+        nhv_monfull m[8];
+        char buf[64];
+
+        if (sscanf(a + 6, "%d,%d", &dx, &dy) == 2) {
+            nhv_get_hero(&h);
+            if (a[0] == 'm' && nhv_get_all_monsters(m, 8) > 0) {
+                printf("STEP -> %d\n", nhv_move_monster(m[0].id, m[0].x + dx, m[0].y + dy));
+                nhv_send_key('#'), nhv_send_text("nhvtick");
+            } else if (a[0] == 'h') {
+                sprintf(buf, "nhvmove %d %d", h.x + dx, h.y + dy);
+                nhv_send_key('#'), nhv_send_text(buf);
+            }
+        }
+    } else if (!strncmp(a, "step:", 5)) {
+        unsigned id; int x, y;
+        if (sscanf(a + 5, "%u,%d,%d", &id, &x, &y) == 3)
+            printf("STEP -> %d\n", nhv_move_monster(id, x, y));
+        nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strcmp(a, "save"))
         nhv_send_key('S'), nhv_send_key('y');
     else
         nhv_send_key((unsigned char) a[0]);

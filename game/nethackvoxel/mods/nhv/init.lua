@@ -4,7 +4,10 @@ nhv = {}
 local path = core.get_modpath("nhv") .. DIR_DELIM
 dofile(path .. "util.lua")
 dofile(path .. "nh.lua")
+dofile(path .. "scale.lua")
 dofile(path .. "terrain.lua")
+dofile(path .. "path.lua")
+dofile(path .. "sim.lua")
 dofile(path .. "mobs.lua")
 
 local U = nhv.util
@@ -22,17 +25,21 @@ nh.on_snapshot(function(snap)
 	local changed = world.ledger ~= snap.hero.ledger
 	world.ledger = snap.hero.ledger
 	if changed then
+		nhv.sim.clear()
 		nhv.terrain.build_all(snap.map)
 	else
 		nhv.terrain.update(snap.map)
 	end
+	nhv.sim.sync()
 	nhv.mobs.update(snap, changed)
 end)
 
+dofile(path .. "clock.lua")
 dofile(path .. "player.lua")
 dofile(path .. "hud.lua")
 dofile(path .. "ui.lua")
 dofile(path .. "actions.lua")
+dofile(path .. "loop.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists
 -- before NetHack starts drawing into it.
@@ -58,6 +65,7 @@ function nhv.new_game(player)
 	nhv.player.ledger = nil
 	nhv.player.hero = nil
 	nhv.mobs.clear()
+	nhv.sim.clear()
 	with_area(function()
 		local ok, err = nh.start(player:get_player_name())
 		if not ok then

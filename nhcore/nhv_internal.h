@@ -5,12 +5,18 @@
 #include "nhv_api.h"
 
 /* one queued piece of host input */
-enum nhv_qitem_type { NHV_Q_KEY = 1, NHV_Q_TEXT, NHV_Q_MENU };
+enum nhv_qitem_type { NHV_Q_KEY = 1, NHV_Q_TEXT, NHV_Q_MENU, NHV_Q_CALL };
+enum nhv_call_id { NHV_CALL_MON_STEP = 1 };
 typedef struct nhv_qitem {
     int type;
     int key;
     char str[256];
+    int args[4];    /* NHV_Q_CALL: call id is 'key' */
 } nhv_qitem;
+
+/* nhv_free.c */
+extern int nhv_cmd_args[4];
+int nhv_exec_mon_step(unsigned id, int x, int y);
 
 /* nhv_main.c */
 void nhv_set_dirs(const char *datadir, const char *userdir);

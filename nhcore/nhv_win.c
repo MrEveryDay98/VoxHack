@@ -518,6 +518,25 @@ nhv_get_ext_cmd(void)
     wait_for(NHV_REQ_EXTCMD, "#", "", 0, &in);
     if (in.type != NHV_Q_TEXT || !in.str[0])
         return -1;
+    /* "name arg arg..." -- arguments for the #nhv* host commands */
+    {
+        char *sp = strchr(in.str, ' ');
+
+        memset(nhv_cmd_args, 0, sizeof nhv_cmd_args);
+        if (sp) {
+            int k = 0;
+            char *p = sp;
+
+            *sp = '\0';
+            while (k < 4 && *++p) {
+                nhv_cmd_args[k++] = atoi(p);
+                while (*p && *p != ' ')
+                    p++;
+                if (!*p)
+                    break;
+            }
+        }
+    }
     n = extcmds_match(in.str, ECM_IGNOREAC | ECM_EXACTMATCH, &matches);
     return (n == 1 && matches) ? matches[0] : -1;
 }

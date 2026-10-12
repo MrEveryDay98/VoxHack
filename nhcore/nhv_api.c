@@ -190,23 +190,80 @@ nhv_clear_input(void)
     LeaveCriticalSection(&cs);
 }
 
+/* synchronous calls run on the game thread while it waits for input */
+static volatile int call_done, call_result;
+
+static int
+exec_call(const nhv_qitem *it)
+{
+    switch (it->key) {
+    case NHV_CALL_MON_STEP:
+        return nhv_exec_mon_step((unsigned) it->args[0], it->args[1],
+                                 it->args[2]);
+    default:
+        return 0;
+    }
+}
+
 /* game thread side */
 void
 nhv_wait_input(const nhv_request *req, nhv_qitem *out)
 {
     EnterCriticalSection(&cs);
-    while (q_count == 0) {
-        cur_req = *req;
-        game_state = NHV_WAITING;
-        WakeAllConditionVariable(&cv_state);
-        SleepConditionVariableCS(&cv_input, &cs, INFINITE);
+    for (;;) {
+        while (q_count == 0) {
+            cur_req = *req;
+            game_state = NHV_WAITING;
+            WakeAllConditionVariable(&cv_state);
+            SleepConditionVariableCS(&cv_input, &cs, INFINITE);
+        }
+        *out = queue[q_head];
+        q_head = (q_head + 1) % QMAX;
+        q_count--;
+        if (out->type != NHV_Q_CALL)
+            break;
+        /* a call: run it and keep waiting for real input */
+        LeaveCriticalSection(&cs);
+        {
+            int r = exec_call(out);
+
+            EnterCriticalSection(&cs);
+            call_result = r;
+            call_done = 1;
+            game_state = NHV_WAITING;
+            WakeAllConditionVariable(&cv_state);
+        }
     }
-    *out = queue[q_head];
-    q_head = (q_head + 1) % QMAX;
-    q_count--;
     game_state = NHV_BUSY;
     cur_req.kind = NHV_REQ_NONE;
     LeaveCriticalSection(&cs);
+}
+
+NHV_API int
+nhv_move_monster(unsigned id, int x, int y)
+{
+    nhv_qitem it;
+    int r;
+
+    memset(&it, 0, sizeof it);
+    it.type = NHV_Q_CALL;
+    it.key = NHV_CALL_MON_STEP;
+    it.args[0] = (int) id, it.args[1] = x, it.args[2] = y;
+    EnterCriticalSection(&cs);
+    if (game_state != NHV_WAITING || q_count != 0) {
+        LeaveCriticalSection(&cs);
+        return 0;
+    }
+    call_done = 0;
+    queue[(q_head + q_count) % QMAX] = it;
+    q_count++;
+    game_state = NHV_BUSY;
+    WakeAllConditionVariable(&cv_input);
+    while (!call_done)
+        SleepConditionVariableCS(&cv_state, &cs, INFINITE);
+    r = call_result;
+    LeaveCriticalSection(&cs);
+    return r;
 }
 
 /* ------------------------------------------------------------ events */

@@ -1,6 +1,6 @@
 -- Player actions and controls.
 --
---   Left click        attack whatever you aim at (NetHack's F + direction)
+--   Left click        attack the monster in reach nearest your crosshair
 --   Shift+left click  fire your quivered ammo where you look
 --   Right click       interact: open/close doors, use stairs, pick up
 --   Shift+right click list everything you can do on/at a square
@@ -42,62 +42,61 @@ local function angle_between(a, b)
 	return math.acos(math.max(-1, math.min(1, d)))
 end
 
-local function attack_dir(dx, dy)
-	nhv.player.timed_action("F" .. U.dir_key(dx, dy), {kind = "attack"}, 0.4)
-end
+local ATTACK_CONE = 0.6 -- radians either side of the crosshair
 
--- Attack the adjacent monster closest to the crosshair, or swing at the
--- square you face (hits invisible monsters; costs a turn like NetHack).
-function actions.attack(player)
-	if busy() then
-		return
-	end
-	local h = hero()
-	local eye = vector.add(player:get_pos(), vector.new(0, 1.6, 0))
+-- the perceived monster your swing would hit: within reach of your body
+-- and closest to the crosshair
+local function attack_target(player, prefer_id)
+	local pos = player:get_pos()
 	local look = player:get_look_dir()
 	local best, best_a
 	for _, e in pairs(nhv.mobs.mons) do
-		if e.x and math.abs(e.x - h.x) <= 1 and math.abs(e.y - h.y) <= 1
-				and (e.x ~= h.x or e.y ~= h.y) then
-			local c = U.tile_center(e.x, e.y)
-			local a = angle_between(look, vector.subtract(c, eye))
-			if a < 0.7 and (not best_a or a < best_a) then
-				best, best_a = e, a
+		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
+		if body then
+			local d = vector.distance(vector.new(pos.x, 0, pos.z), body.pos)
+			local reach = body.r + nhv.sim.HERO_R + nhv.sim.REACH + 0.6
+			if d <= reach then
+				local a = angle_between(look, vector.subtract(body.pos, pos))
+				if e.id == prefer_id then
+					a = a - 0.3
+				end
+				if a < ATTACK_CONE and (not best_a or a < best_a) then
+					best, best_a = e, a
+				end
 			end
 		end
 	end
-	if best then
-		attack_dir(best.x - h.x, best.y - h.y)
+	return best
+end
+
+function actions.attack(player, prefer_id)
+	if busy() or nhv.clock.busy() then
+		return
+	end
+	local h = hero()
+	if U.has(h.flags, U.HERO.SWALLOWED) then
+		nhv.clock.act("Fl", {kind = "attack"})
+		return
+	end
+	local t = attack_target(player, prefer_id)
+	if t then
+		nhv.clock.act({{key = "#"}, {text = "nhvattack " .. t.id}}, {kind = "attack"})
 	else
-		local dx, dy = U.vec_to_dir(look)
-		if dx ~= 0 or dy ~= 0 then
-			attack_dir(dx, dy)
-		end
+		-- a swing at nothing still takes the time a swing takes
+		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "swing"})
 	end
 end
 
 function actions.attack_entity(player, ent)
-	if busy() then
-		return
-	end
 	local e = nhv.mobs.mons[ent.nh_key]
-	local h = hero()
-	if not e or not h then
-		return
-	end
-	local dx, dy = e.x - h.x, e.y - h.y
-	if math.abs(dx) <= 1 and math.abs(dy) <= 1 and (dx ~= 0 or dy ~= 0) then
-		attack_dir(dx, dy)
-	else
-		actions.attack(player)
-	end
+	actions.attack(player, e and e.id)
 end
 
 function actions.fire(player)
-	if busy() then
+	if busy() or nhv.clock.busy() then
 		return
 	end
-	nhv.player.timed_action("f", {kind = "fire"}, 0.6)
+	nhv.clock.act("f", {kind = "fire"})
 end
 
 -- ---------------------------------------------------------------- squares
@@ -209,7 +208,7 @@ local function square_actions(tx, ty)
 end
 
 local function run_keys(keys, info, secs)
-	nhv.player.timed_action(keys, info or {kind = "interact"}, secs or 0.35)
+	nhv.clock.act(keys, info or {kind = "interact"})
 end
 
 -- Right click: the most likely action for what you point at.
@@ -382,7 +381,7 @@ function actions.do_item_action(player, o, a)
 		end
 		keys = k2
 	end
-	nhv.player.timed_action(keys, {kind = "item"}, 0.5)
+	nhv.clock.act(keys, {kind = "item"})
 end
 
 -- ---------------------------------------------------------------- hooking up
@@ -410,7 +409,7 @@ end
 local function on_drop(itemstack, dropper)
 	local invlet = itemstack:get_meta():get_string("nhv_invlet")
 	if invlet ~= "" and nh.ready() then
-		nhv.player.timed_action({{key = "d"}, {key = invlet}}, {kind = "drop"}, 0.3)
+		nhv.clock.act({{key = "d"}, {key = invlet}}, {kind = "drop"})
 	end
 	return itemstack
 end
@@ -454,7 +453,7 @@ core.register_globalstep(function()
 		end
 	end
 	if pressed("jump") and nh.ready() then
-		nhv.player.timed_action("ms", {kind = "wait"}, 0.3)
+		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "wait"})
 	end
 	if pressed("zoom") then
 		nhv.hud.toggle_map()

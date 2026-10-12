@@ -4,22 +4,18 @@
 -- Every sprite is a NetHack tile rendered with visual = "wielditem",
 -- which Luanti draws as an extruded voxel model.
 --
--- Monster movement is tweened between the square a monster was on and
--- the square it moved to, driven by nhv.time.p (0..1), which advances
--- only while the hero moves or acts: stand still and everything freezes.
+-- Monsters are drawn where their bodies are in nhv.sim (continuous
+-- positions); only the ones NetHack says the hero perceives are shown.
+-- Their hitbox matches their sprite and is solid to the player.
 
 local U = nhv.util
+local scale = nhv.scale
 local mobs = {
-	mons = {},      -- key -> {obj=, from=, to=, tile=, flags=, wavy=}
+	mons = {},      -- key -> {obj=, tile=, h=, x=, y=, mon=, id=}
 	objs = {},      -- square index -> {obj=, tile=}
 	feats = {},     -- square index -> {obj=, tile=}
 }
 nhv.mobs = mobs
-
-nhv.time = {p = 1}
-
--- sprite height in nodes per monster size (MZ_TINY .. MZ_GIGANTIC)
-local SIZE_H = {[0] = 1.1, 1.5, 2.0, 2.7, 3.5, 4.4}
 
 local function sprite_props(tile, height)
 	local s = height / 2
@@ -51,11 +47,6 @@ core.register_entity("nhv:mon", {
 			nhv.actions.attack_entity(puncher, self)
 		end
 		return true
-	end,
-	on_activate = function(self, staticdata)
-		if staticdata == "" then
-			-- only ever created by this mod at runtime
-		end
 	end,
 })
 
@@ -92,50 +83,58 @@ function mobs.clear()
 	end
 end
 
-local function mon_height(m)
-	if m.size and SIZE_H[m.size] then
-		return SIZE_H[m.size]
-	end
-	return SIZE_H[2]
-end
-
-local function mon_pos(tx, ty, height)
-	return U.tile_center(tx, ty, U.STAND_Y + height / 2)
-end
-
 -- ---------------------------------------------------------------- monsters
+-- where to draw a perceived monster: its body if we simulate it, else
+-- the middle of its square (remembered 'I's, warnings)
+local function mon_draw_pos(e)
+	local body = e.id and e.id > 0 and nhv.sim.body(e.id)
+	local base
+	if body and body.x == e.x and body.y == e.y then
+		base = body.pos
+	else
+		base = U.tile_center(e.x, e.y)
+	end
+	return vector.new(base.x, U.STAND_Y + e.h / 2, base.z)
+end
+
+local function apply_sprite(e, m)
+	local h = scale.height(m.size, m.mndx)
+	if e.tile ~= m.tile or e.h ~= h then
+		local props = sprite_props(m.tile, h)
+		local w = scale.radius(m.size, m.mndx)
+		-- solid body for the player, the size of the sprite
+		if m.id > 0 then
+			props.collide_with_objects = true
+			props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}
+		end
+		e.obj:set_properties(props)
+		e.tile, e.h = m.tile, h
+	end
+end
+
 local function update_monsters(snap)
 	local seen = {}
 	local hallu = U.has(snap.hero.flags, U.HERO.HALLU)
 	for _, m in ipairs(snap.monsters) do
 		local key = m.id > 0 and ("id" .. m.id) or ("at" .. m.x .. "," .. m.y)
 		seen[key] = true
-		local h = mon_height(m)
-		local target = mon_pos(m.x, m.y, h)
 		local e = mobs.mons[key]
 		if e and not e.obj:get_pos() then
 			e = nil
 		end
-		local wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
 		if not e then
-			local obj = core.add_entity(target, "nhv:mon")
+			local obj = core.add_entity(U.tile_center(m.x, m.y), "nhv:mon")
 			if obj then
-				e = {obj = obj, from = target, to = target}
+				e = {obj = obj}
 				obj:get_luaentity().nh_key = key
 				mobs.mons[key] = e
 			end
-		else
-			e.from = e.obj:get_pos()
-			e.to = target
 		end
 		if e then
-			e.x, e.y, e.mon = m.x, m.y, m
-			e.wavy = wavy
-			e.height = h
-			if e.tile ~= m.tile or e.h ~= h then
-				e.obj:set_properties(sprite_props(m.tile, h))
-				e.tile, e.h = m.tile, h
-			end
+			e.x, e.y, e.mon, e.id = m.x, m.y, m, m.id
+			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
+			apply_sprite(e, m)
+			e.obj:set_pos(mon_draw_pos(e))
 		end
 	end
 	for key, e in pairs(mobs.mons) do
@@ -146,6 +145,23 @@ local function update_monsters(snap)
 			mobs.mons[key] = nil
 		end
 	end
+end
+
+-- re-apply sizes after /scale
+function mobs.refresh_sizes()
+	for _, e in pairs(mobs.mons) do
+		if e.mon and e.obj:get_pos() then
+			e.tile = nil
+			apply_sprite(e, e.mon)
+		end
+	end
+	nhv.sim.sync()
+end
+
+-- only refresh which monsters are perceived (cheap, every step a
+-- monster changed squares)
+function mobs.update_monsters_only(snap)
+	update_monsters(snap)
 end
 
 -- ---------------------------------------------------------------- objects
@@ -283,24 +299,23 @@ function mobs.monster_at(tx, ty)
 end
 
 -- ---------------------------------------------------------------- per step
-local clock = 0
+local clock_t = 0
 core.register_globalstep(function(dtime)
-	clock = clock + dtime
-	local p = nhv.time.p
+	clock_t = clock_t + dtime
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
 	for _, e in pairs(mobs.mons) do
 		local obj = e.obj
-		if obj:get_pos() then
-			local pos = vector.add(e.from, vector.multiply(vector.subtract(e.to, e.from), p))
+		if obj:get_pos() and e.h then
+			local pos = mon_draw_pos(e)
 			obj:move_to(pos, true)
 			if ppos then
 				local d = vector.subtract(ppos, pos)
 				local yaw = math.atan2(d.z, d.x) - math.pi / 2
 				if e.wavy then
-					yaw = yaw + math.sin(clock * 5 + (e.x or 0)) * 0.35
-					local s = (e.h or 2) / 2
-					local w = 1 + 0.18 * math.sin(clock * 9 + (e.y or 0))
+					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
+					local s = e.h / 2
+					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
 					obj:set_properties({visual_size = {x = s * w, y = s / w, z = s}})
 				end
 				obj:set_yaw(yaw)
@@ -309,7 +324,7 @@ core.register_globalstep(function(dtime)
 	end
 	for _, e in pairs(mobs.objs) do
 		if e.spin and e.obj:get_pos() then
-			e.obj:set_yaw((clock * 0.8) % (2 * math.pi))
+			e.obj:set_yaw((clock_t * 0.8) % (2 * math.pi))
 		elseif e.obj:get_pos() and ppos then
 			local pos = e.obj:get_pos()
 			local d = vector.subtract(ppos, pos)

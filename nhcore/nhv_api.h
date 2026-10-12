@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 1
+#define NHV_API_VERSION 2
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -258,6 +258,51 @@ NHV_API int nhv_tile_count(void);
 NHV_API const char *nhv_cmap_name(int symidx);
 NHV_API const char *nhv_mon_name(int mndx);
 NHV_API const char *nhv_obj_name(int otyp); /* actual (unidentified-safe? no: true) name */
+
+/* ------------------------------------------------------------ free movement
+ * In free-movement mode the host owns physical positions. Monsters stop
+ * stepping around the grid by themselves; the host moves them and calls
+ * nhv_move_monster() when a body crosses into another square. Melee range is
+ * whatever the host reports through nhv_set_monstates(). The hero moves
+ * with "#nhvmove x y" (no time), time passes with "#nhvtick", and melee
+ * attacks with "#nhvattack <m_id>". */
+NHV_API void nhv_set_freemove(int on);
+
+typedef struct nhv_monstate {
+    unsigned id;
+    int in_reach;           /* can hit the hero in melee right now */
+    unsigned melee_target;  /* m_id this monster should fight, or 0 */
+} nhv_monstate;
+NHV_API void nhv_set_monstates(const nhv_monstate *states, int n);
+
+#define NHV_MF_TAME     0x001
+#define NHV_MF_PEACEFUL 0x002
+#define NHV_MF_FLEE     0x004
+#define NHV_MF_CANMOVE  0x008  /* awake, not trapped/paralyzed/eating */
+#define NHV_MF_SEES_U   0x010
+#define NHV_MF_GRID     0x020  /* NetHack keeps moving it on the grid */
+#define NHV_MF_VISIBLE  0x040  /* hero can perceive it */
+#define NHV_MF_CONFUSED 0x080
+#define NHV_MF_HIDER    0x100
+#define NHV_MF_HIDDEN   0x200
+
+typedef struct nhv_monfull {
+    unsigned id;
+    int x, y;       /* NetHack square */
+    int mndx;       /* true monster type */
+    int speed;      /* movement rate, 12 = normal */
+    int size;
+    int mux, muy;   /* where it thinks the hero is */
+    int flags;      /* NHV_MF_* */
+} nhv_monfull;
+/* Every monster on the level (true state, for the host's simulation;
+ * only draw what nhv_get_monsters() says the hero perceives). */
+NHV_API int nhv_get_all_monsters(nhv_monfull *buf, int max);
+
+/* Move monster <id> onto adjacent square <x,y>. Only while WAITING; runs
+ * synchronously on the game thread. Returns 1 moved, 0 refused, -1 the
+ * monster is gone (e.g. died in a trap). */
+NHV_API int nhv_move_monster(unsigned id, int x, int y);
 
 #ifdef __cplusplus
 }
