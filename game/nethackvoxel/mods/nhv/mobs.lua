@@ -94,7 +94,8 @@ local function mon_draw_pos(e)
 	else
 		base = U.tile_center(e.x, e.y)
 	end
-	return vector.new(base.x, U.STAND_Y + e.h / 2, base.z)
+	local y = scale.mon_center_y(e.mon and e.mon.mndx, e.h, U.STAND_Y, U.CEIL_Y - 0.5)
+	return vector.new(base.x, y, base.z)
 end
 
 local function apply_sprite(e, m)
@@ -268,8 +269,8 @@ local function update_features(snap)
 						e = nil
 					end
 					local h = flat and 2.4 or (nhv.scale.feature_height(name) or 1.8)
-					local pos = U.tile_center(tx, ty,
-						flat and (U.STAND_Y + 0.02) or (U.STAND_Y + h / 2))
+					local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.02)
+						or scale.center_y("feat", name, h, U.STAND_Y, U.CEIL_Y - 0.5))
 					if not e then
 						local obj = core.add_entity(pos, "nhv:feat")
 						if obj then
@@ -277,7 +278,8 @@ local function update_features(snap)
 							mobs.feats[i] = e
 						end
 					end
-					if e and (e.tile ~= map.mem_tile[i] or e.h ~= h) then
+					if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
+						e.pos = pos
 						local props = sprite_props(map.mem_tile[i], h)
 						props.pointable = false
 						e.obj:set_properties(props)

@@ -240,7 +240,8 @@ local SILENCED = {
 	"^Your body is too large to fit", "^You try to squeeze",
 	"^There is an obstacle there", "^You harmlessly attack thin air",
 	"^You already found a monster", "^There's a .* in the way",
-	"^You hear a monster behind the boulder",
+	"^You hear a monster behind the boulder", "blocks your way", "blocks your path",
+	"^You can.t move past", "in the way%.$", "^You swap places with",
 }
 
 function hud.silenced(text)

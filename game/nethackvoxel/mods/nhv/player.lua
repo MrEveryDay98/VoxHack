@@ -19,7 +19,6 @@ local player_mod = {
 nhv.player = player_mod
 
 local GRACE_US = 400000 -- after we move the body, ignore stale positions
-local HALF = U.TILE / 2
 
 function player_mod.get()
 	return core.get_connected_players()[1]
@@ -70,18 +69,6 @@ function player_mod.freeze(on)
 			set_speed(p)
 		end
 	end
-end
-
--- keep the body inside the hero's square (just inside the edge nearest
--- to where it is now)
-local function clamp_to_hero(player)
-	local h = player_mod.hero
-	local c = U.tile_center(h.x, h.y)
-	local pos = player:get_pos()
-	local lim = HALF - 0.4
-	local x = math.max(c.x - lim, math.min(c.x + lim, pos.x))
-	local z = math.max(c.z - lim, math.min(c.z + lim, pos.z))
-	teleport(player, vector.new(x, pos.y, z))
 end
 
 -- direction the player is trying to walk (from the movement keys)
@@ -153,10 +140,18 @@ local function step(player)
 		return
 	end
 	player_mod.ahead = nil
-	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 or not U.in_map(tx, ty) then
-		clamp_to_hero(player)
+	if not U.in_map(tx, ty) then
 		return
 	end
+	-- NetHack refused that square a moment ago (someone is standing in
+	-- it, ...): the body just stays where it is; try again shortly
+	if player_mod.retry_at and core.get_us_time() < player_mod.retry_at then
+		return
+	end
+	player_mod.retry_at = nil
+	-- more than one square away (e.g. after waiting): step toward it
+	tx = h.x + U.sign(tx - h.x)
+	ty = h.y + U.sign(ty - h.y)
 	nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(tx, ty)}},
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
 end
@@ -211,7 +206,8 @@ nh.on_snapshot(function(snap, action)
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
-			clamp_to_hero(player) -- refused
+			-- refused: no teleporting the body back; retry later
+			player_mod.retry_at = core.get_us_time() + 500000
 		elseif h.x ~= action.tx or h.y ~= action.ty then
 			teleport(player, U.tile_center(h.x, h.y)) -- moved elsewhere
 		end

@@ -150,6 +150,37 @@ function actions.pointed(player)
 	return {kind = "square", tx = h.x, ty = h.y}
 end
 
+-- Answer for "In what direction?": the square you point at (an
+-- adjacent one gives its direction, your own gives '.'); looking steeply
+-- up or down gives '<' / '>' (zapping, digging, ...).
+function actions.pointed_dir_key(player, prompt)
+	local pitch = player:get_look_vertical()
+	local h = hero()
+	local p = actions.pointed(player)
+	local dx, dy = p.tx - h.x, p.ty - h.y
+	if math.abs(dx) <= 1 and math.abs(dy) <= 1 and (dx ~= 0 or dy ~= 0) then
+		return U.dir_key(dx, dy)
+	end
+	if pitch > 1.0 then
+		-- your own square: '.' unless it can mean "down" here
+		if prompt and (prompt:find("dig") or prompt:find("zap")) then
+			return ">"
+		end
+		return "."
+	elseif pitch < -1.0 then
+		return "<"
+	end
+	-- something further away: the direction it lies in
+	local ddx, ddy = U.sign(dx), U.sign(dy)
+	if ddx == 0 and ddy == 0 then
+		ddx, ddy = U.vec_to_dir(player:get_look_dir())
+	end
+	if ddx == 0 and ddy == 0 then
+		return "."
+	end
+	return U.dir_key(ddx, ddy)
+end
+
 local function square_info(tx, ty)
 	local map = nh.snap.map
 	local i = U.idx(tx, ty)

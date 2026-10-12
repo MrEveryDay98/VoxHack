@@ -13,7 +13,7 @@ local terrain = {}
 nhv.terrain = terrain
 
 local function tile_tex(n)
-	return "[fill:16x16:#000000^" .. nhv_tiles.texture(n)
+	return "[fill:16x16:#000000^(" .. nhv_tiles.texture(n) .. ")"
 end
 
 local BLACK = "[fill:16x16:#000000"

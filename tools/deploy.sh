@@ -15,7 +15,7 @@ ninja -C "$ROOT/build/nhcore"
 ninja -C "$LUANTI/build"
 
 # 3. tiles
-if [ ! -f "$GAME/mods/nhv_tiles/tilenames.lua" ]; then
+if [ ! -f "$GAME/mods/nhv_tiles/textures/nhv_tiles.png" ]; then
 	python -I "$ROOT/tools/tiles2png.py" "$ROOT/external/nethack" "$GAME/mods/nhv_tiles/textures" "$GAME/mods/nhv_tiles/tilenames.lua"
 fi
 

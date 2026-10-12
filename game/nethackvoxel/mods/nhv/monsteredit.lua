@@ -2,10 +2,12 @@
 -- and dungeon feature is drawn.
 --
 -- Press E (or /monsters). A list of every monster and feature appears on
--- the left; the selected one stands on a stage on the right, turning
--- slowly, with a grid of 1-node squares (the bright 3x3 square is one map
--- square) and an optional view of its hitbox. Drag the scale slider, or
--- reset it to the default. Scales are saved for all worlds immediately.
+-- the left; the selected one stands on a stage on the right, facing you,
+-- with a grid of 1-node squares (the bright 3x3 square is one map square),
+-- a see-through ceiling at the game's ceiling height, and an optional view
+-- of its hitbox. Set its scale, whether it stands on the floor or hangs
+-- from the ceiling, and how far it is raised/lowered from there.
+-- Settings are saved for all worlds immediately.
 
 local scale = nhv.scale
 local medit = {}
@@ -15,6 +17,8 @@ nhv.monsteredit = medit
 local STAGE = vector.new(-40, 0, -40)   -- centre of the stage floor (y = floor top)
 local STAGE_R = 4                        -- half-size of the floor in nodes
 local CAM = vector.new(STAGE.x - 1.5, STAGE.y + 2.0, STAGE.z - 6.5)
+-- ceiling node height relative to the floor top, as in the game
+local CEIL_REL = nhv.util.CEIL_Y - nhv.util.STAND_Y - 0.5
 
 -- ---------------------------------------------------------------- entries
 local entries = nil   -- {kind = "mon"|"feat", key=, name=, tile=, size=}
@@ -62,6 +66,18 @@ local function set_factor(e, f)
 	scale.save()
 end
 
+local function placement(e)
+	return scale.get(e.kind, e.key)
+end
+
+local function set_placement(e, anchor, off)
+	local st = scale.get(e.kind, e.key)
+	st.anchor = anchor or st.anchor
+	st.off = off or st.off
+	scale.set(e.kind, e.key, st)
+	scale.save()
+end
+
 -- ---------------------------------------------------------------- stage
 core.register_node("nhv:editor_grid", {
 	description = "Stage floor",
@@ -73,6 +89,12 @@ core.register_node("nhv:editor_grid_square", {
 	description = "Stage floor (one map square)",
 	tiles = {"[fill:16x16:#5868F0^[fill:16x1:0,0:#E070F0^[fill:1x16:0,0:#E070F0"},
 	paramtype = "light", light_source = 6,
+	groups = {not_in_creative_inventory = 1}, drop = "", diggable = false,
+})
+core.register_node("nhv:editor_ceiling", {
+	description = "Stage ceiling",
+	drawtype = "glasslike", tiles = {"[fill:16x16:#C0C8FF30^[fill:16x1:0,0:#C0C8FF90^[fill:1x16:0,0:#C0C8FF90"},
+	use_texture_alpha = "blend", paramtype = "light", sunlight_propagates = true,
 	groups = {not_in_creative_inventory = 1}, drop = "", diggable = false,
 })
 core.register_node("nhv:editor_backdrop", {
@@ -93,6 +115,15 @@ local function build_stage()
 			core.set_node(vector.new(STAGE.x + x, STAGE.y + y, STAGE.z + STAGE_R + 1),
 				{name = "nhv:editor_backdrop"})
 		end
+		-- ceiling at the game's ceiling height (back half only, so the
+		-- camera can still see in)
+		for z = 0, STAGE_R do
+			core.set_node(vector.new(STAGE.x + x, STAGE.y + CEIL_REL, STAGE.z + z),
+				{name = "nhv:editor_ceiling"})
+		end
+		for z = -STAGE_R, -1 do
+			core.set_node(vector.new(STAGE.x + x, STAGE.y + CEIL_REL, STAGE.z + z), {name = "air"})
+		end
 	end
 	-- somewhere to stand
 	for x = -2, 2 do
@@ -108,8 +139,11 @@ core.register_entity("nhv:editor_preview", {
 		physical = false, pointable = false, static_save = false,
 		visual_size = {x = 1, y = 1, z = 1},
 	},
-	on_step = function(self, dtime)
-		self.object:set_yaw((self.object:get_yaw() + dtime * 0.6) % (math.pi * 2))
+	-- monsters don't spin (that's for items): face the camera
+	on_step = function(self)
+		local pos = self.object:get_pos()
+		local d = vector.subtract(CAM, pos)
+		self.object:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
 	end,
 })
 
@@ -142,7 +176,9 @@ local function show_preview(s)
 		return
 	end
 	local h = base_height(e) * factor(e)
-	local pos = vector.new(STAGE.x, STAGE.y - 0.5 + h / 2, STAGE.z)
+	local floor_top = STAGE.y - 0.5
+	local y = scale.center_y(e.kind, e.key, h, floor_top, floor_top + CEIL_REL)
+	local pos = vector.new(STAGE.x, y, STAGE.z)
 	s.preview = core.add_entity(pos, "nhv:editor_preview")
 	if s.preview then
 		s.preview:set_properties({wield_item = nhv_tiles.item(e.tile),
@@ -183,19 +219,29 @@ local function formspec(s)
 	fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=12;largestep=80]"):format(math.max(0, (rows - 8) * 12))
 	fs[#fs + 1] = ("scrollbar[9.3,1.2;0.35,9.4;vertical;mlist;%d]"):format(s.scroll or 0)
 	-- right side: the stage shows through; frame it and put controls below
-	fs[#fs + 1] = "box[10.4,0.4;9.2,0.06;#000000]box[10.4,8.3;9.2,0.06;#000000]"
-	fs[#fs + 1] = "box[10.4,0.4;0.06,7.96;#000000]box[19.54,0.4;0.06,7.96;#000000]"
+	fs[#fs + 1] = "box[10.4,0.4;9.2,0.06;#000000]box[10.4,6.9;9.2,0.06;#000000]"
+	fs[#fs + 1] = "box[10.4,0.4;0.06,6.56;#000000]box[19.54,0.4;0.06,6.56;#000000]"
 	local e = entries[s.sel]
 	if e then
 		local f = factor(e)
-		fs[#fs + 1] = "box[10.4,8.5;9.2,2.3;#101018D8]"
-		fs[#fs + 1] = ("label[10.6,8.85;%s  -  scale x%.2f]"):format(E(e.name), f)
-		fs[#fs + 1] = "button[16.6,8.6;2.9,0.7;reset;Reset to default]"
+		local pl = placement(e)
+		fs[#fs + 1] = "box[10.4,7.1;9.2,3.7;#101018D8]"
+		fs[#fs + 1] = ("label[10.6,7.45;%s]"):format(E(e.name))
+		fs[#fs + 1] = "button[16.6,7.15;2.9,0.65;reset;Reset to default]"
+		-- scale
+		fs[#fs + 1] = ("label[10.6,8.15;Scale x%.2f]"):format(f)
 		fs[#fs + 1] = "scrollbaroptions[min=10;max=400;smallstep=5;largestep=25]"
-		fs[#fs + 1] = ("scrollbar[10.6,9.5;8.9,0.45;horizontal;scale;%d]"):format(math.floor(f * 100 + 0.5))
-		fs[#fs + 1] = "label[14.6,10.3;SCALE]"
+		fs[#fs + 1] = ("scrollbar[12.8,7.95;6.7,0.4;horizontal;scale;%d]"):format(math.floor(f * 100 + 0.5))
+		-- anchor and offset
+		fs[#fs + 1] = "label[10.6,8.9;Snap to]"
+		fs[#fs + 1] = ("dropdown[12.8,8.6;2.6,0.6;anchor;Floor,Ceiling;%d;true]"):format(
+			pl.anchor == "ceiling" and 2 or 1)
+		fs[#fs + 1] = ("label[15.6,8.9;offset %.2f]"):format(pl.off)
+		fs[#fs + 1] = "scrollbaroptions[min=-200;max=400;smallstep=5;largestep=25]"
+		fs[#fs + 1] = ("scrollbar[10.6,9.45;8.9,0.4;horizontal;off;%d]"):format(math.floor(pl.off * 100 + 0.5))
+		fs[#fs + 1] = "label[10.6,10.2;(offset: nodes up from the floor, or down from the ceiling)]"
 		if e.kind == "mon" then
-			fs[#fs + 1] = ("checkbox[10.6,10.3;hitbox;Show hitbox;%s]"):format(s.show_hitbox and "true" or "false")
+			fs[#fs + 1] = ("checkbox[17.3,10.2;hitbox;Show hitbox;%s]"):format(s.show_hitbox and "true" or "false")
 		end
 	end
 	return table.concat(fs)
@@ -273,8 +319,25 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			show(player)
 		end
 	end
+	if fields.off and e then
+		local ev = core.explode_scrollbar_event(fields.off)
+		if ev.type == "CHG" then
+			set_placement(e, nil, ev.value / 100)
+			show_preview(s)
+			show(player)
+		end
+	end
+	if fields.anchor and e then
+		local want = fields.anchor == "2" and "ceiling" or "floor"
+		if want ~= placement(e).anchor then
+			set_placement(e, want, nil)
+			show_preview(s)
+			show(player)
+		end
+	end
 	if fields.reset and e then
-		set_factor(e, 1)
+		scale.set(e.kind, e.key, {f = 1, anchor = "floor", off = 0})
+		scale.save()
 		show_preview(s)
 		show(player)
 	end

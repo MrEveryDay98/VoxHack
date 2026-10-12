@@ -254,10 +254,11 @@ nh.on_request(function(req)
 		end
 	end
 	-- direction prompts are answered by where you are looking
-	if req.kind == "key" and req.prompt:lower():find("direction") then
+	-- (they may come as a key or a y/n style question)
+	if (req.kind == "key" or req.kind == "yn") and req.prompt:lower():find("direction") then
 		local player = nhv.player.get()
 		if player then
-			nh.answer_key(nhv.player.look_dir_key(player))
+			nh.answer_key(nhv.actions.pointed_dir_key(player, req.prompt))
 			return true
 		end
 	end

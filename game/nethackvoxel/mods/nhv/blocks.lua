@@ -7,7 +7,7 @@ local blocks = {}
 nhv.blocks = blocks
 
 local function tile_tex(n)
-	return "[fill:16x16:#000000^" .. nhv_tiles.texture(n)
+	return "[fill:16x16:#000000^(" .. nhv_tiles.texture(n) .. ")"
 end
 
 -- name, description, texture, extra node fields

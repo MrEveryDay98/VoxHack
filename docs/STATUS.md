@@ -49,6 +49,21 @@ pathfinding when they can't see you.
 - Boulders are solid; walking into one tries to push it. Messages about bumping into things are
   hidden.
 - Sprites have NetHack's built-in drop shadows removed.
+- Each monster and feature can stand on the floor or hang from the ceiling, with an offset (set in
+  the monster editor). Monsters face you; only items spin.
+- Your body is never teleported for blocked moves; if NetHack refuses a square, it quietly
+  retries until the square is free.
+
+## Sprites (moddable)
+All sprites and tile textures come from one sprite sheet:
+`game/nethackvoxel/mods/nhv_tiles/textures/nhv_tiles.png`.
+
+- **Layout:** 48 tiles per row, 16×16 each, numbered left to right, top to bottom. Tile numbers
+  and names are in `mods/nhv_tiles/tilenames.lua`.
+- **Editing:** edit it in any image editor; transparent pixels are see-through, and changes show
+  up the next time the game starts.
+- **Regenerating:** the sheet is only generated when it's missing. To start over from NetHack's
+  originals, delete it and run the deploy script.
 
 ## Prefab editor
 Double-click `NetHack Voxel Prefab Editor.bat`. It's a creative world with one build cell per

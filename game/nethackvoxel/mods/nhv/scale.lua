@@ -25,8 +25,37 @@ scale.FEATURE_NAMES = {
 local DATA_DIR = core.get_mod_data_path()
 local DATA_PATH = DATA_DIR .. DIR_DELIM .. "scales.dat"
 
--- {mon = {[name] = factor}, feat = {[cmap] = factor}}
+-- {mon = {[name] = setting}, feat = {[cmap] = setting}}, where a setting
+-- is {f = factor, anchor = "floor"|"ceiling", off = nodes} (older files
+-- stored just the factor)
 local data = {mon = {}, feat = {}}
+
+local function setting(tbl, key)
+	local v = tbl[key]
+	if type(v) == "number" then
+		return {f = v, anchor = "floor", off = 0}
+	elseif type(v) == "table" then
+		return {f = v.f or 1, anchor = v.anchor or "floor", off = v.off or 0}
+	end
+	return {f = 1, anchor = "floor", off = 0}
+end
+
+local function store(tbl, key, st)
+	if st.f == 1 and st.anchor == "floor" and st.off == 0 then
+		tbl[key] = nil
+	else
+		tbl[key] = {f = st.f, anchor = st.anchor, off = st.off}
+	end
+end
+
+-- full setting for a monster name / feature cmap
+function scale.get(kind, key)
+	return setting(kind == "feat" and data.feat or data.mon, key)
+end
+
+function scale.set(kind, key, st)
+	store(kind == "feat" and data.feat or data.mon, key, st)
+end
 
 local function load()
 	local f = io.open(DATA_PATH, "rb")
@@ -49,11 +78,13 @@ load()
 
 -- ---------------------------------------------------------------- monsters
 function scale.mon_factor_by_name(name)
-	return (name and data.mon[name]) or 1
+	return name and setting(data.mon, name).f or 1
 end
 
 function scale.set_mon(name, f)
-	data.mon[name] = (f and f ~= 1) and f or nil
+	local st = setting(data.mon, name)
+	st.f = f or 1
+	store(data.mon, name, st)
 end
 
 function scale.factor(mndx)
@@ -79,11 +110,29 @@ end
 
 -- ---------------------------------------------------------------- features
 function scale.feat_factor(cmap)
-	return data.feat[cmap] or 1
+	return setting(data.feat, cmap).f
 end
 
 function scale.set_feat(cmap, f)
-	data.feat[cmap] = (f and f ~= 1) and f or nil
+	local st = setting(data.feat, cmap)
+	st.f = f or 1
+	store(data.feat, cmap, st)
+end
+
+-- Height of the sprite's centre above ground, for a sprite `h` nodes tall,
+-- given its anchor: floor = standing on the floor (raised by off),
+-- ceiling = hanging from the ceiling (lowered by off).
+function scale.center_y(kind, key, h, floor_top, ceiling_bottom)
+	local st = setting(kind == "feat" and data.feat or data.mon, key)
+	if st.anchor == "ceiling" then
+		return ceiling_bottom - st.off - h / 2
+	end
+	return floor_top + st.off + h / 2
+end
+
+function scale.mon_center_y(mndx, h, floor_top, ceiling_bottom)
+	local name = mndx and mndx >= 0 and core.nh_mon_name(mndx) or ""
+	return scale.center_y("mon", name, h, floor_top, ceiling_bottom)
 end
 
 function scale.feature_height(cmap)
@@ -101,11 +150,11 @@ core.register_chatcommand("scale", {
 	func = function(_, param)
 		if param == "" then
 			local list = {}
-			for k, v in pairs(data.mon) do
-				list[#list + 1] = k .. " = " .. v
+			for k in pairs(data.mon) do
+				list[#list + 1] = k .. " = " .. setting(data.mon, k).f
 			end
-			for k, v in pairs(data.feat) do
-				list[#list + 1] = (scale.FEATURE_NAMES[k] or k) .. " = " .. v
+			for k in pairs(data.feat) do
+				list[#list + 1] = (scale.FEATURE_NAMES[k] or k) .. " = " .. setting(data.feat, k).f
 			end
 			table.sort(list)
 			return true, #list == 0 and "No scales set." or table.concat(list, ", ")
