@@ -10,7 +10,8 @@ nhv.util = U
 U.TILE = 3
 U.COLNO = 80
 U.ROWNO = 21
-U.FLOOR_Y = 0      -- floor nodes
+U.FLOOR_Y = -1     -- floor nodes (so open space starts at y = 0 and
+                   -- world-aligned textures line up with doors)
 U.WALL_H = 4       -- wall height above the floor
 U.CEIL_Y = U.FLOOR_Y + U.WALL_H + 1
 U.STAND_Y = U.FLOOR_Y + 0.5 -- player feet
@@ -62,9 +63,9 @@ U.OBJ = {
 
 -- object classes (include/objclass.h)
 U.OCLASS = {
-	ILLOBJ = 0, WEAPON = 1, ARMOR = 2, RING = 3, AMULET = 4, TOOL = 5,
-	FOOD = 6, POTION = 7, SCROLL = 8, SPBOOK = 9, WAND = 10, COIN = 11,
-	GEM = 12, ROCK = 13, BALL = 14, CHAIN = 15, VENOM = 16,
+	ILLOBJ = 1, WEAPON = 2, ARMOR = 3, RING = 4, AMULET = 5, TOOL = 6,
+	FOOD = 7, POTION = 8, SCROLL = 9, SPBOOK = 10, WAND = 11, COIN = 12,
+	GEM = 13, ROCK = 14, BALL = 15, CHAIN = 16, VENOM = 17,
 }
 
 function U.idx(x, y)

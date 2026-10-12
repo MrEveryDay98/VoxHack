@@ -72,7 +72,10 @@ function nh.start(name)
 	core.nh_unload()
 	nh.glyph_cache, nh.cmap_cache = {}, {}
 	nh.req, nh.snap, nh.pending_action = nil, nil, nil
-	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS, name)
+	-- extra options from the player's config (e.g. to pre-pick a role)
+	-- ("\n" in the setting separates lines)
+	local extra = (core.settings:get("nhv_extra_options") or ""):gsub("\\n", "\n")
+	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS .. "\n" .. extra, name)
 	if not ok then
 		core.log("error", "[nhv] could not start NetHack: " .. tostring(err))
 		return false, err
@@ -92,7 +95,9 @@ local function take_snapshot()
 		monsters = core.nh_get_monsters(),
 		inventory = core.nh_get_inventory(),
 	}
-	if not snap.map or not snap.hero then
+	-- before the game proper starts (character selection) there is no
+	-- dungeon to look at yet
+	if not snap.map or not snap.hero or snap.hero.ledger == 0 then
 		return nil
 	end
 	nh.snap_serial = nh.snap_serial + 1

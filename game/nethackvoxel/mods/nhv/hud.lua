@@ -1,0 +1,264 @@
+-- HUD: status line, message log and the overhead pixel map.
+
+local U = nhv.util
+local nh = nhv.nh
+local hud = {
+	ids = {},
+	messages = {},   -- {text=, t=}
+	big_map = false,
+	last_map_png = nil,
+}
+nhv.hud = hud
+
+local MSG_LINES = 6
+local MSG_TTL = 12 -- seconds a message stays visible
+
+-- pixel map colours (RGBA bytes)
+local COL = {
+	unknown = {0, 0, 0, 150},
+	floor = {70, 70, 80, 255},
+	corridor = {55, 55, 60, 255},
+	wall = {150, 150, 160, 255},
+	door = {150, 100, 40, 255},
+	water = {40, 80, 220, 255},
+	lava = {230, 70, 20, 255},
+	stairs = {255, 255, 0, 255},
+	feature = {0, 200, 200, 255},
+	trap = {255, 0, 255, 255},
+	object = {60, 200, 60, 255},
+	boulder = {200, 200, 200, 255},
+	hole = {120, 0, 120, 255},
+	monster = {255, 40, 40, 255},
+	pet = {255, 150, 150, 255},
+	peaceful = {255, 150, 0, 255},
+	hero = {255, 255, 255, 255},
+}
+
+local function color_for(map, i)
+	local gi = nhv.glyph_info(map.glyph[i])
+	local k = gi.kind
+	if k == "mon" or k == "detected" or k == "ridden" or k == "invis" or k == "warning" then
+		return COL.monster
+	elseif k == "pet" then
+		return COL.pet
+	elseif k == "obj" or k == "body" or k == "statue" then
+		if core.nh_obj_name(gi.index) == "boulder" then
+			return COL.boulder
+		end
+		return COL.object
+	elseif k == "cmap" then
+		local n = nhv.cmap_name(gi.index)
+		if n == "S_stone" or n == "S_unexplored" then
+			return COL.unknown
+		elseif n:match("wall") or n:match("corn") or n == "S_tree" or n == "S_bars" then
+			return COL.wall
+		elseif n:match("door") or n:match("dbridge") then
+			return COL.door
+		elseif n:match("stair") or n:match("ladder") then
+			return COL.stairs
+		elseif n == "S_pool" or n == "S_water" then
+			return COL.water
+		elseif n == "S_lava" or n == "S_lavawall" then
+			return COL.lava
+		elseif n == "S_hole" or n == "S_trap_door" or n == "S_pit" or n == "S_spiked_pit" then
+			return COL.hole
+		elseif gi.sym == 94 then
+			return COL.trap
+		elseif n == "S_corr" or n == "S_litcorr" or n == "S_engrcorr" then
+			return COL.corridor
+		elseif n == "S_altar" or n == "S_fountain" or n == "S_throne" or n == "S_sink"
+				or n == "S_grave" then
+			return COL.feature
+		elseif n == "S_room" or n == "S_darkroom" or n == "S_engroom" or n == "S_ndoor"
+				or n == "S_ice" then
+			return COL.floor
+		end
+		return COL.floor
+	end
+	return COL.unknown
+end
+
+local function map_png(snap)
+	local map, h = snap.map, snap.hero
+	local data = {}
+	for y = 0, U.ROWNO - 1 do
+		for x = 0, U.COLNO - 1 do
+			local c
+			if x == h.x and y == h.y then
+				c = COL.hero
+			elseif x == 0 then
+				c = COL.unknown
+			else
+				c = color_for(map, U.idx(x, y))
+			end
+			data[#data + 1] = string.char(c[1], c[2], c[3], c[4])
+		end
+	end
+	local png = core.encode_png(U.COLNO, U.ROWNO, table.concat(data))
+	return "[png:" .. core.encode_base64(png)
+end
+
+local HUNGER = {[0] = "", "", "Hungry", "Weak", "Fainting", "Fainted", "Starved"}
+local ENCUMBRANCE = {[0] = "", "Burdened", "Stressed", "Strained", "Overtaxed", "Overloaded"}
+
+local function status_text(h)
+	local conds = {}
+	local function add(flag, txt)
+		if U.has(h.flags, flag) then
+			conds[#conds + 1] = txt
+		end
+	end
+	add(U.HERO.BLIND, "Blind")
+	add(U.HERO.HALLU, "Hallu")
+	add(U.HERO.CONF, "Conf")
+	add(U.HERO.STUN, "Stun")
+	add(U.HERO.LEVITATE, "Lev")
+	add(U.HERO.FLYING, "Fly")
+	add(U.HERO.RIDING, "Ride")
+	if HUNGER[h.hunger] and HUNGER[h.hunger] ~= "" then
+		conds[#conds + 1] = HUNGER[h.hunger]
+	end
+	if ENCUMBRANCE[h.encumbrance] and ENCUMBRANCE[h.encumbrance] ~= "" then
+		conds[#conds + 1] = ENCUMBRANCE[h.encumbrance]
+	end
+	local line1 = string.format("%s the %s   St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s",
+		h.name, h.rank, h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str),
+		h.dex, h.con, h.int, h.wis, h.cha, h.align)
+	local line2 = string.format("%s  $:%d  HP:%d(%d)  Pw:%d(%d)  AC:%d  XL:%d/%d  T:%d  %s",
+		h.level_desc, h.gold, h.hp, h.hpmax, h.pw, h.pwmax, h.ac, h.xlvl, h.xp, h.moves,
+		table.concat(conds, " "))
+	return line1 .. "\n" .. line2
+end
+
+local function update_messages(player)
+	local now = core.get_us_time() / 1e6
+	while #hud.messages > 0 and now - hud.messages[1].t > MSG_TTL do
+		table.remove(hud.messages, 1)
+	end
+	local lines = {}
+	for _, m in ipairs(hud.messages) do
+		lines[#lines + 1] = m.text
+	end
+	player:hud_change(hud.ids.msg, "text", table.concat(lines, "\n"))
+end
+
+function hud.message(text)
+	if not text or text == "" then
+		return
+	end
+	table.insert(hud.messages, {text = text, t = core.get_us_time() / 1e6})
+	while #hud.messages > MSG_LINES do
+		table.remove(hud.messages, 1)
+	end
+	local player = nhv.player.get()
+	if player and hud.ids.msg then
+		update_messages(player)
+	end
+end
+
+local function place_map(player)
+	if hud.big_map then
+		player:hud_change(hud.ids.map, "position", {x = 0.5, y = 0.45})
+		player:hud_change(hud.ids.map, "alignment", {x = 0, y = 0})
+		player:hud_change(hud.ids.map, "scale", {x = 10, y = 10})
+		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
+	else
+		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
+		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
+		player:hud_change(hud.ids.map, "scale", {x = 3, y = 3})
+		player:hud_change(hud.ids.map, "offset", {x = -10, y = 10})
+	end
+end
+
+function hud.toggle_map()
+	hud.big_map = not hud.big_map
+	local player = nhv.player.get()
+	if player then
+		place_map(player)
+	end
+end
+
+core.register_on_joinplayer(function(player)
+	player:hud_set_flags({minimap = false, minimap_radar = false, healthbar = false,
+		breathbar = false, basic_debug = false})
+	player:hud_set_hotbar_itemcount(10)
+	hud.ids.status = player:hud_add({
+		type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
+		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
+		style = 4, -- monospace
+	})
+	hud.ids.msg = player:hud_add({
+		type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "",
+	})
+	hud.ids.map = player:hud_add({
+		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
+		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
+	})
+	hud.ids.flash = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+		scale = {x = -100, y = -100}, text = "blank.png",
+	})
+	place_map(player)
+end)
+
+-- red flash when hurt
+local flash_until = 0
+function hud.flash(color)
+	local player = nhv.player.get()
+	if not player then
+		return
+	end
+	player:hud_change(hud.ids.flash, "text", "[fill:1x1:" .. (color or "#ff000060"))
+	flash_until = core.get_us_time() + 250000
+end
+
+local tick = 0
+core.register_globalstep(function(dtime)
+	tick = tick + dtime
+	local player = nhv.player.get()
+	if not player or not hud.ids.msg then
+		return
+	end
+	if flash_until > 0 and core.get_us_time() > flash_until then
+		flash_until = 0
+		player:hud_change(hud.ids.flash, "text", "blank.png")
+	end
+	if tick > 1 then
+		tick = 0
+		update_messages(player)
+	end
+end)
+
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "message" or ev.kind == "raw" then
+			hud.message(ev.text)
+		end
+	end
+end)
+
+local last_hp
+nh.on_snapshot(function(snap)
+	local player = nhv.player.get()
+	if not snap or not player or not hud.ids.status then
+		return
+	end
+	local h = snap.hero
+	player:hud_change(hud.ids.status, "text", status_text(h))
+	player:hud_change(hud.ids.map, "text", map_png(snap))
+	if last_hp and h.hp < last_hp then
+		hud.flash()
+	end
+	last_hp = h.hp
+	-- blindness: black fog that hides everything beyond arm's reach
+	local blind = U.has(h.flags, U.HERO.BLIND)
+	if blind ~= hud.blind then
+		hud.blind = blind
+		player:set_sky({type = "plain", base_color = "#000000", clouds = false,
+			fog = blind and {fog_distance = 5, fog_start = 0.1}
+				or {fog_distance = 90, fog_start = 0.3}})
+	end
+end)
+
+return hud

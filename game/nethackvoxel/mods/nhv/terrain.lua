@@ -32,17 +32,20 @@ end
 reg("void", {description = "Unexplored", tiles = {BLACK}, paramtype = "none"})
 reg("rock", {description = "Stone", tiles = {tile_tex(1272)}, paramtype = "none"})
 reg("wall", {description = "Wall", tiles = {tile_tex(1274)}, paramtype = "none"})
-reg("ceiling", {description = "Ceiling", tiles = {tile_tex(1272) .. "^[multiply:#606060"},
-	paramtype = "none"})
-reg("ceiling_lit", {description = "Ceiling", tiles = {tile_tex(1272) .. "^[multiply:#909090"},
-	light_source = core.LIGHT_MAX})
-reg("door_closed", {description = "Closed door", tiles = {tile_tex(1288)}})
+reg("ceiling", {description = "Ceiling", tiles = {{name = tile_tex(1272) .. "^[multiply:#606060",
+	align_style = "world", scale = U.TILE}}, paramtype = "none"})
+reg("ceiling_lit", {description = "Ceiling", tiles = {{name = tile_tex(1272) .. "^[multiply:#909090",
+	align_style = "world", scale = U.TILE}}, light_source = core.LIGHT_MAX})
+reg("door_closed", {description = "Closed door",
+	tiles = {{name = tile_tex(1288), align_style = "world", scale = U.TILE}}})
 reg("lavawall", {description = "Wall of lava", tiles = {tile_tex(1317)},
 	light_source = 8})
 
 -- floors (top face shows the NetHack tile, sides are plain)
 local function floor_node(name, desc, top, extra)
-	local def = {description = desc, tiles = {top, BLACK, BLACK}}
+	-- the top texture spans the whole square (TILE x TILE nodes)
+	local def = {description = desc,
+		tiles = {{name = top, align_style = "world", scale = U.TILE}, BLACK, BLACK}}
 	for k, v in pairs(extra or {}) do
 		def[k] = v
 	end

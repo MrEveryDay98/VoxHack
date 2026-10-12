@@ -103,7 +103,7 @@ local function commit_wait()
 	player_mod.travel = 0
 	nhv.time.p = 0
 	player_mod.auto = 0
-	nh.act("s", {kind = "wait"})
+	nh.act("ms", {kind = "wait"})
 end
 
 -- Start a timed action (attack, item use): time flows for `secs`.
@@ -114,12 +114,21 @@ function player_mod.timed_action(keys, info, secs)
 	nh.act(keys, info)
 end
 
+local GRACE_US = 400000 -- ignore movement this long after we move the player
+
+local function teleport(player, pos)
+	player:set_pos(pos)
+	player_mod.last_pos = pos
+	player_mod.grace_until = core.get_us_time() + GRACE_US
+end
+player_mod.teleport = teleport
+
 -- Put the player back inside the hero's square.
 local function clamp_to_hero(player, hard)
 	local c = hero_center()
 	local pos = player:get_pos()
 	if hard then
-		player:set_pos(c)
+		teleport(player, c)
 		return
 	end
 	local off = vector.subtract(pos, c)
@@ -129,7 +138,7 @@ local function clamp_to_hero(player, hard)
 	if len > lim then
 		off = vector.multiply(off, lim / len)
 	end
-	player:set_pos(vector.new(c.x + off.x, pos.y, c.z + off.z))
+	teleport(player, vector.new(c.x + off.x, pos.y, c.z + off.z))
 end
 
 local function step(player, dtime)
@@ -155,6 +164,12 @@ local function step(player, dtime)
 	if not nh.ready() then
 		return
 	end
+	-- positions reported right after a teleport may be stale
+	if core.get_us_time() < (player_mod.grace_until or 0) then
+		return
+	end
+	local vel = player:get_velocity()
+	local walking = math.sqrt(vel.x * vel.x + vel.z * vel.z) > 0.3
 	player_mod.travel = player_mod.travel + moved
 
 	local c = hero_center()
@@ -162,14 +177,20 @@ local function step(player, dtime)
 	local tx, ty = U.pos_to_tile(pos)
 
 	-- left the square entirely (fast motion): step toward where we are
+	-- standing in a different square than the hero
 	if tx ~= h.x or ty ~= h.y then
 		local dx, dy = U.sign(tx - h.x), U.sign(ty - h.y)
-		local b = player_mod.blocked
-		if b and b[1] == dx and b[2] == dy then
-			clamp_to_hero(player)
+		-- right after a committed move the player is still catching up
+		-- with the hero's new square: only step if heading away from it
+		local away = vel.x * dx - vel.z * dy > 0
+		if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 then
+			clamp_to_hero(player, true)
 			return
 		end
-		commit_move(dx, dy)
+		local b = player_mod.blocked
+		if walking and away and not (b and b[1] == dx and b[2] == dy) then
+			commit_move(dx, dy)
+		end
 		return
 	end
 
@@ -179,7 +200,8 @@ local function step(player, dtime)
 		player_mod.blocked = nil
 		b = nil
 	end
-	if dist > COMMIT_R and moved > 0.001 then
+	local outward = off.x * vel.x + off.z * vel.z > 0
+	if dist > COMMIT_R and walking and outward then
 		local dx, dy = U.vec_to_dir(off)
 		local map = nh.snap.map
 		-- diagonal into a wall corner or through a doorway: go straight
@@ -200,7 +222,7 @@ local function step(player, dtime)
 	end
 
 	-- walking around inside one square still passes time
-	if player_mod.travel >= U.TILE then
+	if walking and player_mod.travel >= U.TILE then
 		commit_wait()
 	end
 end
@@ -222,8 +244,7 @@ nh.on_snapshot(function(snap, action)
 	player_mod.ledger = h.ledger
 
 	if level_changed or not prev then
-		player:set_pos(U.tile_center(h.x, h.y))
-		player_mod.last_pos = player:get_pos()
+		teleport(player, U.tile_center(h.x, h.y))
 		player_mod.blocked = nil
 	elseif action and action.kind == "move" then
 		if h.x == action.from_x and h.y == action.from_y then
@@ -231,15 +252,13 @@ nh.on_snapshot(function(snap, action)
 			player_mod.blocked = {action.dx, action.dy}
 			clamp_to_hero(player)
 		elseif h.x ~= action.from_x + action.dx or h.y ~= action.from_y + action.dy then
-			player:set_pos(U.tile_center(h.x, h.y)) -- trap, teleport, ...
-			player_mod.last_pos = player:get_pos()
+			teleport(player, U.tile_center(h.x, h.y)) -- trap, teleport, ...
 		else
 			player_mod.blocked = nil
 		end
 	elseif prev and (prev.x ~= h.x or prev.y ~= h.y) then
 		-- moved by something other than walking
-		player:set_pos(U.tile_center(h.x, h.y))
-		player_mod.last_pos = player:get_pos()
+		teleport(player, U.tile_center(h.x, h.y))
 	end
 	terrain.place_hero_light(h.x, h.y)
 
