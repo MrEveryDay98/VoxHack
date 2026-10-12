@@ -28,6 +28,9 @@ local CHOICE_LABELS = {
 local function show(name, fs)
 	local player = nhv.player.get()
 	if player then
+		if core.settings:get_bool("nhv_debug") then
+			core.log("action", "[nhv] formspec " .. name .. ": " .. fs)
+		end
 		core.show_formspec(player:get_player_name(), name, fs)
 	end
 end
@@ -131,8 +134,13 @@ local function key_dialog(req)
 		fs[#fs + 1] = ("button[1,%f;8,0.8;key_%d;%s]"):format(yy, c:byte(), E(label))
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
+	-- a scroll container needs its scrollbar to exist; park it off-screen
+	-- when everything fits
 	if rows > 10 then
-		fs[#fs + 1] = ("scrollbar[9.6,1.3;0.3,%f;vertical;keyscroll;0]"):format(9)
+		fs[#fs + 1] = ("scrollbaroptions[max=%d]"):format((rows - 10) * 9)
+		fs[#fs + 1] = "scrollbar[9.6,1.3;0.3,9;vertical;keyscroll;0]"
+	else
+		fs[#fs + 1] = "scrollbar[-10,-10;0.1,0.1;vertical;keyscroll;0]"
 	end
 	fs[#fs + 1] = ("field[0.5,%f;3,0.8;keytext;Or type a key;]"):format(h - 1.4)
 	fs[#fs + 1] = ("button[3.7,%f;2,0.8;keyok;OK]"):format(h - 1.4)
@@ -171,8 +179,10 @@ local function menu_dialog(req)
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
 	if rows > 12 then
-		fs[#fs + 1] = ("scrollbar[12.6,1.1;0.3,%f;vertical;menuscroll;0]"):format(view * 0.8)
 		fs[#fs + 1] = ("scrollbaroptions[max=%d]"):format((rows - 12) * 8)
+		fs[#fs + 1] = ("scrollbar[12.6,1.1;0.3,%f;vertical;menuscroll;0]"):format(view * 0.8)
+	else
+		fs[#fs + 1] = "scrollbar[-10,-10;0.1,0.1;vertical;menuscroll;0]"
 	end
 	if multi then
 		fs[#fs + 1] = ("button[0.5,%f;3,0.9;menu_ok;OK]"):format(h - 1.3)
@@ -192,7 +202,14 @@ end
 -- ---------------------------------------------------------------- requests
 local function show_request(req)
 	ui.req = req
-	if req.kind == "yn" then
+	if req.kind == "yn" and req.choices == "" then
+		-- some questions carry their choices in the text: "... [ynaq]"
+		local inside = req.prompt:match("%[([%a%-%*%$#]+)%]")
+		if inside then
+			req.choices = inside
+		end
+	end
+	if req.kind == "yn" and req.choices ~= "" then
 		ui.open = "nhv:req"
 		show("nhv:req", yn_dialog(req))
 	elseif req.kind == "menu" then
@@ -359,6 +376,9 @@ end
 
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
+		if ev.kind == "message" and ev.text:find("^Saving") then
+			ui.saving = true
+		end
 		if ev.kind == "text_begin" then
 			ui.text_lines = {title = ev.text, lines = {}}
 		elseif ev.kind == "text_line" and ui.text_lines then
@@ -514,7 +534,7 @@ function ui.show_death()
 	show("nhv:dead", head(14, 11)
 		.. "label[0.5,0.6;" .. E(ui.end_title or "Your game is over.") .. "]"
 		.. ("textarea[0.5,1;13,8.6;;;%s]"):format(E(table.concat(lines, "\n")))
-		.. "button[0.5,9.9;6,0.9;newgame;Start a new game]"
+		.. "button[0.5,9.9;6,0.9;newgame;" .. (ui.end_title:find("saved") and "Continue" or "Start a new game") .. "]"
 		.. "button[7.5,9.9;6,0.9;quitgame;Quit to menu]")
 end
 
@@ -544,7 +564,9 @@ nh.on_snapshot(function(snap, info)
 	end
 	nhv.player.freeze(true)
 	ui.dead = true
-	ui.end_title = info.saved and "Game saved." or "Your game is over."
+	ui.end_title = ui.saving and "Game saved. Rejoin this world to continue."
+		or "Your game is over."
+	ui.saving = false
 	core.after(0.2, ui.show_death)
 end)
 

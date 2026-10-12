@@ -72,7 +72,7 @@ local function set_speed(player)
 		speed = 0
 	end
 	player:set_physics_override({speed = speed, jump = 0, sneak_glitch = false,
-		new_move = true})
+		new_move = true, gravity = h and 1 or 0})
 end
 
 function player_mod.freeze(on)
