@@ -1,0 +1,132 @@
+/* nhvtest - drives nethack.dll headlessly to check the API works.
+ *
+ * usage: nhvtest <datadir> <userdir> [keys...]
+ * Each extra argument is sent as input: a single char is a key,
+ * "text:..." is a getlin/extcmd answer, "menu:..." a menu answer,
+ * "save" sends S then y. The map is printed after every request.
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "nhv_api.h"
+
+static void
+drain_events(void)
+{
+    nhv_event ev;
+
+    while (nhv_poll_event(&ev)) {
+        switch (ev.kind) {
+        case NHV_EV_MESSAGE: printf("MSG: %s\n", ev.text); break;
+        case NHV_EV_RAW: printf("RAW: %s\n", ev.text); break;
+        case NHV_EV_TEXT_BEGIN: printf("TEXT [%s] {\n", ev.text); break;
+        case NHV_EV_TEXT_LINE: printf("  | %s\n", ev.text); break;
+        case NHV_EV_TEXT_END: printf("}\n"); break;
+        default: break;
+        }
+    }
+}
+
+static void
+dump_map(void)
+{
+    static nhv_loc map[NHV_COLNO * NHV_ROWNO];
+    nhv_hero h;
+    nhv_mon mons[64];
+    int x, y, n, i;
+
+    nhv_get_map(map);
+    nhv_get_hero(&h);
+    for (y = 0; y < NHV_ROWNO; y++) {
+        char line[NHV_COLNO + 1];
+
+        for (x = 0; x < NHV_COLNO; x++) {
+            nhv_glyph_info gi;
+
+            nhv_get_glyph_info(map[x * NHV_ROWNO + y].glyph, &gi);
+            line[x] = (x == h.x && y == h.y) ? '@'
+                      : (gi.sym >= 32 && gi.sym < 127) ? (char) gi.sym : '?';
+        }
+        line[NHV_COLNO] = 0;
+        printf("%s\n", line);
+    }
+    printf("HERO %s the %s @%d,%d %s HP %d/%d Pw %d/%d AC %d XL %d T:%ld\n",
+           h.name, h.rank, h.x, h.y, h.level_desc, h.hp, h.hpmax, h.pw,
+           h.pwmax, h.ac, h.xlvl, h.moves);
+    n = nhv_get_monsters(mons, 64);
+    for (i = 0; i < n && i < 64; i++)
+        printf("  MON id=%u %s at %d,%d tile=%d flags=%x\n", mons[i].id,
+               nhv_mon_name(mons[i].mndx), mons[i].x, mons[i].y,
+               mons[i].tile, mons[i].flags);
+}
+
+static void
+show_request(void)
+{
+    nhv_request r;
+    int i;
+
+    nhv_get_request(&r);
+    printf("REQ kind=%d cmd=%d prompt=\"%s\" choices=\"%s\"\n", r.kind,
+           r.for_command, r.prompt, r.choices);
+    if (r.kind == NHV_REQ_MENU) {
+        for (i = 0; i < r.menu_count; i++) {
+            nhv_menu_item it;
+
+            if (nhv_get_menu_item(i, &it))
+                printf("  [%c]%s %s\n", it.sel ? it.sel : ' ',
+                       it.preselected ? "*" : " ", it.text);
+        }
+    }
+}
+
+static void
+send_arg(const char *a)
+{
+    if (!strncmp(a, "text:", 5))
+        nhv_send_text(a + 5);
+    else if (!strncmp(a, "menu:", 5))
+        nhv_send_menu(a + 5);
+    else if (!strcmp(a, "esc"))
+        nhv_send_key('\033');
+    else if (!strcmp(a, "save"))
+        nhv_send_key('S'), nhv_send_key('y');
+    else
+        nhv_send_key((unsigned char) a[0]);
+}
+
+int
+main(int argc, char **argv)
+{
+    int st, i;
+
+    setvbuf(stdout, NULL, _IONBF, 0);
+    if (argc < 3) {
+        fprintf(stderr, "usage: nhvtest datadir userdir [inputs...]\n");
+        return 2;
+    }
+    if (nhv_start(argv[1], argv[2],
+                  "OPTIONS=role:valkyrie,race:human,gender:female,"
+                  "align:neutral,!autopickup,pettype:cat,!tutorial,!legacy,"
+                  "!splash_screen,suppress_alert:3.4.3",
+                  "tester") != 0) {
+        fprintf(stderr, "nhv_start failed\n");
+        return 1;
+    }
+    for (i = 3;; i++) {
+        st = nhv_wait(30000);
+        drain_events();
+        if (st != NHV_WAITING)
+            break;
+        dump_map();
+        show_request();
+        if (i >= argc) {
+            printf("(out of inputs)\n");
+            return 0;
+        }
+        printf(">> %s\n", argv[i]);
+        send_arg(argv[i]);
+    }
+    printf("STATE %d exit=%d\n", st, nhv_exit_code());
+    return 0;
+}

@@ -1,0 +1,4 @@
+/external/
+/build/
+/dist/
+*.log
