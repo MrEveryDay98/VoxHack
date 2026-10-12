@@ -49,7 +49,8 @@ terrain type and one per trap.
   - Each cell is 3×3 blocks with 19 layers.
   - The orange markers show the floor and ceiling levels.
   - Below the floor there is room for pits and stairs going down; above the ceiling, for stairs going up.
-- **Orientation:**
+- **Orientation:** a red block in each cell's blue base marks north (the direction you face from the spawn point).
+- **Orientation details:**
   - Walls and doors are built in one orientation and rotated to fit. The text at the top of the
     screen says which.
   - Corners join east and south; T-walls join west, east and south; door passages run north–south.

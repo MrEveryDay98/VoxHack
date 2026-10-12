@@ -42,6 +42,13 @@ core.register_node("nhv:editor_plate", {
 	groups = {not_in_creative_inventory = 1}, drop = "",
 	diggable = false, pointable = true,
 })
+core.register_node("nhv:editor_plate_front", {
+	description = "Cell front (north)",
+	tiles = {"[fill:16x16:#E02020"},
+	paramtype = "light", light_source = 6,
+	groups = {not_in_creative_inventory = 1}, drop = "",
+	diggable = false, pointable = true,
+})
 core.register_node("nhv:editor_rail", {
 	description = "Floor / ceiling level marker",
 	drawtype = "nodebox", paramtype = "light", light_source = 4,
@@ -93,6 +100,9 @@ local function decorate_cell(slot)
 			core.set_node(vector.new(o.x + x, o.y - 1, o.z + z), {name = "nhv:editor_plate"})
 		end
 	end
+	-- red block in the border: the cell's front, which faces north in the
+	-- game (the orientation the cell descriptions refer to)
+	core.set_node(vector.new(o.x + 1, o.y - 1, o.z + W), {name = "nhv:editor_plate_front"})
 	-- floor and ceiling level rails on the outside corners
 	for _, ly in ipairs({prefabs.FLOOR, prefabs.CEIL}) do
 		for _, c in ipairs({{-1, -1}, {W, -1}, {-1, W}, {W, W}}) do
@@ -341,7 +351,7 @@ core.register_globalstep(function(dtime)
 		local name = player:get_player_name()
 		local slot = nearest_slot(player:get_pos())
 		local info = prefabs.SLOT_INFO[slot]
-		local text = ("Cell: %s%s\n%s"):format(slot,
+		local text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
 			info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
