@@ -2,7 +2,25 @@
 nhv = {}
 
 local path = core.get_modpath("nhv") .. DIR_DELIM
+
+-- A world with a file named "nhv_editor" in it is the prefab editor.
+do
+	local f = io.open(core.get_worldpath() .. DIR_DELIM .. "nhv_editor", "r")
+	nhv.EDITOR = f ~= nil
+	if f then
+		f:close()
+	end
+end
+
 dofile(path .. "util.lua")
+dofile(path .. "blocks.lua")
+dofile(path .. "prefabs.lua")
+if nhv.EDITOR then
+	dofile(path .. "nh.lua") -- glyph helpers only; no game is started
+	dofile(path .. "terrain.lua")
+	dofile(path .. "editor.lua")
+	return
+end
 dofile(path .. "nh.lua")
 dofile(path .. "scale.lua")
 dofile(path .. "terrain.lua")

@@ -163,11 +163,42 @@ nh.on_snapshot(function(snap, action)
 	terrain.place_hero_light(h.x, h.y)
 end)
 
+-- touching an nhv:trigger node uses the stairs/ladder it belongs to
+local TRIGGER_KEYS = {
+	stairs_down = ">", ladder_down = ">", stairs_up = "<", ladder_up = "<",
+}
+local in_trigger = false
+local function check_trigger(player)
+	local pos = player:get_pos()
+	local touching = false
+	for _, dy in ipairs({0.1, 0.9, 1.6}) do
+		if core.get_node(vector.round(vector.new(pos.x, pos.y + dy, pos.z))).name == "nhv:trigger" then
+			touching = true
+			break
+		end
+	end
+	if not touching then
+		in_trigger = false
+		return
+	end
+	if in_trigger or not nh.ready() then
+		return
+	end
+	local h = player_mod.hero
+	local slot = terrain.slot_at(h.x, h.y)
+	local key = slot and TRIGGER_KEYS[slot]
+	if key then
+		in_trigger = true
+		nhv.clock.act(key, {kind = "stairs"})
+	end
+end
+
 core.register_globalstep(function()
 	local player = player_mod.get()
 	if player and nh.snap then
 		try_escape(player)
 		step(player)
+		check_trigger(player)
 	end
 end)
 

@@ -240,6 +240,11 @@ local function update_features(snap)
 				if flat == nil and is_trap(name, gi) then
 					flat = true
 				end
+				-- a hand-built prefab replaces the sprite
+				local fslot = nhv.terrain.feature_slot(name)
+				if fslot and nhv.prefabs.custom(fslot) then
+					flat = nil
+				end
 				if flat ~= nil then
 					seen[i] = true
 					local e = mobs.feats[i]
