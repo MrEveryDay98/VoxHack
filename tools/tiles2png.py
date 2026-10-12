@@ -1,12 +1,18 @@
 """Convert NetHack's vanilla tileset (win/share/*.txt) to the game's sprite
-sheet (nhv_tiles.png, SHEET_COLS tiles per row) plus a list of tile names.
+sheet (nhv_tiles.png, SHEET_COLS tiles per row) plus tilenames.lua.
 
-The sheet is meant to be edited by hand afterwards; deploy.sh only runs
-this when the sheet doesn't exist yet.
+The sheet holds each distinct sprite once:
+  * monsters whose male and female tiles are identical get one sprite;
+    pairs that really differ keep both;
+  * statues are not stored at all - the game draws a monster's sprite
+    with a stone colour filter instead.
+Pixels are copied as-is (NetHack's drop shadows included); the sheet is
+meant to be edited by hand afterwards, so deploy.sh only runs this when
+the sheet doesn't exist yet.
 
-Tile numbering matches glyphmap[].tileidx in the generated tile.c:
-monsters.txt, then objects.txt, then other.txt, then one generated
-statue tile per monster tile (grayscale copy).
+NetHack's own tile numbers (glyphmap[].tileidx from the generated tile.c:
+monsters.txt, then objects.txt, then other.txt, then one statue per
+monster tile) are mapped to sheet positions in tilenames.lua.
 
 usage: python tiles2png.py <nethack root> <output textures dir> <output lua>
 """
@@ -17,53 +23,7 @@ import sys
 from PIL import Image
 
 BACKGROUND = (71, 108, 108)  # tile background colour -> transparent
-BLACK = (0, 0, 0)
 SHEET_COLS = 48
-
-
-def remove_drop_shadow(rows, palette):
-    """NetHack's tiles draw a drop shadow in black to the lower right of
-    each figure. Black pixels are grouped into connected regions; a region
-    is shadow when most of its pixels have no coloured (non-black,
-    non-background) pixel to their right. Black that belongs to the art
-    (outlines, eyes, black creatures) has colour beside it and stays."""
-    h, w = len(rows), len(rows[0])
-
-    def kind(x, y):
-        rgb = palette[rows[y][x]]
-        if rgb == BACKGROUND:
-            return "bg"
-        return "black" if rgb == BLACK else "color"
-
-    def colour_right(x, y):
-        return any(kind(xx, y) == "color" for xx in range(x + 1, w))
-
-    out = [list(r) for r in rows]
-    bg_char = next(k for k, v in palette.items() if v == BACKGROUND)
-    figure = sum(1 for yy in range(h) for xx in range(w) if kind(xx, yy) != "bg")
-    seen = set()
-    for y in range(h):
-        for x in range(w):
-            if (x, y) in seen or kind(x, y) != "black":
-                continue
-            comp, stack = [], [(x, y)]
-            seen.add((x, y))
-            while stack:
-                cx, cy = stack.pop()
-                comp.append((cx, cy))
-                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-                    if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in seen                             and kind(nx, ny) == "black":
-                        seen.add((nx, ny))
-                        stack.append((nx, ny))
-            open_right = sum(1 for cx, cy in comp if not colour_right(cx, cy))
-            # a black region that is most of the sprite is the creature
-            # itself (black monsters), not its shadow
-            if len(comp) > 0.5 * figure and len(comp) > 12:
-                continue
-            if open_right >= 0.7 * len(comp):
-                for cx, cy in comp:
-                    out[cy][cx] = bg_char
-    return ["".join(r) for r in out]
 
 
 def parse_tile_file(path):
@@ -106,69 +66,95 @@ def tile_image(palette, rows):
     return img
 
 
-TERRAIN_WORDS = ("wall", "door", "floor", "corridor", "stone", "dark part",
-                 "ice", "lava", "pool", "water", "air", "cloud", "drawbridge",
-                 "bars", "stair", "ladder", "zap", "beam", "swallow",
-                 "explosion", "boom", "shield", "valid position", "poison cloud")
-
-
-def is_terrain(name):
-    return any(w in name for w in TERRAIN_WORDS)
-
-
-def statue_of(img):
-    out = img.copy()
-    px = out.load()
-    for y in range(out.height):
-        for x in range(out.width):
-            r, g, b, a = px[x, y]
-            if a:
-                v = int(0.3 * r + 0.59 * g + 0.11 * b)
-                v = 96 + v * 120 // 255  # stone grey range
-                px[x, y] = (v, v, v, 255)
-    return out
+def lua_str(s):
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def main():
     root, outdir, outlua = sys.argv[1:4]
     os.makedirs(outdir, exist_ok=True)
     share = os.path.join(root, "win", "share")
-    names = []
-    images = []
+
+    names = []          # NetHack tile number -> name
+    tile_sheet = []     # NetHack tile number -> sheet index
+    statue = []         # NetHack tile numbers drawn as statues
+    sheet = []          # sheet index -> image
+    sheet_names = []    # sheet index -> name
     nmon = 0
+
+    def add_sprite(img, name):
+        sheet.append(img)
+        sheet_names.append(name)
+        return len(sheet) - 1
+
     for fname in ("monsters.txt", "objects.txt", "other.txt"):
         palette, tiles = parse_tile_file(os.path.join(share, fname))
-        for name, rows in tiles:
-            names.append(name)
-            # sprites lose their drop shadow; terrain tiles (used as node
-            # textures) keep theirs
-            if fname != "other.txt" or not is_terrain(name):
-                rows = remove_drop_shadow(rows, palette)
-            images.append(tile_image(palette, rows))
         if fname == "monsters.txt":
             nmon = len(tiles)
+            i = 0
+            while i < len(tiles):
+                name, rows = tiles[i]
+                base = name.rsplit(",", 1)[0] if name.endswith((",male", ",female")) else name
+                nxt = tiles[i + 1] if i + 1 < len(tiles) else None
+                if name.endswith(",male") and nxt and nxt[0] == base + ",female":
+                    # a male/female pair: one sprite if they look the same
+                    if rows == nxt[1]:
+                        idx = add_sprite(tile_image(palette, rows), base)
+                        names += [name, nxt[0]]
+                        tile_sheet += [idx, idx]
+                    else:
+                        a = add_sprite(tile_image(palette, rows), base + " (male)")
+                        b = add_sprite(tile_image(palette, nxt[1]), base + " (female)")
+                        names += [name, nxt[0]]
+                        tile_sheet += [a, b]
+                    i += 2
+                    continue
+                names.append(name)
+                tile_sheet.append(add_sprite(tile_image(palette, rows), base))
+                i += 1
+        else:
+            for name, rows in tiles:
+                names.append(name)
+                tile_sheet.append(add_sprite(tile_image(palette, rows), name))
+
+    # statues: NetHack numbers them after everything else, one per monster
+    # tile; they reuse the monster's sprite
     for i in range(nmon):
         names.append("statue of " + names[i])
-        images.append(statue_of(images[i]))
+        tile_sheet.append(tile_sheet[i])
+        statue.append(len(names) - 1)
 
-    # one sprite sheet, SHEET_COLS tiles wide; the game cuts tiles out of
-    # it with the [sheet texture modifier, so it can be edited directly
     cols = SHEET_COLS
-    rows_n = (len(images) + cols - 1) // cols
-    tw, th = images[0].size
-    sheet = Image.new("RGBA", (cols * tw, rows_n * th), (0, 0, 0, 0))
-    for i, img in enumerate(images):
-        sheet.paste(img, ((i % cols) * tw, (i // cols) * th))
-    sheet.save(os.path.join(outdir, "nhv_tiles.png"), optimize=True)
+    rows_n = (len(sheet) + cols - 1) // cols
+    tw, th = sheet[0].size
+    img = Image.new("RGBA", (cols * tw, rows_n * th), (0, 0, 0, 0))
+    for i, s in enumerate(sheet):
+        img.paste(s, ((i % cols) * tw, (i // cols) * th))
+    img.save(os.path.join(outdir, "nhv_tiles.png"), optimize=True)
 
     with open(outlua, "w", encoding="utf-8") as f:
-        f.write("-- generated by tools/tiles2png.py; do not edit\n")
-        f.write("return {\n  count = %d,\n  monsters = %d,\n  cols = %d,\n  rows = %d,\n  names = {\n"
-                % (len(images), nmon, cols, rows_n))
+        f.write("-- generated by tools/tiles2png.py\n")
+        f.write("-- tile = NetHack's tile number; sheet = position in nhv_tiles.png\n")
+        f.write("-- (left to right, top to bottom, starting at 0)\n")
+        f.write("return {\n")
+        f.write("  count = %d,\n  monsters = %d,\n  cols = %d,\n  rows = %d,\n"
+                % (len(names), nmon, cols, rows_n))
+        f.write("  sheet_count = %d,\n" % len(sheet))
+        f.write("  -- what is at each sheet position\n  sheet_names = {\n")
+        for i, n in enumerate(sheet_names):
+            f.write("    [%d] = %s,\n" % (i, lua_str(n)))
+        f.write("  },\n  -- NetHack tile -> sheet position\n  sheet = {\n")
+        for i, s in enumerate(tile_sheet):
+            f.write("    [%d] = %d,\n" % (i, s))
+        f.write("  },\n  -- NetHack tiles drawn as statues (stone-coloured)\n  statue = {\n")
+        for t in statue:
+            f.write("    [%d] = true,\n" % t)
+        f.write("  },\n  names = {\n")
         for i, n in enumerate(names):
-            f.write("    [%d] = %s,\n" % (i, '"' + n.replace("\\", "\\\\").replace('"', '\\"') + '"'))
+            f.write("    [%d] = %s,\n" % (i, lua_str(n)))
         f.write("  },\n}\n")
-    print("wrote %d tiles" % len(images))
+    print("%d NetHack tiles -> %d sprites in the sheet (%d x %d)"
+          % (len(names), len(sheet), cols, rows_n))
 
 
 if __name__ == "__main__":

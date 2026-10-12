@@ -2,9 +2,11 @@
 -- one of these items render it as an extruded voxel sprite, which is how
 -- monsters and floor objects get their 3D look.
 --
--- All tiles live in one sprite sheet, textures/nhv_tiles.png (cols x rows
--- tiles, numbered left to right, top to bottom). Edit it freely; tile
--- numbers are listed in tilenames.lua.
+-- Sprites live in one sheet, textures/nhv_tiles.png (cols x rows sprites,
+-- numbered left to right, top to bottom from 0). Edit it freely.
+-- tilenames.lua maps NetHack's tile numbers onto sheet positions: a
+-- monster's male and female tiles share a sprite unless they differ, and
+-- statues reuse the monster's sprite with a stone colour filter.
 local meta = dofile(core.get_modpath("nhv_tiles") .. "/tilenames.lua")
 
 nhv_tiles = {
@@ -14,6 +16,9 @@ nhv_tiles = {
 	rows = meta.rows,
 }
 
+-- the colour filter that turns a sprite into a statue
+nhv_tiles.STONE = "^[hsl:0:-100:-10"
+
 function nhv_tiles.item(tile)
 	if not tile or tile < 0 or tile >= meta.count then
 		tile = 0
@@ -21,13 +26,23 @@ function nhv_tiles.item(tile)
 	return string.format("nhv_tiles:t%04d", tile)
 end
 
--- texture string for one tile, cut from the sheet
-function nhv_tiles.texture(tile)
+-- sheet position of a NetHack tile
+function nhv_tiles.sheet_index(tile)
 	if not tile or tile < 0 or tile >= meta.count then
 		tile = 0
 	end
-	return string.format("nhv_tiles.png^[sheet:%dx%d:%d,%d", meta.cols, meta.rows,
-		tile % meta.cols, math.floor(tile / meta.cols))
+	return meta.sheet[tile] or 0
+end
+
+-- texture string for a NetHack tile
+function nhv_tiles.texture(tile)
+	local s = nhv_tiles.sheet_index(tile)
+	local tex = string.format("nhv_tiles.png^[sheet:%dx%d:%d,%d", meta.cols, meta.rows,
+		s % meta.cols, math.floor(s / meta.cols))
+	if meta.statue[tile] then
+		tex = tex .. nhv_tiles.STONE
+	end
+	return tex
 end
 
 for i = 0, meta.count - 1 do

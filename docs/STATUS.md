@@ -48,7 +48,6 @@ pathfinding when they can't see you.
   their square, because NetHack treats trees as solid.
 - Boulders are solid; walking into one tries to push it. Messages about bumping into things are
   hidden.
-- Sprites have NetHack's built-in drop shadows removed.
 - Each monster and feature can stand on the floor or hang from the ceiling, with an offset (set in
   the monster editor). Monsters face you; only items spin.
 - Your body is never teleported for blocked moves; if NetHack refuses a square, it quietly
@@ -58,37 +57,18 @@ pathfinding when they can't see you.
 All sprites and tile textures come from one sprite sheet:
 `game/nethackvoxel/mods/nhv_tiles/textures/nhv_tiles.png`.
 
-- **Layout:** 48 tiles per row, 16×16 each, numbered left to right, top to bottom. Tile numbers
-  and names are in `mods/nhv_tiles/tilenames.lua`.
-- **Editing:** edit it in any image editor; transparent pixels are see-through, and changes show
-  up the next time the game starts.
-- **Regenerating:** the sheet is only generated when it's missing. To start over from NetHack's
-  originals, delete it and run the deploy script.
-
-## Prefab editor
-Double-click `NetHack Voxel Prefab Editor.bat`. It's a creative world with one build cell per
-terrain type and one per trap.
-
-- **Controls:** I opens the block palette, K toggles flying. Placing never uses up blocks, and
-  punching removes a block instantly.
-- **The cell:**
-  - Each cell is 3×3 blocks with 19 layers.
-  - The orange markers show the floor and ceiling levels.
-  - Below the floor there is room for pits and stairs going down; above the ceiling, for stairs going up.
-- **Orientation:** a red block in each cell's blue base marks north (the direction you face from the spawn point).
-- **Orientation details:**
-  - Walls and doors are built in one orientation and rotated to fit. The text at the top of the
-    screen says which.
-  - Corners join east and south; T-walls join west, east and south; door passages run north–south.
-- **Markers:**
-  - Red `nhv:trigger`: touching it takes the stairs/ladder.
-  - Green `nhv:mpath`: the path monsters follow to it (stored, but not used yet).
-  - Yellow `nhv:carve`: forces air (trap overlays only).
-  - All three are invisible in the game.
-- **Commands:**
-  - `/prefab save` saves every cell. Every game world uses the saved cells.
-  - `/prefab reset <slot>`, `/prefab goto <slot>`, `/prefab list`.
-- **Sprites:** a fountain, altar, trap etc. you build replaces its sprite.
+- **Layout:** 48 sprites per row, 16×16 each, numbered from 0 left to right, top to bottom.
+  It holds NetHack's original pixels, drop shadows included. Edit them however you like.
+- **Male/female:** a monster's male and female tiles share one sprite when they look the same;
+  pairs that differ have one each.
+- **Statues:** they aren't in the sheet. The game draws the monster's sprite through a stone colour
+  filter (`nhv_tiles.STONE` in `mods/nhv_tiles/init.lua`).
+- **`mods/nhv_tiles/tilenames.lua`** lists:
+  - what is at each sheet position (`sheet_names`),
+  - which sheet position each NetHack tile uses (`sheet`),
+  - which tiles are statues.
+- **Editing:** changes show up the next time the game starts. The sheet is only generated when
+  it's missing (delete it and run the deploy script to start over).
 
 ## Architecture
 - `nhcore/`: NetHack 3.7 built as `nethack.dll` with a C API (`nhv_api.h`). NetHack runs on its
