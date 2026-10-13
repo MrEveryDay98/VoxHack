@@ -42,9 +42,8 @@ for _, style in ipairs(terrain.WALL_STYLES) do
 end
 reg("ceiling", {description = "Ceiling", tiles = {tile_tex(1272) .. "^[multiply:#606060"},
 	paramtype = "none"})
--- one 48x48 picture over the whole 3x3 doorway (nhv_tiles/textures/nhv_wall_door.png)
-reg("door_closed", {description = "Closed door",
-	tiles = {{name = "nhv_wall_door.png", align_style = "world", scale = U.TILE}}})
+-- drawn by doors.lua: one picture stretched over each group of door blocks
+reg("door_closed", {description = "Closed door", tiles = {"nhv_wall_door.png"}})
 
 -- floors (the NetHack tile on each node's top face, so 3x3 per square)
 local function floor_node(name, desc, top)
@@ -316,6 +315,8 @@ local function write_squares(sqs)
 	vm:write_to_map(true)
 	-- objects (props) placed by the prefabs get their sprites
 	nhv.props.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
+	-- doors: one picture across each group of connected door blocks
+	nhv.doors.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
 end
 
 -- ---------------------------------------------------------------- updating
@@ -452,6 +453,7 @@ end
 function terrain.build_all(map)
 	terrain.built = {}
 	nhv.props.clear()
+	nhv.doors.clear()
 	terrain.wall_style = detect_wall_style(map) or "main"
 	terrain.hero_light_pos = nil
 	terrain.update(map, true)
