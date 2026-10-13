@@ -40,17 +40,16 @@ for _, style in ipairs(terrain.WALL_STYLES) do
 			tiles = {"nhv_wall_" .. style .. ".png"}, paramtype = "none"})
 	end
 end
-reg("ceiling", {description = "Ceiling", tiles = {{name = tile_tex(1272) .. "^[multiply:#606060",
-	align_style = "world", scale = U.TILE}}, paramtype = "none"})
+reg("ceiling", {description = "Ceiling", tiles = {tile_tex(1272) .. "^[multiply:#606060"},
+	paramtype = "none"})
 reg("door_closed", {description = "Closed door",
-	tiles = {{name = tile_tex(1288), align_style = "world", scale = U.TILE}}})
+	tiles = {tile_tex(1288)}})
 reg("lavawall", {description = "Wall of lava", tiles = {tile_tex(1317)},
 	light_source = 8})
 
--- floors (top face shows the NetHack tile across the whole square)
+-- floors (the NetHack tile on each node's top face, so 3x3 per square)
 local function floor_node(name, desc, top)
-	reg(name, {description = desc,
-		tiles = {{name = top, align_style = "world", scale = U.TILE}, BLACK, BLACK}})
+	reg(name, {description = desc, tiles = {top, BLACK, BLACK}})
 end
 floor_node("void_floor", "Unexplored", BLACK)
 floor_node("floor", "Floor", tile_tex(1291))
