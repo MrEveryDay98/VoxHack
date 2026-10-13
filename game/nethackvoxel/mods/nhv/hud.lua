@@ -156,19 +156,41 @@ function hud.message(text)
 	end
 end
 
+-- the big map fills most of the window's width (in whole pixels per square)
+local function big_map_scale(player)
+	local info = player.get_window_information and player:get_window_information()
+	if not info or not info.size or not info.real_hud_scaling then
+		return 10
+	end
+	local fit = math.min(0.92 * info.size.x / U.COLNO, 0.8 * info.size.y / U.ROWNO)
+	return math.max(2, math.floor(fit / info.real_hud_scaling))
+end
+
+-- the corner map's pixels per square (Graphics > Map size; 0 hides it)
+local function corner_scale()
+	return tonumber(core.settings:get("nhv_map_scale")) or 3
+end
+
 local function place_map(player)
+	if not hud.ids.map then
+		return
+	end
 	if hud.big_map then
+		local s = big_map_scale(player)
 		player:hud_change(hud.ids.map, "position", {x = 0.5, y = 0.45})
 		player:hud_change(hud.ids.map, "alignment", {x = 0, y = 0})
-		player:hud_change(hud.ids.map, "scale", {x = 10, y = 10})
+		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
 	else
+		local s = corner_scale()
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
 		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
-		player:hud_change(hud.ids.map, "scale", {x = 3, y = 3})
+		-- (a hidden map is scaled to nothing)
+		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = -10, y = 10})
 	end
 end
+hud.place_map = place_map
 
 function hud.toggle_map()
 	hud.big_map = not hud.big_map

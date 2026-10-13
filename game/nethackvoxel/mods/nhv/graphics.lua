@@ -1,60 +1,85 @@
 -- Graphics options (the Graphics button in the inventory screen):
+--   * interface style: Retro (pixel font, old PC boxes) or Modern
+--   * HUD size, menu size and map size
 --   * sprites drawn extruded (voxel models) or flat
 --   * a lower render resolution for a retro look (Luanti's "undersampling":
 --     the world is drawn at 1/N size and scaled up with sharp pixels; the
 --     HUD and menus stay full resolution)
 --   * sharp or smoothed distant textures (Luanti's "mip_map": mipmaps blur
 --     far-away textures to stop them shimmering)
--- Both apply immediately and are remembered in the settings.
+-- All apply immediately and are remembered in the settings.
 
 local graphics = {}
 nhv.graphics = graphics
 
 local E = core.formspec_escape
+local theme = nhv.theme
+local STYLE = {"Retro", "Modern"}
 local SPRITES = {"Extruded (3D)", "Flat"}
 local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local RES = {
 	{1, "Full"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4 (retro)"}, {6, "1/6"}, {8, "1/8 (very chunky)"},
 }
+local HUD = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}, {3, "Giant"}}
+local MENU = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}}
+local MAP = {{0, "Hidden"}, {2, "Small"}, {3, "Normal"}, {4, "Large"}, {5, "Larger"}, {6, "Huge"}}
 
-local function res_index()
-	local u = tonumber(core.settings:get("undersampling")) or 1
-	for i, r in ipairs(RES) do
-		if r[1] == u then
-			return i
+-- index of the choice nearest the setting's value
+local function pick(list, setting, default)
+	local v = tonumber(core.settings:get(setting)) or default
+	local best, dist = 1, math.huge
+	for i, c in ipairs(list) do
+		if math.abs(c[1] - v) < dist then
+			best, dist = i, math.abs(c[1] - v)
 		end
 	end
-	return 1
+	return best
+end
+
+local function labels(list)
+	local out = {}
+	for i, c in ipairs(list) do
+		out[i] = E(c[2])
+	end
+	return table.concat(out, ",")
+end
+
+-- one labelled dropdown row
+local function row(y, label, name, items, sel)
+	return ("label[0.5,%s;%s]dropdown[4.2,%s;5.3,0.8;%s;%s;%d;true]"):format(
+		y + 0.4, E(label), y, name, items, sel)
 end
 
 function graphics.formspec()
-	local res_labels = {}
-	for i, r in ipairs(RES) do
-		res_labels[i] = E(r[2])
-	end
 	return table.concat({
-		"formspec_version[6]size[9,6.6]",
-		"bgcolor[#000000C0;true]style_type[button;bgcolor=#303040]",
-		"style_type[label;textcolor=#E0E0E0]",
-		"label[0.5,0.6;", core.colorize("#FFD080", "Graphics"), "]",
-		"label[0.5,1.4;Sprites]",
-		"dropdown[3.6,1.0;5,0.8;sprites;", table.concat(SPRITES, ","), ";",
-		nhv_tiles.flat() and 2 or 1, ";true]",
-		"label[0.5,2.4;Render resolution]",
-		"dropdown[3.6,2.0;5,0.8;res;", table.concat(res_labels, ","), ";", res_index(), ";true]",
-		"label[0.5,3.4;Distant textures]",
-		"dropdown[3.6,3.0;5,0.8;distant;", table.concat(DISTANT, ","), ";",
-		core.settings:get_bool("mip_map", false) and 2 or 1, ";true]",
-		"label[0.5,4.3;", core.colorize("#A0A0A0",
-			E("Lower resolutions draw the world with big, sharp pixels;")), "]",
-		"label[0.5,4.7;", core.colorize("#A0A0A0", E("the HUD and menus stay sharp. Turning smoothing")), "]",
-		"label[0.5,5.1;", core.colorize("#A0A0A0", E("back on may need a restart.")), "]",
-		"button_exit[3.25,5.6;2.5,0.8;close;Done]",
+		theme.head(10, 9.4),
+		"label[0.5,0.6;", theme.title("Graphics"), "]",
+		row(1.0, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2),
+		row(1.9, "HUD size", "hud", labels(HUD), pick(HUD, "hud_scaling", 1)),
+		row(2.8, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)),
+		row(3.7, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
+		row(4.6, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
+		row(5.5, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
+		row(6.4, "Distant textures", "distant", table.concat(DISTANT, ","),
+			core.settings:get_bool("mip_map", false) and 2 or 1),
+		"label[0.5,7.5;", theme.dim(E("Lower resolutions draw the world with big, sharp pixels.")), "]",
+		"label[0.5,7.9;", theme.dim(E("Turning smoothing back on may need a restart.")), "]",
+		"button_exit[3.75,8.4;2.5,0.8;close;Done]",
 	})
 end
 
 function graphics.show(player)
 	core.show_formspec(player:get_player_name(), "nhv:graphics", graphics.formspec())
+end
+
+-- store a numeric choice; true if it changed
+local function set_num(list, idx, setting, default)
+	idx = tonumber(idx)
+	if not idx or not list[idx] or idx == pick(list, setting, default) then
+		return false
+	end
+	core.settings:set(setting, tostring(list[idx][1]))
+	return true
 end
 
 core.register_on_player_receive_fields(function(player, formname, fields)
@@ -65,7 +90,23 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "nhv:graphics" then
 		return false
 	end
-	local changed = false
+	local changed, reshow = false, false
+	local st = tonumber(fields.style)
+	if st and (st == 1) ~= theme.retro() then
+		core.settings:set("nhv_interface", st == 1 and "retro" or "modern")
+		theme.apply(player)
+		changed, reshow = true, true
+	end
+	if set_num(HUD, fields.hud, "hud_scaling", 1) then
+		changed = true
+	end
+	if set_num(MENU, fields.menu, "gui_scaling", 1) then
+		changed, reshow = true, true
+	end
+	if set_num(MAP, fields.map, "nhv_map_scale", 3) then
+		nhv.hud.place_map(player)
+		changed = true
+	end
 	local s = tonumber(fields.sprites)
 	if s and (s == 2) ~= nhv_tiles.flat() then
 		core.settings:set_bool("nhv_flat_sprites", s == 2)
@@ -78,13 +119,14 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		nhv.mobs.refresh_sizes() -- sprites pick up the new filtering
 		changed = true
 	end
-	local r = tonumber(fields.res)
-	if r and RES[r] and r ~= res_index() then
-		core.settings:set("undersampling", tostring(RES[r][1]))
+	if set_num(RES, fields.res, "undersampling", 1) then
 		changed = true
 	end
 	if changed then
 		core.settings:write()
+	end
+	if reshow and not fields.quit then
+		graphics.show(player) -- (redrawn in the new style / size)
 	end
 	return true
 end)

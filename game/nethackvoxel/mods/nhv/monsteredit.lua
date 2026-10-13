@@ -200,7 +200,7 @@ end
 local E = core.formspec_escape
 
 local function formspec(s)
-	local fs = {"formspec_version[6]size[20,11]position[0.5,0.5]",
+	local fs = {"formspec_version[6]size[20,11]position[0.5,0.5]no_prepend[]",
 		"bgcolor[#00000000;false]",
 		"box[0.2,0.2;9.6,10.6;#101018D8]",
 		"style_type[button;bgcolor=#303040]",

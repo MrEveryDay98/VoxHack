@@ -1,3 +1,10 @@
 # Draw monsters, items and features as flat sprites instead of extruded
 # voxel models. (Also in the game: Inventory > Graphics.)
 nhv_flat_sprites (Flat sprites) bool false
+
+# Interface style: retro (NetHack's IBM PC pixel font, old PC style boxes)
+# or modern (Luanti's own look). (Also in the game: Inventory > Graphics.)
+nhv_interface (Interface style) enum retro retro,modern
+
+# Pixels per map square of the corner map (0 hides it).
+nhv_map_scale (Map size) int 3 0 8

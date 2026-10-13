@@ -17,9 +17,7 @@ ui.persistent = {} -- formspec names that stay open across commands
 
 local E = core.formspec_escape
 local function head(w, h)
-	return ("formspec_version[6]size[%s,%s]"):format(w, h)
-		.. "bgcolor[#000000C0;true]style_type[button;bgcolor=#303040]"
-		.. "style_type[label;textcolor=#E0E0E0]"
+	return nhv.theme.head(w, h)
 end
 
 local CHOICE_LABELS = {
@@ -499,6 +497,10 @@ function ui.item_row(fs, o, x, y, field, w, text)
 	local max = math.floor(w * 9)
 	if #text > max then
 		text = text:sub(1, max - 2) .. ".."
+	end
+	if nhv.theme.retro() then -- (plain text, lit up blue under the mouse)
+		fs[#fs + 1] = ("style[%s;border=false;bgimg=blank.png;bgimg_hovered=[fill:8x8:#0000AA;"
+			.. "bgimg_pressed=[fill:8x8:#000078]"):format(field)
 	end
 	fs[#fs + 1] = ("item_image_button[%f,%f;0.7,0.7;%s;%s;]"):format(x, y, nhv_tiles.item(o.tile), field)
 	-- left-aligned text over an invisible button

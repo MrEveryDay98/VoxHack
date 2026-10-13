@@ -13,6 +13,7 @@ do
 end
 
 dofile(path .. "util.lua")
+dofile(path .. "theme.lua")
 dofile(path .. "blocks.lua")
 dofile(path .. "props.lua")
 dofile(path .. "custom_blocks.lua")
