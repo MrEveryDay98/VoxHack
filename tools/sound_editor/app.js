@@ -543,6 +543,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + b.dataset.tab));
   if (b.dataset.tab === "library") renderLibrary();
   if (b.dataset.tab === "casting") VoiceGen.render();
+  if (b.dataset.tab === "blocks") Blocks.render();
+  history.replaceState(null, "", "#" + b.dataset.tab);
 }));
 $("#saveBtn").addEventListener("click", save);
 $("#hookSearch").addEventListener("input", renderHooks);
@@ -577,9 +579,19 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("#confirm").hidden) $("#confirmNo").click();
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); }
 });
-window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+window.addEventListener("beforeunload", (e) => {
+  if (dirty || Blocks.isDirty()) { e.preventDefault(); e.returnValue = ""; }
+});
 
 load().catch((e) => toast("Could not load: " + e.message));
+Blocks.load().catch((e) => toast("Could not load blocks: " + e.message));
+$("#blkSave").addEventListener("click", () => Blocks.save());
+// open a tab from the address (e.g. .../#blocks)
+{
+  const t = location.hash.slice(1);
+  const btn = t && document.querySelector(`.tabs button[data-tab="${t}"]`);
+  if (btn) btn.click();
+}
 
 // keep the server running while this page is open; it stops itself a few
 // seconds after the page closes

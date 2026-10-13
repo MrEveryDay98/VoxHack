@@ -150,7 +150,23 @@ local function door(panel)
 	return nodes
 end
 
+-- pits are real holes: the floor is taken away and you land two blocks
+-- down (on spikes, in a spiked pit); Space at the edge climbs out
+local function pit(spikes)
+	local nodes = {}
+	for lx = 0, W - 1 do
+		for lz = 0, W - 1 do
+			nodes[prefabs.index(lx, FL, lz)] = {n = "nhv:carve"}
+			nodes[prefabs.index(lx, FL - 1, lz)] = {n = spikes and "nhv:x_spikes" or "nhv:carve"}
+			nodes[prefabs.index(lx, FL - 2, lz)] = {n = "nhv:floor"}
+		end
+	end
+	return nodes
+end
+
 local DEFAULTS = {
+	trap_pit = function() return pit(false) end,
+	trap_spiked_pit = function() return pit(true) end,
 	stone = function() return column(function() return "nhv:rock" end) end,
 	wall_straight = function() return solid("nhv:wall") end,
 	wall_corner = function() return solid("nhv:wall") end,
@@ -201,8 +217,9 @@ function prefabs.load()
 	if f then
 		local saved = core.deserialize(f:read("*a")) or {}
 		f:close()
+		-- only hand-built cells; the rest follow the current defaults
 		for slot, d in pairs(saved) do
-			if prefabs.SLOT_INFO[slot] then
+			if prefabs.SLOT_INFO[slot] and d.custom then
 				prefabs.data[slot] = d
 			end
 		end

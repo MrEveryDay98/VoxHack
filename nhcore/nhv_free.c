@@ -17,6 +17,7 @@ static nhv_monstate states[MAXSTATES];
 static int nstates;
 
 /* arguments of the #nhv* extended command being run */
+char nhv_cmd_text[256];
 int nhv_cmd_args[NHV_MAXARGS];
 
 static const nhv_monstate *
@@ -502,6 +503,23 @@ nhv_clear_rays(void)
 
     for (i = 0; i < MAXRAYS; i++)
         rays[i].used = FALSE;
+}
+
+/* #nhvhurt <hp> <cause>: a block hurt the hero (spikes, ...); the cause is
+   what the death message says ("killed by <cause>") */
+int
+donhvhurt(void)
+{
+    static char why[128];
+    int dmg = nhv_cmd_args[0];
+    const char *p = strchr(nhv_cmd_text, ' ');
+
+    Snprintf(why, sizeof why, "%s", (p && p[1]) ? p + 1 : "something sharp");
+    if (dmg > 0) {
+        You("are hurt by %s!", why);
+        losehp(Maybe_Half_Phys(dmg), why, KILLED_BY);
+    }
+    return ECMD_OK;
 }
 
 void

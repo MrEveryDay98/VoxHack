@@ -1321,6 +1321,11 @@
    "desc": "A door is broken, or rock or wall dug out"
   },
   {
+   "id": "climb_out",
+   "group": "game",
+   "desc": "The hero climbs out of a pit"
+  },
+  {
    "id": "level_enter_down",
    "group": "game",
    "desc": "Arriving on a deeper level"

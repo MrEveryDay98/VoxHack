@@ -1,0 +1,2 @@
+-- Blocks made in the block editor: the definitions are in blocks.json and
+-- the pictures in textures/. The nhv mod (custom_blocks.lua) registers them.

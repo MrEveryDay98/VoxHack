@@ -35,6 +35,7 @@ GAME_HOOKS = [
     ("container_move", "An item goes into or out of a container"),
     ("container_close", "The container panel is closed"),
     ("block_destroyed", "A door is broken, or rock or wall dug out"),
+    ("climb_out", "The hero climbs out of a pit"),
     ("level_enter_down", "Arriving on a deeper level"),
     ("level_enter_up", "Arriving on a shallower level"),
     ("hunger_hungry", "The hero becomes Hungry"),

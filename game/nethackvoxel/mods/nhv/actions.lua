@@ -68,6 +68,30 @@ function actions.swing()
 	end
 end
 
+-- ---------------------------------------------------------------- pits
+-- Down in a pit (a hole below the floor), Space climbs out onto the square
+-- you're facing, if you're at that edge. Returns true when you're in a pit.
+function actions.climb_out(player)
+	local pos = player:get_pos()
+	if pos.y > U.STAND_Y - 1 then
+		return false
+	end
+	local look = player:get_look_dir()
+	local dir = vector.normalize(vector.new(look.x, 0, look.z))
+	local target = vector.add(pos, vector.multiply(dir, 0.9))
+	local tx, ty = U.pos_to_tile(pos)
+	local nx, ny = U.pos_to_tile(target)
+	if (nx == tx and ny == ty) or not nh.snap
+			or not nhv.terrain.passable(nh.snap.map, nx, ny) then
+		nhv.hud.message("Walk to the edge of the pit and face out of it to climb out.")
+		return true
+	end
+	local spot = nhv.player.free_spot(vector.new(target.x, U.STAND_Y + 0.05, target.z))
+	nhv.player.teleport(player, spot)
+	nhv.sound.hook("climb_out")
+	return true
+end
+
 -- ---------------------------------------------------------------- attacking
 local function angle_between(a, b)
 	local la, lb = math.sqrt(a.x * a.x + a.z * a.z), math.sqrt(b.x * b.x + b.z * b.z)
@@ -471,7 +495,9 @@ core.register_globalstep(function()
 	local function pressed(k)
 		return ctl[k] and not prev[k]
 	end
-	if pressed("jump") and nh.ready() and not nhv.clock.busy() then
+	if pressed("jump") and actions.climb_out(player) then -- luacheck: ignore 542
+		-- in a pit: Space climbs out at its edge
+	elseif pressed("jump") and nh.ready() and not nhv.clock.busy() then
 		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "wait"})
 	end
 	if pressed("zoom") then

@@ -39,6 +39,12 @@ function nhv_tiles.sheet_index(tile)
 	return meta.sheet[tile] or 0
 end
 
+-- texture string for a sheet position (the block editor picks these)
+function nhv_tiles.sheet_texture(s)
+	return string.format("nhv_tiles.png^[sheet:%dx%d:%d,%d", meta.cols, meta.rows,
+		s % meta.cols, math.floor(s / meta.cols))
+end
+
 -- texture string for a NetHack tile
 function nhv_tiles.texture(tile)
 	local s = nhv_tiles.sheet_index(tile)

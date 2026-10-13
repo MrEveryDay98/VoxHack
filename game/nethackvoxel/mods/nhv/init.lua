@@ -15,6 +15,7 @@ end
 dofile(path .. "util.lua")
 dofile(path .. "blocks.lua")
 dofile(path .. "props.lua")
+dofile(path .. "custom_blocks.lua")
 dofile(path .. "prefabs.lua")
 if nhv.EDITOR then
 	dofile(path .. "nh.lua") -- glyph helpers only; no game is started

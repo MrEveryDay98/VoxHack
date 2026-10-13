@@ -34,6 +34,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import blocks_api  # noqa: E402
 import speakable  # noqa: E402
 import voicegen  # noqa: E402
 
@@ -43,7 +44,8 @@ SOUNDS = os.path.join(MOD, "sounds")
 CONFIG = os.path.join(MOD, "config.json")
 CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
-          "/voices.js": ("voices.js", "text/javascript"), "/style.css": ("style.css", "text/css")}
+          "/voices.js": ("voices.js", "text/javascript"),
+          "/blocks.js": ("blocks.js", "text/javascript"), "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
 PORT = 8765
@@ -251,6 +253,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(VG.take_path(unquote(m.group(1))), "audio/mpeg")
         if url.path == "/preview.ogg":
             return self.send_file(os.path.join(VG.work, "preview.ogg"), "audio/ogg")
+        if url.path == "/sheet.png":
+            return self.send_file(blocks_api.SHEET, "image/png")
+        m = re.match(r"^/blocktex/([A-Za-z0-9_.-]+\.png)$", url.path)
+        if m:
+            return self.send_file(blocks_api.texture_path(m.group(1)), "image/png")
         if not url.path.startswith("/api/"):
             return self.send(404, {"error": "not found"})
         if not self.allowed():
@@ -265,6 +272,9 @@ class Handler(BaseHTTPRequestHandler):
     def api_get(self, path, q):
         if path == "/api/ping":
             return self.send(200, {"ok": True})
+        if path == "/api/blocks":
+            return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
+                                   "sheet": blocks_api.sheet_info()})
         if path == "/api/catalog":
             return self.send(200, {
                 "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", []),
@@ -327,6 +337,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/config":
             save_config(data)
             return self.send(200, {"ok": True})
+        if path == "/api/blocks":
+            try:
+                return self.send(200, {"blocks": blocks_api.save(data)})
+            except (ValueError, TypeError) as e:
+                return self.send(400, {"error": str(e)})
         if path == "/api/cast":
             write_json(VG.cast_path, data, backup=True)
             return self.send(200, {"ok": True})
@@ -355,6 +370,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == "/api/upload":
                 return self.upload(q)
+            if url.path == "/api/blocks/texture":
+                name = (q.get("name") or ["texture"])[0]
+                return self.send(200, {"file": blocks_api.upload_texture(name, self.read_body())})
             data = self.body_json() or {}
             return self.api_post(url.path, data)
         except voicegen.ApiError as e:
@@ -472,7 +490,7 @@ def main():
     PORT = int(ports[0]) if ports else 8765
     os.makedirs(SOUNDS, exist_ok=True)
     srv = Server(("127.0.0.1", PORT), Handler)
-    url = "http://127.0.0.1:%d/" % PORT
+    url = "http://127.0.0.1:%d/" % PORT + ("#blocks" if "--blocks" in sys.argv else "")
     print("NetHack Voxel sound editor: " + url + "  (stops when the editor tab is closed)")
     if "--no-browser" not in sys.argv:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

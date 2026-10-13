@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NetHack Voxel Sound Editor</title>
+<title>NetHack Voxel Editor</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <div class="brand">
     <span class="logo" aria-hidden="true">♪</span>
     <div>
-      <h1>Sound &amp; Voice Editor</h1>
+      <h1>NetHack Voxel Editor</h1>
       <p class="sub">NetHack Voxel · changes apply in-game a couple of seconds after saving</p>
     </div>
   </div>
@@ -28,6 +28,7 @@
   <button role="tab" data-tab="voices">Voices &amp; dialogue</button>
   <button role="tab" data-tab="casting">Voice casting</button>
   <button role="tab" data-tab="library">Sound library</button>
+  <button role="tab" data-tab="blocks">Blocks</button>
 </nav>
 
 <main>
@@ -76,6 +77,15 @@
     <div id="castingBody"></div>
   </section>
 
+  <section id="tab-blocks" class="tab" hidden>
+    <div class="toolbar">
+      <span class="hint" style="margin:0">Blocks for prefabs: they appear in the prefab editor's palette (and the game) after a restart.</span>
+      <span id="blkDirty" class="dirty" hidden>Unsaved blocks</span>
+      <button id="blkSave" class="primary" disabled>Save blocks</button>
+    </div>
+    <div id="blocksBody"></div>
+  </section>
+
   <section id="tab-library" class="tab" hidden>
     <div class="toolbar">
       <input id="libSearch" type="search" placeholder="Search sounds…">
@@ -113,6 +123,7 @@
 
 <div id="toast" class="toast" hidden role="status"></div>
 <script src="/voices.js"></script>
+<script src="/blocks.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

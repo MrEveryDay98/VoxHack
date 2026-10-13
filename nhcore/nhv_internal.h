@@ -17,6 +17,8 @@ typedef struct nhv_qitem {
 /* nhv_free.c */
 #define NHV_MAXARGS 16
 extern int nhv_cmd_args[NHV_MAXARGS];
+/* the arguments as typed (for commands that take text) */
+extern char nhv_cmd_text[256];
 int nhv_exec_mon_step(unsigned id, int x, int y);
 
 /* nhv_main.c */

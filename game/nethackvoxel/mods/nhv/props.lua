@@ -88,25 +88,42 @@ end
 
 -- ---------------------------------------------------------------- nodes
 props.names = {}
+
+-- an object block: node name, texture, description; extra = more node
+-- fields (walkable, climbable, light_source, ...) from the block editor
+function props.register(node, tex, desc, extra)
+	local groups = {editor = 1, nhv_prop = 1, not_in_creative_inventory = 1}
+	local def = {
+		description = desc,
+		drawtype = "airlike",
+		inventory_image = tex, wield_image = tex, -- the entity draws it extruded
+		paramtype = "light", paramtype2 = "facedir", sunlight_propagates = true,
+		walkable = false, pointable = true, buildable_to = false,
+		selection_box = {type = "fixed", fixed = {-0.4, -0.5, -0.4, 0.4, 0.5, 0.4}},
+		is_ground_content = false, drop = "",
+		groups = groups,
+		on_place = core.rotate_node,
+		on_construct = function(pos) core.after(0, props.show, pos) end,
+		after_destruct = function(pos) props.remove(pos) end,
+		on_rotate = function(pos) core.after(0, props.show, pos) end,
+	}
+	for k, v in pairs(extra or {}) do
+		if k == "groups" then
+			for g, n in pairs(v) do
+				groups[g] = n
+			end
+		else
+			def[k] = v
+		end
+	end
+	core.register_node(":" .. node, def)
+	props.names[#props.names + 1] = node
+end
+
 for _, f in ipairs(core.get_dir_list(TEX_DIR, false) or {}) do
 	local name = f:match("^nhv_object_([%w_]+)%.png$")
 	if name then
-		local node = "nhv:prop_" .. name:lower()
-		core.register_node(node, {
-			description = "Object: " .. name:gsub("_", " "),
-			drawtype = "airlike",
-			inventory_image = f, wield_image = f, -- the entity draws it extruded
-			paramtype = "light", paramtype2 = "facedir", sunlight_propagates = true,
-			walkable = false, pointable = true, buildable_to = false,
-			selection_box = {type = "fixed", fixed = {-0.4, -0.5, -0.4, 0.4, 0.5, 0.4}},
-			is_ground_content = false, drop = "",
-			groups = {editor = 1, nhv_prop = 1, not_in_creative_inventory = 1},
-			on_place = core.rotate_node,
-			on_construct = function(pos) core.after(0, props.show, pos) end,
-			after_destruct = function(pos) props.remove(pos) end,
-			on_rotate = function(pos) core.after(0, props.show, pos) end,
-		})
-		props.names[#props.names + 1] = node
+		props.register("nhv:prop_" .. name:lower(), f, "Object: " .. name:gsub("_", " "))
 	end
 end
 

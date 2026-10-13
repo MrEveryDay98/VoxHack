@@ -523,6 +523,9 @@ nhv_get_ext_cmd(void)
         char *sp = strchr(in.str, ' ');
 
         memset(nhv_cmd_args, 0, sizeof nhv_cmd_args);
+        nhv_cmd_text[0] = '\0';
+        if (sp)
+            Snprintf(nhv_cmd_text, sizeof nhv_cmd_text, "%s", sp + 1);
         if (sp) {
             int k = 0;
             char *p = sp;

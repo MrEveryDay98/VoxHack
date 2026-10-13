@@ -276,9 +276,9 @@ local function update_features(snap)
 				if flat == nil and is_trap(name, gi) then
 					flat = true
 				end
-				-- a hand-built prefab replaces the sprite
+				-- a hand-built prefab (or one like the pits' holes) replaces the sprite
 				local fslot = nhv.terrain.feature_slot(name)
-				if fslot and nhv.prefabs.custom(fslot) then
+				if fslot and (nhv.prefabs.custom(fslot) or next(nhv.prefabs.get(fslot).nodes)) then
 					flat = nil
 				end
 				if flat ~= nil then
@@ -392,6 +392,11 @@ nhv.nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
 		if ev.kind == "combat" then
 			local kind, a, b, melee = ev.text:match("^(%a+) (%d+) (%d+) (%d)")
+			-- a monster died (even from one hit): blood where its body was
+			local dead = kind == "die" and mobs.mons["id" .. a]
+			if dead and dead.obj:get_pos() then
+				mobs.blood(dead)
+			end
 			if kind == "attack" then
 				a, b = tonumber(a), tonumber(b)
 				mobs.flash(a, "w", 0.12)
