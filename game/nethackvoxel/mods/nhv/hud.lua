@@ -124,8 +124,9 @@ local function status_text(h)
 	local line1 = string.format("%s the %s   St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s",
 		h.name, h.rank, h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str),
 		h.dex, h.con, h.int, h.wis, h.cha, h.align)
-	local line2 = string.format("%s  $:%d  HP:%d(%d)  Pw:%d(%d)  AC:%d  XL:%d/%d  T:%d  %s",
-		h.level_desc, h.gold, h.hp, h.hpmax, h.pw, h.pwmax, h.ac, h.xlvl, h.xp, h.moves,
+	-- (HP and Pw are on the meters, top left)
+	local line2 = string.format("%s  $:%d  AC:%d  XL:%d/%d  T:%d  %s",
+		h.level_desc, h.gold, h.ac, h.xlvl, h.xp, h.moves,
 		table.concat(conds, " "))
 	return line1 .. "\n" .. line2
 end
