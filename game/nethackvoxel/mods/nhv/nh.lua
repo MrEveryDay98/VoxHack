@@ -75,6 +75,13 @@ function nh.start(name)
 	-- extra options from the player's config (e.g. to pre-pick a role)
 	-- ("\n" in the setting separates lines)
 	local extra = (core.settings:get("nhv_extra_options") or ""):gsub("\\n", "\n")
+	-- a world with a file named "nhv_debug" in it plays in NetHack's debug
+	-- (wizard) mode; NetHack also requires the character to be named "wizard"
+	local dbg = io.open(core.get_worldpath() .. DIR_DELIM .. "nhv_debug", "r")
+	if dbg then
+		dbg:close()
+		extra = extra .. "\nOPTIONS=playmode:debug"
+	end
 	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS .. "\n" .. extra, name)
 	if not ok then
 		core.log("error", "[nhv] could not start NetHack: " .. tostring(err))

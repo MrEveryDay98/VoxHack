@@ -138,7 +138,8 @@ local function roll(dice)
 		for _ = 1, math.max(1, tonumber(n) or 1) do
 			total = total + math.random(tonumber(s))
 		end
-		return total + (tonumber((plus or ""):gsub("%s", "")) or 0)
+		local bonus = (plus or ""):gsub("%s", "") -- (keep only the string, not gsub's count)
+		return total + (tonumber(bonus) or 0)
 	end
 	return tonumber(dice) or 0
 end
