@@ -5,15 +5,17 @@ Tenacity for effects and the final sample rate.
                the voice cast for its speaker. Takes are kept (they cost
                credits) in voice_work/takes/, listed in voice_work/takes.json.
   Tenacity     driven through its scripting pipe (mod-script-pipe). A take
-               is imported, the speaker's preset (a list of Tenacity macro
+               is imported, the chosen preset (a list of Tenacity macro
                commands) is applied, the project rate is set (11025 Hz by
-               default) and it is exported; ffmpeg then makes the Ogg file the
-               game plays, in sounds/voices/.
+               default) and it is exported; ffmpeg makes an Ogg preview
+               (voice_work/pending/). Once confirmed, the preview becomes the
+               line's voice in sounds/voices/.
 
 The API key is kept out of the project, encrypted for the current Windows
 user (DPAPI), in %APPDATA%/NetHackVoxel/elevenlabs.key. The environment
 variable ELEVENLABS_API_KEY is used when no key was saved.
 """
+import contextlib
 import ctypes
 import json
 import os
@@ -138,25 +140,45 @@ def tts(voice_id, text, model_id, settings):
 
 
 # ---------------------------------------------------------------- Tenacity
+def fix_json_escapes(text):
+    """Double any backslash that doesn't start a valid JSON escape."""
+    def one(m):
+        return m.group(0) if m.group(1) in '"\\/bfnrtu' else "\\\\" + m.group(1)
+    return re.sub(r"\\(.)", one, text, flags=re.S)
+
+
 class Tenacity:
-    """Talks to Tenacity through mod-script-pipe (one command at a time)."""
+    """Talks to Tenacity through mod-script-pipe.
+
+    Tenacity serves one connected program at a time, so the pipe is only
+    held for one piece of work (a session) and then let go."""
 
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.to = self.frm = None
+        self.depth = 0
         self.commands = None
 
     def _open(self):
-        if self.to:
-            return
-        try:
-            self.to = open(TO_PIPE, "w", encoding="utf-8")
-            self.frm = open(FROM_PIPE, "r", encoding="utf-8")
-        except OSError:
-            self._close()
-            raise RuntimeError(
-                "Tenacity isn't reachable. Start Tenacity, and make sure mod-script-pipe is "
-                "Enabled in Edit > Preferences > Modules (then restart Tenacity once).")
+        deadline = time.time() + 6
+        while True:
+            try:
+                self.to = open(TO_PIPE, "w", encoding="utf-8")
+                self.frm = open(FROM_PIPE, "r", encoding="utf-8")
+                return
+            except OSError as e:
+                self._close()
+                # "all pipe instances are busy": someone else is talking to it
+                if getattr(e, "winerror", None) == 231:
+                    if time.time() < deadline:
+                        time.sleep(0.3)
+                        continue
+                    raise RuntimeError(
+                        "Tenacity is busy with another program (an older copy of this editor "
+                        "may still be running: close its window or tab and try again).")
+                raise RuntimeError(
+                    "Tenacity isn't reachable. Start Tenacity, and make sure mod-script-pipe is "
+                    "Enabled in Edit > Preferences > Modules (then restart Tenacity once).")
 
     def _close(self):
         for f in (self.to, self.frm):
@@ -167,18 +189,29 @@ class Tenacity:
                 pass
         self.to = self.frm = None
 
-    def connected(self):
+    @contextlib.contextmanager
+    def session(self):
         with self.lock:
-            try:
+            if self.depth == 0:
                 self._open()
+            self.depth += 1
+            try:
+                yield self
+            finally:
+                self.depth -= 1
+                if self.depth == 0:
+                    self._close()
+
+    def connected(self):
+        try:
+            with self.session():
                 return True
-            except RuntimeError:
-                return False
+        except RuntimeError:
+            return False
 
     def cmd(self, line):
         """Run one scripting command; returns its output, raises on failure."""
-        with self.lock:
-            self._open()
+        with self.session():
             try:
                 self.to.write(line + "\r\n\0")
                 self.to.flush()
@@ -192,6 +225,7 @@ class Tenacity:
                     out.append(s.rstrip("\n"))
             except OSError:
                 self._close()
+                self.depth = 0
                 raise RuntimeError("Lost the connection to Tenacity (was it closed?)")
         status = out[-1] if out else ""
         body = "\n".join(out[:-1])
@@ -202,24 +236,28 @@ class Tenacity:
     def get_commands(self):
         if self.commands is None:
             text = self.cmd("GetInfo: Type=Commands Format=JSON")
-            self.commands = json.loads(text[text.index("["):])
+            text = text[text.index("["):]
+            # Tenacity doesn't escape backslashes (e.g. in Windows paths)
+            text = fix_json_escapes(text)
+            self.commands = json.loads(text, strict=False)
         return self.commands
 
     def process(self, src_wav, steps, rate, dst_wav):
         q = lambda p: '"%s"' % p.replace("\\", "/")
-        self.cmd("SelectAll:")
-        self.cmd("RemoveTracks:")
-        self.cmd("Import2: Filename=%s" % q(src_wav))
-        for step in steps:
-            step = step.strip()
-            if step and not step.startswith("#"):
-                self.cmd("SelectAll:")
-                self.cmd(step if ":" in step else step + ":")
-        self.cmd("SetProject: Rate=%d" % int(rate))
-        self.cmd("SelectAll:")
-        self.cmd("Export2: Filename=%s NumChannels=1" % q(dst_wav))
-        self.cmd("SelectAll:")
-        self.cmd("RemoveTracks:")
+        with self.session():
+            self.cmd("SelectAll:")
+            self.cmd("RemoveTracks:")
+            self.cmd("Import2: Filename=%s" % q(src_wav))
+            for step in steps:
+                step = step.strip()
+                if step and not step.startswith("#"):
+                    self.cmd("SelectAll:")
+                    self.cmd(step if ":" in step else step + ":")
+            self.cmd("SetProject: Rate=%d" % int(rate))
+            self.cmd("SelectAll:")
+            self.cmd("Export2: Filename=%s NumChannels=1" % q(dst_wav))
+            self.cmd("SelectAll:")
+            self.cmd("RemoveTracks:")
 
 
 def list_macros():
@@ -305,7 +343,9 @@ class VoiceGen:
             return None
         return path
 
-    # -- what a line will be read as
+    # -- what a line will be read as: the line's own choices, else its speaker's
+    NO_EFFECTS = "__none__"
+
     def line_plan(self, line_id, cast=None):
         cast = cast or self.load_cast()
         entry = self.catalog().get(line_id)
@@ -314,8 +354,21 @@ class VoiceGen:
         ln = cast["lines"].get(line_id, {})
         speaker = ln.get("cast") or entry["speaker"]
         sc = cast["speakers"].get(speaker, {})
-        text = ln.get("spoken") or self.speakable(entry)[0]
-        return entry, speaker, sc, text
+        if ln.get("voice_id"):
+            voice_id, voice_name = ln["voice_id"], ln.get("voice_name", ln["voice_id"])
+            model = ln.get("model_id") or sc.get("model_id")
+        else:
+            voice_id, voice_name = sc.get("voice_id"), sc.get("voice_name", sc.get("voice_id"))
+            model = sc.get("model_id")
+        preset = ln["preset"] if "preset" in ln else sc.get("preset", "")
+        if preset == self.NO_EFFECTS:
+            preset = ""
+        return {"entry": entry, "speaker": speaker, "voice_id": voice_id, "voice_name": voice_name,
+                "model_id": model or "eleven_multilingual_v2", "settings": sc.get("settings", {}),
+                "preset": preset, "text": ln.get("spoken") or self.speakable(entry)[0]}
+
+    def pending_path(self, line_id):
+        return os.path.join(self.work, "pending", safe_id(line_id) + ".ogg")
 
     # -- queue
     def enqueue(self, items):
@@ -377,18 +430,22 @@ class VoiceGen:
 
     # -- the work itself
     def run(self, line_id, action):
+        """generate: a new ElevenLabs take, then a preview of it;
+        process: a new preview of the current take (e.g. another effect).
+        Previews wait for confirm() before the game gets them."""
         cast = self.load_cast()
-        entry, speaker, sc, text = self.line_plan(line_id, cast)
+        plan = self.line_plan(line_id, cast)
         if action == "generate":
-            if not sc.get("voice_id"):
-                raise ValueError('No ElevenLabs voice is chosen for "%s" yet' % speaker)
-            if not text.strip():
-                raise ValueError("The spoken text is empty")
-            model = sc.get("model_id") or "eleven_multilingual_v2"
+            if not plan["voice_id"]:
+                raise ValueError('Choose a voice for this line (or for "%s" in Voice casting)' % plan["speaker"])
+            text = plan["text"]
+            if not re.search(r"[^\W\d_]", text):
+                raise ValueError("There are no words to read: this line is only placeholders. "
+                                 "Write what should be said in its Spoken text first.")
             audio = None
             for attempt in range(4):
                 try:
-                    audio = tts(sc["voice_id"], text, model, sc.get("settings", {}))
+                    audio = tts(plan["voice_id"], text, plan["model_id"], plan["settings"])
                     break
                 except ApiError as e:
                     if e.status != 429 or attempt == 3:
@@ -403,32 +460,62 @@ class VoiceGen:
             with self.lock:
                 takes = self.load_takes()
                 t = takes.setdefault(line_id, {"takes": [], "current": 0})
-                t["takes"].append({"file": sid + "/" + fname, "voice": sc.get("voice_name", sc["voice_id"]),
-                                   "voice_id": sc["voice_id"], "model": model, "text": text,
+                t["takes"].append({"file": sid + "/" + fname, "voice": plan["voice_name"],
+                                   "voice_id": plan["voice_id"], "model": plan["model_id"], "text": text,
                                    "chars": len(text), "time": int(time.time())})
                 t["current"] = len(t["takes"]) - 1
                 self._save_takes(takes)
-        return self.process(line_id, cast, speaker, sc)
+        return self.make_preview(line_id, cast, plan)
 
-    def process(self, line_id, cast, speaker, sc):
+    def make_preview(self, line_id, cast, plan):
         t = self.load_takes().get(line_id)
         if not t or not t["takes"]:
             raise ValueError("This line has no generated take yet")
-        take = t["takes"][t.get("current", 0)]
-        preset = cast["presets"].get(sc.get("preset") or "", {"steps": []})
-        out = cast.get("output", {})
-        # Luanti can't swap a sound it already sent to the game, so every
-        # render gets a new name (the old file is removed afterwards)
-        sound = "voice_%s_%s" % (safe_id(line_id), format(int(time.time() * 10) % 36 ** 5, "x"))
-        os.makedirs(os.path.join(self.sounds, "voices"), exist_ok=True)
-        self.render(self.take_path(take["file"]), preset.get("steps", []), out,
-                    os.path.join(self.sounds, "voices", sound + ".ogg"))
+        index = t.get("current", 0)
+        take = t["takes"][index]
+        preset = cast["presets"].get(plan["preset"] or "", {"steps": []})
+        dst = self.pending_path(line_id)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        self.render(self.take_path(take["file"]), preset.get("steps", []), cast.get("output", {}), dst)
+        pending = {"take": index, "preset": plan["preset"], "voice": take["voice"],
+                   "url": "/pending/%s.ogg?v=%d" % (safe_id(line_id), int(time.time() * 1000)),
+                   "rate": int(cast.get("output", {}).get("rate") or 11025), "time": int(time.time())}
+        with self.lock:
+            takes = self.load_takes()
+            takes[line_id]["pending"] = pending
+            self._save_takes(takes)
+        return {"pending": pending}
+
+    def confirm(self, line_id):
+        """The previewed audio becomes the line's voice in the game."""
+        src = self.pending_path(line_id)
+        with self.lock:
+            takes = self.load_takes()
+            t = takes.get(line_id)
+            if not t or "pending" not in t or not os.path.exists(src):
+                raise ValueError("There is no preview waiting for this line")
+            # Luanti can't swap a sound it already sent to the game, so every
+            # confirmed voice gets a new name (the old file is removed)
+            sound = "voice_%s_%s" % (safe_id(line_id), format(int(time.time() * 10) % 36 ** 5, "x"))
+            os.makedirs(os.path.join(self.sounds, "voices"), exist_ok=True)
+            shutil.move(src, os.path.join(self.sounds, "voices", sound + ".ogg"))
+            t["confirmed"] = dict(t.pop("pending"), sound=sound)
+            self._save_takes(takes)
         cfg = self.load_config()
         old = cfg.setdefault("voices", {}).get(line_id, {})
         cfg["voices"][line_id] = {"sound": sound, "volume": old.get("volume", 100)}
         self.save_config(cfg)
         self._drop_old(old.get("sound"), sound)
-        return {"sound": sound, "take": t.get("current", 0), "takes": len(t["takes"])}
+        return {"sound": sound}
+
+    def discard(self, line_id):
+        with self.lock:
+            takes = self.load_takes()
+            if line_id in takes:
+                takes[line_id].pop("pending", None)
+                self._save_takes(takes)
+        if os.path.exists(self.pending_path(line_id)):
+            os.remove(self.pending_path(line_id))
 
     def render(self, src, steps, out, dst):
         """src audio -> Tenacity (preset steps, then the output rate) -> Ogg at dst"""

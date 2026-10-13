@@ -243,6 +243,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/sounds/([a-z0-9_]+)\.ogg$", url.path)
         if m:
             return self.send_file(sound_path(m.group(1)), "audio/ogg")
+        m = re.match(r"^/pending/([a-z0-9_]+)\.ogg$", url.path)
+        if m:
+            return self.send_file(os.path.join(VG.work, "pending", m.group(1) + ".ogg"), "audio/ogg")
         m = re.match(r"^/takes/(.+\.mp3)$", url.path)
         if m:
             return self.send_file(VG.take_path(unquote(m.group(1))), "audio/mpeg")
@@ -424,14 +427,20 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/voice/take":
             VG.set_take(data.get("line", ""), int(data.get("index", 0)))
             return self.send(200, {"ok": True})
+        if path == "/api/voice/confirm":
+            return self.send(200, VG.confirm(data.get("line", "")))
+        if path == "/api/voice/discard":
+            VG.discard(data.get("line", ""))
+            return self.send(200, {"ok": True})
         if path == "/api/voice/plan":
             cast = VG.load_cast()
             out = []
             for line in data.get("lines", [])[:5000]:
                 try:
-                    _, speaker, sc, text = VG.line_plan(line, cast)
-                    out.append({"line": line, "speaker": speaker, "chars": len(text),
-                                "voice": bool(sc.get("voice_id")), "model": sc.get("model_id", "")})
+                    p = VG.line_plan(line, cast)
+                    words = speakable.has_words(p["text"])
+                    out.append({"line": line, "speaker": p["speaker"], "chars": len(p["text"]) if words else 0,
+                                "voice": bool(p["voice_id"]), "model": p["model_id"]})
                 except ValueError:
                     pass
             return self.send(200, out)

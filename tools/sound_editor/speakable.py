@@ -302,7 +302,14 @@ def tidy(text):
     text = text.replace("\n\n", " ").replace("\n", " ").replace(" ", "\n\n")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r" +([,.;:!?])", r"\1", text)
+    text = re.sub(r"[,;:]+([.!?])", r"\1", text)      # "the amulet,!" -> "the amulet!"
+    text = re.sub(r'(^|\n)\s*[,.;:!?]+\s*', r"\1", text)  # punctuation left at a start
     return text.strip()
+
+
+def has_words(text):
+    """False when nothing speakable is left (e.g. a line that was only placeholders)."""
+    return bool(re.search(r"[^\W\d_]", text))
 
 
 def speakable(entry):

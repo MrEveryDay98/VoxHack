@@ -16,12 +16,19 @@ const VoiceGen = (() => {
   let testSource = "";
   const jobs = {};          // line id -> latest job
   const seenJobs = new Set();
+  const autoplay = new Set(); // jobs whose result plays as soon as it's ready
   const redraws = new Map(); // line id -> redraw its dialogue row
   let polling = false;
   let stopReason = "";
   let firstPoll = true; // an old stop reason is shown quietly, not as a toast
 
-  const touch = () => { dirty = true; markDirty(); };
+  // voice casting, presets and per-line choices save themselves shortly after a change
+  let saveTimer = null;
+  const touch = () => {
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => save().catch((e) => toast("Couldn't save the voice settings: " + e.message)), 700);
+  };
 
   // ---------------------------------------------------------- loading
   async function load() {
@@ -65,8 +72,14 @@ const VoiceGen = (() => {
 
   async function save() {
     if (!dirty) return;
-    await api("/api/cast", { method: "PUT", json: cast });
-    dirty = false;
+    clearTimeout(saveTimer);
+    dirty = false; // changes made while this is saving mark it again
+    try {
+      await api("/api/cast", { method: "PUT", json: cast });
+    } catch (e) {
+      dirty = true;
+      throw e;
+    }
   }
 
   // ---------------------------------------------------------- helpers
@@ -118,11 +131,12 @@ const VoiceGen = (() => {
   }
 
   // ---------------------------------------------------------- jobs
-  async function queue(items) {
+  async function queue(items, play) {
     if (!items.length) return;
     try {
       await save();
       const res = await api("/api/voice/queue", { method: "POST", json: { items } });
+      if (play) res.jobs.forEach((j) => autoplay.add(j));
       items.forEach((it, i) => {
         jobs[it.line] = { job: res.jobs[i], status: "queued", action: it.action };
         redrawLine(it.line);
@@ -151,11 +165,10 @@ const VoiceGen = (() => {
           if ((j.status === "done" || j.status === "error" || j.status === "cancelled") && !seenJobs.has(j.job)) {
             seenJobs.add(j.job);
             changed = true;
-            if (j.status === "done" && j.result) {
-              const old = config.voices[j.line] || {};
-              config.voices[j.line] = { sound: j.result.sound, volume: old.volume ?? 100 };
-              addSound(j.result.sound, "voices");
+            if (j.status === "done" && j.result && j.result.pending && autoplay.has(j.job)) {
+              playUrl(j.result.pending.url, "result");
             }
+            autoplay.delete(j.job);
           }
           if (prev && prev.status !== j.status) redrawLine(j.line);
         }
@@ -213,7 +226,8 @@ const VoiceGen = (() => {
     if (!lines.length) return toast(action === "generate" ? "Every shown line is voiced already" : "None of the shown lines has a take yet");
     if (action === "process") {
       const ok = await confirmBox("Re-process lines", [el("p", {},
-        `Run ${lines.length} line(s) through their speaker's Tenacity preset again (no ElevenLabs credits are used).`)], "Re-process");
+        `Run ${lines.length} line(s) through their effect again (no ElevenLabs credits are used). ` +
+        "Each result waits for you to listen and confirm it (filter: Awaiting review).")], "Re-process");
       if (ok) queue(lines.map((d) => ({ line: d.id, action })));
       return;
     }
@@ -225,7 +239,8 @@ const VoiceGen = (() => {
     for (const p of plan) if (!p.voice) missing[p.speaker] = (missing[p.speaker] || 0) + 1;
     const chars = ready.reduce((n, p) => n + p.chars, 0);
     const credits = Math.round(ready.reduce((n, p) => n + p.chars * modelCost(p.model), 0));
-    const body = [el("p", {}, `${ready.length} line(s), ${fmt(chars)} characters — about ${fmt(credits)} ElevenLabs credits.`)];
+    const body = [el("p", {}, `${ready.length} line(s), ${fmt(chars)} characters — about ${fmt(credits)} ElevenLabs credits.`),
+      el("p", { class: "muted" }, "Nothing is saved to the game until you confirm it: listen to each result with the “Awaiting review” filter.")];
     if (subscription && subscription.character_limit) {
       body.push(el("p", { class: "muted" }, `You have used ${fmt(subscription.character_count)} of ${fmt(subscription.character_limit)} this period.`));
     }
@@ -240,43 +255,127 @@ const VoiceGen = (() => {
   }
 
   // ---------------------------------------------------------- dialogue rows
+  // what this line will be read with: its own choices, else its speaker's
+  const NO_EFFECTS = "__none__";
+  function planFor(d) {
+    const ln = cast.lines[d.id] || {};
+    const sc = cast.speakers[lineCast(d)] || {};
+    const own = !!ln.voice_id;
+    let preset = "preset" in ln ? ln.preset : (sc.preset || "");
+    if (preset === NO_EFFECTS) preset = "";
+    return {
+      voice_id: own ? ln.voice_id : sc.voice_id, voice_name: own ? ln.voice_name : sc.voice_name,
+      model_id: (own && ln.model_id) || sc.model_id || "eleven_multilingual_v2", preset,
+    };
+  }
+
+  // Generate -> listen to the processed result -> Confirm (or Regenerate)
   function rowControls(d, redraw) {
     redraws.set(d.id, redraw);
     const box = el("div", { class: "gen" });
     const t = takes[d.id];
     const job = jobs[d.id];
+    const ln = cast.lines[d.id] || {};
     const sc = cast.speakers[lineCast(d)] || {};
+    const plan = planFor(d);
     const busy = job && (job.status === "queued" || job.status === "running");
-    const text = spoken(d);
-    const credits = Math.round(text.length * modelCost(sc.model_id || "eleven_multilingual_v2"));
-    const genBtn = el("button", {
-      class: "primary small", disabled: busy || !sc.voice_id || null,
-      title: sc.voice_id ? `About ${credits} credits` : `Choose a voice for "${lineCast(d)}" in Voice casting first`,
-      onclick: () => queue([{ line: d.id, action: "generate" }]),
-    }, t && t.takes.length ? "Generate again" : "Generate voice");
-    box.append(genBtn);
-    if (t && t.takes.length) {
-      const cur = t.current || 0;
-      const sel = el("select", { "aria-label": "Take", disabled: busy || null, onchange: async (e) => {
-        try {
-          await api("/api/voice/take", { method: "POST", json: { line: d.id, index: +e.target.value } });
-          t.current = +e.target.value;
-          queue([{ line: d.id, action: "process" }]);
-        } catch (err) { toast(err.message); }
-      } }, ...t.takes.map((k, i) => el("option", { value: i, selected: i === cur || null },
-        `Take ${i + 1} · ${k.voice} · ${new Date(k.time * 1000).toLocaleDateString()}`)));
-      box.append(el("div", { class: "takes" }, sel,
-        el("button", { class: "icon", title: "Play the raw take (before Tenacity)", "aria-label": "Play raw take",
-          onclick: () => playUrl("/takes/" + encodeURI(t.takes[cur].file)) }, "▶ raw"),
-        el("button", { class: "small", disabled: busy || null, title: "Run the take through the preset again",
-          onclick: () => queue([{ line: d.id, action: "process" }]) }, "Re-process")));
+    const hasTake = t && t.takes.length;
+    const pending = t && t.pending;
+
+    // voice and effect for this line
+    const voiceSel = el("select", { "aria-label": "Voice for this line", disabled: busy || null, onchange: (e) => {
+      const v = voices.find((x) => x.voice_id === e.target.value);
+      setLine(d.id, "voice_id", e.target.value);
+      setLine(d.id, "voice_name", v ? v.name : "");
+      redrawLine(d.id);
+    } }, el("option", { value: "" }, sc.voice_id ? `${lineCast(d)}'s voice: ${sc.voice_name || sc.voice_id}` : (voices.length ? "— choose a voice —" : "No voices: add your key in Voice casting")),
+    ...voices.map((v) => el("option", { value: v.voice_id, selected: v.voice_id === ln.voice_id || null }, v.name)));
+    if (ln.voice_id && !voices.find((v) => v.voice_id === ln.voice_id)) {
+      voiceSel.append(el("option", { value: ln.voice_id, selected: true }, ln.voice_name || ln.voice_id));
     }
+    const v = voices.find((x) => x.voice_id === plan.voice_id);
+    const effectSel = el("select", { "aria-label": "Effect for this line", disabled: busy || null, onchange: (e) => {
+      setLine(d.id, "preset", e.target.value);
+      // a new effect on the same take costs nothing: preview it straight away
+      if (hasTake) queue([{ line: d.id, action: "process" }], true);
+      else redrawLine(d.id);
+    } }, el("option", { value: "" }, `${lineCast(d)}'s effect: ${sc.preset || "none"}`),
+    el("option", { value: NO_EFFECTS, selected: ln.preset === NO_EFFECTS || null }, "No effects"),
+    ...Object.keys(cast.presets).map((p) => el("option", { value: p, selected: (ln.preset === p) || null }, p)));
+    box.append(el("div", { class: "genpick" },
+      el("label", {}, el("span", {}, "Voice"), el("div", { class: "with-play" }, voiceSel,
+        v && v.preview_url ? el("button", { class: "icon", "aria-label": "Hear " + v.name, title: "Hear this voice",
+          onclick: () => playUrl(v.preview_url, v.name) }, "▶") : null)),
+      el("label", {}, el("span", {}, "Effect"), effectSel)));
+
+    // generate
+    const credits = Math.round(spoken(d).length * modelCost(plan.model_id));
+    const words = /\p{L}/u.test(spoken(d));
+    box.append(el("button", {
+      class: (pending ? "" : "primary ") + "small", disabled: busy || !plan.voice_id || !words || null,
+      title: !words ? "Nothing to read: this line is only placeholders. Write what should be said in Spoken text."
+        : plan.voice_id ? `Reads the spoken text with ${plan.voice_name || "this voice"} (about ${credits} credits)` : "Choose a voice first",
+      onclick: () => queue([{ line: d.id, action: "generate" }], true),
+    }, pending ? `↻ Regenerate (~${credits} credits)` : `Generate (~${credits} credits)`));
+    if (!words) box.append(el("div", { class: "jobnote error" }, "Only placeholders: write its Spoken text to voice it."));
+
     if (job && job.status !== "done") {
-      const label = { queued: "Waiting…", running: job.action === "process" ? "Processing in Tenacity…" : "Generating…",
+      const label = { queued: "Waiting…", running: job.action === "process" ? "Applying the effect in Tenacity…" : "Generating with ElevenLabs…",
         error: job.message, cancelled: "Cancelled" }[job.status] || job.status;
       box.append(el("div", { class: "jobnote " + job.status }, label));
     }
+
+    // review the result
+    if (pending && !busy) {
+      const k = t.takes[pending.take] || {};
+      box.append(el("div", { class: "review" },
+        el("div", { class: "review-head" },
+          el("button", { class: "primary small", onclick: () => playUrl(pending.url) }, "▶ Play result"),
+          el("span", { class: "muted" }, `${k.voice || pending.voice} · ${pending.preset || "no effects"} · ${(pending.rate / 1000).toLocaleString()} kHz`)),
+        el("div", { class: "review-actions" },
+          el("button", { class: "small ok", onclick: () => confirmLine(d) }, "✓ Confirm"),
+          el("button", { class: "small", onclick: () => queue([{ line: d.id, action: "generate" }], true) }, "↻ Regenerate"),
+          el("button", { class: "small", onclick: () => discardLine(d) }, "Discard"))));
+    }
+
+    // earlier takes can be previewed again (no credits)
+    if (hasTake && !busy) {
+      const cur = t.current || 0;
+      box.append(el("details", { class: "older" }, el("summary", {}, `Takes (${t.takes.length})`),
+        el("div", { class: "takes" },
+          el("select", { "aria-label": "Take", onchange: async (e) => {
+            try {
+              await api("/api/voice/take", { method: "POST", json: { line: d.id, index: +e.target.value } });
+              t.current = +e.target.value;
+              queue([{ line: d.id, action: "process" }], true);
+            } catch (err) { toast(err.message); }
+          } }, ...t.takes.map((x, i) => el("option", { value: i, selected: i === cur || null },
+            `Take ${i + 1} · ${x.voice} · ${new Date(x.time * 1000).toLocaleString()}`))),
+          el("button", { class: "icon", title: "Play this take as ElevenLabs made it (no effect, full quality)",
+            onclick: () => playUrl("/takes/" + encodeURI(t.takes[cur].file)) }, "▶ raw"))));
+    }
     return box;
+  }
+
+  async function confirmLine(d) {
+    try {
+      const res = await api("/api/voice/confirm", { method: "POST", json: { line: d.id } });
+      const old = config.voices[d.id] || {};
+      config.voices[d.id] = { sound: res.sound, volume: old.volume ?? 100 };
+      addSound(res.sound, "voices");
+      if (takes[d.id]) delete takes[d.id].pending;
+      redrawLine(d.id);
+      renderVoicesCount();
+      toast("Saved — the game uses it from now on");
+    } catch (e) { toast(e.message); }
+  }
+
+  async function discardLine(d) {
+    try {
+      await api("/api/voice/discard", { method: "POST", json: { line: d.id } });
+      if (takes[d.id]) delete takes[d.id].pending;
+      redrawLine(d.id);
+    } catch (e) { toast(e.message); }
   }
 
   function spokenEditor(d) {
@@ -555,5 +654,6 @@ const VoiceGen = (() => {
     return box;
   }
 
-  return { load, save, render, rowControls, spokenEditor, bulk, isDirty: () => dirty };
+  return { load, save, render, rowControls, spokenEditor, bulk, isDirty: () => dirty,
+    awaitingReview: (id) => !!(takes[id] && takes[id].pending) };
 })();

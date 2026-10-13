@@ -204,4 +204,19 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .vrow .text mark.varies { background: #3a2620; color: var(--warn); }
 @media (max-width: 860px) { .legend-body { grid-template-columns: 1fr; } }
 
+/* generate -> review -> confirm */
+.genpick { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.genpick label { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.genpick select { width: 100%; font-size: 12px; padding: 4px 6px; }
+.with-play { display: flex; gap: 4px; min-width: 0; }
+.with-play select { flex: 1; min-width: 0; }
+.review { width: 100%; border: 1px solid var(--accent); background: #2a2516; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.review-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 11px; }
+.review-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font-weight: 600; }
+.older { font-size: 12px; width: 100%; }
+.older summary { cursor: pointer; color: var(--muted); }
+.older .takes { margin-top: 4px; }
+.vrow { grid-template-columns: 170px 1fr 270px; }
+
 [hidden] { display: none !important; }

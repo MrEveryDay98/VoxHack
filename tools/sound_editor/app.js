@@ -260,6 +260,7 @@ function filteredDialogue() {
     const voiced = !!config.voices[d.id];
     if (st === "voiced" && !voiced) return false;
     if (st === "unvoiced" && voiced) return false;
+    if (st === "review" && !VoiceGen.awaitingReview(d.id)) return false;
     if (q && !(d.text.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || d.speaker.toLowerCase().includes(q))) return false;
     return true;
   });
