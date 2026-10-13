@@ -105,7 +105,8 @@ const Blocks = (() => {
     const shape = b.shape || "cube";
     const s = (b.scale || 1) * S;
     const bf = b.backfaces || {};
-    const show = (side) => (bf[side] ? "backface-visibility:visible;opacity:.92" : "");
+    const hid = b.hidden || {};
+    const show = (side) => (hid[side] ? "display:none" : bf[side] ? "backface-visibility:visible;opacity:.92" : "");
     if (shape === "cube" || shape === "slab" || shape === "pane") {
       const h = shape === "slab" ? S / 2 : S;
       const d = shape === "pane" ? S / 8 : S;
@@ -201,22 +202,30 @@ const Blocks = (() => {
   // which sides are also drawn from behind (seen from inside the block)
   const SIDES = [["top", "Top"], ["bottom", "Bottom"], ["north", "North"], ["south", "South"],
     ["east", "East"], ["west", "West"]];
-  // commit(sides) stores the new set of sides (defaults to the block's own)
+  // How each side is drawn: normally (from outside), also from behind (seen
+  // from inside the block), or not at all. commit(backfaces, hidden) stores
+  // the new choice (defaults to the block's own fields).
   function backfaces(b, commit) {
     const bf = Object.assign({}, b.backfaces || {});
-    const done = commit || ((v) => { b.backfaces = v; touch(); render(); });
+    const hid = Object.assign({}, b.hidden || {});
+    const done = commit || ((v, h) => { b.backfaces = v; b.hidden = h; touch(); render(); });
+    const MODES = [["normal", "Normal"], ["back", "Also from behind"], ["hidden", "Don't draw"]];
+    const modeOf = (k) => (hid[k] ? "hidden" : bf[k] ? "back" : "normal");
+    const setMode = (k, m) => {
+      delete bf[k]; delete hid[k];
+      if (m === "back") bf[k] = true;
+      if (m === "hidden") hid[k] = true;
+    };
     return el("div", {},
-      el("h4", {}, "Back faces"),
+      el("h4", {}, "Sides"),
       el("p", { class: "muted", style: "margin:0 0 6px" },
-        "Normally a side is only drawn from outside. Tick a side to also draw it from behind, so it's seen from inside the block (glass cases, cages, panes seen from both sides)."),
-      el("div", { class: "inline" }, ...SIDES.map(([k, l]) => el("label", { class: "check" },
-        el("input", { type: "checkbox", checked: bf[k] || null, onchange: (e) => {
-          if (e.target.checked) bf[k] = true; else delete bf[k];
-          done(bf);
-        } }), l))),
+        "Normally a side is drawn from outside only. “Also from behind” draws it from inside the block too (glass cases, cages, panes seen from both sides); “Don't draw” leaves it out (open-topped boxes, see-through sides)."),
+      el("div", { class: "blk-sides" }, ...SIDES.map(([k, l]) => el("label", { class: "blk-field" }, el("span", {}, l),
+        el("select", { onchange: (e) => { setMode(k, e.target.value); done(bf, hid); } },
+          ...MODES.map(([m, ml]) => el("option", { value: m, selected: modeOf(k) === m || null }, ml)))))),
       el("div", { class: "inline" },
-        el("button", { class: "small", onclick: () => { SIDES.forEach(([k]) => { bf[k] = true; }); done(bf); } }, "All sides"),
-        el("button", { class: "small", onclick: () => done({}) }, "None")));
+        el("button", { class: "small", onclick: () => { SIDES.forEach(([k]) => setMode(k, "back")); done(bf, hid); } }, "All from behind too"),
+        el("button", { class: "small", onclick: () => done({}, {}) }, "All normal")));
   }
 
   function editor(b) {
@@ -313,7 +322,7 @@ const Blocks = (() => {
       shape: gameShape(g), texture: has("texture") ? o.texture : g.look,
       solid: has("solid") ? o.solid : g.solid, climbable: has("climbable") ? o.climbable : g.climbable,
       light: has("light") ? o.light : g.light, damage: o.damage || "", repeat: o.repeat || 0,
-      cause: o.cause || "", backfaces: o.backfaces || {}, scale: 1,
+      cause: o.cause || "", backfaces: o.backfaces || {}, hidden: o.hidden || {}, scale: 1,
     };
   }
 
@@ -383,7 +392,10 @@ const Blocks = (() => {
               field("When you step in", text("damage", "e.g. 1d4", "7em")),
               field("Again every (s)", num("repeat", 0, 60, 0.5), "0 = only on entering"),
               field("Cause of death", text("cause", g.description), "“killed by …”")))),
-        ["cube", "slab", "pane", "floor"].includes(b.shape) && g.drawtype !== "liquid" ? backfaces(b, (v) => set("backfaces", v)) : null,
+        ["cube", "slab", "pane", "floor"].includes(b.shape) && g.drawtype !== "liquid" ? backfaces(b, (v, h) => {
+          overrides[g.name] = Object.assign(overrides[g.name] || {}, { backfaces: v, hidden: h });
+          touchGame(); render();
+        }) : null,
         el("h4", {}, "Texture"), texturePicker(proxy)));
   }
 

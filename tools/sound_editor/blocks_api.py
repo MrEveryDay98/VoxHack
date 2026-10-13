@@ -88,6 +88,8 @@ def clean_block(b):
         "cause": str(b.get("cause") or "")[:60],
         # sides whose back is drawn too (seen from inside the block)
         "backfaces": {s: True for s in SIDES if (b.get("backfaces") or {}).get(s)},
+        # sides that aren't drawn at all
+        "hidden": {s: True for s in SIDES if (b.get("hidden") or {}).get(s)},
     }
 
 
@@ -136,7 +138,7 @@ def texture_path(fname):
 CATALOG = os.path.join(ROOT, "external", "luanti", "mod_data", "nhv", "blocks_catalog.json")
 OVERRIDES = os.path.join(BLOCKS, "overrides.json")
 OVERRIDE_KEYS = ("name", "texture", "light", "solid", "climbable", "damage", "repeat",
-                 "cause", "backfaces")
+                 "cause", "backfaces", "hidden")
 
 
 def describe_texture(tex, cols):
@@ -203,8 +205,9 @@ def save_overrides(data):
             c["damage"] = str(c["damage"]).strip()
             if c["damage"] and not re.match(r"^\d*d\d+\s*([+-]\s*\d+)?$|^\d+$", c["damage"]):
                 raise ValueError("damage must be like 1d4, 2d6+1 or 3")
-        if "backfaces" in c:
-            c["backfaces"] = {s: True for s in SIDES if (c["backfaces"] or {}).get(s)}
+        for k in ("backfaces", "hidden"):
+            if k in c:
+                c[k] = {s: True for s in SIDES if (c[k] or {}).get(s)}
         if c:
             out[name] = c
     os.makedirs(BLOCKS, exist_ok=True)

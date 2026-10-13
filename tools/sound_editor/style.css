@@ -241,6 +241,7 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .blk-ghost { border: 2px dashed #6a6a80; }
 .blk-ground { position: absolute; left: 0; top: 0; background: radial-gradient(#2a2a35, transparent 70%); }
 @keyframes blkspin { from { transform: rotateX(-22deg) rotateY(0deg); } to { transform: rotateX(-22deg) rotateY(360deg); } }
+.blk-sides { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 6px 14px; margin-bottom: 6px; }
 .blk-texpick { display: flex; flex-direction: column; gap: 8px; }
 .blk-grid { display: flex; flex-wrap: wrap; gap: 3px; max-height: 300px; overflow: auto; background: #0b0b10; padding: 6px; border-radius: 6px; }
 .blk-grid .tex { cursor: pointer; outline: 1px solid transparent; }

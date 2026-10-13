@@ -18,6 +18,7 @@
 --   backfaces  {top=, bottom=, east=, west=, north=, south=}: sides whose
 --              back is drawn too, so they're seen from inside the block
 --              (cube, slab, pane, floor)
+--   hidden     the same, for sides that aren't drawn at all
 -- New or changed blocks need the game (or editor) restarted.
 
 local cblocks = {defs = {}}
@@ -76,9 +77,15 @@ local function register(b)
 	-- one tile per side (+Y, -Y, +X, -X, +Z, -Z), each culled unless its
 	-- back face is asked for
 	local back = type(b.backfaces) == "table" and b.backfaces or {}
-	local tiles = {}
+	local hide = type(b.hidden) == "table" and b.hidden or {}
+	local tiles, any_hidden = {}, false
 	for i, side in ipairs({"top", "bottom", "east", "west", "north", "south"}) do
-		tiles[i] = {name = tex, backface_culling = not back[side]}
+		if hide[side] then
+			tiles[i] = {name = "blank.png"} -- not drawn (fully see-through)
+			any_hidden = true
+		else
+			tiles[i] = {name = tex, backface_culling = not back[side]}
+		end
 	end
 	local def = {
 		description = b.name or id,
@@ -114,7 +121,8 @@ local function register(b)
 		def.inventory_image = tex
 	else
 		def.drawtype = "normal"
-		def.use_texture_alpha = "opaque"
+		-- (a cube with an undrawn side has to let you see through it)
+		def.use_texture_alpha = any_hidden and "clip" or "opaque"
 	end
 	core.register_node(":" .. name, def)
 	cblocks.defs[name] = info
@@ -199,15 +207,23 @@ local function apply_override(name, o)
 			ch.wield_image = tex -- objects are drawn from this
 		end
 	end
-	if type(o.backfaces) == "table" and next(o.backfaces) then
+	local back = type(o.backfaces) == "table" and o.backfaces or {}
+	local hide = type(o.hidden) == "table" and o.hidden or {}
+	if next(back) or next(hide) then
 		local out = {}
 		for i, side in ipairs(SIDES) do
 			local t = (tiles or {})[math.min(i, #(tiles or {}))] or first_tile(def)
 			t = type(t) == "table" and table.copy(t) or {name = t}
-			t.backface_culling = not o.backfaces[side]
+			t.backface_culling = not back[side]
+			if hide[side] then
+				t = {name = "blank.png"} -- not drawn
+			end
 			out[i] = t
 		end
 		ch.tiles = out
+		if next(hide) then
+			ch.use_texture_alpha = "clip"
+		end
 	end
 	if o.light ~= nil then
 		ch.light_source = math.max(0, math.min(14, tonumber(o.light) or 0))
