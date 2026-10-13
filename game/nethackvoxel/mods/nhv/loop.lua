@@ -14,7 +14,8 @@ local test_input = core.settings:get("nhv_test_input")
 
 core.register_globalstep(function(dtime)
 	local player = nhv.player.get()
-	if not player or not nh.snap or not nh.ready() or nhv.ui.open or nhv.ui.chat_open then
+	if not player or not nh.snap or not nh.ready() or nhv.ui.open or nhv.ui.chat_open
+			or nhv.ui.menu_open then
 		return
 	end
 	if test_input and test_input ~= "" then

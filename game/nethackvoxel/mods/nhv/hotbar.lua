@@ -8,7 +8,7 @@
 -- Your hand always holds the wielded weapon.
 --
 -- Chat (T) is a NetHack command line: type a command and press Enter. The
--- game pauses while it's open.
+-- game pauses while it's open, and while any menu or prompt is on screen.
 --   #pray, #loot ...   extended commands (the # can be left out: "pray")
 --   s, 20s, Ea ...     keys, as you'd type them in NetHack (^D = Ctrl+D)
 
@@ -170,6 +170,17 @@ core.register_chatcommand("nhvchat", {
 	description = "(NetHack Voxel) chat prompt opened/closed",
 	func = function(_, param)
 		nhv.ui.chat_open = param == "open"
+		return true
+	end,
+})
+
+-- any menu on screen (the inventory, a NetHack question, a container...):
+-- the game pauses (the NetHack Voxel build of Luanti reports these)
+nhv.ui.menu_open = false
+core.register_chatcommand("nhvmenu", {
+	description = "(NetHack Voxel) a menu opened/closed",
+	func = function(_, param)
+		nhv.ui.menu_open = param == "open"
 		return true
 	end,
 })
