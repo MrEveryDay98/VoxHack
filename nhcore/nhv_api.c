@@ -520,6 +520,20 @@ nhv_get_floor_objects(int x, int y, nhv_obj *buf, int max)
     return n;
 }
 
+NHV_API int
+nhv_get_container(unsigned id, nhv_obj *buf, int max)
+{
+    struct obj *cobj, *otmp;
+    int n = 0;
+
+    if (!safe_to_read() || !(cobj = nhv_find_container(id)))
+        return -1;
+    for (otmp = cobj->cobj; otmp; otmp = otmp->nobj, n++)
+        if (n < max)
+            fill_obj(otmp, &buf[n]);
+    return n;
+}
+
 /* ------------------------------------------------------------ glyph info */
 NHV_API void
 nhv_get_glyph_info(int glyph, nhv_glyph_info *out)

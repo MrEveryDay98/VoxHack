@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 5
+#define NHV_API_VERSION 6
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -119,7 +119,8 @@ enum nhv_event_kind {
     NHV_EV_MISSILE,     /* missile outcome: "hit|miss|stop|pass|land <pid>" */
     NHV_EV_COMBAT,      /* "attack <attacker m_id> <target m_id, 0 = hero> <melee>" */
     NHV_EV_SOUND,       /* sound/voice hook, see nhv_sound.c */
-    NHV_EV_RAY          /* ray outcome: "hit|miss|reflect|stop <rid>" */
+    NHV_EV_RAY,         /* ray outcome: "hit|miss|reflect|stop <rid>" */
+    NHV_EV_CONTAINER    /* "open|fail|changed|gone <container id>" */
 };
 
 typedef struct nhv_event {
@@ -247,6 +248,12 @@ typedef struct nhv_obj {
 NHV_API int nhv_get_inventory(nhv_obj *buf, int max);
 /* Objects on a map square (only meaningful where the hero can see / is). */
 NHV_API int nhv_get_floor_objects(int x, int y, nhv_obj *buf, int max);
+/* Contents of a container the hero can reach (carried, or on/next to their
+ * square), once it has been opened ("#nhvloot <id>"; NHV_EV_CONTAINER
+ * "open <id>"). Items move with "#nhvcontin <id> <obj id> <count>" and
+ * "#nhvcontout <id> <obj id> <count>" (count 0 = all). Returns count, or
+ * -1 if there's no such container. */
+NHV_API int nhv_get_container(unsigned id, nhv_obj *buf, int max);
 
 /* ------------------------------------------------------------ glyph info */
 enum nhv_glyph_kind {

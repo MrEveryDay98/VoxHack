@@ -52,7 +52,18 @@ function actions.run(a, info)
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
 	else
+		actions.swing()
 		nhv.clock.act(a.keys, info or {kind = "action"})
+	end
+end
+
+-- One arm swing (right-click doesn't swing by itself; see hud.lua)
+local swing_state = false
+function actions.swing()
+	local player = nhv.player.get()
+	if player then
+		swing_state = not swing_state
+		player:hud_set_flags({nhv_swing = swing_state})
 	end
 end
 
@@ -245,6 +256,15 @@ function actions.context(player)
 		return list, primary
 	end
 
+	-- chests, boxes and bags on the square (yours or next to you): a tap opens them
+	for _, o in ipairs(core.nh_get_floor_objects(tx, ty) or {}) do
+		if nhv.containers.is_container(o) then
+			local name = o.name:gsub("^an? ", "")
+			add(act("Open " .. (#name > 28 and name:sub(1, 26) .. ".." or name),
+				ext("nhvloot " .. o.id)), true)
+		end
+	end
+
 	if tx == h.x and ty == h.y then
 		local sk = stair_key(sq)
 		if sk == ">" then
@@ -321,6 +341,9 @@ function actions.item_context(o)
 	local alt = U.has(o.flags, U.OBJ.ALTWEP)
 	local c = o.oclass
 	local inv = o.invlet
+	if nhv.containers.is_container(o) then
+		add("Open", ext("nhvloot " .. o.id), true)
+	end
 	if wielded or alt then
 		add("Swap weapons", "x", true)
 	end

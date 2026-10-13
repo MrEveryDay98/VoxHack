@@ -124,7 +124,9 @@ function sound.hook(id, opts)
 	else
 		params.to_player = p:get_player_name()
 	end
-	core.sound_play(name, params, true)
+	-- not "ephemeral": those go out unreliably and get dropped when several
+	-- play at once; every effect gets its own handle, so they all overlap
+	core.sound_play(name, params)
 end
 
 -- ---------------------------------------------------------------- music

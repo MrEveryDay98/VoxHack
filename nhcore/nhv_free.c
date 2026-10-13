@@ -505,6 +505,15 @@ nhv_clear_rays(void)
 }
 
 void
+nhv_container_event(const char *kind, unsigned id)
+{
+    char buf[64];
+
+    Sprintf(buf, "%s %u", kind, id);
+    nhv_push_event(NHV_EV_CONTAINER, 0, buf);
+}
+
+void
 nhv_combat_event(const char *kind, unsigned a, unsigned b, int melee)
 {
     char buf[64];

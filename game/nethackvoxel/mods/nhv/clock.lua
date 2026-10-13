@@ -24,6 +24,7 @@ nhv.clock = clock
 clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0.12
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
+clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
 
 -- NetHack speed of the hero (12 = normal)
 function clock.hero_speed()
@@ -67,6 +68,9 @@ function clock.update(dtime, player)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
 	if clock.debt > 0 then
 		target = 1
+	end
+	if nhv.wheel and nhv.wheel.is_open() then
+		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen
 	end
 	clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
 	local dtg = dtime * clock.scale * clock.RATE

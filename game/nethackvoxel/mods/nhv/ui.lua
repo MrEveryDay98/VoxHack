@@ -13,6 +13,7 @@ local ui = {
 	ctx_obj = nil,     -- item whose context menu is open
 }
 nhv.ui = ui
+ui.persistent = {} -- formspec names that stay open across commands
 
 local E = core.formspec_escape
 local function head(w, h)
@@ -234,6 +235,10 @@ end
 
 nh.on_request(function(req)
 	if req.kind == "key" and req.for_command then
+		-- panels that stay open across commands (e.g. a container) keep you put
+		if ui.open and ui.persistent[ui.open] then
+			return true
+		end
 		if ui.open then
 			close(ui.open)
 			ui.open = nil

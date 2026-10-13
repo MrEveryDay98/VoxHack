@@ -1301,6 +1301,21 @@
    "desc": "A ray hits a body"
   },
   {
+   "id": "container_open",
+   "group": "game",
+   "desc": "A chest, box or bag is opened"
+  },
+  {
+   "id": "container_move",
+   "group": "game",
+   "desc": "An item goes into or out of a container"
+  },
+  {
+   "id": "container_close",
+   "group": "game",
+   "desc": "The container panel is closed"
+  },
+  {
    "id": "level_enter_down",
    "group": "game",
    "desc": "Arriving on a deeper level"

@@ -2,8 +2,8 @@
 --
 -- Tap right click (or E) for the obvious action. Hold it and a wheel of
 -- actions opens around the crosshair; move the mouse toward one and let
--- go to pick it (let go near the middle to cancel). The camera is put
--- back where it was when the wheel closes.
+-- go to pick it (let go near the middle to cancel). While it's open the
+-- view stays still (the mouse only moves the selection) and time slows.
 
 local nh = nhv.nh
 local wheel = {}
@@ -90,6 +90,10 @@ local function pick(player)
 	return best
 end
 
+function wheel.is_open()
+	return state ~= nil and state.open == true
+end
+
 local function close(player, run)
 	if not state then
 		return
@@ -98,6 +102,7 @@ local function close(player, run)
 	if state.open then
 		player:set_look_horizontal(state.yaw)
 		player:set_look_vertical(state.pitch)
+		player:hud_set_flags({nhv_camera_lock = false})
 	end
 	local choice = run
 	state = nil
@@ -163,6 +168,7 @@ core.register_globalstep(function()
 			and core.get_us_time() - state.t0 > HOLD_US then
 		nhv.sound.hook("wheel_open")
 		state.open = true
+		player:hud_set_flags({nhv_camera_lock = true})
 		draw(player)
 	end
 	if state.open then
