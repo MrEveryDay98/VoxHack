@@ -112,10 +112,24 @@ local function close(player, run)
 	end
 end
 
--- list, primary for a button
+-- list, primary for a button. Right click picks the wheel by the modifier
+-- held (Shift = yourself, Alt = use an item, Ctrl = magic; the NetHack
+-- Voxel build of Luanti sends Alt and Ctrl); E is for the wielded weapon.
 local function context_for(player, button)
 	if button == "place" then
-		return nhv.actions.context(player)
+		local ctl = player:get_player_control()
+		if ctl.sneak then
+			return nhv.actions.self_context(player)
+		elseif ctl.nhv_alt then
+			return nhv.actions.item_verbs(player)
+		elseif ctl.nhv_ctrl then
+			return nhv.actions.magic(player)
+		end
+		local list, primary, why = nhv.actions.context(player)
+		if why then
+			nhv.hud.message(why)
+		end
+		return list, primary
 	end
 	local invlet = player:get_wielded_item():get_meta():get_string("nhv_invlet")
 	if invlet == "" then

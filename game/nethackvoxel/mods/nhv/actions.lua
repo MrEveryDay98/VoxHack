@@ -6,6 +6,9 @@
 --                     (open a door, take the stairs, pick up, chat...)
 --                     hold: action wheel for it - move the mouse toward
 --                     an action and let go
+--   Shift+right click the same for yourself (search, pray, rest...)
+--   Alt+right click   use an item (eat, quaff, read, zap, wear...)
+--   Ctrl+right click  magic and abilities (cast, turn undead, ...)
 --   E (aux1)          same, for your wielded weapon
 --   1-5               the hotbar's action keys (hotbar.lua)
 --   T                 NetHack command line (hotbar.lua)
@@ -181,6 +184,12 @@ function actions.pointed(player)
 		elseif pt.type == "node" then
 			-- an object block (a ladder...): the square it stands in
 			local def = core.registered_nodes[core.get_node(pt.under).name]
+			-- a door: its own square (the face you see lies on the border
+			-- with the square in front of it)
+			if def and def.groups and def.groups.nhv_door then
+				local tx, ty = U.pos_to_tile(pt.under)
+				return {kind = "door", tx = tx, ty = ty}
+			end
 			if def and def.groups and def.groups.nhv_prop then
 				local tx, ty = U.pos_to_tile(pt.under)
 				return {kind = "prop", tx = tx, ty = ty, pos = pt.under}
@@ -282,6 +291,9 @@ function actions.context(player)
 	end
 	-- far away squares: act on your own square
 	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 then
+		if p.kind == "door" then
+			return {}, nil, "The door is too far away: step up to it."
+		end
 		tx, ty = h.x, h.y
 	end
 	local sq = square_info(tx, ty)
@@ -339,14 +351,7 @@ function actions.context(player)
 		elseif c == "S_grave" then
 			add(act("Dig up grave", "a"))
 		end
-		add(act("Search", "s"))
-		add(act("Rest 20 turns", "20s"))
-		add(act("Pray", ext("pray")))
-		add(act("Sit", ext("sit")))
-		add(act("Loot", ext("loot")))
-		add(act("Engrave", "E"))
-		add(info_act("Attributes", "\24"))
-		add(act("Save & quit", "S"))
+		-- (things you do by yourself are on the Shift wheel)
 		return list, primary
 	end
 
@@ -367,6 +372,43 @@ function actions.context(player)
 	add(act("Search", "s"))
 	add(act("Kick", "\4" .. key))
 	return list, primary
+end
+
+-- Shift + right click: things you do by yourself
+function actions.self_context()
+	local list = {
+		act("Search", "s"),
+		act("Rest 20 turns", "20s"),
+		act("Pray", ext("pray")),
+		act("Sit", ext("sit")),
+		act("Engrave", "E"),
+		act("Loot", ext("loot")),
+		info_act("Look here", ":"),
+		info_act("Attributes", "\24"),
+		act("Save & quit", "S"),
+	}
+	return list, list[1] -- (a tap searches)
+end
+
+-- Alt + right click: use an item (NetHack asks which)
+function actions.item_verbs()
+	return {
+		act("Eat", "e"), act("Quaff", "q"), act("Read", "r"), act("Zap", "z"),
+		act("Apply", "a"), act("Wear", "W"), act("Take off", "T"), act("Put on", "P"),
+		act("Remove", "R"), act("Wield", "w"),
+	}, nil -- (a tap does nothing: pick one)
+end
+
+-- Ctrl + right click: magic and abilities
+function actions.magic()
+	local list = {
+		act("Cast a spell", "Z"),
+		act("Turn undead", ext("turn")),
+		act("Monster ability", ext("monster")),
+		info_act("Enhance skills", ext("enhance")),
+		act("Teleport", "\20"),
+	}
+	return list, list[1] -- (a tap casts)
 end
 
 -- ---------------------------------------------------------------- items
