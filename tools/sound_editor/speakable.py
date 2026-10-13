@@ -190,7 +190,8 @@ PRINTF_CODES = {
 def legend():
     """Everything the editor's placeholder legend shows."""
     return {"quest": QUEST_CODES, "quest_mods": QUEST_MODS, "pronoun_codes": PRONOUN_CODES,
-            "printf": PRINTF_CODES, "quest_varies": "".join(VARIES)}
+            "printf": PRINTF_CODES, "quest_varies": "".join(VARIES),
+            "marks": [[label, meaning] for _, label, meaning, _ in MARKS] + [list(n) for n in OTHER_NOTES]}
 
 
 def _quest(text, role):
@@ -312,16 +313,77 @@ def has_words(text):
     return bool(re.search(r"[^\W\d_]", text))
 
 
+# ---------------------------------------------------------------- other markings
+# Things in the text that aren't placeholders but need explaining, as
+# (pattern, label, meaning, spoken replacement or None to keep as is).
+MARKS = [
+    (re.compile(r"^\[cookie\] "), "[cookie]",
+     "at the start of a rumor: it only comes out of fortune cookies. NetHack removes the tag, "
+     "so it's never shown or spoken.", ""),
+    (re.compile(r"(?m)^#.*(?:\n|$)"), "# note",
+     "a line starting with # in a book passage is the file's source note (edition, page...). "
+     "NetHack never shows it; it's left out of the spoken text.", ""),
+    (re.compile(r"\[\.\.\.[^\]]*\]"), "[...]",
+     "words cut from the quoted book passage. Shown as is; spoken as a pause.", "…"),
+    (re.compile(r"\[[^\]\n]+, by [^\]\n]+\]"), "[Book, by Author]",
+     "the book a passage is quoted from, shown under it in play. Left out of the spoken text "
+     "(add it to the Spoken text if you want it read).", ""),
+    (re.compile(r"`([^`'\n]*)'"), "`word'",
+     "old typewriter-style quotation marks: the same as 'word'. Spoken normally.", r"'\1'"),
+    (re.compile(r"AM\$"), "AM$",
+     "Ankh-Morpork dollars (Discworld money).", None),
+]
+OTHER_NOTES = [
+    ("ALL CAPITALS", "in the \"Death Quotes\" book passages, Death is talking (in Terry Pratchett's books "
+     "Death speaks in capitals). The spoken text is written in normal case so the voice doesn't "
+     "shout or spell it out; give these lines a deep, calm voice."),
+    ("% alone", "a % that isn't followed by a code letter (10%, %&#@#&) is just a percent sign or a "
+     "censored swear word, not a placeholder."),
+    ("^? and ^.", "engravings of odd keyboard symbols (an old programmers' joke); there's nothing to say."),
+    ("Line breaks", "shown as written. The spoken text joins the lines; a blank line becomes a paragraph pause."),
+    ("TEST:{ ... }", "developer and settings messages (also 'msg_window' ...) only appear when testing or when "
+     "an option is set wrong. They don't need voicing."),
+]
+
+
+def _marks(text):
+    """Markings found in text: tokens for the editor, and the speakable text."""
+    tokens = []
+    for pat, label, meaning, _ in MARKS:
+        for m in pat.finditer(text):
+            tokens.append({"pos": m.start(), "text": m.group(0).rstrip("\n"), "value": "",
+                           "meaning": meaning, "varies": False, "mark": label})
+    spoken = text
+    for pat, _, _, repl in MARKS:
+        if repl is not None:
+            spoken = pat.sub(repl, spoken)
+    return tokens, spoken
+
+
+def _caps_to_sentence(text):
+    """DEATH'S LINES IN CAPITALS -> Death's lines in normal case."""
+    def para(p):
+        letters = [c for c in p if c.isalpha()]
+        if len(letters) < 8 or any(c.islower() for c in letters):
+            return p
+        p = p.lower()
+        p = re.sub(r"(^|[.!?]\s+|\n\s*)([a-z])", lambda m: m.group(1) + m.group(2).upper(), p)
+        return re.sub(r"\bi\b", "I", p)
+    return "\n\n".join(para(p) for p in text.split("\n\n"))
+
+
 def speakable(entry):
     """Default text to send to the voice generator for a dialogue entry,
-    what changes from game to game, and each placeholder explained."""
+    what changes from game to game, and each placeholder or marking explained."""
     text = entry.get("text", "")
     varies, tokens = [], []
     q = entry.get("quest")
+    mark_tokens, text = _marks(text)
     if q and "%" in text:
         role = _load().get(q.get("section"))
         text, varies, tokens = _quest(text, role)
-    elif "%" in text:
+    elif "%" in text and entry.get("category") not in ("written", "oracle"):
+        # (book passages, rumors, epitaphs and the Oracle are shown word for word)
         for m in PRINTF.finditer(text):
             conv = (m.group(1) or "") + m.group(2)
             tokens.append({"text": m.group(0), "value": "",
@@ -330,7 +392,17 @@ def speakable(entry):
         if tokens:
             varies.append("names or numbers")
         text = PRINTF.sub("", text).replace("%%", "%")
-    return tidy(text), sorted(set(varies)), tokens
+    # placeholders were found in the marked-up text: place them in the original
+    original = entry.get("text", "")
+    pos = 0
+    for t in tokens:
+        at = original.find(t["text"], pos)
+        t["pos"] = at if at >= 0 else pos
+        pos = t["pos"] + len(t["text"])
+    tokens = sorted(tokens + mark_tokens, key=lambda t: t["pos"])
+    for t in tokens:
+        del t["pos"]
+    return tidy(_caps_to_sentence(text)), sorted(set(varies)), tokens
 
 
 if __name__ == "__main__":

@@ -275,11 +275,11 @@ function highlight(d) {
   for (const t of d.tokens || []) {
     const at = text.indexOf(t.text, last);
     if (at < 0) continue;
-    let tip = `${t.text} — ${t.meaning}`;
+    let tip = `${t.mark || t.text} — ${t.meaning}`;
     if (t.varies) tip += t.value ? `\nChanges from game to game, so it's spoken as “${t.value}”.` : "\nChanges from game to game, so it's left out of the spoken text.";
     else if (t.value) tip += `\nHere: “${t.value}”`;
     frag.append(text.slice(last, at),
-      el("mark", { class: t.varies ? "varies" : null, title: tip, tabindex: 0, "aria-label": tip }, t.text));
+      el("mark", { class: t.mark ? "note" : t.varies ? "varies" : null, title: tip, tabindex: 0, "aria-label": tip }, t.text));
     last = at + t.text.length;
   }
   frag.append(text.slice(last));
@@ -306,7 +306,12 @@ function renderLegend() {
       el("h3", {}, "Everything else"),
       el("p", { class: "muted" }, "Ordinary game messages use C-style codes, filled in with whatever the situation needs. They change every time, so they're left out of the spoken text — reword those lines in Spoken text if they need it."),
       table(Object.entries(lg.printf).filter(([c]) => !["i", "u", "lu", "g", "X"].includes(c)).map(([c, w]) => ["%" + c, w])),
-      el("p", { class: "muted" }, "Numbers or symbols between % and the letter (like %-12s or %ld) only set width or size; the meaning is the same.")));
+      el("p", { class: "muted" }, "Numbers or symbols between % and the letter (like %-12s or %ld) only set width or size; the meaning is the same."),
+      el("p", { class: "muted" }, "Rumors, epitaphs, engravings, book passages and the Oracle are shown word for word: a % in them is just a % sign.")),
+    el("div", { class: "legend-col legend-wide" },
+      el("h3", {}, "Other markings in the text"),
+      el("p", { class: "muted" }, "Not placeholders, but they change what's shown or spoken. They're underlined in the lines; hover one for details."),
+      table((lg.marks || []).map(([label, what]) => [label, what.charAt(0).toUpperCase() + what.slice(1)]))));
 }
 
 function voiceRow(d) {

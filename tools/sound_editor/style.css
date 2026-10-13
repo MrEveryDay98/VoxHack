@@ -200,6 +200,9 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .legend-table td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 .legend-table td:first-child { width: 64px; white-space: nowrap; }
 .vrow .text mark { cursor: help; }
+.vrow .text mark.note { background: none; color: inherit; border-bottom: 1px dashed var(--muted); border-radius: 0; padding: 0; }
+.legend-wide { grid-column: 1 / -1; }
+.legend-wide .legend-table td:first-child { width: 150px; }
 .varies-tag { font-size: 10px; color: var(--warn); border: 1px solid #5a3a2c; border-radius: 999px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
 .vrow .text mark.varies { background: #3a2620; color: var(--warn); }
 @media (max-width: 860px) { .legend-body { grid-template-columns: 1fr; } }
