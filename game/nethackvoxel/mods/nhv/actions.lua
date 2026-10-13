@@ -154,6 +154,12 @@ function actions.pointed(player)
 				return {kind = "square", tx = tx, ty = ty}
 			end
 		elseif pt.type == "node" then
+			-- an object block (a ladder...): the square it stands in
+			local def = core.registered_nodes[core.get_node(pt.under).name]
+			if def and def.groups and def.groups.nhv_prop then
+				local tx, ty = U.pos_to_tile(pt.under)
+				return {kind = "prop", tx = tx, ty = ty, pos = pt.under}
+			end
 			local p = vector.multiply(vector.add(pt.under, pt.above), 0.5)
 			local tx, ty = U.pos_to_tile(p)
 			return {kind = "square", tx = tx, ty = ty}
@@ -232,6 +238,23 @@ function actions.context(player)
 	local h = hero()
 	local p = actions.pointed(player)
 	local tx, ty = p.tx, p.ty
+	-- an object (a ladder...) in a stairs or ladder square: a tap climbs it,
+	-- stepping onto its square first if you're next to it
+	if p.kind == "prop" and math.abs(tx - h.x) <= 1 and math.abs(ty - h.y) <= 1 then
+		local key = stair_key(square_info(tx, ty))
+		if not key then
+			local slot = nhv.terrain.slot_at(tx, ty) or ""
+			key = (slot:match("_up$") and "<") or (slot:match("_down$") and ">") or nil
+		end
+		if key then
+			local keys = {{key = key}}
+			if tx ~= h.x or ty ~= h.y then
+				keys = {{key = "#"}, {text = ("nhvmove %d %d"):format(tx, ty)}, {key = key}}
+			end
+			local a = act(key == "<" and "Climb up" or "Climb down", keys)
+			return {a}, a
+		end
+	end
 	-- far away squares: act on your own square
 	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 then
 		tx, ty = h.x, h.y
