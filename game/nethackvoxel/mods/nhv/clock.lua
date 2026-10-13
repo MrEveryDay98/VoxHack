@@ -61,8 +61,10 @@ function clock.busy()
 	return clock.debt > 0
 end
 
+-- (capped: time owed can never pile up into a long stall)
+clock.MAX_DEBT = 25
 function clock.add_debt(turns)
-	clock.debt = clock.debt + turns
+	clock.debt = math.min(clock.debt + turns, clock.MAX_DEBT)
 end
 
 -- Advance the clock; returns game turns passed this step.

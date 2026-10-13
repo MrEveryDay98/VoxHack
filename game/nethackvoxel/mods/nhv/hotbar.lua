@@ -188,7 +188,9 @@ core.register_chatcommand("nhvkey", {
 	func = function(_, param)
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n]
-		if not a or nhv.ui.open or not nh.ready() then
+		-- (a held key repeats: each press waits until the last action has
+		-- played out, so it repeats at action speed instead of piling up)
+		if not a or nhv.ui.open or not nh.ready() or nhv.clock.busy() then
 			return true
 		end
 		flash_slot(n + 2)

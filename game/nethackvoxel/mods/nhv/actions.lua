@@ -55,7 +55,7 @@ function actions.run(a, info)
 	end
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
-	else
+	elseif not nhv.clock.busy() then -- (the last action has played out)
 		actions.swing()
 		nhv.clock.act(a.keys, info or {kind = "action"})
 	end
