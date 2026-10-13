@@ -33,8 +33,7 @@ local hud = {}       -- element ids
 -- slots grow with Graphics > Text size so their labels fit, as far as
 -- the window's width allows
 local function measure(player)
-	local k = nhv.theme.text_scale()
-	SLOT = math.floor(64 * k)
+	SLOT = math.floor(64 * nhv.theme.box_scale())
 	GAP = 6
 	local info = player and core.get_player_window_information(player:get_player_name())
 	if info and info.size and info.real_hud_scaling then

@@ -62,6 +62,19 @@ function theme.text_scale()
 	return math.max(0.5, math.min(4, k))
 end
 
+-- how big HUD text is compared with the HUD's own boxes (which grow with
+-- the HUD size): boxes made this much bigger fit their text. The pixel
+-- font's size is set by Text size alone (14, 28, ... pixels: it can't be
+-- scaled by the HUD size's 1.5 etc.); Luanti's font grows with the HUD.
+function theme.box_scale()
+	local k = theme.text_scale()
+	if theme.retro() then
+		local hud = tonumber(core.settings:get("hud_scaling")) or 1
+		return math.max(1, k / math.max(0.1, hud))
+	end
+	return k
+end
+
 local function font_settings()
 	local k = theme.text_scale()
 	if theme.retro() then

@@ -10,5 +10,6 @@ nhv_interface (Interface style) enum retro retro,modern
 nhv_map_scale (Map size) int 3 0 8
 
 # Text size (font size multiplier, in menus and on the HUD). The retro
-# pixel font only uses whole steps (1, 2, 3).
+# pixel font only uses whole steps (1, 2, 3, 4: 14, 28, 42, 56 pixels,
+# whatever the HUD size).
 nhv_text_scale (Text size) float 1 0.5 4

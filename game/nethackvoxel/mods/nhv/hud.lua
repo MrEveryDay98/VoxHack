@@ -244,7 +244,7 @@ local meter_ids = {}
 local meter_last = {} -- key -> "cur/max" shown
 
 local function meter_size()
-	local k = nhv.theme and nhv.theme.text_scale() or 1
+	local k = nhv.theme and nhv.theme.box_scale() or 1
 	return math.floor(200 * k), 14 * k + 6 -- width, height (HUD pixels)
 end
 

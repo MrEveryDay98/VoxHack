@@ -23,7 +23,7 @@ local RES = {
 local HUD = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}, {3, "Giant"}}
 local MENU = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}}
 -- (the pixel font only has whole steps)
-local TEXT_RETRO = {{1, "Normal"}, {2, "Large"}, {3, "Huge"}}
+local TEXT_RETRO = {{1, "1x (14 px)"}, {2, "2x (28 px)"}, {3, "3x (42 px)"}, {4, "4x (56 px)"}}
 local TEXT_MODERN = {{0.85, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}}
 local function text_list()
 	return theme.retro() and TEXT_RETRO or TEXT_MODERN
@@ -106,6 +106,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		changed, reshow = true, true
 	end
 	if set_num(HUD, fields.hud, "hud_scaling", 1) then
+		theme.apply(player) -- (hotbar and meters refit their text)
 		changed = true
 	end
 	-- (the text size list differs between styles: skip it on a style change)
