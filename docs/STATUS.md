@@ -111,7 +111,7 @@ All sprites and tile textures come from one sprite sheet:
   it's missing (delete it and run the deploy script to start over).
 
 ## Sounds and voice lines
-- **Sound editor:** run `NetHack Voxel Sound Editor.bat`. It opens a browser page where you
+- **Sound editor:** run `NetHack Voxel Editor.bat` (sounds, voices and blocks). It opens a browser page where you
   assign sounds to hooks. Changes are picked up by a running game within about 2 seconds.
 - **Hooks** are called from NetHack's code (`NHV_HOOK`), traps, NetHack's own sound effects,
   game events and music. They are not read from the message feed. The list is in

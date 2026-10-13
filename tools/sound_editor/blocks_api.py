@@ -20,6 +20,7 @@ SHEET = os.path.join(MODS, "nhv_tiles", "textures", "nhv_tiles.png")
 TILENAMES = os.path.join(MODS, "nhv_tiles", "tilenames.lua")
 
 SHAPES = ("cube", "x", "floor", "slab", "pane", "object", "invisible")
+SIDES = ("top", "bottom", "east", "west", "north", "south")
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 
@@ -85,6 +86,8 @@ def clean_block(b):
         "light": max(0, min(14, int(b.get("light") or 0))),
         "damage": dmg, "repeat": max(0.0, float(b.get("repeat") or 0)),
         "cause": str(b.get("cause") or "")[:60],
+        # sides whose back is drawn too (seen from inside the block)
+        "backfaces": {s: True for s in SIDES if (b.get("backfaces") or {}).get(s)},
     }
 
 

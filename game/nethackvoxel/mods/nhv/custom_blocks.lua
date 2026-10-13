@@ -15,6 +15,9 @@
 --   damage     dice ("1d4", "2") taken when you step into it ("" = none)
 --   repeat     seconds between hits while you stay in it (0 = only on entry)
 --   cause      what the death message says: "killed by <cause>"
+--   backfaces  {top=, bottom=, east=, west=, north=, south=}: sides whose
+--              back is drawn too, so they're seen from inside the block
+--              (cube, slab, pane, floor)
 -- New or changed blocks need the game (or editor) restarted.
 
 local cblocks = {defs = {}}
@@ -70,9 +73,16 @@ local function register(b)
 		cblocks.defs[name] = info
 		return
 	end
+	-- one tile per side (+Y, -Y, +X, -X, +Z, -Z), each culled unless its
+	-- back face is asked for
+	local back = type(b.backfaces) == "table" and b.backfaces or {}
+	local tiles = {}
+	for i, side in ipairs({"top", "bottom", "east", "west", "north", "south"}) do
+		tiles[i] = {name = tex, backface_culling = not back[side]}
+	end
 	local def = {
 		description = b.name or id,
-		tiles = {tex}, paramtype = "light",
+		tiles = tiles, paramtype = "light",
 		is_ground_content = false, drop = "", groups = groups,
 		use_texture_alpha = "clip",
 	}
@@ -80,6 +90,7 @@ local function register(b)
 		def[k] = v
 	end
 	if shape == "x" then
+		def.tiles = {tex}
 		def.drawtype = "plantlike"
 		def.visual_scale = tonumber(b.scale) or 1
 		def.sunlight_propagates = true

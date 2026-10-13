@@ -128,7 +128,9 @@ core.register_node("nhv:room_light", {
 -- never drawn (from inside a block you see out, not its inner walls).
 core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_nodes) do
-		if name:match("^nhv:") and def.tiles and def.drawtype ~= "airlike" then
+		-- (blocks from the block editor set their own, per side)
+		if name:match("^nhv:") and def.tiles and def.drawtype ~= "airlike"
+				and not (def.groups and def.groups.nhv_custom) then
 			local tiles = {}
 			for i, t in ipairs(def.tiles) do
 				local tt = type(t) == "table" and table.copy(t) or {name = t}

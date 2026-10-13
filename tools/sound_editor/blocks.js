@@ -86,17 +86,19 @@ const Blocks = (() => {
       el("div", { class: "blk-face", style: `width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${transform};${tex}${extra}` });
     const shape = b.shape || "cube";
     const s = (b.scale || 1) * S;
+    const bf = b.backfaces || {};
+    const show = (side) => (bf[side] ? "backface-visibility:visible;opacity:.92" : "");
     if (shape === "cube" || shape === "slab" || shape === "pane") {
       const h = shape === "slab" ? S / 2 : S;
       const d = shape === "pane" ? S / 8 : S;
       const y = shape === "slab" ? S / 4 : 0;
       rig.append(
-        face(S, h, `translateY(${y}px) translateZ(${d / 2}px)`),
-        face(S, h, `translateY(${y}px) rotateY(180deg) translateZ(${d / 2}px)`),
-        face(d, h, `translateY(${y}px) rotateY(90deg) translateZ(${S / 2}px)`),
-        face(d, h, `translateY(${y}px) rotateY(-90deg) translateZ(${S / 2}px)`),
-        face(S, d, `translateY(${y - h / 2}px) rotateX(90deg)`),
-        face(S, d, `translateY(${y + h / 2}px) rotateX(-90deg)`));
+        face(S, h, `translateY(${y}px) translateZ(${d / 2}px)`, show("south")),
+        face(S, h, `translateY(${y}px) rotateY(180deg) translateZ(${d / 2}px)`, show("north")),
+        face(d, h, `translateY(${y}px) rotateY(90deg) translateZ(${S / 2}px)`, show("east")),
+        face(d, h, `translateY(${y}px) rotateY(-90deg) translateZ(${S / 2}px)`, show("west")),
+        face(S, d, `translateY(${y - h / 2}px) rotateX(90deg)`, show("top")),
+        face(S, d, `translateY(${y + h / 2}px) rotateX(-90deg)`, show("bottom")));
     } else if (shape === "x") {
       const y = (S - s) / 2;
       rig.append(face(s * 1.41, s, `translateY(${y}px) rotateY(45deg)`, "backface-visibility:visible"),
@@ -178,6 +180,25 @@ const Blocks = (() => {
     return box;
   }
 
+  // which sides are also drawn from behind (seen from inside the block)
+  const SIDES = [["top", "Top"], ["bottom", "Bottom"], ["north", "North"], ["south", "South"],
+    ["east", "East"], ["west", "West"]];
+  function backfaces(b) {
+    const bf = b.backfaces || (b.backfaces = {});
+    return el("div", {},
+      el("h4", {}, "Back faces"),
+      el("p", { class: "muted", style: "margin:0 0 6px" },
+        "Normally a side is only drawn from outside. Tick a side to also draw it from behind, so it's seen from inside the block (glass cases, cages, panes seen from both sides)."),
+      el("div", { class: "inline" }, ...SIDES.map(([k, l]) => el("label", { class: "check" },
+        el("input", { type: "checkbox", checked: bf[k] || null, onchange: (e) => {
+          if (e.target.checked) bf[k] = true; else delete bf[k];
+          touch(); render();
+        } }), l))),
+      el("div", { class: "inline" },
+        el("button", { class: "small", onclick: () => { SIDES.forEach(([k]) => { bf[k] = true; }); touch(); render(); } }, "All sides"),
+        el("button", { class: "small", onclick: () => { b.backfaces = {}; touch(); render(); } }, "None")));
+  }
+
   function editor(b) {
     const set = (k, v) => { b[k] = v; touch(); render(); };
     const shapeSel = el("select", { onchange: (e) => set("shape", e.target.value) },
@@ -204,6 +225,7 @@ const Blocks = (() => {
             field("When you step in", text("damage", "e.g. 1d4", "7em")),
             field("Again every (s)", num("repeat", 0, 60, 0.5), "0 = only on entering"),
             field("Cause of death", text("cause", "sharp spikes"), "“killed by …”")))),
+      ["cube", "slab", "pane", "floor"].includes(b.shape || "cube") ? backfaces(b) : null,
       el("h4", {}, "Texture"), texturePicker(b));
   }
 
