@@ -4,8 +4,12 @@
 -- crawls at MIN_SCALE, walking at full speed it runs at 1. The rate
 -- eases toward its target so it never snaps.
 --
--- Actions (attacks, using items) cost NetHack time: they add "debt",
--- during which time runs at full rate until the action's cost is paid.
+-- Actions (attacks, using items) cost the NetHack time they really took
+-- (a refused one, "You can't...", costs nothing). That time is paid from
+-- what has built up toward the next turn first; the rest becomes "debt",
+-- during which time runs at full rate (and no other action can start)
+-- until it's paid. So game time never runs ahead of or behind the clock,
+-- however fast you act.
 --
 -- Options > Time "Real time" (setting nhv_time_mode = realtime) turns the
 -- Superhot part off: time always runs at the full rate. (Menus and prompts
@@ -108,14 +112,13 @@ function clock.tick_due()
 	return false
 end
 
--- Do an action that costs one hero action of time (or `turns`).
-function clock.act(keys, info, turns)
-	clock.add_debt(turns or clock.action_turns())
-	clock.acc = 0
+-- Do an action that takes game time (charged when its result arrives).
+function clock.act(keys, info)
 	nh.act(keys, info)
 end
 
--- multi-turn actions (eating, digging...) take their full time
+-- An action's result: charge the turns it really took (multi-turn ones,
+-- eating, digging..., take their full time; refused ones nothing).
 nh.on_snapshot(function(snap, action)
 	if not snap then
 		return
@@ -124,8 +127,11 @@ nh.on_snapshot(function(snap, action)
 	clock.last_moves = snap.hero.moves
 	if prev and action and action.kind ~= "tick" and action.kind ~= "hmove" then
 		local passed = snap.hero.moves - prev
-		if passed > 1 then
-			clock.add_debt(math.min(passed - 1, 20) * 1.0)
+		if passed > 0 and passed < 1000 then -- (not a level change's jump)
+			local owed = passed * 1.0
+			local paid = math.min(clock.acc, owed)
+			clock.acc = clock.acc - paid
+			clock.add_debt(owed - paid)
 		end
 	end
 end)
