@@ -125,4 +125,21 @@ core.register_node("nhv:room_light", {
 	groups = {not_in_creative_inventory = 1}, drop = "",
 })
 
+-- ---------------------------------------------------------------- culling
+-- Backface culling for every NetHack Voxel block: the back of a face is
+-- never drawn (from inside a block you see out, not its inner walls).
+core.register_on_mods_loaded(function()
+	for name, def in pairs(core.registered_nodes) do
+		if name:match("^nhv:") and def.tiles and def.drawtype ~= "airlike" then
+			local tiles = {}
+			for i, t in ipairs(def.tiles) do
+				local tt = type(t) == "table" and table.copy(t) or {name = t}
+				tt.backface_culling = true
+				tiles[i] = tt
+			end
+			core.override_item(name, {tiles = tiles})
+		end
+	end
+end)
+
 return blocks
