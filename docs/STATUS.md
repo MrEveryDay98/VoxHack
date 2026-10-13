@@ -73,6 +73,13 @@ pathfinding when they can't see you.
 - **Containers and corpses:** chests, large boxes and ice boxes face you instead of spinning;
   corpses lie flat.
 
+## Runs as a local application
+The NetHack Voxel build of Luanti always plays a world on the command line in single-player
+mode, keeping your name (NetHack saves go by it). Its built-in server and client sockets exist
+only on 127.0.0.1, on ports the OS picks, so nothing is reachable from the network. The window
+is titled "NetHack Voxel"; the pause menu is Continue / Settings / Sound Volume / Quit, with no
+server or version information; loading shows "Loading...".
+
 ## Graphics options
 Inventory > Graphics (applies immediately, remembered):
 - **Sprites:** extruded voxel models, or flat sprites (setting `nhv_flat_sprites`).
