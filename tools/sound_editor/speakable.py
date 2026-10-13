@@ -13,7 +13,9 @@ them, so:
     the editor can point them out;
   * printf-style codes are dropped.
 
-speakable(entry) -> (text, varies)
+speakable(entry) -> (text, varies, tokens)
+  tokens: each placeholder in the line, with what it means and what it
+  becomes here (for the editor's legend and tooltips)
 """
 import os
 import re
@@ -127,13 +129,84 @@ def _plural(s):
 
 PRONOUNS = {"m": ("he", "him", "his"), "f": ("she", "her", "her"), "n": ("it", "it", "its")}
 
+# ---------------------------------------------------------------- legend
+# quest text codes (NetHack's questpgr.c)
+QUEST_CODES = {
+    "p": "your character's name",
+    "c": "your role, e.g. Valkyrie (Priestess, Cavewoman when female)",
+    "r": "your current rank title",
+    "R": "the rank title needed to start the quest (level 14)",
+    "s": "brother or sister (your gender)",
+    "S": "son or daughter (your gender)",
+    "l": "the quest leader",
+    "n": "the quest nemesis",
+    "g": "the leader's guards",
+    "o": "the quest artifact",
+    "O": "the quest artifact, short name (without \"of ...\")",
+    "i": "where the nemesis waits (the quest's goal level)",
+    "H": "the quest home base",
+    "d": "your god",
+    "D": "your role's lawful god",
+    "G": "god or goddess (whichever your god is)",
+    "a": "your starting alignment (lawful, neutral, chaotic)",
+    "A": "your current alignment",
+    "C": "the word \"chaotic\"",
+    "N": "the word \"neutral\"",
+    "L": "the word \"lawful\"",
+    "x": "\"see\" (\"sense\" while blind)",
+    "Z": "the main dungeon's name (The Dungeons of Doom)",
+}
+# a letter right after the code changes it
+QUEST_MODS = {
+    "A": "with \"A\"/\"An\" in front",
+    "a": "with \"a\"/\"an\" in front",
+    "C": "capitalised",
+    "P": "plural, capitalised",
+    "p": "plural",
+    "S": "possessive ('s), capitalised",
+    "s": "possessive ('s)",
+    "t": "without a leading \"the\"",
+    "h": "as he/she/it", "H": "as He/She/It",
+    "i": "as him/her/it", "I": "as Him/Her/It",
+    "j": "as his/her/its", "J": "as His/Her/Its",
+}
+PRONOUN_CODES = "dlno"  # h/H/i/I/j/J only work after these
+# stand-ins in the common quest text (shared by every role)
+COMMON_GENERIC = {
+    "l": "your leader", "n": "your nemesis", "g": "guard", "o": "the artifact",
+    "O": "the artifact", "i": "the nemesis's lair", "H": "your home", "D": "god",
+    "c": "adventurer", "r": "adventurer", "R": "adventurer",
+}
+# printf-style codes in ordinary game messages
+PRINTF_CODES = {
+    "s": "words the game fills in: a name, an item, a monster...",
+    "d": "a number", "i": "a number", "u": "a number", "ld": "a number", "lu": "a number",
+    "c": "a single letter or symbol",
+    "f": "a number with decimals", "g": "a number with decimals",
+    "x": "a number (hexadecimal)", "X": "a number (hexadecimal)",
+}
+
+
+def legend():
+    """Everything the editor's placeholder legend shows."""
+    return {"quest": QUEST_CODES, "quest_mods": QUEST_MODS, "pronoun_codes": PRONOUN_CODES,
+            "printf": PRINTF_CODES, "quest_varies": "".join(VARIES)}
+
 
 def _quest(text, role):
+    """Fill quest placeholders as NetHack would. role is None for the common
+    quest text (shared by all roles): role-specific parts are left out."""
     varies = []
+    tokens = []
     god_gender = "n"
 
     def arg(c):
-        if c in VARIES and not (c == "c" and not role.get("role_f")):
+        if role is None:
+            # common quest text: the same for every role, so generic words
+            if c in COMMON_GENERIC:
+                varies.append("role-specific names")
+                return COMMON_GENERIC[c]
+        if c in VARIES and not (c == "c" and role and not role.get("role_f")):
             varies.append(VARIES[c])
         if c == "p":
             return GENERIC["p"]
@@ -173,44 +246,56 @@ def _quest(text, role):
             out.append(ch)
             i += 1
             continue
+        start = i
         c = text[i + 1]
         i += 2
         if c == "%":
             out.append("%")
             continue
+        n_varies = len(varies)
         s = arg(c)
         mod = text[i] if i < len(text) else ""
-        if mod in "Aa" and mod:
+        used = ""
+        if mod and mod in "Aa":
             s = _an(s)
             s = s[:1].upper() + s[1:] if mod == "A" else s
-            i += 1
+            used = mod
         elif mod == "C":
             s = s[:1].upper() + s[1:]
-            i += 1
-        elif mod and mod in "hHiIjJ" and c in "dlno":
-            who = {"l": role["leader"], "n": role["nemesis"]}.get(c)
-            gender = (who or {}).get("gender", "n") if c in "ln" else god_gender
-            if c == "o":
-                gender = "n"
-            s = PRONOUNS[gender]["hij".index(mod.lower())]
-            s = s[:1].upper() + s[1:] if mod.isupper() else s
-            i += 1
-        elif mod in "Pp" and mod:
-            s = _plural(s)
+            used = mod
+        elif mod and mod in "hHiIjJ" and c in PRONOUN_CODES:
+            if role is None:
+                s = ""
+            else:
+                who = {"l": role["leader"], "n": role["nemesis"]}.get(c)
+                gender = (who or {}).get("gender", "n") if c in "ln" else god_gender
+                if c == "o":
+                    gender = "n"
+                s = PRONOUNS[gender]["hij".index(mod.lower())]
+                s = s[:1].upper() + s[1:] if mod.isupper() else s
+            used = mod
+        elif mod and mod in "Pp":
+            s = _plural(s) if s else s
             s = s[:1].upper() + s[1:] if mod == "P" else s
-            i += 1
-        elif mod in "Ss" and mod:
-            s = s + ("'" if s.endswith("s") else "'s")
+            used = mod
+        elif mod and mod in "Ss":
+            s = s + ("'" if s.endswith("s") else "'s") if s else s
             s = s[:1].upper() + s[1:] if mod == "S" else s
-            i += 1
+            used = mod
         elif mod == "t":
             s = s[4:] if s.lower().startswith("the ") else s
-            i += 1
+            used = mod
+        i += len(used)
+        meaning = QUEST_CODES.get(c, "unknown code (left empty)")
+        if used:
+            meaning += ", " + QUEST_MODS[used]
+        tokens.append({"text": text[start:i], "meaning": meaning, "value": s,
+                       "varies": len(varies) > n_varies})
         out.append(s)
-    return "".join(out), varies
+    return "".join(out), varies, tokens
 
 
-PRINTF = re.compile(r"%[-+ #0-9.*]*(?:l|ll|h)?[sdciuxXfgeEp]")
+PRINTF = re.compile(r"%[-+ #0-9.*]*(l|ll|h)?([sdciuxXfgeEp])")
 
 
 def tidy(text):
@@ -221,25 +306,24 @@ def tidy(text):
 
 
 def speakable(entry):
-    """Default text to send to the voice generator for a dialogue entry."""
+    """Default text to send to the voice generator for a dialogue entry,
+    what changes from game to game, and each placeholder explained."""
     text = entry.get("text", "")
-    varies = []
+    varies, tokens = [], []
     q = entry.get("quest")
     if q and "%" in text:
-        roles = _load()
-        role = roles.get(q.get("section"))
-        if role:
-            text, varies = _quest(text, role)
-        else:
-            # common quest text: the role-specific parts differ per game
-            if re.search(r"%[a-zA-Z]", text):
-                varies.append("role-specific names")
-            text = re.sub(r"%[a-zA-Z][AaCPpSsthHiIjJ]?", "", text)
+        role = _load().get(q.get("section"))
+        text, varies, tokens = _quest(text, role)
     elif "%" in text:
-        if PRINTF.search(text):
+        for m in PRINTF.finditer(text):
+            conv = (m.group(1) or "") + m.group(2)
+            tokens.append({"text": m.group(0), "value": "",
+                           "meaning": PRINTF_CODES.get(conv, PRINTF_CODES.get(m.group(2), "something the game fills in")),
+                           "varies": True})
+        if tokens:
             varies.append("names or numbers")
         text = PRINTF.sub("", text).replace("%%", "%")
-    return tidy(text), sorted(set(varies))
+    return tidy(text), sorted(set(varies)), tokens
 
 
 if __name__ == "__main__":

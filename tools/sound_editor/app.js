@@ -78,6 +78,7 @@ async function load() {
   renderHooks();
   renderMusic();
   renderVoiceFilters();
+  renderLegend();
   renderVoices();
   renderLibrary();
   VoiceGen.render();
@@ -264,16 +265,47 @@ function filteredDialogue() {
   });
 }
 
-function highlight(text) {
+// the line's text with each placeholder marked; hover (or focus) one to
+// see what it means and what it becomes in this line
+function highlight(d) {
   const frag = document.createDocumentFragment();
-  const re = /%[-0-9.]*l?[sdcuix]|%[a-zA-Z]{1,2}/g;
-  let last = 0, m;
-  while ((m = re.exec(text))) {
-    frag.append(text.slice(last, m.index), el("mark", { title: "filled in during play" }, m[0]));
-    last = m.index + m[0].length;
+  const text = d.text;
+  let last = 0;
+  for (const t of d.tokens || []) {
+    const at = text.indexOf(t.text, last);
+    if (at < 0) continue;
+    let tip = `${t.text} — ${t.meaning}`;
+    if (t.varies) tip += t.value ? `\nChanges from game to game, so it's spoken as “${t.value}”.` : "\nChanges from game to game, so it's left out of the spoken text.";
+    else if (t.value) tip += `\nHere: “${t.value}”`;
+    frag.append(text.slice(last, at),
+      el("mark", { class: t.varies ? "varies" : null, title: tip, tabindex: 0, "aria-label": tip }, t.text));
+    last = at + t.text.length;
   }
   frag.append(text.slice(last));
   return frag;
+}
+
+// the placeholder legend above the dialogue list
+function renderLegend() {
+  const lg = catalog.legend;
+  if (!lg) return;
+  const table = (rows) => el("table", { class: "legend-table" },
+    el("tbody", {}, ...rows.map(([code, what]) => el("tr", {}, el("td", {}, el("code", {}, code)), el("td", {}, what)))));
+  $("#legendBody").replaceChildren(
+    el("div", { class: "legend-col" },
+      el("h3", {}, "Quest text"),
+      el("p", { class: "muted" }, "Used in the quest category. Codes for the leader, nemesis, artifact and places are filled in with each role's real names; marked ones (your name, god, gender) change from game to game."),
+      table(Object.entries(lg.quest).map(([c, w]) => ["%" + c, lg.quest_varies.includes(c)
+        ? el("span", {}, w, " ", el("span", { class: "varies-tag" }, "changes per game")) : w])),
+      el("h4", {}, "A letter right after the code changes it"),
+      el("p", { class: "muted" }, "For example %na is the nemesis with a/an in front, and %lh is the leader as he/she/it."),
+      table(Object.entries(lg.quest_mods).map(([m, w]) => [("hHiIjJ".includes(m) ? "%l" : "%n") + m, w +("hHiIjJ".includes(m) ? ` (only after %${lg.pronoun_codes.split("").join(", %")})` : "")])),
+      table([["%%", "a plain % sign"]])),
+    el("div", { class: "legend-col" },
+      el("h3", {}, "Everything else"),
+      el("p", { class: "muted" }, "Ordinary game messages use C-style codes, filled in with whatever the situation needs. They change every time, so they're left out of the spoken text — reword those lines in Spoken text if they need it."),
+      table(Object.entries(lg.printf).filter(([c]) => !["i", "u", "lu", "g", "X"].includes(c)).map(([c, w]) => ["%" + c, w])),
+      el("p", { class: "muted" }, "Numbers or symbols between % and the letter (like %-12s or %ld) only set width or size; the meaning is the same.")));
 }
 
 function voiceRow(d) {
@@ -312,7 +344,7 @@ function voiceRow(d) {
     el("div", { class: "meta" }, el("div", { class: "who" }, d.speaker),
       el("div", {}, d.category + " · " + d.context), el("div", { class: "vid" }, d.id),
       el("div", {}, d.source)),
-    el("div", { class: "text" }, highlight(d.text), VoiceGen.spokenEditor(d)), voice);
+    el("div", { class: "text" }, highlight(d), VoiceGen.spokenEditor(d)), voice);
   return row;
 }
 

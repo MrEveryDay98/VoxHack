@@ -97,7 +97,7 @@ def dialogue():
     if _dialogue is None:
         entries = load_json(os.path.join(CATALOG, "dialogue.json"), {}).get("entries", [])
         for e in entries:
-            e["spoken"], e["varies"] = speakable.speakable(e)
+            e["spoken"], e["varies"], e["tokens"] = speakable.speakable(e)
         _dialogue = entries
     return _dialogue
 
@@ -268,6 +268,7 @@ class Handler(BaseHTTPRequestHandler):
                 "dialogue": dialogue(),
                 "sounds": list_sounds(),
                 "folders": list_folders(),
+                "legend": speakable.legend(),
             })
         if path == "/api/config":
             return self.send(200, load_config())
