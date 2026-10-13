@@ -26,6 +26,7 @@
   <button role="tab" data-tab="hooks" aria-selected="true">Sound hooks</button>
   <button role="tab" data-tab="music">Music</button>
   <button role="tab" data-tab="voices">Voices &amp; dialogue</button>
+  <button role="tab" data-tab="casting">Voice casting</button>
   <button role="tab" data-tab="library">Sound library</button>
 </nav>
 
@@ -56,21 +57,33 @@
         <option value="voiced">Voiced</option>
       </select>
       <button id="exportScript">Export script (CSV)</button>
+      <button id="genShown" class="primary">Generate shown unvoiced…</button>
+      <button id="reprocShown">Re-process shown…</button>
       <span class="count" id="voiceCount"></span>
     </div>
-    <p class="hint">Placeholders like <code>%s</code> or <code>%p</code> are names and numbers filled in during play. Drop a recording on a line (or use Upload) to attach it.</p>
+    <div id="voiceJobs" class="jobs" hidden></div>
+    <p class="hint">Placeholders like <code>%s</code> or <code>%p</code> are names and numbers filled in during play. Drop a recording on a line (or use Upload) to attach it, or generate it with ElevenLabs (set voices up in Voice casting). Open “Spoken text” on a line to see or edit exactly what will be read.</p>
     <div class="list" id="voiceList"></div>
     <div class="pager" id="voicePager"></div>
+  </section>
+
+  <section id="tab-casting" class="tab" hidden>
+    <div id="castingBody"></div>
   </section>
 
   <section id="tab-library" class="tab" hidden>
     <div class="toolbar">
       <input id="libSearch" type="search" placeholder="Search sounds…">
-      <label class="button">Add sounds…<input type="file" id="libUpload" accept="audio/*" multiple hidden></label>
+      <label class="button">Add files…<input type="file" id="libUpload" accept="audio/*" multiple hidden></label>
+      <label class="button">Import a folder…<input type="file" id="libFolderUpload" webkitdirectory multiple hidden></label>
+      <button id="libNewFolder">New folder</button>
       <span class="count" id="libCount"></span>
     </div>
-    <p class="hint">Drop audio files anywhere on this tab to add them. They are converted to Ogg Vorbis for the game.</p>
-    <div class="grid" id="libList"></div>
+    <p class="hint">Files and folders go into the folder selected on the left, keeping their sub-folders; you can also drop them on the list. Drag a sound onto a folder to move it. Audio is converted to Ogg Vorbis. Names stay unique across folders (the game needs that), so a clashing name gets a number added.</p>
+    <div class="lib">
+      <nav class="folders" id="libFolders" aria-label="Folders"></nav>
+      <div class="grid" id="libList"></div>
+    </div>
   </section>
 </main>
 
@@ -85,7 +98,16 @@
   </div>
 </div>
 
-<div id="toast" class="toast" hidden></div>
+<div id="confirm" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-head"><h2 id="confirmTitle"></h2></div>
+    <div id="confirmBody"></div>
+    <div class="modal-foot"><button id="confirmNo">Cancel</button><button id="confirmYes" class="primary">OK</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden role="status"></div>
+<script src="/voices.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

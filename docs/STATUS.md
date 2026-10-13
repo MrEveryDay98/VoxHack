@@ -98,6 +98,17 @@ All sprites and tile textures come from one sprite sheet:
   `mods/nhv_sounds/catalog/hooks.json`; rebuild it with `tools/build_sound_catalog.py`.
 - **Dialogue:** every spoken line, quest text and narration is listed and labelled in the editor
   (`catalog/dialogue.json`), ready for voice acting.
+- **Sound library folders:** sounds can sit in folders under `sounds/` (the game loads them all).
+  Whole folders can be imported. Names stay unique across folders because Luanti needs that.
+- **Voice generation (Voice casting tab):** choose an ElevenLabs voice, model, settings and effect
+  preset per speaker, then generate lines singly or in bulk (credit estimate shown first).
+  - The API key is saved encrypted for your Windows account, outside the project.
+  - Quest placeholders are filled with each role's real names; parts that change per game (your
+    name, god, gender) are read generically and flagged. Each line's spoken text can be edited.
+  - Takes are kept in `voice_work/` (not in git). Tenacity applies the preset's effects, then
+    resamples to 11025 Hz (configurable), and the result goes to `sounds/voices/`.
+  - Presets are Tenacity macro lines; they can be imported from or saved as Tenacity macros.
+  - Tenacity needs `mod-script-pipe` enabled (Edit > Preferences > Modules) and must be open.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

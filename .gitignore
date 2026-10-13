@@ -2,3 +2,5 @@
 /build/
 /dist/
 *.log
+/voice_work/
+__pycache__/

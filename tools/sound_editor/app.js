@@ -7,7 +7,7 @@ const GROUPS = {
 const MASTERS = [["effects", "Effects"], ["music", "Music"], ["voices", "Voices"]];
 const PAGE = 60;
 
-let catalog = { hooks: [], dialogue: [], sounds: [] };
+let catalog = { hooks: [], dialogue: [], sounds: [], folders: [] };
 let config = { version: 1, hooks: {}, voices: {}, master: {} };
 let dirty = false;
 let voicePage = 0;
@@ -25,12 +25,28 @@ const el = (tag, attrs = {}, ...kids) => {
   return e;
 };
 
+// every API call carries this header: the server refuses calls without it,
+// so other web pages can't use the editor (or your ElevenLabs credits)
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ "X-NHV": "1" }, opts.headers || {});
+  if (opts.json !== undefined) {
+    opts.body = JSON.stringify(opts.json);
+    opts.headers["Content-Type"] = "application/json";
+    delete opts.json;
+  }
+  const r = await fetch(path, opts);
+  let res = null;
+  try { res = await r.json(); } catch (e) { res = null; }
+  if (!r.ok) throw new Error((res && res.error) || r.statusText);
+  return res;
+}
+
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
   t.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 2600);
+  toast.timer = setTimeout(() => (t.hidden = true), Math.max(2600, msg.length * 60));
 }
 
 function markDirty() {
@@ -40,17 +56,18 @@ function markDirty() {
 }
 
 function play(name) {
+  playUrl(`/sounds/${name}.ogg`, name);
+}
+
+function playUrl(url, label) {
   if (audio) audio.pause();
-  audio = new Audio(`/sounds/${name}.ogg`);
-  audio.play().catch(() => toast("Could not play " + name));
+  audio = new Audio(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now());
+  audio.play().catch(() => toast("Could not play " + (label || url)));
 }
 
 // ------------------------------------------------------------ loading/saving
 async function load() {
-  const [cat, cfg] = await Promise.all([
-    fetch("/api/catalog").then((r) => r.json()),
-    fetch("/api/config").then((r) => r.json()),
-  ]);
+  const [cat, cfg] = await Promise.all([api("/api/catalog"), api("/api/config"), VoiceGen.load()]);
   catalog = cat;
   config = cfg;
   config.hooks = config.hooks || {};
@@ -63,27 +80,48 @@ async function load() {
   renderVoiceFilters();
   renderVoices();
   renderLibrary();
+  VoiceGen.render();
 }
 
 async function save() {
-  const r = await fetch("/api/config", { method: "PUT", body: JSON.stringify(config, null, 1) });
-  if (!r.ok) return toast("Saving failed");
+  try {
+    await api("/api/config", { method: "PUT", json: config });
+    await VoiceGen.save();
+  } catch (e) {
+    return toast("Saving failed: " + e.message);
+  }
   dirty = false;
   $("#dirty").hidden = true;
   $("#saveBtn").disabled = true;
   toast("Saved — the game picks it up in a couple of seconds");
 }
 
-async function upload(file, name) {
-  const r = await fetch(`/api/upload?name=${encodeURIComponent(name)}&filename=${encodeURIComponent(file.name)}`,
-    { method: "POST", body: file });
-  const res = await r.json();
-  if (!r.ok) throw new Error(res.error || "upload failed");
-  if (!catalog.sounds.find((s) => s.name === res.name)) {
-    catalog.sounds.push({ name: res.name, size: file.size });
-    catalog.sounds.sort((a, b) => a.name.localeCompare(b.name));
-  }
+// upload one audio file into a library folder; returns the sound's name
+// (made unique across all folders unless replace is set)
+async function upload(file, name, folder = "", replace = false) {
+  const q = new URLSearchParams({ name, filename: file.name, folder, replace: replace ? "1" : "0" });
+  const res = await api("/api/upload?" + q, { method: "POST", body: file });
+  catalog.sounds = catalog.sounds.filter((s) => s.name !== res.name);
+  catalog.sounds.push({ name: res.name, folder: res.folder, size: file.size });
+  catalog.sounds.sort((a, b) => a.name.localeCompare(b.name));
+  addFolderPath(res.folder);
   return res.name;
+}
+
+function addFolderPath(folder) {
+  const parts = (folder || "").split("/").filter(Boolean);
+  for (let i = 1; i <= parts.length; i++) {
+    const f = parts.slice(0, i).join("/");
+    if (!catalog.folders.includes(f)) catalog.folders.push(f);
+  }
+  catalog.folders.sort();
+}
+
+function addSound(name, folder) {
+  if (catalog.sounds.find((s) => s.name === name)) return;
+  catalog.sounds.push({ name, folder: folder || "", size: 0 });
+  catalog.sounds.sort((a, b) => a.name.localeCompare(b.name));
+  addFolderPath(folder);
 }
 
 const baseName = (fname) => fname.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_|_$/g, "");
@@ -117,9 +155,10 @@ function renderPicker() {
   const list = $("#pickerList");
   list.textContent = "";
   for (const s of catalog.sounds) {
-    if (q && !s.name.includes(q)) continue;
+    if (q && !(s.name.includes(q) || (s.folder || "").includes(q))) continue;
     list.append(el("div", { class: "pick" },
       el("button", { class: "icon", "aria-label": "Play " + s.name, onclick: () => play(s.name) }, "▶"),
+      s.folder ? el("span", { class: "folder-tag" }, s.folder) : null,
       el("span", { class: "name", role: "button", tabindex: 0,
         onclick: () => { const cb = pickerCallback; closePicker(); cb && cb(s.name); },
         onkeydown: (e) => { if (e.key === "Enter") e.target.click(); } }, s.name)));
@@ -244,7 +283,7 @@ function voiceRow(d) {
   const attach = async (file) => {
     try {
       toast("Converting " + file.name + "…");
-      const name = await upload(file, voiceName.slice(0, 80));
+      const name = await upload(file, voiceName.slice(0, 80), "voices", true);
       config.voices[d.id] = { sound: name, volume: 100 };
       markDirty();
       row.replaceWith(voiceRow(d));
@@ -259,6 +298,7 @@ function voiceRow(d) {
       el("button", { "aria-label": "Play", onclick: () => play(v.sound) }, "▶"),
       el("button", { "aria-label": "Remove voice", onclick: () => { delete config.voices[d.id]; markDirty(); row.replaceWith(voiceRow(d)); } }, "✕")));
   }
+  voice.append(VoiceGen.rowControls(d, () => row.replaceWith(voiceRow(d))));
   voice.append(el("label", { class: "button" }, v ? "Replace recording…" : "Upload recording…", fileInput),
     el("button", { class: "add", onclick: () => openPicker("Existing sound for this line", (name) => {
       config.voices[d.id] = { sound: name, volume: 100 }; markDirty(); row.replaceWith(voiceRow(d)); }) }, "Use a library sound"));
@@ -272,7 +312,7 @@ function voiceRow(d) {
     el("div", { class: "meta" }, el("div", { class: "who" }, d.speaker),
       el("div", {}, d.category + " · " + d.context), el("div", { class: "vid" }, d.id),
       el("div", {}, d.source)),
-    el("div", { class: "text" }, highlight(d.text)), voice);
+    el("div", { class: "text" }, highlight(d.text), VoiceGen.spokenEditor(d)), voice);
   return row;
 }
 
@@ -309,6 +349,12 @@ function exportScript() {
 }
 
 // ------------------------------------------------------------ library
+// Sounds live in folders under sounds/ (any depth). Sound names are global
+// in the game, so a name is unique across all folders; imports that clash
+// get a number added.
+const AUDIO_EXT = /\.(wav|mp3|ogg|oga|flac|aif|aiff|m4a|opus|wma)$/i;
+let libFolder = null; // null = all sounds, "" = top level, else "a/b"
+
 function usage() {
   const used = {};
   for (const e of Object.values(config.hooks)) for (const n of e.sounds || []) used[n] = (used[n] || 0) + 1;
@@ -316,32 +362,141 @@ function usage() {
   return used;
 }
 
+const cleanPart = (p) => p.toLowerCase().replace(/[^a-z0-9_ .-]+/g, "_").replace(/^[ .-]+/, "").slice(0, 40) || "folder";
+const dirOf = (rel) => rel.split("/").slice(0, -1).map(cleanPart).join("/");
+const joinFolder = (...parts) => parts.filter(Boolean).join("/");
+
+async function moveSounds(names, folder) {
+  try {
+    const res = await api("/api/move", { method: "POST", json: { names, folder } });
+    for (const s of catalog.sounds) if (res.moved.includes(s.name)) s.folder = folder;
+    toast(`Moved ${res.moved.length} sound(s) to ${folder || "the top level"}`);
+  } catch (e) { toast(e.message); }
+  renderLibrary();
+}
+
+function folderButton(label, folder, depth, count) {
+  const b = el("button", { class: "folder", "aria-pressed": String(libFolder === folder),
+    style: `padding-left:${10 + depth * 14}px`,
+    onclick: () => { libFolder = folder; renderLibrary(); } },
+  el("span", {}, label), el("span", { class: "n" }, String(count)));
+  if (folder !== null) {
+    b.addEventListener("dragover", (e) => { if (e.dataTransfer.types.includes("text/x-nhv-sound")) { e.preventDefault(); b.classList.add("drop"); } });
+    b.addEventListener("dragleave", () => b.classList.remove("drop"));
+    b.addEventListener("drop", (e) => {
+      const name = e.dataTransfer.getData("text/x-nhv-sound");
+      b.classList.remove("drop");
+      if (name) { e.preventDefault(); moveSounds([name], folder); }
+    });
+  }
+  return b;
+}
+
+function renderFolders() {
+  const box = $("#libFolders");
+  box.textContent = "";
+  const counts = {};
+  for (const s of catalog.sounds) counts[s.folder || ""] = (counts[s.folder || ""] || 0) + 1;
+  const deep = (f) => Object.entries(counts).reduce((n, [k, c]) => n + (k === f || k.startsWith(f + "/") ? c : 0), 0);
+  box.append(folderButton("All sounds", null, 0, catalog.sounds.length),
+    folderButton("Top level", "", 0, counts[""] || 0));
+  for (const f of catalog.folders) {
+    const parts = f.split("/");
+    box.append(folderButton(parts[parts.length - 1], f, parts.length, deep(f)));
+  }
+  if (libFolder && !deep(libFolder) && catalog.folders.includes(libFolder)) {
+    box.append(el("button", { class: "add", onclick: async () => {
+      try {
+        await api("/api/folders/delete", { method: "POST", json: { folder: libFolder } });
+        catalog.folders = catalog.folders.filter((f) => f !== libFolder && !f.startsWith(libFolder + "/"));
+        libFolder = null;
+        renderLibrary();
+      } catch (e) { toast(e.message); }
+    } }, "Delete this empty folder"));
+  }
+}
+
 function renderLibrary() {
+  renderFolders();
   const q = $("#libSearch").value.trim().toLowerCase();
   const used = usage();
   const list = $("#libList");
   list.textContent = "";
+  const folderOptions = ["", ...catalog.folders];
   let n = 0;
   for (const s of catalog.sounds) {
-    if (q && !s.name.includes(q)) continue;
+    const f = s.folder || "";
+    if (libFolder !== null && !q && f !== libFolder) continue;
+    if (libFolder !== null && q && !(f === libFolder || f.startsWith(libFolder + "/"))) continue;
+    if (q && !(s.name.includes(q) || f.includes(q))) continue;
     n++;
-    list.append(el("div", { class: "card" + (used[s.name] ? "" : " unused") },
+    const move = el("select", { class: "move", "aria-label": "Move " + s.name + " to folder",
+      onchange: (e) => moveSounds([s.name], e.target.value) },
+    ...folderOptions.map((o) => el("option", { value: o, selected: o === f || null }, o || "(top level)")));
+    const card = el("div", { class: "card" + (used[s.name] ? "" : " unused"), draggable: "true" },
       el("button", { class: "icon", "aria-label": "Play " + s.name, onclick: () => play(s.name) }, "▶"),
-      el("div", {}, el("div", { class: "name" }, s.name),
-        el("div", { class: "uses" }, used[s.name] ? `used ${used[s.name]}×` : "not used yet"))));
+      el("div", { class: "info" }, el("div", { class: "name" }, s.name),
+        el("div", { class: "uses" }, used[s.name] ? `used ${used[s.name]}×` : "not used yet"),
+        libFolder === null || q ? el("div", { class: "folder-tag" }, f || "(top level)") : null),
+      move);
+    card.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/x-nhv-sound", s.name));
+    list.append(card);
   }
-  $("#libCount").textContent = `${n} of ${catalog.sounds.length} sounds`;
+  const where = libFolder === null ? "all folders" : libFolder || "the top level";
+  $("#libCount").textContent = `${n} shown (${where}) · ${catalog.sounds.length} sounds in ${catalog.folders.length} folders`;
 }
 
-async function addFiles(files) {
-  for (const f of files) {
+async function newFolder() {
+  const name = prompt("New folder name" + (libFolder ? ` (inside ${libFolder})` : ""));
+  if (!name) return;
+  try {
+    const res = await api("/api/folders", { method: "POST", json: { folder: joinFolder(libFolder || "", cleanPart(name)) } });
+    addFolderPath(res.folder);
+    libFolder = res.folder;
+    renderLibrary();
+  } catch (e) { toast(e.message); }
+}
+
+// files dropped from Explorer, folders included (keeps their structure)
+async function droppedFiles(dt) {
+  const out = [];
+  const walk = (entry, path) => new Promise((resolve) => {
+    if (entry.isFile) {
+      entry.file((f) => { out.push({ file: f, path }); resolve(); }, resolve);
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const sub = joinFolder(path, cleanPart(entry.name));
+      const all = [];
+      const read = () => reader.readEntries(async (batch) => {
+        if (!batch.length) {
+          for (const e of all) await walk(e, sub);
+          resolve();
+        } else { all.push(...batch); read(); }
+      }, resolve);
+      read();
+    } else resolve();
+  });
+  const entries = [...dt.items].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (!entries.length) return [...dt.files].map((f) => ({ file: f, path: "" }));
+  for (const e of entries) await walk(e, "");
+  return out;
+}
+
+// items: [{file, path}] where path is a sub-folder (relative to the current one)
+async function addFiles(items) {
+  items = items.filter((it) => AUDIO_EXT.test(it.file.name));
+  if (!items.length) return toast("No audio files found there");
+  const base = libFolder || "";
+  let done = 0, failed = 0;
+  for (const it of items) {
+    toast(`Importing ${done + failed + 1} of ${items.length}: ${it.file.name}`);
     try {
-      toast("Converting " + f.name + "…");
-      await upload(f, baseName(f.name));
-    } catch (e) { toast(e.message); }
+      await upload(it.file, baseName(it.file.name), joinFolder(base, it.path));
+      done++;
+    } catch (e) { failed++; console.warn(it.file.name, e); }
   }
   renderLibrary();
-  toast("Added " + files.length + " file(s)");
+  toast(`Imported ${done} file(s)` + (failed ? `, ${failed} failed` : ""));
 }
 
 // ------------------------------------------------------------ wiring
@@ -349,6 +504,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
   document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + b.dataset.tab));
   if (b.dataset.tab === "library") renderLibrary();
+  if (b.dataset.tab === "casting") VoiceGen.render();
 }));
 $("#saveBtn").addEventListener("click", save);
 $("#hookSearch").addEventListener("input", renderHooks);
@@ -357,17 +513,30 @@ for (const id of ["#voiceSearch", "#voiceCategory", "#voiceSpeaker", "#voiceStat
   $(id).addEventListener("input", () => { voicePage = 0; renderVoices(); });
 }
 $("#exportScript").addEventListener("click", exportScript);
+$("#genShown").addEventListener("click", () => VoiceGen.bulk("generate", filteredDialogue()));
+$("#reprocShown").addEventListener("click", () => VoiceGen.bulk("process", filteredDialogue()));
 $("#libSearch").addEventListener("input", renderLibrary);
-$("#libUpload").addEventListener("change", (e) => addFiles([...e.target.files]));
-const lib = $("#tab-library");
-lib.addEventListener("dragover", (e) => { e.preventDefault(); lib.classList.add("drop-target"); });
+$("#libUpload").addEventListener("change", (e) => { addFiles([...e.target.files].map((f) => ({ file: f, path: "" }))); e.target.value = ""; });
+$("#libFolderUpload").addEventListener("change", (e) => {
+  addFiles([...e.target.files].map((f) => ({ file: f, path: dirOf(f.webkitRelativePath || "") })));
+  e.target.value = "";
+});
+$("#libNewFolder").addEventListener("click", newFolder);
+const lib = $("#libList");
+lib.addEventListener("dragover", (e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); lib.classList.add("drop-target"); } });
 lib.addEventListener("dragleave", () => lib.classList.remove("drop-target"));
-lib.addEventListener("drop", (e) => { e.preventDefault(); lib.classList.remove("drop-target"); addFiles([...e.dataTransfer.files]); });
+lib.addEventListener("drop", async (e) => {
+  if (!e.dataTransfer.types.includes("Files")) return;
+  e.preventDefault();
+  lib.classList.remove("drop-target");
+  addFiles(await droppedFiles(e.dataTransfer));
+});
 $("#pickerClose").addEventListener("click", closePicker);
 $("#pickerSearch").addEventListener("input", renderPicker);
 $("#picker").addEventListener("click", (e) => { if (e.target.id === "picker") closePicker(); });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("#picker").hidden) closePicker();
+  if (e.key === "Escape" && !$("#confirm").hidden) $("#confirmNo").click();
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); }
 });
 window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });

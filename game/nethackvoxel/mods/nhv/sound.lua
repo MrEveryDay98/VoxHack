@@ -27,13 +27,23 @@ local CFG_PATH = MODPATH .. DIR_DELIM .. "config.json"
 local SOUND_DIR = MODPATH .. DIR_DELIM .. "sounds"
 
 -- ---------------------------------------------------------------- config
-local known = {}   -- sound names the client has
-for _, f in ipairs(core.get_dir_list(SOUND_DIR, false) or {}) do
-	local n = f:match("^(.+)%.ogg$")
-	if n then
-		known[n] = true
+-- every .ogg under sounds/, folders included: {name = path}
+-- (names are global in Luanti, so the editor keeps them unique)
+local function scan(dir, out)
+	out = out or {}
+	for _, f in ipairs(core.get_dir_list(dir, false) or {}) do
+		local n = f:match("^(.+)%.ogg$")
+		if n then
+			out[n] = dir .. DIR_DELIM .. f
+		end
 	end
+	for _, d in ipairs(core.get_dir_list(dir, true) or {}) do
+		scan(dir .. DIR_DELIM .. d, out)
+	end
+	return out
 end
+
+local known = scan(SOUND_DIR)   -- sound names the client has
 
 local cfg_text = nil
 local function load_config()
@@ -57,11 +67,10 @@ local function load_config()
 	cfg.master = cfg.master or {}
 	sound.cfg = cfg
 	-- sounds added since the game started are sent to the client now
-	for _, f in ipairs(core.get_dir_list(SOUND_DIR, false) or {}) do
-		local n = f:match("^(.+)%.ogg$")
-		if n and not known[n] then
-			known[n] = true
-			core.dynamic_add_media({filepath = SOUND_DIR .. DIR_DELIM .. f}, function() end)
+	for n, path in pairs(scan(SOUND_DIR)) do
+		if not known[n] then
+			known[n] = path
+			core.dynamic_add_media({filepath = path}, function() end)
 		end
 	end
 	if sound.music then
