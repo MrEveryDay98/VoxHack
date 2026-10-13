@@ -38,6 +38,21 @@ import blocks_api  # noqa: E402
 import speakable  # noqa: E402
 import voicegen  # noqa: E402
 
+
+_blocks_mtime = os.path.getmtime(blocks_api.__file__)
+
+
+def fresh_blocks_api():
+    """blocks_api, reloaded if its file changed since the server started
+    (so a server left open keeps up with editor updates)."""
+    global blocks_api, _blocks_mtime
+    m = os.path.getmtime(blocks_api.__file__)
+    if m != _blocks_mtime:
+        import importlib
+        blocks_api = importlib.reload(blocks_api)
+        _blocks_mtime = m
+    return blocks_api
+
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 MOD = os.path.join(ROOT, "game", "nethackvoxel", "mods", "nhv_sounds")
 SOUNDS = os.path.join(MOD, "sounds")
@@ -276,6 +291,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/ping":
             return self.send(200, {"ok": True})
         if path == "/api/blocks":
+            fresh_blocks_api()
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
                                    "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
                                    "overrides": blocks_api.load_overrides()})
@@ -341,6 +357,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/config":
             save_config(data)
             return self.send(200, {"ok": True})
+        if path.startswith("/api/blocks"):
+            fresh_blocks_api()
         if path == "/api/blocks":
             try:
                 return self.send(200, {"blocks": blocks_api.save(data)})
