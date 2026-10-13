@@ -59,7 +59,7 @@ end
 
 -- Advance the clock; returns game turns passed this step.
 function clock.update(dtime, player)
-	if not nh.ready() or nhv.ui.open then
+	if not nh.ready() or nhv.ui.open or nhv.ui.chat_open then -- menus / command line: paused
 		return 0
 	end
 	local v = player:get_velocity()

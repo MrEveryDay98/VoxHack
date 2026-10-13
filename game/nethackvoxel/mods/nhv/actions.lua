@@ -6,8 +6,9 @@
 --                     (open a door, take the stairs, pick up, chat...)
 --                     hold: action wheel for it - move the mouse toward
 --                     an action and let go
---   E (aux1)          same, for the selected hotbar item
---   Q (drop)          drop the selected hotbar item
+--   E (aux1)          same, for your wielded weapon
+--   1-5               the hotbar's action keys (hotbar.lua)
+--   T                 NetHack command line (hotbar.lua)
 --   Space (jump)      wait/search for one turn
 --   Z (zoom)          toggle the large overhead map
 --   I                 inventory and equipment
@@ -442,11 +443,8 @@ local function noop()
 	return nil
 end
 
+-- Q does nothing (it would drop your weapon); drop from the inventory
 local function on_drop(itemstack)
-	local invlet = itemstack:get_meta():get_string("nhv_invlet")
-	if invlet ~= "" and nh.ready() then
-		nhv.clock.act({{key = "d"}, {key = invlet}}, {kind = "drop"})
-	end
 	return itemstack
 end
 

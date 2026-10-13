@@ -35,8 +35,62 @@ function player_mod.look_dir_key(player)
 	return U.dir_key(dx, dy)
 end
 
+-- Is a node something you can't stand inside? (unloaded = blocked)
+local function solid(p)
+	local def = core.registered_nodes[core.get_node(p).name]
+	return not def or def.walkable
+end
+
+-- The nearest place a body fits (two open nodes, feet and head) to pos,
+-- preferring ones with something to stand on: so being placed on a square
+-- whose prefab has a pillar or furniture in the middle doesn't put you
+-- inside it. Returns pos itself when that's already free.
+function player_mod.free_spot(pos)
+	local fy = math.floor(pos.y + 0.5) -- node your feet are in
+	local function fits(x, y, z)
+		return not solid(vector.new(x, y, z)) and not solid(vector.new(x, y + 1, z))
+	end
+	local cx, cz = math.floor(pos.x + 0.5), math.floor(pos.z + 0.5)
+	if fits(cx, fy, cz) then
+		return pos
+	end
+	local best, bd
+	for r = 1, 4 do
+		for dx = -r, r do
+			for dz = -r, r do
+				if math.max(math.abs(dx), math.abs(dz)) == r then
+					for _, dy in ipairs({0, 1, -1}) do
+						local x, y, z = cx + dx, fy + dy, cz + dz
+						if fits(x, y, z) then
+							local d = dx * dx + dz * dz + dy * dy * 2
+								+ (solid(vector.new(x, y - 1, z)) and 0 or 6) -- floor under you
+							if not bd or d < bd then
+								best, bd = vector.new(x, y - 0.5, z), d
+							end
+						end
+					end
+				end
+			end
+		end
+		if best then
+			return best
+		end
+	end
+	return pos
+end
+
 local function teleport(player, pos)
-	player:set_pos(pos)
+	player:set_pos(player_mod.free_spot(pos))
+	-- on a new level the blocks are built just after this: check again then
+	core.after(0.1, function()
+		if player:is_player() then
+			local p = player:get_pos()
+			local f = player_mod.free_spot(p)
+			if not vector.equals(f, p) then
+				player:set_pos(f)
+			end
+		end
+	end)
 	player_mod.grace_until = core.get_us_time() + GRACE_US
 end
 player_mod.teleport = teleport

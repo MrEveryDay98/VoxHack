@@ -493,6 +493,22 @@ local function equipped(slot, inv)
 	end
 end
 
+-- One clickable inventory row: the item's sprite and its name (also used by
+-- the container screen). field = the button name, w = width of the name.
+function ui.item_row(fs, o, x, y, field, w, text)
+	local max = math.floor(w * 9)
+	if #text > max then
+		text = text:sub(1, max - 2) .. ".."
+	end
+	fs[#fs + 1] = ("item_image_button[%f,%f;0.7,0.7;%s;%s;]"):format(x, y, nhv_tiles.item(o.tile), field)
+	-- left-aligned text over an invisible button
+	fs[#fs + 1] = ("image_button[%f,%f;%f,0.7;blank.png;%s;]"):format(x + 0.8, y, w, field)
+	fs[#fs + 1] = ("label[%f,%f;%s]"):format(x + 0.9, y + 0.35, E(text))
+	fs[#fs + 1] = ("tooltip[%s;%s]"):format(field, E(o.name))
+end
+ui.CLASS_NAMES = CLASS_NAMES
+ui.head = head
+
 local function inventory_formspec(inv)
 	local fs = {head(19, 11), "label[0.4,0.5;Equipment]",
 		"label[5.6,0.5;Inventory  (click an item for actions)]",
@@ -530,16 +546,7 @@ local function inventory_formspec(inv)
 		if y > 10.2 then
 			x, y = x + col_w, 1.0
 		end
-		fs[#fs + 1] = ("item_image_button[%f,%f;0.7,0.7;%s;inv_%d;]"):format(x, y,
-			nhv_tiles.item(o.tile), o.invlet:byte())
-		local name = o.invlet .. " - " .. o.name
-		if #name > 52 then
-			name = name:sub(1, 50) .. ".."
-		end
-		-- left-aligned text over an invisible button
-		fs[#fs + 1] = ("image_button[%f,%f;5.8,0.7;blank.png;inv_%d;]"):format(x + 0.8, y, o.invlet:byte())
-		fs[#fs + 1] = ("label[%f,%f;%s]"):format(x + 0.9, y + 0.35, E(name))
-		fs[#fs + 1] = ("tooltip[inv_%d;%s]"):format(o.invlet:byte(), E(o.name))
+		ui.item_row(fs, o, x, y, "inv_" .. o.invlet:byte(), 5.8, o.invlet .. " - " .. o.name)
 		y = y + 0.75
 	end
 	if #inv == 0 then
@@ -603,47 +610,12 @@ local function equip_item(slot, o)
 	end
 end
 
--- Hotbar: slot 1 = wielded weapon, slot 2 = alternate weapon, slot 3 is
--- left empty as a divider, then the rest of the inventory.
-local function stack_for(o)
-	local st = ItemStack(nhv_tiles.item(o.tile))
-	st:set_count(math.max(1, math.min(o.quan, 65535)))
-	local meta = st:get_meta()
-	meta:set_string("description", o.invlet .. " - " .. o.name)
-	meta:set_string("nhv_invlet", o.invlet)
-	meta:set_string("count_meta", o.quan > 1 and tostring(o.quan) or "")
-	return st
-end
-
-local function sync_hotbar(player, inv)
-	local pinv = player:get_inventory()
-	pinv:set_size("main", 40)
-	pinv:set_size("craft", 0)
-	local list = {}
-	for i = 1, 40 do
-		list[i] = ItemStack("")
-	end
-	local n = 4
-	for _, o in ipairs(inv) do
-		if has_mask(o, W.WEP) then
-			list[1] = stack_for(o)
-		elseif has_mask(o, W.SWAPWEP) then
-			list[2] = stack_for(o)
-		elseif n <= 40 then
-			list[n] = stack_for(o)
-			n = n + 1
-		end
-	end
-	pinv:set_list("main", list)
-end
-
 nh.on_snapshot(function(snap)
 	local player = nhv.player.get()
 	if not snap or not player then
 		return
 	end
 	player:set_inventory_formspec(inventory_formspec(snap.inventory))
-	sync_hotbar(player, snap.inventory)
 end)
 
 core.register_on_player_receive_fields(function(player, formname, fields)

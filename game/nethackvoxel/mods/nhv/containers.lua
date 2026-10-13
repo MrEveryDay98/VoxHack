@@ -1,6 +1,6 @@
--- Containers (chests, boxes, bags): opened into a panel with two lists,
--- your inventory and the container's contents. Drag items between them
--- (or shift-click to send one straight across).
+-- Containers (chests, boxes, bags): opened into a screen laid out like the
+-- inventory, your items on the left and the container's on the right.
+-- Click an item to move it across ("1" moves just one of a stack).
 --
 -- Opening goes through NetHack ("#nhvloot <id>": locks, chest traps,
 -- cursed bags of holding... all still apply), and so does every move
@@ -15,7 +15,6 @@ nhv.containers = containers
 
 local FORM = "nhv:container"
 nhv.ui.persistent[FORM] = true
-local COLS, ROWS = 8, 6 -- slots shown per list (the lists scroll if longer)
 local CONTAINER_TYPES = {
 	["large box"] = true, ["chest"] = true, ["ice box"] = true,
 	["sack"] = true, ["oilskin sack"] = true, ["bag of holding"] = true,
@@ -56,50 +55,10 @@ local function close_panel()
 	end
 end
 
--- ---------------------------------------------------------------- lists
-local inv = core.create_detached_inventory("nhv_container", {
-	allow_move = function(_, from_list, _, to_list, _, count)
-		if from_list == to_list or not containers.cid then
-			return 0 -- only between the two lists
-		end
-		return count
-	end,
-	allow_put = function() return 0 end,
-	allow_take = function() return 0 end,
-	on_move = function(detinv, from_list, _, to_list, to_index, count)
-		-- the moved stack is already in its new slot; read which object it was
-		local st = detinv:get_stack(to_list, to_index)
-		local oid = tonumber(st:get_meta():get_string("nhv_oid")) or 0
-		local quan = tonumber(st:get_meta():get_string("nhv_quan")) or count
-		local n = count >= quan and 0 or count
-		if from_list == "player" then
-			command(("nhvcontin %d %d %d"):format(containers.cid, oid, n))
-		else
-			command(("nhvcontout %d %d %d"):format(containers.cid, oid, n))
-		end
-	end,
-})
-
-local function stack_for(o)
-	local st = ItemStack(nhv_tiles.item(o.tile))
-	st:set_count(math.max(1, math.min(o.quan, 65535)))
-	local meta = st:get_meta()
-	meta:set_string("description", o.name)
-	meta:set_string("nhv_oid", tostring(o.id))
-	meta:set_string("nhv_quan", tostring(o.quan))
-	return st
-end
-
-local function fill(list, objs)
-	local size = math.max(COLS * ROWS, (math.ceil((#objs + 1) / COLS)) * COLS)
-	inv:set_size(list, size)
-	local stacks = {}
-	for i, o in ipairs(objs) do
-		stacks[i] = stack_for(o)
-	end
-	inv:set_list(list, stacks)
-end
-
+-- ---------------------------------------------------------------- the screen
+-- Laid out like the inventory screen: rows of items grouped by kind, yours
+-- on the left and the container's on the right. Click an item to move it
+-- across; "1" moves just one of a stack.
 local function total_weight(objs)
 	local w = 0
 	for _, o in ipairs(objs) do
@@ -128,33 +87,53 @@ local function container_obj(id)
 	end
 end
 
-local function formspec(cont, contents, mine)
-	local lw = COLS * 1.25 - 0.25 -- width of a list
-	local w = lw * 2 + 2.2
-	local h = ROWS * 1.25 + 2.6
-	local function heading(x, title, sub)
-		return ("label[%f,0.55;%s]label[%f,0.95;%s]"):format(x, core.colorize("#FFD080", E(title)),
-			x, core.colorize("#A0A0A0", E(sub)))
+-- a scrolling column of item rows; dir = "in" (yours) or "out" (container's)
+local function column(fs, objs, x, w, dir, empty_text)
+	local ui = nhv.ui
+	local view_h = 8.9
+	fs[#fs + 1] = ("scroll_container[%f,1.55;%f,%f;scroll_%s;vertical;0.1]"):format(x, w + 0.2, view_h, dir)
+	local y = 0.05
+	local last_class
+	for _, o in ipairs(objs) do
+		if o.oclass ~= last_class then
+			last_class = o.oclass
+			fs[#fs + 1] = ("label[0.05,%f;%s]"):format(y + 0.25,
+				core.colorize("#FFD080", ui.CLASS_NAMES[o.oclass] or "Other"))
+			y = y + 0.55
+		end
+		local text = (dir == "in" and (o.invlet .. " - ") or "") .. o.name
+		ui.item_row(fs, o, 0.05, y, dir .. "_" .. o.id, w - 1.85, text)
+		if o.quan > 1 then
+			fs[#fs + 1] = ("button[%f,%f;0.85,0.7;one%s_%d;1]"):format(w - 0.9, y, dir, o.id)
+			fs[#fs + 1] = ("tooltip[one%s_%d;Move just one]"):format(dir, o.id)
+		end
+		y = y + 0.75
 	end
-	local rx = 0.6 + lw + 1.0
-	return table.concat({
-		("formspec_version[6]size[%f,%f]"):format(w, h),
-		"bgcolor[#000000B0;true]style_type[button;bgcolor=#303040]",
-		("background9[0,0;%f,%f;[fill:8x8:#16161cF0;true;2]"):format(w, h),
-		"listcolors[#00000060;#5a5a7080;#141418;#30304a;#FFFFFF]",
-		heading(0.6, "Your inventory", ("%d items, weight %d"):format(#mine, total_weight(mine))),
-		heading(rx, cont and short(cont) or "Container",
-			#contents == 0 and "empty" or ("%d items, weight %d"):format(#contents, total_weight(contents))),
-		("box[0.45,1.25;%f,%f;#ffffff10]"):format(lw + 0.3, ROWS * 1.25 + 0.05),
-		("box[%f,1.25;%f,%f;#ffd08018]"):format(rx - 0.15, lw + 0.3, ROWS * 1.25 + 0.05),
-		("list[detached:nhv_container;player;0.6,1.4;%d,%d;]"):format(COLS, ROWS),
-		("list[detached:nhv_container;cont;%f,1.4;%d,%d;]"):format(rx, COLS, ROWS),
-		"listring[detached:nhv_container;player]listring[detached:nhv_container;cont]",
-		("label[%f,%f;%s]"):format(0.6 + lw + 0.2, 1.4 + ROWS * 0.62, core.colorize("#808080", "<->")),
-		("label[0.6,%f;%s]"):format(h - 0.75, core.colorize("#A0A0A0",
-			E("Drag items between the lists (shift-click moves one across). Hover an item for its name."))),
-		("button_exit[%f,%f;2.4,0.75;close;Close]"):format(w - 3.0, h - 1.05),
-	})
+	if #objs == 0 then
+		fs[#fs + 1] = ("label[0.1,0.4;%s]"):format(core.colorize("#909090", empty_text))
+	end
+	fs[#fs + 1] = "scroll_container_end[]"
+	fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=7;largestep=40]"):format(
+		math.max(0, math.ceil((y - view_h) * 10)))
+	fs[#fs + 1] = ("scrollbar[%f,1.55;0.3,%f;vertical;scroll_%s;0]"):format(x + w + 0.25, view_h, dir)
+end
+
+local function formspec(cont, contents, mine)
+	local E = core.formspec_escape
+	local fs = {nhv.ui.head(19, 11.5)}
+	local cname = cont and cont.name:gsub("^an? ", "") or "container"
+	fs[#fs + 1] = ("label[0.4,0.5;%s]"):format(core.colorize("#FFFFFF", "Your inventory"))
+	fs[#fs + 1] = ("label[0.4,0.95;%s]"):format(core.colorize("#A0A0A0",
+		("%d items, weight %d   (click an item to put it in)"):format(#mine, total_weight(mine))))
+	fs[#fs + 1] = ("label[9.9,0.5;%s]"):format(core.colorize("#FFD080", E(cname:sub(1, 1):upper() .. cname:sub(2))))
+	fs[#fs + 1] = ("label[9.9,0.95;%s]"):format(core.colorize("#A0A0A0",
+		("%d items, weight %d   (click an item to take it out)"):format(#contents, total_weight(contents))))
+	fs[#fs + 1] = "box[0.3,1.45;8.95,9.1;#00000060]"
+	fs[#fs + 1] = "box[9.75,1.45;8.95,9.1;#ffd0800f]"
+	column(fs, mine, 0.4, 8.4, "in", "Not carrying anything.")
+	column(fs, contents, 9.85, 8.4, "out", "Empty.")
+	fs[#fs + 1] = "button_exit[16.2,10.75;2.5,0.6;close;Close]"
+	return table.concat(fs)
 end
 
 -- rebuild both lists from NetHack and (re)show the panel
@@ -174,8 +153,6 @@ function containers.refresh()
 			mine[#mine + 1] = o
 		end
 	end
-	fill("player", mine)
-	fill("cont", contents)
 	local name = player_name()
 	if name then
 		nhv.ui.open = FORM
@@ -227,6 +204,19 @@ end)
 core.register_on_player_receive_fields(function(_, formname, fields)
 	if formname ~= FORM then
 		return false
+	end
+	if containers.cid and nh.ready() then
+		for k in pairs(fields) do
+			local dir, id = k:match("^one(%a+)_(%d+)$")
+			local one = dir ~= nil
+			if not dir then
+				dir, id = k:match("^(%a+)_(%d+)$")
+			end
+			if (dir == "in" or dir == "out") and id then
+				command(("nhvcont%s %d %s %d"):format(dir, containers.cid, id, one and 1 or 0))
+				return true
+			end
+		end
 	end
 	if fields.quit or fields.close then
 		containers.cid = nil

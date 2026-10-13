@@ -183,7 +183,6 @@ core.register_on_joinplayer(function(player)
 	player:hud_set_flags({nhv_no_place_swing = true})
 	player:hud_set_flags({minimap = false, minimap_radar = false, healthbar = false,
 		breathbar = false, basic_debug = false})
-	player:hud_set_hotbar_itemcount(10)
 	hud.ids.status = player:hud_add({
 		type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
