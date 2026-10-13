@@ -148,7 +148,10 @@ typedef struct nhv_loc {
     unsigned char typ;      /* true terrain type (levl[x][y].typ) */
     unsigned char flags;    /* NHV_LOC_* */
     unsigned char door;     /* D_* bits when typ is DOOR */
-    unsigned char extra;    /* reserved */
+    unsigned char back;     /* true background: cmap symbol index (S_*) of
+                               what's really there, seen or not (stairs
+                               up/down, fountain, ...; never traps or
+                               objects), 255 if none */
 } nhv_loc;
 
 /* Fills buf[x * NHV_ROWNO + y] for every map location. */

@@ -2,9 +2,16 @@
 --
 -- Each map square is a cell built from a prefab (see prefabs.lua) chosen
 -- by its terrain type, door state, stairs etc., and rotated to fit (walls
--- and doors). Collision follows the true terrain so you can't walk
--- through walls you haven't seen yet; squares the hero has never seen are
--- drawn as black void.
+-- and doors).
+--
+-- The whole level is built from what's really there, seen or not: there
+-- is no fog of war on the world. Darkness hides it instead: lit rooms
+-- glow (NetHack's lit flags), dark rooms and corridors are black but for
+-- the light you carry, so a dark corridor comes out of the dark as you
+-- walk instead of popping in square by square. Secret doors and
+-- corridors are built as the wall / rock they look like until found;
+-- traps and objects still only show once NetHack lets you see them, and
+-- the overhead map still shows only what you've explored.
 
 local U = nhv.util
 local T = U.TYP
@@ -237,34 +244,6 @@ local function open_typ(typ)
 end
 
 -- ---------------------------------------------------------------- writing
--- unseen square: black, solid where the real terrain is solid
-local function write_void(data, area, tx, ty, typ)
-	local ox, oz = U.tile_origin(tx, ty)
-	local rock, void = cid("nhv:rock"), cid("nhv:void")
-	local liquid = typ >= T.POOL and typ <= T.LAVAPOOL and typ ~= T.IRONBARS
-		and typ ~= T.LAVAWALL and typ ~= T.DOOR
-	local walk = open_typ(typ)
-	for ly = 0, prefabs.H - 1 do
-		local id
-		if ly < prefabs.FLOOR or ly > prefabs.CEIL then
-			id = rock
-		elseif ly == prefabs.FLOOR then
-			id = liquid and cid("nhv:void_liquid") or (walk and cid("nhv:void_floor") or void)
-		elseif ly == prefabs.CEIL then
-			id = void
-		else
-			id = walk and cid("air") or void
-		end
-		for lx = 0, U.TILE - 1 do
-			for lz = 0, U.TILE - 1 do
-				local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
-				data.ids[vi] = id
-				data.p2[vi] = 0
-			end
-		end
-	end
-end
-
 -- prefabs are built with the main walls; other levels swap in their own
 local WALL_NODES = {["nhv:wall"] = true, ["nhv:brick"] = true}
 local function styled_cid(name)
@@ -275,10 +254,6 @@ local function styled_cid(name)
 end
 
 local function write_square(data, area, sq)
-	if not sq.seen then
-		write_void(data, area, sq.tx, sq.ty, sq.typ)
-		return
-	end
 	prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
@@ -338,16 +313,22 @@ local function describe(map, tx, ty)
 		memcmap = prev.memcmap -- an object lying on the stairs etc.
 	end
 	local seen = map.flags[i] % 2 == 1
-	local lit = seen and has_bit(map.flags[i], U.LOC_LIT)
-	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap}
-	if seen then
-		sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
-		local fs = memcmap and terrain.feature_slot(memcmap)
-		if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
-			sq.overlay = fs
-		end
+	-- never seen: what's really there (stairs up or down, fountain...;
+	-- NetHack leaves traps out of this)
+	local back = map.back and map.back[i]
+	if not memcmap and not seen and back and back ~= 255 then
+		memcmap = nhv.cmap_name(back)
 	end
-	sq.key = table.concat({sq.typ, seen and 1 or 0, lit and 1 or 0, sq.slot or "",
+	local lit = has_bit(map.flags[i], U.LOC_LIT)
+	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap,
+		cansee = has_bit(map.flags[i], U.LOC_CANSEE)}
+	sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
+	local fs = memcmap and terrain.feature_slot(memcmap)
+	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
+		sq.overlay = fs
+	end
+	-- (seeing a square for the first time doesn't change what's built)
+	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
 		sq.rot or 0, sq.overlay or ""}, ":")
 	return i, sq
 end
@@ -378,7 +359,8 @@ local SOLID_SLOTS = {
 local DOOR_SLOTS = {door_closed = true, door_open = true}
 
 local function destroyed(prev, sq)
-	if not (prev and prev.seen and sq.seen) or prev.slot == sq.slot then
+	-- (only where you can see it happen)
+	if not (prev and sq.cansee) or prev.slot == sq.slot then
 		return false
 	end
 	if DOOR_SLOTS[prev.slot] then

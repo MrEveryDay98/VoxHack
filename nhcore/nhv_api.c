@@ -345,6 +345,12 @@ nhv_get_map(nhv_loc *buf)
                        | (couldsee(x, y) ? NHV_LOC_COULDSEE : 0);
             l->door = (IS_DOOR(lev->typ) || lev->typ == SDOOR)
                               ? (unsigned char) lev->doormask : 0;
+            {
+                int bg = back_to_glyph(x, y);
+
+                l->back = glyph_is_cmap(bg) ? (unsigned char) glyph_to_cmap(bg)
+                                            : 255;
+            }
         }
 }
 

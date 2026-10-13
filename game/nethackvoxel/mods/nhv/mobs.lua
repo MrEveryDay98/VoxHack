@@ -58,6 +58,62 @@ core.register_entity("nhv:feat", {
 	on_punch = function() return true end,
 })
 
+-- ---------------------------------------------------------------- fading
+-- Monsters, objects and features NetHack starts or stops showing fade in
+-- and out instead of popping: flat sprites through transparency, 3D models
+-- by growing / shrinking (they can't be see-through).
+local FADE_S = 0.35
+local fading = {} -- {e=, t0=, out=}
+
+local function fade_apply(e, a)
+	if not (e.obj:get_pos() and e.tile and e.h) then
+		return
+	end
+	a = math.max(0.02, math.min(1, a))
+	if nhv_tiles.flat() then
+		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(math.floor(a * 255))
+		e.obj:set_properties({textures = {tex, tex .. "^[transformFX"}, use_texture_alpha = a < 1})
+	else
+		local sz = nhv_tiles.size(e.h)
+		e.obj:set_properties({visual_size = {x = sz.x * a, y = sz.y * a, z = sz.z * a}})
+	end
+end
+
+local function fade_in(e)
+	fading[#fading + 1] = {e = e, t0 = core.get_us_time()}
+	fade_apply(e, 0)
+end
+
+-- (the entity is taken out of its table; it's removed when it has faded)
+local function fade_out(e)
+	if not e.obj:get_pos() then
+		return
+	end
+	e.obj:set_properties({pointable = false})
+	fading[#fading + 1] = {e = e, t0 = core.get_us_time(), out = true}
+end
+
+local function update_fades()
+	local now = core.get_us_time()
+	for i = #fading, 1, -1 do
+		local f = fading[i]
+		local t = (now - f.t0) / (FADE_S * 1e6)
+		if not f.e.obj:get_pos() then
+			table.remove(fading, i)
+		elseif t >= 1 then
+			table.remove(fading, i)
+			if f.out then
+				f.e.obj:remove()
+			else
+				fade_apply(f.e, 1)
+				f.e.obj:set_properties(nhv_tiles.look(f.e.tile, f.e.h)) -- (back to normal)
+			end
+		else
+			fade_apply(f.e, f.out and 1 - t or t)
+		end
+	end
+end
+
 local function remove_all(tbl)
 	for k, e in pairs(tbl) do
 		if e.obj and e.obj:get_pos() then
@@ -68,6 +124,12 @@ local function remove_all(tbl)
 end
 
 function mobs.clear()
+	for _, f in ipairs(fading) do
+		if f.e.obj:get_pos() then
+			f.e.obj:remove()
+		end
+	end
+	fading = {}
 	remove_all(mobs.mons)
 	remove_all(mobs.objs)
 	remove_all(mobs.feats)
@@ -122,12 +184,14 @@ local function update_monsters(snap)
 		if e and not e.obj:get_pos() then
 			e = nil
 		end
+		local fresh = false
 		if not e then
 			local obj = core.add_entity(U.tile_center(m.x, m.y), "nhv:mon")
 			if obj then
 				e = {obj = obj}
 				obj:get_luaentity().nh_key = key
 				mobs.mons[key] = e
+				fresh = true
 			end
 		end
 		if e then
@@ -135,13 +199,14 @@ local function update_monsters(snap)
 			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
 			apply_sprite(e, m)
 			e.obj:set_pos(mon_draw_pos(e))
+			if fresh then
+				fade_in(e)
+			end
 		end
 	end
 	for key, e in pairs(mobs.mons) do
 		if not seen[key] then
-			if e.obj:get_pos() then
-				e.obj:remove()
-			end
+			fade_out(e)
 			mobs.mons[key] = nil
 		end
 	end
@@ -206,11 +271,13 @@ local function update_objects(snap)
 					h = 1.4
 				end
 				local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03) or (U.STAND_Y + h / 2))
+				local fresh = false
 				if not e then
 					local obj = core.add_entity(pos, "nhv:obj")
 					if obj then
 						e = {obj = obj}
 						mobs.objs[i] = e
+						fresh = true
 					end
 				end
 				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h) then
@@ -238,15 +305,16 @@ local function update_objects(snap)
 				end
 				if e then
 					e.x, e.y, e.boulder = tx, ty, name == "boulder"
+					if fresh then
+						fade_in(e)
+					end
 				end
 			end
 		end
 	end
 	for i, e in pairs(mobs.objs) do
 		if not seen[i] then
-			if e.obj:get_pos() then
-				e.obj:remove()
-			end
+			fade_out(e)
 			mobs.objs[i] = nil
 		end
 	end
@@ -290,11 +358,13 @@ local function update_features(snap)
 					local h = flat and 2.4 or (nhv.scale.feature_height(name) or 1.8)
 					local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.02)
 						or scale.center_y("feat", name, h, U.STAND_Y, U.CEIL_Y - 0.5))
+					local fresh = false
 					if not e then
 						local obj = core.add_entity(pos, "nhv:feat")
 						if obj then
 							e = {obj = obj}
 							mobs.feats[i] = e
+							fresh = true
 						end
 					end
 					if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
@@ -308,15 +378,16 @@ local function update_features(snap)
 						end
 						e.tile, e.flat, e.h = map.mem_tile[i], flat, h
 					end
+					if fresh and e then
+						fade_in(e)
+					end
 				end
 			end
 		end
 	end
 	for i, e in pairs(mobs.feats) do
 		if not seen[i] then
-			if e.obj:get_pos() then
-				e.obj:remove()
-			end
+			fade_out(e)
 			mobs.feats[i] = nil
 		end
 	end
@@ -421,6 +492,7 @@ end)
 local clock_t = 0
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
+	update_fades()
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
 	local now = core.get_us_time()
