@@ -275,6 +275,16 @@ nh.on_request(function(req)
 	return true
 end)
 
+-- show NetHack's current question again (the watchdog in loop.lua: the
+-- game was waiting on one with nothing on screen)
+function ui.reshow()
+	if nh.state == "waiting" and nh.req and not nh.ready() then
+		show_request(nh.req)
+		return true
+	end
+	return false
+end
+
 local function answered()
 	ui.open = nil
 	ui.req = nil
