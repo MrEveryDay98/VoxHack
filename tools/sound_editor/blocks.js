@@ -253,7 +253,8 @@ const Blocks = (() => {
           el("div", { class: "inline" },
             field("When you step in", text("damage", "e.g. 1d4", "7em")),
             field("Again every (s)", num("repeat", 0, 60, 0.5), "0 = only on entering"),
-            field("Cause of death", text("cause", "sharp spikes"), "“killed by …”")))),
+            field("Cause of death", text("cause", "sharp spikes"), "“killed by …”")),
+          check("spikes", "Iron spikes (iron boots protect; 1 in 6 are poisoned)"))),
       ["cube", "slab", "pane", "floor"].includes(b.shape || "cube") ? backfaces(b) : null,
       el("h4", {}, "Texture"), texturePicker(b));
   }
@@ -322,7 +323,7 @@ const Blocks = (() => {
       shape: gameShape(g), texture: has("texture") ? o.texture : g.look,
       solid: has("solid") ? o.solid : g.solid, climbable: has("climbable") ? o.climbable : g.climbable,
       light: has("light") ? o.light : g.light, damage: o.damage || "", repeat: o.repeat || 0,
-      cause: o.cause || "", backfaces: o.backfaces || {}, hidden: o.hidden || {}, scale: 1,
+      cause: o.cause || "", spikes: o.spikes || false, backfaces: o.backfaces || {}, hidden: o.hidden || {}, scale: 1,
     };
   }
 
@@ -391,7 +392,8 @@ const Blocks = (() => {
             el("div", { class: "inline" },
               field("When you step in", text("damage", "e.g. 1d4", "7em")),
               field("Again every (s)", num("repeat", 0, 60, 0.5), "0 = only on entering"),
-              field("Cause of death", text("cause", g.description), "“killed by …”")))),
+              field("Cause of death", text("cause", g.description), "“killed by …”")),
+            check("spikes", "Iron spikes (iron boots protect; 1 in 6 are poisoned)"))),
         ["cube", "slab", "pane", "floor"].includes(b.shape) && g.drawtype !== "liquid" ? backfaces(b, (v, h) => {
           overrides[g.name] = Object.assign(overrides[g.name] || {}, { backfaces: v, hidden: h });
           touchGame(); render();

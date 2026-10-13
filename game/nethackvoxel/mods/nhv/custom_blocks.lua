@@ -15,6 +15,8 @@
 --   damage     dice ("1d4", "2") taken when you step into it ("" = none)
 --   repeat     seconds between hits while you stay in it (0 = only on entry)
 --   cause      what the death message says: "killed by <cause>"
+--   spikes     iron spikes: iron boots protect you, and they may be poisoned
+--              (1 in 6), as in a NetHack spiked pit
 --   backfaces  {top=, bottom=, east=, west=, north=, south=}: sides whose
 --              back is drawn too, so they're seen from inside the block
 --              (cube, slab, pane, floor)
@@ -59,6 +61,7 @@ local function register(b)
 		damage = b.damage ~= "" and b.damage or nil,
 		repeat_s = tonumber(b["repeat"]) or 0,
 		cause = (b.cause and b.cause ~= "") and b.cause or (b.name or id),
+		spikes = b.spikes == true,
 	}
 	if info.damage then
 		groups.nhv_hurts = 1
@@ -239,7 +242,8 @@ local function apply_override(name, o)
 	end
 	if o.damage and o.damage ~= "" then
 		cblocks.defs[name] = {damage = o.damage, repeat_s = tonumber(o["repeat"]) or 0,
-			cause = (o.cause and o.cause ~= "") and o.cause or (o.name or def.description or name)}
+			cause = (o.cause and o.cause ~= "") and o.cause or (o.name or def.description or name),
+			spikes = o.spikes == true}
 	end
 end
 
@@ -295,9 +299,10 @@ end
 local inside, next_hit = nil, 0
 local queue = {}
 
-local function hurt(dmg, cause)
+-- (iron spikes go through NetHack's spike rules: boots, poison)
+local function hurt(dmg, cause, spikes)
 	if dmg > 0 then
-		queue[#queue + 1] = {{key = "#"}, {text = ("nhvhurt %d %s"):format(dmg, cause)}}
+		queue[#queue + 1] = {{key = "#"}, {text = ("%s %d %s"):format(spikes and "nhvspike" or "nhvhurt", dmg, cause)}}
 	end
 end
 
@@ -343,7 +348,7 @@ if not nhv.EDITOR then
 		elseif inside ~= name or (info.repeat_s > 0 and now >= next_hit) then
 			inside = name
 			next_hit = now + info.repeat_s * 1e6
-			hurt(roll(info.damage), info.cause)
+			hurt(roll(info.damage), info.cause, info.spikes)
 		end
 		while #queue > 0 and nh.ready() do
 			nh.act(table.remove(queue, 1), {kind = "hurt"})

@@ -522,6 +522,33 @@ donhvhurt(void)
     return ECMD_OK;
 }
 
+/* #nhvspike <damage> [cause]: you stepped into iron spikes (a spike
+   block). Like a spiked pit's: iron boots protect you, and 1 time in 6
+   they're poisoned. */
+int
+donhvspike(void)
+{
+    static char why[128];
+    int dmg = nhv_cmd_args[0], oldumort = u.umortality;
+    const char *p = strchr(nhv_cmd_text, ' ');
+
+    Snprintf(why, sizeof why, "%s", (p && p[1]) ? p + 1 : "sharp iron spikes");
+    if (wearing_iron_shoes(&gy.youmonst)) {
+        pline("%s protects you from the sharp iron spikes.", Yname2(uarmf));
+        return ECMD_OK;
+    }
+    if (dmg <= 0)
+        return ECMD_OK;
+    You("step on %s!", why);
+    losehp(Maybe_Half_Phys(dmg), why, KILLED_BY);
+    if (!rn2(6))
+        poisoned("spikes", A_STR, "stepping on poison spikes",
+                 /* if the damage triggered life-saving, poison is
+                    limited to attribute loss (as in a spiked pit) */
+                 (u.umortality > oldumort) ? 0 : 8, FALSE);
+    return ECMD_OK;
+}
+
 void
 nhv_container_event(const char *kind, unsigned id)
 {

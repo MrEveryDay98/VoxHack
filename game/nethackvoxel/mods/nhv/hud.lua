@@ -230,7 +230,86 @@ core.register_on_joinplayer(function(player)
 		scale = {x = -100, y = -100}, text = "blank.png",
 	})
 	place_map(player)
+	hud.build_meters(player)
 end)
+
+-- ---------------------------------------------------------------- meters
+-- HP and Pw bars in the top-left corner, sized for Graphics > Text size
+local METERS = {
+	{key = "hp", label = "HP", cur = "hp", max = "hpmax", color = "#C02020", low = "#FF5555"},
+	{key = "pw", label = "Pw", cur = "pw", max = "pwmax", color = "#2040C0", low = "#5555FF"},
+}
+local meter_ids = {}
+local meter_last = {} -- key -> "cur/max" shown
+
+local function meter_size()
+	local k = nhv.theme and nhv.theme.text_scale() or 1
+	return math.floor(200 * k), 14 * k + 6 -- width, height (HUD pixels)
+end
+
+local function meter_y(row)
+	local _, h = meter_size()
+	return 12 + (row - 1) * (h + 6)
+end
+
+function hud.build_meters(player)
+	for _, id in pairs(meter_ids) do
+		player:hud_remove(id)
+	end
+	meter_ids, meter_last = {}, {}
+	local w, h = meter_size()
+	local frame = nhv.theme and nhv.theme.retro() and "#AAAAAA" or "#000000"
+	for row, m in ipairs(METERS) do
+		local y = meter_y(row)
+		local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
+		meter_ids[m.key .. "_bg"] = player:hud_add({
+			type = "image", position = base.position, alignment = base.alignment,
+			offset = {x = 12, y = y}, scale = {x = 1, y = 1}, z_index = 40,
+			text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(w, h, frame, w - 4, h - 4),
+		})
+		meter_ids[m.key .. "_fill"] = player:hud_add({
+			type = "image", position = base.position, alignment = base.alignment,
+			offset = {x = 14, y = y + 2}, scale = {x = 0, y = 0}, z_index = 41,
+			text = "[fill:1x1:" .. m.color,
+		})
+		meter_ids[m.key .. "_text"] = player:hud_add({
+			type = "text", position = base.position, alignment = {x = 0, y = 0},
+			offset = {x = 12 + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+		})
+	end
+end
+
+local function update_meters(player, h)
+	if not next(meter_ids) then
+		return
+	end
+	local w, ht = meter_size()
+	for _, m in ipairs(METERS) do
+		local cur, max = h[m.cur] or 0, h[m.max] or 0
+		local shown = cur .. "/" .. max
+		if meter_last[m.key] ~= shown then
+			meter_last[m.key] = shown
+			local frac = max > 0 and math.max(0, math.min(1, cur / max)) or 0
+			-- (a 1-pixel texture stretched to the filled part; low = brighter)
+			player:hud_change(meter_ids[m.key .. "_fill"], "scale",
+				{x = (w - 4) * frac, y = frac > 0 and (ht - 4) or 0})
+			player:hud_change(meter_ids[m.key .. "_fill"], "text",
+				"[fill:1x1:" .. (frac <= 1 / 3 and m.low or m.color))
+			player:hud_change(meter_ids[m.key .. "_text"], "text",
+				("%s %d/%d"):format(m.label, cur, max))
+		end
+	end
+end
+
+-- redraw at a new size (Graphics > Text size / Interface)
+function hud.rebuild_meters(player)
+	if next(meter_ids) then
+		hud.build_meters(player)
+		if nh.snap then
+			update_meters(player, nh.snap.hero)
+		end
+	end
+end
 
 -- red flash when hurt
 local flash_until = 0
@@ -299,6 +378,7 @@ nh.on_snapshot(function(snap)
 	end
 	local h = snap.hero
 	player:hud_change(hud.ids.status, "text", status_text(h))
+	update_meters(player, h)
 	player:hud_change(hud.ids.map, "text", map_png(snap))
 	if last_hp and h.hp < last_hp then
 		hud.flash()

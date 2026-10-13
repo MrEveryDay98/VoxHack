@@ -102,6 +102,9 @@ function theme.apply(player)
 	if nhv.hotbar and nhv.hotbar.rebuild then
 		nhv.hotbar.rebuild(player) -- (slots sized for the text)
 	end
+	if nhv.hud and nhv.hud.rebuild_meters then
+		nhv.hud.rebuild_meters(player) -- (HP / Pw bars too)
+	end
 end
 
 core.register_on_joinplayer(function(player)

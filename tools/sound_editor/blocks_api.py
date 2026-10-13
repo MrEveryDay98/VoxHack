@@ -86,6 +86,8 @@ def clean_block(b):
         "light": max(0, min(14, int(b.get("light") or 0))),
         "damage": dmg, "repeat": max(0.0, float(b.get("repeat") or 0)),
         "cause": str(b.get("cause") or "")[:60],
+        # iron spikes: iron boots protect, may be poisoned
+        "spikes": bool(b.get("spikes")),
         # sides whose back is drawn too (seen from inside the block)
         "backfaces": {s: True for s in SIDES if (b.get("backfaces") or {}).get(s)},
         # sides that aren't drawn at all
@@ -138,7 +140,7 @@ def texture_path(fname):
 CATALOG = os.path.join(ROOT, "external", "luanti", "mod_data", "nhv", "blocks_catalog.json")
 OVERRIDES = os.path.join(BLOCKS, "overrides.json")
 OVERRIDE_KEYS = ("name", "texture", "light", "solid", "climbable", "damage", "repeat",
-                 "cause", "backfaces", "hidden")
+                 "cause", "spikes", "backfaces", "hidden")
 
 
 def describe_texture(tex, cols):
@@ -198,7 +200,7 @@ def save_overrides(data):
                 del c["texture"]
         if "light" in c:
             c["light"] = max(0, min(14, int(c["light"])))
-        for k in ("solid", "climbable"):
+        for k in ("solid", "climbable", "spikes"):
             if k in c:
                 c[k] = bool(c[k])
         if "damage" in c:
