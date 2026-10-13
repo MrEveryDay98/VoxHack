@@ -42,10 +42,9 @@ for _, style in ipairs(terrain.WALL_STYLES) do
 end
 reg("ceiling", {description = "Ceiling", tiles = {tile_tex(1272) .. "^[multiply:#606060"},
 	paramtype = "none"})
+-- one 48x48 picture over the whole 3x3 doorway (nhv_tiles/textures/nhv_wall_door.png)
 reg("door_closed", {description = "Closed door",
-	tiles = {tile_tex(1288)}})
-reg("lavawall", {description = "Wall of lava", tiles = {tile_tex(1317)},
-	light_source = 8})
+	tiles = {{name = "nhv_wall_door.png", align_style = "world", scale = U.TILE}}})
 
 -- floors (the NetHack tile on each node's top face, so 3x3 per square)
 local function floor_node(name, desc, top)
@@ -92,9 +91,11 @@ end
 terrain.flowing = flowing
 
 liquid_node("water", "Water", flowing(tile_tex(1314), 200), nil)
-liquid_node("lava", "Molten lava", tile_tex(1316), 10)
+liquid_node("lava", "Molten lava", flowing(tile_tex(1316), 255), 10)
 liquid_node("void_liquid", "Unexplored", BLACK, nil)
 liquid_node("waterwall", "Wall of water", flowing(tile_tex(1324), 180), nil)
+reg("lavawall", {description = "Wall of lava", tiles = {flowing(tile_tex(1317), 255)},
+	light_source = 8})
 
 -- invisible light carried with the hero
 reg("hero_light", {
@@ -313,6 +314,8 @@ local function write_squares(sqs)
 	vm:set_data(data.ids)
 	vm:set_param2_data(data.p2)
 	vm:write_to_map(true)
+	-- objects (props) placed by the prefabs get their sprites
+	nhv.props.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
 end
 
 -- ---------------------------------------------------------------- updating
@@ -364,6 +367,63 @@ local function detect_wall_style(map)
 	return nil
 end
 
+-- ---------------------------------------------------------------- debris
+-- squares whose solid part gets destroyed (a door broken, rock or wall dug
+-- out, a tree cut down, bars melted) burst into pieces of what was there
+local SOLID_SLOTS = {
+	stone = true, wall_straight = true, wall_corner = true, wall_tee = true,
+	wall_cross = true, tree = true, iron_bars = true,
+}
+local DOOR_SLOTS = {door_closed = true, door_open = true}
+
+local function destroyed(prev, sq)
+	if not (prev and prev.seen and sq.seen) or prev.slot == sq.slot then
+		return false
+	end
+	if DOOR_SLOTS[prev.slot] then
+		return sq.slot == "door_broken" or sq.slot == "doorway"
+	end
+	return SOLID_SLOTS[prev.slot] and not SOLID_SLOTS[sq.slot]
+end
+
+-- the most common block in the part of a prefab you'd see (above the floor)
+local function main_node(slot)
+	local counts, best, bn = {}, nil, 0
+	for i, nd in pairs(prefabs.get(slot).nodes) do
+		local _, ly = prefabs.unindex(i)
+		if ly > prefabs.FLOOR and ly < prefabs.CEIL - 1 and nd.n ~= "air" then
+			counts[nd.n] = (counts[nd.n] or 0) + 1
+			if counts[nd.n] > bn then
+				best, bn = nd.n, counts[nd.n]
+			end
+		end
+	end
+	if best and (best == "nhv:wall" or best == "nhv:brick") and terrain.wall_style ~= "main" then
+		best = "nhv:wall_" .. terrain.wall_style
+	end
+	return best
+end
+
+local function debris(prev)
+	local node = main_node(prev.slot)
+	if not node or not core.registered_nodes[node] then
+		return
+	end
+	local ox, oz = U.tile_origin(prev.tx, prev.ty)
+	core.add_particlespawner({
+		amount = 90, time = 0.12,
+		minpos = vector.new(ox - 0.4, U.FLOOR_Y + 0.6, oz - 0.4),
+		maxpos = vector.new(ox + U.TILE - 0.6, U.CEIL_Y - 0.6, oz + U.TILE - 0.6),
+		minvel = vector.new(-2.5, 0, -2.5), maxvel = vector.new(2.5, 3, 2.5),
+		minacc = vector.new(0, -14, 0), maxacc = vector.new(0, -14, 0),
+		minexptime = 0.8, maxexptime = 1.8, minsize = 1.2, maxsize = 3,
+		collisiondetection = true, node = {name = node},
+	})
+	if nhv.sound then
+		nhv.sound.hook("block_destroyed", {pos = vector.new(ox + 1, U.FLOOR_Y + 2, oz + 1)})
+	end
+end
+
 function terrain.update(map, force)
 	local style = detect_wall_style(map)
 	if style and style ~= terrain.wall_style then
@@ -376,6 +436,9 @@ function terrain.update(map, force)
 			local i, sq = describe(map, tx, ty)
 			local prev = terrain.built[i]
 			if force or not prev or prev.key ~= sq.key then
+				if not force and destroyed(prev, sq) then
+					debris(prev)
+				end
 				terrain.built[i] = sq
 				sqs[#sqs + 1] = sq
 			end
@@ -388,6 +451,7 @@ end
 -- Rebuild everything (level change, or prefabs changed).
 function terrain.build_all(map)
 	terrain.built = {}
+	nhv.props.clear()
 	terrain.wall_style = detect_wall_style(map) or "main"
 	terrain.hero_light_pos = nil
 	terrain.update(map, true)

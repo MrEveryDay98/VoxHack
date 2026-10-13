@@ -349,6 +349,28 @@ function mobs.flash(id, kind, secs)
 	end
 	e.flash_until = core.get_us_time() + (secs or 0.15) * 1e6
 	e.obj:set_properties(nhv_tiles.look(e.tile, e.h, kind))
+	if kind == "r" then
+		mobs.blood(e)
+	end
+end
+
+-- a spray of red particles from a monster that was hurt
+function mobs.blood(e)
+	local pos = e.obj:get_pos()
+	if not pos then
+		return
+	end
+	local h = e.h or 1.5
+	local w = h * 0.3
+	core.add_particlespawner({
+		amount = math.floor(14 + h * 8), time = 0.08,
+		minpos = vector.offset(pos, -w, -h * 0.25, -w), maxpos = vector.offset(pos, w, h * 0.3, w),
+		minvel = vector.new(-2.2, 0.5, -2.2), maxvel = vector.new(2.2, 3.5, 2.2),
+		minacc = vector.new(0, -12, 0), maxacc = vector.new(0, -12, 0),
+		minexptime = 0.35, maxexptime = 0.8, minsize = 0.8, maxsize = 2.0,
+		collisiondetection = true, collision_removal = true,
+		texture = "[fill:2x2:#b01010", glow = 2,
+	})
 end
 
 -- a quick swipe in front of an attacking monster, toward its target

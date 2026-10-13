@@ -144,11 +144,9 @@ core.register_entity("nhv:editor_preview", {
 		physical = false, pointable = false, static_save = false,
 		visual_size = {x = 1, y = 1, z = 1},
 	},
-	-- monsters don't spin (that's for items): face the camera
+	-- monsters and features don't spin (that's for items): they face you
 	on_step = function(self)
-		local pos = self.object:get_pos()
-		local d = vector.subtract(CAM, pos)
-		self.object:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
+		nhv.util.face_player(self.object)
 	end,
 })
 

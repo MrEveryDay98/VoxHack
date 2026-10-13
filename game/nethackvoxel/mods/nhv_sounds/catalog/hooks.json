@@ -1316,6 +1316,11 @@
    "desc": "The container panel is closed"
   },
   {
+   "id": "block_destroyed",
+   "group": "game",
+   "desc": "A door is broken, or rock or wall dug out"
+  },
+  {
    "id": "level_enter_down",
    "group": "game",
    "desc": "Arriving on a deeper level"

@@ -74,6 +74,22 @@ function U.idx(x, y)
 end
 
 -- node position of the south-west bottom corner of a tile's column
+-- turn a sprite entity to face the nearest player (billboarding)
+function U.face_player(obj)
+	local pos = obj:get_pos()
+	local best, bd
+	for _, p in ipairs(core.get_connected_players()) do
+		local d = vector.distance(p:get_pos(), pos)
+		if not bd or d < bd then
+			best, bd = p, d
+		end
+	end
+	if best then
+		local d = vector.subtract(best:get_pos(), pos)
+		obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
+	end
+end
+
 function U.tile_origin(tx, ty)
 	return tx * U.TILE, (U.ROWNO - 1 - ty) * U.TILE
 end

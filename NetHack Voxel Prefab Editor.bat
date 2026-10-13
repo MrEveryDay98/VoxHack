@@ -1,5 +1,5 @@
 @echo off
-rem Opens the prefab editor world (creative). Build, then type /prefab save in chat.
+rem Opens the prefab editor world (creative). Cells save automatically as you build.
 cd /d "%~dp0external\luanti"
 if not exist worlds\prefab_editor mkdir worlds\prefab_editor
 if not exist worlds\prefab_editor\world.mt (

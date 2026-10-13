@@ -28,6 +28,8 @@ local MATERIALS = {
 	{"tree", "Tree", tile_tex(1290)},
 	{"ice", "Ice", tile_tex(1315)},
 	{"drawbridge", "Drawbridge planks", tile_tex(1319)},
+	-- one 48x48 picture spread over 3x3 blocks, lined up with the map squares
+	{"door_big", "Door (3x3 picture)", {name = "nhv_wall_door.png", align_style = "world", scale = 3}},
 	{"black", "Black", "[fill:16x16:#000000"},
 	{"white", "White", "[fill:16x16:#E8E8E8"},
 	{"gray", "Gray", "[fill:16x16:#707070"},

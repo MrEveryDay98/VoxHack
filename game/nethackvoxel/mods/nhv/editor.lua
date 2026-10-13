@@ -156,6 +156,10 @@ core.register_entity("nhv:editor_cellsprite", {
 		visual = "wielditem", wield_item = nhv_tiles.item(0), physical = false,
 		pointable = false, static_save = false,
 	},
+	-- feature sprites face you, as in the game
+	on_step = function(self)
+		nhv.util.face_player(self.object)
+	end,
 })
 
 local function sprite_cell(slot)
@@ -268,7 +272,8 @@ core.register_chatcommand("prefab", {
 			end
 			prefabs.data[arg] = prefabs.default(arg)
 			write_cell(arg)
-			return true, arg .. " reset to default (not saved yet)"
+			editor.save({arg})
+			return true, arg .. " reset to default"
 		elseif cmd == "goto" then
 			local o = slot_origin(arg)
 			if not o then
@@ -303,7 +308,7 @@ core.register_on_joinplayer(function(player)
 	build_palette()
 	player:set_inventory_formspec(palette_formspec())
 	core.chat_send_player(name, "Prefab editor. I = block palette, E = monster editor, K = toggle flying. "
-		.. "/prefab save when done. /prefab list, /prefab goto <slot>, /prefab reset <slot>.")
+		.. "Cells save automatically. /prefab list, /prefab goto <slot>, /prefab reset <slot>.")
 	-- float until the editor area exists (nothing to stand on before)
 	player:set_physics_override({gravity = 0})
 	player:set_velocity(vector.zero())
@@ -326,6 +331,8 @@ function editor.on_ready(player)
 	do
 		do
 			setup_world()
+			-- capture every cell as it stands (keeps earlier, unsaved builds)
+			editor.save_all()
 			if player:get_pos().y < BASE_Y - 4 then
 				to_spawn(player)
 			end
@@ -349,10 +356,76 @@ core.override_item("", {
 	},
 })
 
+-- ---------------------------------------------------------------- saving
+-- Cells save themselves: any block placed or dug in a cell is written to
+-- prefabs.dat a moment later (and everything is captured when the editor
+-- opens and when it closes), so the game always uses what you built.
+local dirty = {}
+local save_at = nil
+
+local function slot_at(pos)
+	for _, s in ipairs(prefabs.SLOTS) do
+		local o = slot_origin(s[1])
+		if pos.x >= o.x and pos.x < o.x + W and pos.z >= o.z and pos.z < o.z + W
+				and pos.y >= o.y and pos.y < o.y + H then
+			return s[1]
+		end
+	end
+end
+
+function editor.save(slots)
+	for _, slot in ipairs(slots or {}) do
+		prefabs.data[slot] = prefabs.capture(slot, slot_origin(slot))
+	end
+	return prefabs.save()
+end
+
+local function all_slots()
+	local out = {}
+	for _, s in ipairs(prefabs.SLOTS) do
+		out[#out + 1] = s[1]
+	end
+	return out
+end
+
+function editor.save_all()
+	return editor.save(all_slots())
+end
+
+local function changed(pos)
+	local slot = slot_at(pos)
+	if slot then
+		dirty[slot] = true
+		save_at = core.get_us_time() + 800000
+	end
+end
+
+core.register_globalstep(function()
+	if save_at and core.get_us_time() > save_at then
+		save_at = nil
+		local slots = {}
+		for slot in pairs(dirty) do
+			slots[#slots + 1] = slot
+		end
+		dirty = {}
+		if not editor.save(slots) then
+			core.chat_send_all("Could not save prefabs to " .. prefabs.DATA_PATH)
+		end
+	end
+end)
+
+core.register_on_shutdown(function()
+	if next(dirty) then
+		editor.save(all_slots())
+	end
+end)
+
 -- placing never uses up blocks
-core.register_on_placenode(function()
+core.register_on_placenode(function(pos)
+	changed(pos)
 	return true
 end)
+core.register_on_dignode(changed)
 
 -- which cell you're at, shown on screen
 local hud_ids = {}
