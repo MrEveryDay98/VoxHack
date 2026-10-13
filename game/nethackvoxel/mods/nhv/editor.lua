@@ -290,7 +290,7 @@ end)
 
 -- ---------------------------------------------------------------- commands
 core.register_chatcommand("prefab", {
-	params = "save | reset <slot> | goto <slot> | list",
+	params = "save | reset <slot> | swap <slot> <slot> | goto <slot> | list",
 	description = "Prefab editor commands",
 	func = function(name, param)
 		local cmd, arg = param:match("^(%S*)%s*(.-)%s*$")
@@ -316,6 +316,18 @@ core.register_chatcommand("prefab", {
 			write_cell(arg)
 			editor.save({arg})
 			return true, arg .. " reset to default"
+		elseif cmd == "swap" then
+			-- exchange two cells (e.g. up and down stairs built the wrong way round)
+			local a, b = arg:match("^(%S+)%s+(%S+)$")
+			if not (a and b and prefabs.SLOT_INFO[a] and prefabs.SLOT_INFO[b]) then
+				return false, "Usage: /prefab swap <slot> <slot>  (see /prefab list)"
+			end
+			editor.save({a, b})
+			prefabs.data[a], prefabs.data[b] = prefabs.data[b], prefabs.data[a]
+			write_cell(a)
+			write_cell(b)
+			editor.save({a, b})
+			return true, ("Swapped %s and %s"):format(a, b)
 		elseif cmd == "goto" then
 			local o = slot_origin(arg)
 			if not o then
@@ -332,7 +344,7 @@ core.register_chatcommand("prefab", {
 			end
 			return true, table.concat(names, ", ")
 		end
-		return false, "Usage: /prefab save | reset <slot> | goto <slot> | list"
+		return false, "Usage: /prefab save | reset <slot> | swap <slot> <slot> | goto <slot> | list"
 	end,
 })
 
