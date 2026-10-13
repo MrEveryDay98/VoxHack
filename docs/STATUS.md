@@ -79,6 +79,8 @@ Inventory > Graphics (applies immediately, remembered):
 - **Render resolution:** full down to 1/8. The world is drawn smaller and scaled up with sharp
   pixels for a retro look; the HUD and menus stay sharp (Luanti's `undersampling`, which the
   NetHack Voxel build of Luanti now applies without a restart).
+- **Distant textures:** sharp, or smoothed by mipmaps (setting `mip_map`). Turning it off applies
+  at once; turning it back on may need a restart if the game started with it off.
 
 ## Sprites (moddable)
 All sprites and tile textures come from one sprite sheet:

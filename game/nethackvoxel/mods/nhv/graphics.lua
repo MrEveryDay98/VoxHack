@@ -3,6 +3,8 @@
 --   * a lower render resolution for a retro look (Luanti's "undersampling":
 --     the world is drawn at 1/N size and scaled up with sharp pixels; the
 --     HUD and menus stay full resolution)
+--   * sharp or smoothed distant textures (Luanti's "mip_map": mipmaps blur
+--     far-away textures to stop them shimmering)
 -- Both apply immediately and are remembered in the settings.
 
 local graphics = {}
@@ -10,6 +12,7 @@ nhv.graphics = graphics
 
 local E = core.formspec_escape
 local SPRITES = {"Extruded (3D)", "Flat"}
+local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local RES = {
 	{1, "Full"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4 (retro)"}, {6, "1/6"}, {8, "1/8 (very chunky)"},
 }
@@ -30,7 +33,7 @@ function graphics.formspec()
 		res_labels[i] = E(r[2])
 	end
 	return table.concat({
-		"formspec_version[6]size[9,5.4]",
+		"formspec_version[6]size[9,6.6]",
 		"bgcolor[#000000C0;true]style_type[button;bgcolor=#303040]",
 		"style_type[label;textcolor=#E0E0E0]",
 		"label[0.5,0.6;", core.colorize("#FFD080", "Graphics"), "]",
@@ -39,10 +42,14 @@ function graphics.formspec()
 		nhv_tiles.flat() and 2 or 1, ";true]",
 		"label[0.5,2.4;Render resolution]",
 		"dropdown[3.6,2.0;5,0.8;res;", table.concat(res_labels, ","), ";", res_index(), ";true]",
-		"label[0.5,3.4;", core.colorize("#A0A0A0",
-			E("Lower resolutions draw the world with big, sharp pixels.")), "]",
-		"label[0.5,3.8;", core.colorize("#A0A0A0", E("The HUD and menus stay sharp.")), "]",
-		"button_exit[3.25,4.4;2.5,0.8;close;Done]",
+		"label[0.5,3.4;Distant textures]",
+		"dropdown[3.6,3.0;5,0.8;distant;", table.concat(DISTANT, ","), ";",
+		core.settings:get_bool("mip_map", false) and 2 or 1, ";true]",
+		"label[0.5,4.3;", core.colorize("#A0A0A0",
+			E("Lower resolutions draw the world with big, sharp pixels;")), "]",
+		"label[0.5,4.7;", core.colorize("#A0A0A0", E("the HUD and menus stay sharp. Turning smoothing")), "]",
+		"label[0.5,5.1;", core.colorize("#A0A0A0", E("back on may need a restart.")), "]",
+		"button_exit[3.25,5.6;2.5,0.8;close;Done]",
 	})
 end
 
@@ -63,6 +70,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if s and (s == 2) ~= nhv_tiles.flat() then
 		core.settings:set_bool("nhv_flat_sprites", s == 2)
 		nhv.mobs.refresh_sizes()
+		changed = true
+	end
+	local d = tonumber(fields.distant)
+	if d and (d == 2) ~= core.settings:get_bool("mip_map", false) then
+		core.settings:set_bool("mip_map", d == 2)
+		nhv.mobs.refresh_sizes() -- sprites pick up the new filtering
 		changed = true
 	end
 	local r = tonumber(fields.res)
