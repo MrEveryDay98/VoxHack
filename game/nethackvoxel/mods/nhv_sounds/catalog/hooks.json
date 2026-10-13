@@ -1,0 +1,1469 @@
+{
+ "hooks": [
+  {
+   "id": "air_crackles",
+   "group": "nethack",
+   "desc": "air crackles"
+  },
+  {
+   "id": "alarm",
+   "group": "nethack",
+   "desc": "alarm"
+  },
+  {
+   "id": "angry_drone",
+   "group": "nethack",
+   "desc": "angry drone"
+  },
+  {
+   "id": "angry_snakes",
+   "group": "nethack",
+   "desc": "angry snakes"
+  },
+  {
+   "id": "angry_voice",
+   "group": "nethack",
+   "desc": "angry voice"
+  },
+  {
+   "id": "applause",
+   "group": "nethack",
+   "desc": "applause"
+  },
+  {
+   "id": "avian_screak",
+   "group": "nethack",
+   "desc": "avian screak"
+  },
+  {
+   "id": "bang_weapon_side",
+   "group": "nethack",
+   "desc": "bang weapon side"
+  },
+  {
+   "id": "bars_clink",
+   "group": "nethack",
+   "desc": "bars clink"
+  },
+  {
+   "id": "bars_clonk",
+   "group": "nethack",
+   "desc": "bars clonk"
+  },
+  {
+   "id": "bars_flapp",
+   "group": "nethack",
+   "desc": "bars flapp"
+  },
+  {
+   "id": "bars_whang",
+   "group": "nethack",
+   "desc": "bars whang"
+  },
+  {
+   "id": "bars_whap",
+   "group": "nethack",
+   "desc": "bars whap"
+  },
+  {
+   "id": "bees",
+   "group": "nethack",
+   "desc": "bees"
+  },
+  {
+   "id": "blast",
+   "group": "nethack",
+   "desc": "blast"
+  },
+  {
+   "id": "board_squeak",
+   "group": "nethack",
+   "desc": "board squeak"
+  },
+  {
+   "id": "board_squeaks_loudly",
+   "group": "nethack",
+   "desc": "board squeaks loudly"
+  },
+  {
+   "id": "boing",
+   "group": "nethack",
+   "desc": "boing"
+  },
+  {
+   "id": "bolt_of_lightning",
+   "group": "nethack",
+   "desc": "bolt of lightning"
+  },
+  {
+   "id": "bone_rattle",
+   "group": "nethack",
+   "desc": "bone rattle"
+  },
+  {
+   "id": "boomerang_klonk",
+   "group": "nethack",
+   "desc": "boomerang klonk"
+  },
+  {
+   "id": "boulder_drop",
+   "group": "nethack",
+   "desc": "boulder drop"
+  },
+  {
+   "id": "bovine_bellow",
+   "group": "nethack",
+   "desc": "bovine bellow"
+  },
+  {
+   "id": "bovine_moo",
+   "group": "nethack",
+   "desc": "bovine moo"
+  },
+  {
+   "id": "bubble_rising",
+   "group": "nethack",
+   "desc": "bubble rising"
+  },
+  {
+   "id": "bugle_playing_reveille",
+   "group": "nethack",
+   "desc": "bugle playing reveille"
+  },
+  {
+   "id": "buzz",
+   "group": "nethack",
+   "desc": "buzz"
+  },
+  {
+   "id": "canine_bark",
+   "group": "nethack",
+   "desc": "canine bark"
+  },
+  {
+   "id": "canine_growl",
+   "group": "nethack",
+   "desc": "canine growl"
+  },
+  {
+   "id": "canine_howl",
+   "group": "nethack",
+   "desc": "canine howl"
+  },
+  {
+   "id": "canine_whine",
+   "group": "nethack",
+   "desc": "canine whine"
+  },
+  {
+   "id": "canine_yelp",
+   "group": "nethack",
+   "desc": "canine yelp"
+  },
+  {
+   "id": "canine_yip",
+   "group": "nethack",
+   "desc": "canine yip"
+  },
+  {
+   "id": "canine_yowl",
+   "group": "nethack",
+   "desc": "canine yowl"
+  },
+  {
+   "id": "chain_shatters",
+   "group": "nethack",
+   "desc": "chain shatters"
+  },
+  {
+   "id": "chains_rattling_gears_turning",
+   "group": "nethack",
+   "desc": "chains rattling gears turning"
+  },
+  {
+   "id": "chant",
+   "group": "nethack",
+   "desc": "chant"
+  },
+  {
+   "id": "chirp",
+   "group": "nethack",
+   "desc": "chirp"
+  },
+  {
+   "id": "clanging_sound",
+   "group": "nethack",
+   "desc": "clanging sound"
+  },
+  {
+   "id": "clank",
+   "group": "nethack",
+   "desc": "clank"
+  },
+  {
+   "id": "clanking_pipe",
+   "group": "nethack",
+   "desc": "clanking pipe"
+  },
+  {
+   "id": "clash",
+   "group": "nethack",
+   "desc": "clash"
+  },
+  {
+   "id": "cockatrice_hiss",
+   "group": "nethack",
+   "desc": "cockatrice hiss"
+  },
+  {
+   "id": "cough",
+   "group": "nethack",
+   "desc": "cough"
+  },
+  {
+   "id": "courtly_conversation",
+   "group": "nethack",
+   "desc": "courtly conversation"
+  },
+  {
+   "id": "cracking_sound",
+   "group": "nethack",
+   "desc": "cracking sound"
+  },
+  {
+   "id": "crackling",
+   "group": "nethack",
+   "desc": "crackling"
+  },
+  {
+   "id": "crackling_of_hellfire",
+   "group": "nethack",
+   "desc": "crackling of hellfire"
+  },
+  {
+   "id": "crash",
+   "group": "nethack",
+   "desc": "crash"
+  },
+  {
+   "id": "crash_door",
+   "group": "nethack",
+   "desc": "crash door"
+  },
+  {
+   "id": "crash_something_broke",
+   "group": "nethack",
+   "desc": "crash something broke"
+  },
+  {
+   "id": "crash_throne_destroyed",
+   "group": "nethack",
+   "desc": "crash throne destroyed"
+  },
+  {
+   "id": "crash_through_floor",
+   "group": "nethack",
+   "desc": "crash through floor"
+  },
+  {
+   "id": "crashed_ceiling",
+   "group": "nethack",
+   "desc": "crashed ceiling"
+  },
+  {
+   "id": "crashing_boulder",
+   "group": "nethack",
+   "desc": "crashing boulder"
+  },
+  {
+   "id": "crashing_rock",
+   "group": "nethack",
+   "desc": "crashing rock"
+  },
+  {
+   "id": "crashing_sound",
+   "group": "nethack",
+   "desc": "crashing sound"
+  },
+  {
+   "id": "croc_bellow",
+   "group": "nethack",
+   "desc": "croc bellow"
+  },
+  {
+   "id": "crumbling_sound",
+   "group": "nethack",
+   "desc": "crumbling sound"
+  },
+  {
+   "id": "crunching_sound",
+   "group": "nethack",
+   "desc": "crunching sound"
+  },
+  {
+   "id": "crushing_sound",
+   "group": "nethack",
+   "desc": "crushing sound"
+  },
+  {
+   "id": "deafening_roar_atmospheric",
+   "group": "nethack",
+   "desc": "deafening roar atmospheric"
+  },
+  {
+   "id": "destroy_web",
+   "group": "nethack",
+   "desc": "destroy web"
+  },
+  {
+   "id": "distant_thunder",
+   "group": "nethack",
+   "desc": "distant thunder"
+  },
+  {
+   "id": "divine_music",
+   "group": "nethack",
+   "desc": "divine music"
+  },
+  {
+   "id": "door_crash_open",
+   "group": "nethack",
+   "desc": "door crash open"
+  },
+  {
+   "id": "door_open",
+   "group": "nethack",
+   "desc": "door open"
+  },
+  {
+   "id": "door_unlock_and_open",
+   "group": "nethack",
+   "desc": "door unlock and open"
+  },
+  {
+   "id": "drain_noises",
+   "group": "nethack",
+   "desc": "drain noises"
+  },
+  {
+   "id": "dry_throat_rattle",
+   "group": "nethack",
+   "desc": "dry throat rattle"
+  },
+  {
+   "id": "egg_cracking",
+   "group": "nethack",
+   "desc": "egg cracking"
+  },
+  {
+   "id": "egg_splatting",
+   "group": "nethack",
+   "desc": "egg splatting"
+  },
+  {
+   "id": "elephant_trumpet",
+   "group": "nethack",
+   "desc": "elephant trumpet"
+  },
+  {
+   "id": "equine_neigh",
+   "group": "nethack",
+   "desc": "equine neigh"
+  },
+  {
+   "id": "equine_whicker",
+   "group": "nethack",
+   "desc": "equine whicker"
+  },
+  {
+   "id": "equine_whinny",
+   "group": "nethack",
+   "desc": "equine whinny"
+  },
+  {
+   "id": "explosion",
+   "group": "nethack",
+   "desc": "explosion"
+  },
+  {
+   "id": "faint_chime",
+   "group": "nethack",
+   "desc": "faint chime"
+  },
+  {
+   "id": "faint_sloshing",
+   "group": "nethack",
+   "desc": "faint sloshing"
+  },
+  {
+   "id": "faint_splashing",
+   "group": "nethack",
+   "desc": "faint splashing"
+  },
+  {
+   "id": "feline_meow",
+   "group": "nethack",
+   "desc": "feline meow"
+  },
+  {
+   "id": "feline_mew",
+   "group": "nethack",
+   "desc": "feline mew"
+  },
+  {
+   "id": "feline_purr",
+   "group": "nethack",
+   "desc": "feline purr"
+  },
+  {
+   "id": "feline_yelp",
+   "group": "nethack",
+   "desc": "feline yelp"
+  },
+  {
+   "id": "feline_yip",
+   "group": "nethack",
+   "desc": "feline yip"
+  },
+  {
+   "id": "feline_yowl",
+   "group": "nethack",
+   "desc": "feline yowl"
+  },
+  {
+   "id": "furious_bubbling",
+   "group": "nethack",
+   "desc": "furious bubbling"
+  },
+  {
+   "id": "gear_turn",
+   "group": "nethack",
+   "desc": "gear turn"
+  },
+  {
+   "id": "gears_turning_chains_rattling",
+   "group": "nethack",
+   "desc": "gears turning chains rattling"
+  },
+  {
+   "id": "glass_crashing",
+   "group": "nethack",
+   "desc": "glass crashing"
+  },
+  {
+   "id": "glass_shattering",
+   "group": "nethack",
+   "desc": "glass shattering"
+  },
+  {
+   "id": "groan",
+   "group": "nethack",
+   "desc": "groan"
+  },
+  {
+   "id": "groans_and_moans",
+   "group": "nethack",
+   "desc": "groans and moans"
+  },
+  {
+   "id": "growl",
+   "group": "nethack",
+   "desc": "growl"
+  },
+  {
+   "id": "grunt",
+   "group": "nethack",
+   "desc": "grunt"
+  },
+  {
+   "id": "guards_footsteps",
+   "group": "nethack",
+   "desc": "guards footsteps"
+  },
+  {
+   "id": "gurgle",
+   "group": "nethack",
+   "desc": "gurgle"
+  },
+  {
+   "id": "gushing_sound",
+   "group": "nethack",
+   "desc": "gushing sound"
+  },
+  {
+   "id": "heart_beat",
+   "group": "nethack",
+   "desc": "heart beat"
+  },
+  {
+   "id": "hiss",
+   "group": "nethack",
+   "desc": "hiss"
+  },
+  {
+   "id": "hollow_sound",
+   "group": "nethack",
+   "desc": "hollow sound"
+  },
+  {
+   "id": "horn_being_played",
+   "group": "nethack",
+   "desc": "horn being played"
+  },
+  {
+   "id": "iron_ball_dragging_you",
+   "group": "nethack",
+   "desc": "iron ball dragging you"
+  },
+  {
+   "id": "iron_ball_hits_you",
+   "group": "nethack",
+   "desc": "iron ball hits you"
+  },
+  {
+   "id": "item_tumble_downwards",
+   "group": "nethack",
+   "desc": "item tumble downwards"
+  },
+  {
+   "id": "jabberwock_burble",
+   "group": "nethack",
+   "desc": "jabberwock burble"
+  },
+  {
+   "id": "kaablamm_of_mine",
+   "group": "nethack",
+   "desc": "kaablamm of mine"
+  },
+  {
+   "id": "kaboom",
+   "group": "nethack",
+   "desc": "kaboom"
+  },
+  {
+   "id": "kaboom_boom_boom",
+   "group": "nethack",
+   "desc": "kaboom boom boom"
+  },
+  {
+   "id": "kaboom_door_explodes",
+   "group": "nethack",
+   "desc": "kaboom door explodes"
+  },
+  {
+   "id": "kadoom_boulder_falls_in",
+   "group": "nethack",
+   "desc": "kadoom boulder falls in"
+  },
+  {
+   "id": "kerplunk_boulder_gone",
+   "group": "nethack",
+   "desc": "kerplunk boulder gone"
+  },
+  {
+   "id": "kick_door_it_crashes_open",
+   "group": "nethack",
+   "desc": "kick door it crashes open"
+  },
+  {
+   "id": "kick_door_it_shatters",
+   "group": "nethack",
+   "desc": "kick door it shatters"
+  },
+  {
+   "id": "klick",
+   "group": "nethack",
+   "desc": "klick"
+  },
+  {
+   "id": "klunk",
+   "group": "nethack",
+   "desc": "klunk"
+  },
+  {
+   "id": "klunk_pipe",
+   "group": "nethack",
+   "desc": "klunk pipe"
+  },
+  {
+   "id": "laughter",
+   "group": "nethack",
+   "desc": "laughter"
+  },
+  {
+   "id": "lid_slams_open_falls_shut",
+   "group": "nethack",
+   "desc": "lid slams open falls shut"
+  },
+  {
+   "id": "loud_click",
+   "group": "nethack",
+   "desc": "loud click"
+  },
+  {
+   "id": "loud_crash",
+   "group": "nethack",
+   "desc": "loud crash"
+  },
+  {
+   "id": "loud_pop",
+   "group": "nethack",
+   "desc": "loud pop"
+  },
+  {
+   "id": "loud_splash",
+   "group": "nethack",
+   "desc": "loud splash"
+  },
+  {
+   "id": "low_buzzing",
+   "group": "nethack",
+   "desc": "low buzzing"
+  },
+  {
+   "id": "low_hum",
+   "group": "nethack",
+   "desc": "low hum"
+  },
+  {
+   "id": "maniacal_laughter",
+   "group": "nethack",
+   "desc": "maniacal laughter"
+  },
+  {
+   "id": "masticating_sound",
+   "group": "nethack",
+   "desc": "masticating sound"
+  },
+  {
+   "id": "mon_chugging_potion",
+   "group": "nethack",
+   "desc": "mon chugging potion"
+  },
+  {
+   "id": "monster_behind_boulder",
+   "group": "nethack",
+   "desc": "monster behind boulder"
+  },
+  {
+   "id": "mutter_imprecations",
+   "group": "nethack",
+   "desc": "mutter imprecations"
+  },
+  {
+   "id": "mutter_incantation",
+   "group": "nethack",
+   "desc": "mutter incantation"
+  },
+  {
+   "id": "orc_grunt",
+   "group": "nethack",
+   "desc": "orc grunt"
+  },
+  {
+   "id": "paranoid_confirmation",
+   "group": "nethack",
+   "desc": "paranoid confirmation"
+  },
+  {
+   "id": "potion_crash_and_break",
+   "group": "nethack",
+   "desc": "potion crash and break"
+  },
+  {
+   "id": "ring_in_drain",
+   "group": "nethack",
+   "desc": "ring in drain"
+  },
+  {
+   "id": "ripping_sound",
+   "group": "nethack",
+   "desc": "ripping sound"
+  },
+  {
+   "id": "snarl",
+   "group": "nethack",
+   "desc": "snarl"
+  },
+  {
+   "id": "roar",
+   "group": "nethack",
+   "desc": "roar"
+  },
+  {
+   "id": "rumbling",
+   "group": "nethack",
+   "desc": "rumbling"
+  },
+  {
+   "id": "rumbling_of_earth",
+   "group": "nethack",
+   "desc": "rumbling of earth"
+  },
+  {
+   "id": "rushing_wind_noise",
+   "group": "nethack",
+   "desc": "rushing wind noise"
+  },
+  {
+   "id": "rustling_paper",
+   "group": "nethack",
+   "desc": "rustling paper"
+  },
+  {
+   "id": "sad_wailing",
+   "group": "nethack",
+   "desc": "sad wailing"
+  },
+  {
+   "id": "sceptor_pounding",
+   "group": "nethack",
+   "desc": "sceptor pounding"
+  },
+  {
+   "id": "scratching",
+   "group": "nethack",
+   "desc": "scratching"
+  },
+  {
+   "id": "scream",
+   "group": "nethack",
+   "desc": "scream"
+  },
+  {
+   "id": "screech",
+   "group": "nethack",
+   "desc": "screech"
+  },
+  {
+   "id": "sewer_song",
+   "group": "nethack",
+   "desc": "sewer song"
+  },
+  {
+   "id": "sharp_crack",
+   "group": "nethack",
+   "desc": "sharp crack"
+  },
+  {
+   "id": "shriek",
+   "group": "nethack",
+   "desc": "shriek"
+  },
+  {
+   "id": "shrill_whistle",
+   "group": "nethack",
+   "desc": "shrill whistle"
+  },
+  {
+   "id": "sinister_laughter",
+   "group": "nethack",
+   "desc": "sinister laughter"
+  },
+  {
+   "id": "sizzling",
+   "group": "nethack",
+   "desc": "sizzling"
+  },
+  {
+   "id": "slurping_sound",
+   "group": "nethack",
+   "desc": "slurping sound"
+  },
+  {
+   "id": "smashing_and_crushing",
+   "group": "nethack",
+   "desc": "smashing and crushing"
+  },
+  {
+   "id": "snake_rattle",
+   "group": "nethack",
+   "desc": "snake rattle"
+  },
+  {
+   "id": "snakes_hissing",
+   "group": "nethack",
+   "desc": "snakes hissing"
+  },
+  {
+   "id": "soft_click",
+   "group": "nethack",
+   "desc": "soft click"
+  },
+  {
+   "id": "soft_crackling",
+   "group": "nethack",
+   "desc": "soft crackling"
+  },
+  {
+   "id": "someone_bowling",
+   "group": "nethack",
+   "desc": "someone bowling"
+  },
+  {
+   "id": "someone_searching",
+   "group": "nethack",
+   "desc": "someone searching"
+  },
+  {
+   "id": "someone_summoning",
+   "group": "nethack",
+   "desc": "someone summoning"
+  },
+  {
+   "id": "someone_yells",
+   "group": "nethack",
+   "desc": "someone yells"
+  },
+  {
+   "id": "splash",
+   "group": "nethack",
+   "desc": "splash"
+  },
+  {
+   "id": "splat_egg",
+   "group": "nethack",
+   "desc": "splat egg"
+  },
+  {
+   "id": "splat_from_engulf",
+   "group": "nethack",
+   "desc": "splat from engulf"
+  },
+  {
+   "id": "squawk",
+   "group": "nethack",
+   "desc": "squawk"
+  },
+  {
+   "id": "squeak",
+   "group": "nethack",
+   "desc": "squeak"
+  },
+  {
+   "id": "squeal",
+   "group": "nethack",
+   "desc": "squeal"
+  },
+  {
+   "id": "squelch",
+   "group": "nethack",
+   "desc": "squelch"
+  },
+  {
+   "id": "stone_breaking",
+   "group": "nethack",
+   "desc": "stone breaking"
+  },
+  {
+   "id": "stone_crumbling",
+   "group": "nethack",
+   "desc": "stone crumbling"
+  },
+  {
+   "id": "swoosh",
+   "group": "nethack",
+   "desc": "swoosh"
+  },
+  {
+   "id": "sword_blade_rings",
+   "group": "nethack",
+   "desc": "sword blade rings"
+  },
+  {
+   "id": "thud",
+   "group": "nethack",
+   "desc": "thud"
+  },
+  {
+   "id": "thump",
+   "group": "nethack",
+   "desc": "thump"
+  },
+  {
+   "id": "thunderclap",
+   "group": "nethack",
+   "desc": "thunderclap"
+  },
+  {
+   "id": "tumbler_click",
+   "group": "nethack",
+   "desc": "tumbler click"
+  },
+  {
+   "id": "typing_noise",
+   "group": "nethack",
+   "desc": "typing noise"
+  },
+  {
+   "id": "wail",
+   "group": "nethack",
+   "desc": "wail"
+  },
+  {
+   "id": "wailing_of_the_banshee",
+   "group": "nethack",
+   "desc": "wailing of the banshee"
+  },
+  {
+   "id": "wall_of_force",
+   "group": "nethack",
+   "desc": "wall of force"
+  },
+  {
+   "id": "yelp",
+   "group": "nethack",
+   "desc": "yelp"
+  },
+  {
+   "id": "zap",
+   "group": "nethack",
+   "desc": "zap"
+  },
+  {
+   "id": "zap_then_explosion",
+   "group": "nethack",
+   "desc": "zap then explosion"
+  },
+  {
+   "id": "secret_found",
+   "group": "events",
+   "desc": "A secret door or passage is found",
+   "source": "detect.c"
+  },
+  {
+   "id": "dig",
+   "group": "events",
+   "desc": "Digging (every turn of it)",
+   "source": "dig.c"
+  },
+  {
+   "id": "dig_hole",
+   "group": "events",
+   "desc": "Digging through to a hole",
+   "source": "dig.c"
+  },
+  {
+   "id": "eat_done",
+   "group": "events",
+   "desc": "The hero finishes eating",
+   "source": "eat.c"
+  },
+  {
+   "id": "eat_rotten",
+   "group": "events",
+   "desc": "Eating something rotten",
+   "source": "eat.c"
+  },
+  {
+   "id": "eat_dog_food",
+   "group": "events",
+   "desc": "Eating dog food",
+   "source": "eat.c"
+  },
+  {
+   "id": "vomit",
+   "group": "events",
+   "desc": "The hero vomits",
+   "source": "eat.c"
+  },
+  {
+   "id": "level_up",
+   "group": "events",
+   "desc": "The hero gains an experience level",
+   "source": "exper.c"
+  },
+  {
+   "id": "fountain_refresh",
+   "group": "events",
+   "desc": "A refreshing drink from a fountain",
+   "source": "fountain.c"
+  },
+  {
+   "id": "door_locked",
+   "group": "events",
+   "desc": "A door is found locked",
+   "source": "lock.c"
+  },
+  {
+   "id": "door_resists",
+   "group": "events",
+   "desc": "A door resists",
+   "source": "lock.c"
+  },
+  {
+   "id": "door_close",
+   "group": "events",
+   "desc": "A door closes",
+   "source": "lock.c"
+  },
+  {
+   "id": "monster_hits_you",
+   "group": "events",
+   "desc": "A monster hits the hero",
+   "source": "mhitu.c"
+  },
+  {
+   "id": "monster_misses_you",
+   "group": "events",
+   "desc": "A monster misses the hero",
+   "source": "mhitu.c"
+  },
+  {
+   "id": "monster_killed",
+   "group": "events",
+   "desc": "The hero kills a monster",
+   "source": "mon.c"
+  },
+  {
+   "id": "prayer_answered",
+   "group": "events",
+   "desc": "A god answers favourably",
+   "source": "pray.c"
+  },
+  {
+   "id": "pray",
+   "group": "events",
+   "desc": "The hero prays",
+   "source": "pray.c"
+  },
+  {
+   "id": "shop_enter",
+   "group": "events",
+   "desc": "Entering a shop",
+   "source": "shk.c"
+  },
+  {
+   "id": "shop_buy",
+   "group": "events",
+   "desc": "Paying for something",
+   "source": "shk.c"
+  },
+  {
+   "id": "sit",
+   "group": "events",
+   "desc": "The hero sits down",
+   "source": "sit.c"
+  },
+  {
+   "id": "study_book",
+   "group": "events",
+   "desc": "The hero starts studying a spellbook",
+   "source": "spell.c"
+  },
+  {
+   "id": "spell_cast",
+   "group": "events",
+   "desc": "The hero casts a spell",
+   "source": "spell.c"
+  },
+  {
+   "id": "item_stolen",
+   "group": "events",
+   "desc": "A monster steals from the hero",
+   "source": "steal.c"
+  },
+  {
+   "id": "teleport",
+   "group": "events",
+   "desc": "The hero teleports",
+   "source": "teleport.c"
+  },
+  {
+   "id": "fall_asleep",
+   "group": "events",
+   "desc": "The hero falls asleep",
+   "source": "timeout.c"
+  },
+  {
+   "id": "fall_into_water",
+   "group": "events",
+   "desc": "The hero falls into water",
+   "source": "trap.c"
+  },
+  {
+   "id": "hero_hits",
+   "group": "events",
+   "desc": "The hero hits a monster",
+   "source": "uhitm.c"
+  },
+  {
+   "id": "hero_misses",
+   "group": "events",
+   "desc": "The hero misses a monster",
+   "source": "uhitm.c"
+  },
+  {
+   "id": "skill_ready",
+   "group": "events",
+   "desc": "A skill can be advanced",
+   "source": "weapon.c"
+  },
+  {
+   "id": "skill_up",
+   "group": "events",
+   "desc": "The hero advances a skill",
+   "source": "weapon.c"
+  },
+  {
+   "id": "trap_arrow_trap",
+   "group": "traps",
+   "desc": "arrow trap"
+  },
+  {
+   "id": "trap_dart_trap",
+   "group": "traps",
+   "desc": "dart trap"
+  },
+  {
+   "id": "trap_falling_rock_trap",
+   "group": "traps",
+   "desc": "falling rock trap"
+  },
+  {
+   "id": "trap_squeaky_board",
+   "group": "traps",
+   "desc": "squeaky board"
+  },
+  {
+   "id": "trap_bear_trap",
+   "group": "traps",
+   "desc": "bear trap"
+  },
+  {
+   "id": "trap_land_mine",
+   "group": "traps",
+   "desc": "land mine"
+  },
+  {
+   "id": "trap_rolling_boulder_trap",
+   "group": "traps",
+   "desc": "rolling boulder trap"
+  },
+  {
+   "id": "trap_sleeping_gas_trap",
+   "group": "traps",
+   "desc": "sleeping gas trap"
+  },
+  {
+   "id": "trap_rust_trap",
+   "group": "traps",
+   "desc": "rust trap"
+  },
+  {
+   "id": "trap_fire_trap",
+   "group": "traps",
+   "desc": "fire trap"
+  },
+  {
+   "id": "trap_pit",
+   "group": "traps",
+   "desc": "pit"
+  },
+  {
+   "id": "trap_spiked_pit",
+   "group": "traps",
+   "desc": "spiked pit"
+  },
+  {
+   "id": "trap_hole",
+   "group": "traps",
+   "desc": "hole"
+  },
+  {
+   "id": "trap_trap_door",
+   "group": "traps",
+   "desc": "trap door"
+  },
+  {
+   "id": "trap_teleportation_trap",
+   "group": "traps",
+   "desc": "teleportation trap"
+  },
+  {
+   "id": "trap_level_teleporter",
+   "group": "traps",
+   "desc": "level teleporter"
+  },
+  {
+   "id": "trap_magic_portal",
+   "group": "traps",
+   "desc": "magic portal"
+  },
+  {
+   "id": "trap_statue_trap",
+   "group": "traps",
+   "desc": "statue trap"
+  },
+  {
+   "id": "trap_magic_trap",
+   "group": "traps",
+   "desc": "magic trap"
+  },
+  {
+   "id": "trap_anti_magic_trap",
+   "group": "traps",
+   "desc": "anti magic trap"
+  },
+  {
+   "id": "trap_polymorph_trap",
+   "group": "traps",
+   "desc": "polymorph trap"
+  },
+  {
+   "id": "trap_trapped_door",
+   "group": "traps",
+   "desc": "trapped door"
+  },
+  {
+   "id": "trap_trapped_chest",
+   "group": "traps",
+   "desc": "trapped chest"
+  },
+  {
+   "id": "trap_web",
+   "group": "traps",
+   "desc": "web"
+  },
+  {
+   "id": "footstep",
+   "group": "game",
+   "desc": "The hero takes a step (every ~1.5 blocks walked)"
+  },
+  {
+   "id": "hero_swing",
+   "group": "game",
+   "desc": "The hero swings at a monster"
+  },
+  {
+   "id": "hero_swing_miss_air",
+   "group": "game",
+   "desc": "The hero swings at nothing"
+  },
+  {
+   "id": "hero_hurt",
+   "group": "game",
+   "desc": "The hero loses hit points"
+  },
+  {
+   "id": "hero_heal",
+   "group": "game",
+   "desc": "The hero regains a good chunk of hit points"
+  },
+  {
+   "id": "hp_low",
+   "group": "game",
+   "desc": "Hit points drop below a third"
+  },
+  {
+   "id": "death",
+   "group": "game",
+   "desc": "The hero dies"
+  },
+  {
+   "id": "missile_launch",
+   "group": "game",
+   "desc": "A monster throws or shoots something"
+  },
+  {
+   "id": "missile_dodged",
+   "group": "game",
+   "desc": "A missile that reached you misses (\"Dodged!\")"
+  },
+  {
+   "id": "missile_hit",
+   "group": "game",
+   "desc": "A missile hits you"
+  },
+  {
+   "id": "missile_land",
+   "group": "game",
+   "desc": "A missile comes down on the floor or a wall"
+  },
+  {
+   "id": "boulder_push",
+   "group": "game",
+   "desc": "The hero pushes a boulder"
+  },
+  {
+   "id": "level_enter_down",
+   "group": "game",
+   "desc": "Arriving on a deeper level"
+  },
+  {
+   "id": "level_enter_up",
+   "group": "game",
+   "desc": "Arriving on a shallower level"
+  },
+  {
+   "id": "hunger_hungry",
+   "group": "game",
+   "desc": "The hero becomes Hungry"
+  },
+  {
+   "id": "hunger_weak",
+   "group": "game",
+   "desc": "The hero becomes Weak"
+  },
+  {
+   "id": "hunger_fainting",
+   "group": "game",
+   "desc": "The hero is Fainting"
+  },
+  {
+   "id": "gold_gain",
+   "group": "game",
+   "desc": "The hero's gold goes up"
+  },
+  {
+   "id": "gold_loss",
+   "group": "game",
+   "desc": "The hero's gold goes down"
+  },
+  {
+   "id": "item_pickup",
+   "group": "game",
+   "desc": "Something is added to the inventory"
+  },
+  {
+   "id": "item_drop",
+   "group": "game",
+   "desc": "Something leaves the inventory"
+  },
+  {
+   "id": "blind_start",
+   "group": "game",
+   "desc": "The hero is blinded"
+  },
+  {
+   "id": "blind_end",
+   "group": "game",
+   "desc": "The hero can see again"
+  },
+  {
+   "id": "hallucination_start",
+   "group": "game",
+   "desc": "The hero starts hallucinating"
+  },
+  {
+   "id": "hallucination_end",
+   "group": "game",
+   "desc": "The hero stops hallucinating"
+  },
+  {
+   "id": "speed_fast",
+   "group": "game",
+   "desc": "The hero becomes fast"
+  },
+  {
+   "id": "levitation_start",
+   "group": "game",
+   "desc": "The hero starts levitating"
+  },
+  {
+   "id": "levitation_end",
+   "group": "game",
+   "desc": "The hero stops levitating"
+  },
+  {
+   "id": "wheel_open",
+   "group": "game",
+   "desc": "The action wheel opens"
+  },
+  {
+   "id": "wheel_select",
+   "group": "game",
+   "desc": "An action is picked on the wheel"
+  },
+  {
+   "id": "dialog_open",
+   "group": "game",
+   "desc": "A question or menu appears"
+  },
+  {
+   "id": "music_title",
+   "group": "music",
+   "desc": "Character selection"
+  },
+  {
+   "id": "music_dungeon",
+   "group": "music",
+   "desc": "The Dungeons of Doom"
+  },
+  {
+   "id": "music_mines",
+   "group": "music",
+   "desc": "The Gnomish Mines"
+  },
+  {
+   "id": "music_minetown",
+   "group": "music",
+   "desc": "Minetown"
+  },
+  {
+   "id": "music_sokoban",
+   "group": "music",
+   "desc": "Sokoban"
+  },
+  {
+   "id": "music_shop",
+   "group": "music",
+   "desc": "Inside a shop"
+  },
+  {
+   "id": "music_temple",
+   "group": "music",
+   "desc": "Inside a temple"
+  },
+  {
+   "id": "music_oracle",
+   "group": "music",
+   "desc": "The Oracle's level"
+  },
+  {
+   "id": "music_bigroom",
+   "group": "music",
+   "desc": "The Big Room"
+  },
+  {
+   "id": "music_quest",
+   "group": "music",
+   "desc": "The Quest"
+  },
+  {
+   "id": "music_ludios",
+   "group": "music",
+   "desc": "Fort Ludios"
+  },
+  {
+   "id": "music_gehennom",
+   "group": "music",
+   "desc": "Gehennom"
+  },
+  {
+   "id": "music_vlad",
+   "group": "music",
+   "desc": "Vlad's Tower"
+  },
+  {
+   "id": "music_endgame",
+   "group": "music",
+   "desc": "The Elemental Planes"
+  },
+  {
+   "id": "music_astral",
+   "group": "music",
+   "desc": "The Astral Plane"
+  },
+  {
+   "id": "music_death",
+   "group": "music",
+   "desc": "After dying"
+  },
+  {
+   "id": "music_victory",
+   "group": "music",
+   "desc": "After ascending"
+  }
+ ]
+}

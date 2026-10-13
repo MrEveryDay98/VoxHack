@@ -72,6 +72,7 @@ local function launch(info)
 		obj:set_properties({wield_item = nhv_tiles.item(info.tile)})
 		obj:set_yaw(math.atan2(dir.z, dir.x))
 	end
+	nhv.sound.hook("missile_launch", {pos = start})
 	missiles.list[info.pid] = {
 		pid = info.pid, obj = obj, pos = start, dir = dir, travelled = 0,
 		range = (math.max(info.range, 1) + 1) * U.TILE, thrower = info.mon_id,
@@ -204,10 +205,16 @@ nh.on_event(function(evs)
 			if m then
 				if what == "miss" then
 					missiles.float_text("Dodged!")
+					nhv.sound.hook("missile_dodged")
 					m.waiting = false
 				elseif what == "pass" then
 					m.waiting = false
 				else -- hit, stop, land
+					if what == "hit" then
+						nhv.sound.hook("missile_hit")
+					elseif what == "land" then
+						nhv.sound.hook("missile_land", {pos = m.pos})
+					end
 					remove(m)
 				end
 			end

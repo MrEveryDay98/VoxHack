@@ -126,6 +126,7 @@ nhv_game_thread_main(const char *rcfile, const char *name)
     }
 
     vision_init();
+    assign_soundlib(soundlib_vissound); /* nhv_sound.c */
     init_sound_disp_gamewindows();
 
     if ((getlock_result != -1) && (nhfp = restore_saved_game()) != 0) {

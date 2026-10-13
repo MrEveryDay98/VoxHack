@@ -111,6 +111,11 @@ function sim.sync()
 		e.x, e.y = m.x, m.y
 		e.mndx, e.size, e.speed, e.flags = m.mndx, m.size, m.speed, m.flags
 		e.mux, e.muy = m.mux, m.muy
+		-- took damage since last time: flash red
+		if e.hp and m.hp and m.hp < e.hp and nhv.mobs then
+			nhv.mobs.flash(m.id, "r", 0.22)
+		end
+		e.hp = m.hp
 		e.r = scale.radius(m.size, m.mndx)
 	end
 	for id in pairs(sim.mons) do

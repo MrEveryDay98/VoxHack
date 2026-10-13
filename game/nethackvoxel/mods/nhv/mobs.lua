@@ -333,14 +333,69 @@ function mobs.monster_at(tx, ty)
 	end
 end
 
+-- ---------------------------------------------------------------- combat
+-- Flash a monster's sprite: "w" = faint white (attacking), "r" = red (hurt)
+function mobs.flash(id, kind, secs)
+	local e = mobs.mons["id" .. id]
+	if not e or not e.tile or not e.obj:get_pos() then
+		return
+	end
+	e.flash_until = core.get_us_time() + (secs or 0.15) * 1e6
+	e.obj:set_properties({wield_item = nhv_tiles.flash_item(e.tile, kind)})
+end
+
+-- a quick swipe in front of an attacking monster, toward its target
+local function swipe(e, target)
+	local pos = e.obj:get_pos()
+	if not pos or not target then
+		return
+	end
+	local dir = vector.direction(pos, target)
+	local front = vector.add(pos, vector.multiply(dir, math.min(1.2, (e.h or 2) * 0.4)))
+	core.add_particle({
+		pos = front, velocity = vector.multiply(dir, 2),
+		expirationtime = 0.18, size = 6 * math.min(2, (e.h or 2) / 2),
+		texture = "nhv_swipe.png", glow = 10,
+	})
+end
+
+nhv.nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local kind, a, b, melee = ev.text:match("^(%a+) (%d+) (%d+) (%d)")
+			if kind == "attack" then
+				a, b = tonumber(a), tonumber(b)
+				mobs.flash(a, "w", 0.12)
+				local e = mobs.mons["id" .. a]
+				if e and melee == "1" then
+					local target
+					if b == 0 then
+						local p = core.get_connected_players()[1]
+						target = p and vector.add(p:get_pos(), vector.new(0, 1.2, 0))
+					else
+						local t = mobs.mons["id" .. b]
+						target = t and t.obj:get_pos()
+					end
+					swipe(e, target)
+				end
+			end
+		end
+	end
+end)
+
 -- ---------------------------------------------------------------- per step
 local clock_t = 0
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
+	local now = core.get_us_time()
 	for _, e in pairs(mobs.mons) do
 		local obj = e.obj
+		if e.flash_until and now > e.flash_until and obj:get_pos() then
+			e.flash_until = nil
+			obj:set_properties({wield_item = nhv_tiles.item(e.tile)})
+		end
 		if obj:get_pos() and e.h then
 			local pos = mon_draw_pos(e)
 			obj:move_to(pos, true)

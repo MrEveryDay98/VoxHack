@@ -116,7 +116,9 @@ enum nhv_event_kind {
     NHV_EV_LEVEL_CHANGE,/* hero arrived on a different level */
     NHV_EV_BELL,
     NHV_EV_DELAY,       /* animation frame boundary (delay_output) */
-    NHV_EV_MISSILE      /* missile outcome: "hit|miss|stop|pass|land <pid>" */
+    NHV_EV_MISSILE,     /* missile outcome: "hit|miss|stop|pass|land <pid>" */
+    NHV_EV_COMBAT,      /* "attack <attacker m_id> <target m_id, 0 = hero> <melee>" */
+    NHV_EV_SOUND        /* sound/voice hook, see nhv_sound.c */
 };
 
 typedef struct nhv_event {
@@ -185,6 +187,8 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_RIDING    0x1000
 #define NHV_HERO_FAST      0x2000
 #define NHV_HERO_VFAST     0x4000
+#define NHV_HERO_INSHOP    0x8000
+#define NHV_HERO_INTEMPLE  0x10000
 
 typedef struct nhv_hero {
     int x, y;
@@ -310,6 +314,7 @@ typedef struct nhv_monfull {
     int size;
     int mux, muy;   /* where it thinks the hero is */
     int flags;      /* NHV_MF_* */
+    int hp, hpmax;
 } nhv_monfull;
 /* Every monster on the level (true state, for the host's simulation;
  * only draw what nhv_get_monsters() says the hero perceives). */

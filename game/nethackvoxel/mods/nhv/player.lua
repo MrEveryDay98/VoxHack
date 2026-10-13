@@ -115,8 +115,25 @@ local function try_push(player)
 	return false
 end
 
+local step_dist, step_last = 0, nil
+local function footsteps(player)
+	local pos = player:get_pos()
+	if step_last then
+		local d = math.sqrt((pos.x - step_last.x) ^ 2 + (pos.z - step_last.z) ^ 2)
+		if d < 2 then
+			step_dist = step_dist + d
+		end
+	end
+	step_last = pos
+	if step_dist >= 1.6 then
+		step_dist = 0
+		nhv.sound.hook("footstep")
+	end
+end
+
 local function step(player)
 	local h = player_mod.hero
+	footsteps(player)
 	if not h or not nh.ready() then
 		return
 	end
@@ -201,6 +218,7 @@ nh.on_snapshot(function(snap, action)
 		teleport(player, U.tile_center(h.x, h.y))
 	elseif action and action.kind == "push" then
 		if h.x == action.tx and h.y == action.ty then
+			nhv.sound.hook("boulder_push")
 			player_mod.ahead = {from_x = action.from_x, from_y = action.from_y,
 				t_end = core.get_us_time() + 1500000}
 		end

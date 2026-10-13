@@ -141,10 +141,11 @@ add_library(nethack SHARED
     nhv_main.c
     nhv_win.c
     nhv_api.c
-    nhv_free.c)
+    nhv_free.c
+    nhv_sound.c)
 target_include_directories(nethack PRIVATE ${NH_COMMON_INCS} "${CMAKE_CURRENT_SOURCE_DIR}")
 list(REMOVE_ITEM NH_COMMON_DEFS NO_TILE_C)
-target_compile_definitions(nethack PRIVATE ${NH_COMMON_DEFS} DLB NHV_FREEMOVE TILES_IN_GLYPHMAP SHIM_GRAPHICS NOTTYGRAPHICS NHV_BUILDING_DLL)
+target_compile_definitions(nethack PRIVATE ${NH_COMMON_DEFS} DLB NHV_FREEMOVE SND_LIB_VISSOUND SND_SPEECH TILES_IN_GLYPHMAP SHIM_GRAPHICS NOTTYGRAPHICS NHV_BUILDING_DLL)
 target_compile_options(nethack PRIVATE ${NH_WARN} $<$<COMPILE_LANGUAGE:C>:-include process.h>)
 target_link_libraries(nethack PRIVATE nhlua54 shlwapi ole32 shell32 uuid winmm bcrypt userenv rpcrt4)
 set_target_properties(nethack PROPERTIES PREFIX "")

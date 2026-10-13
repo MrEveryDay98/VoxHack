@@ -1,0 +1,620 @@
+{
+ "version": 1,
+ "hooks": {
+  "hero_swing_miss_air": {
+   "sounds": [
+    "yh_air"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "missile_dodged": {
+   "sounds": [
+    "yh_almost"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "applause": {
+   "sounds": [
+    "yh_applause"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "missile_hit": {
+   "sounds": [
+    "yh_arrow"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_arrow_trap": {
+   "sounds": [
+    "yh_arrow"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "teleport": {
+   "sounds": [
+    "yh_beam"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_teleportation_trap": {
+   "sounds": [
+    "yh_beam"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_bear_trap": {
+   "sounds": [
+    "yh_beartrap"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "monster_behind_boulder": {
+   "sounds": [
+    "yh_bison"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "eat_rotten": {
+   "sounds": [
+    "yh_blecch"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "study_book": {
+   "sounds": [
+    "yh_book"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "boulder_push": {
+   "sounds": [
+    "yh_boulder"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "bubble_rising": {
+   "sounds": [
+    "yh_bubbs"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "skill_up": {
+   "sounds": [
+    "yh_circus"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "skill_ready": {
+   "sounds": [
+    "yh_circus"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "gold_gain": {
+   "sounds": [
+    "yh_coins"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "gold_loss": {
+   "sounds": [
+    "yh_coinsfall"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_crash_open": {
+   "sounds": [
+    "yh_crack"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kick_door_it_crashes_open": {
+   "sounds": [
+    "yh_crack"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kick_door_it_shatters": {
+   "sounds": [
+    "yh_crack"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "crash_door": {
+   "sounds": [
+    "yh_crack"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_open": {
+   "sounds": [
+    "yh_creak"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_unlock_and_open": {
+   "sounds": [
+    "yh_creak"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "crumbling_sound": {
+   "sounds": [
+    "yh_crumble"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "stone_crumbling": {
+   "sounds": [
+    "yh_crumble"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_dart_trap": {
+   "sounds": [
+    "yh_dart"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "fall_into_water": {
+   "sounds": [
+    "yh_dive"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_resists": {
+   "sounds": [
+    "yh_door1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_close": {
+   "sounds": [
+    "yh_door3"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "fountain_refresh": {
+   "sounds": [
+    "yh_draught"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "death": {
+   "sounds": [
+    "yh_evil"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "explosion": {
+   "sounds": [
+    "yh_explosion"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "speed_fast": {
+   "sounds": [
+    "yh_faster"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kadoom_boulder_falls_in": {
+   "sounds": [
+    "yh_fills"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "level_up": {
+   "sounds": [
+    "yh_firework"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "guards_footsteps": {
+   "sounds": [
+    "yh_footsteps"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_growl": {
+   "sounds": [
+    "yh_growl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "gurgle": {
+   "sounds": [
+    "yh_gurgling"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "gushing_sound": {
+   "sounds": [
+    "yh_gush"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hallucination_start": {
+   "sounds": [
+    "yh_hallucinate"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "prayer_answered": {
+   "sounds": [
+    "yh_helping"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hero_hits": {
+   "sounds": [
+    "yh_hit1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "monster_killed": {
+   "sounds": [
+    "yh_hit2"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_howl": {
+   "sounds": [
+    "yh_howling"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kaboom": {
+   "sounds": [
+    "yh_kaboom"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kaablamm_of_mine": {
+   "sounds": [
+    "yh_kaboom"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_land_mine": {
+   "sounds": [
+    "yh_kaboom"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "bolt_of_lightning": {
+   "sounds": [
+    "yh_lightning"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "door_locked": {
+   "sounds": [
+    "yh_lock"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "spell_cast": {
+   "sounds": [
+    "yh_magic1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "klunk": {
+   "sounds": [
+    "yh_metal"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "missile_launch": {
+   "sounds": [
+    "yh_missile"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hunger_hungry": {
+   "sounds": [
+    "yh_moan"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hunger_weak": {
+   "sounds": [
+    "yh_moan"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "item_stolen": {
+   "sounds": [
+    "yh_monkey"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "eat_done": {
+   "sounds": [
+    "yh_munch"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "faint_splashing": {
+   "sounds": [
+    "yh_naiad"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hero_hurt": {
+   "sounds": [
+    "yh_ouch"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "heart_beat": {
+   "sounds": [
+    "yh_pulse"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hp_low": {
+   "sounds": [
+    "yh_pulse"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "shop_buy": {
+   "sounds": [
+    "yh_register"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "dig_hole": {
+   "sounds": [
+    "yh_rockl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "dig": {
+   "sounds": [
+    "yh_rocks"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "monster_hits_you": {
+   "sounds": [
+    "yh_scream1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "secret_found": {
+   "sounds": [
+    "yh_secret1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "glass_shattering": {
+   "sounds": [
+    "yh_shatter"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "potion_crash_and_break": {
+   "sounds": [
+    "yh_shatter"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "shop_enter": {
+   "sounds": [
+    "yh_shopdoor"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "scratching": {
+   "sounds": [
+    "yh_skrap"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "lid_slams_open_falls_shut": {
+   "sounds": [
+    "yh_slams"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "splash": {
+   "sounds": [
+    "yh_slop"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "level_enter_down": {
+   "sounds": [
+    "yh_stairs1"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "level_enter_up": {
+   "sounds": [
+    "yh_stairs2"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hero_misses": {
+   "sounds": [
+    "yh_swing"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "monster_misses_you": {
+   "sounds": [
+    "yh_swing"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "thud": {
+   "sounds": [
+    "yh_thud"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "vomit": {
+   "sounds": [
+    "yh_vomit"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "rushing_wind_noise": {
+   "sounds": [
+    "yh_wind"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "eat_dog_food": {
+   "sounds": [
+    "yh_yak"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "fall_asleep": {
+   "sounds": [
+    "yh_yawn"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_sleeping_gas_trap": {
+   "sounds": [
+    "yh_yawn"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "music_shop": {
+   "sounds": [
+    "yh_music_cantina"
+   ],
+   "volume": 100,
+   "loop": true
+  },
+  "music_death": {
+   "sounds": [
+    "yh_music_dead"
+   ],
+   "volume": 100,
+   "loop": true
+  },
+  "music_endgame": {
+   "sounds": [
+    "yh_music_endgame"
+   ],
+   "volume": 100,
+   "loop": true
+  },
+  "music_victory": {
+   "sounds": [
+    "yh_music_endingyiruma"
+   ],
+   "volume": 100,
+   "loop": true
+  },
+  "music_dungeon": {
+   "sounds": [
+    "yh_music_al"
+   ],
+   "volume": 100,
+   "loop": true
+  },
+  "music_gehennom": {
+   "sounds": [
+    "yh_music_df"
+   ],
+   "volume": 100,
+   "loop": true
+  }
+ },
+ "voices": {},
+ "master": {
+  "effects": 100,
+  "music": 60,
+  "voices": 100
+ }
+}

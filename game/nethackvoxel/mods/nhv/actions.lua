@@ -104,9 +104,11 @@ function actions.attack(player, prefer_id)
 	end
 	local t = attack_target(player, prefer_id)
 	if t then
+		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
 	else
 		-- a swing at nothing still takes the time a swing takes
+		nhv.sound.hook("hero_swing_miss_air")
 		nhv.clock.act(ext("nhvtick"), {kind = "swing"})
 	end
 end

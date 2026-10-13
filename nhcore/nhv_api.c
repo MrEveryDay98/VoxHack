@@ -444,6 +444,8 @@ nhv_get_hero(nhv_hero *out)
     if (Fast) f |= NHV_HERO_FAST;
     if (Very_fast) f |= NHV_HERO_VFAST;
     if (program_state.gameover) f |= NHV_HERO_DEAD;
+    if (*u.ushops) f |= NHV_HERO_INSHOP;
+    if (temple_occupied(u.urooms)) f |= NHV_HERO_INTEMPLE;
     out->flags = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);
     Snprintf(out->rank, sizeof out->rank, "%s",

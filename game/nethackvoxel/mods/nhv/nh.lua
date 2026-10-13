@@ -62,7 +62,7 @@ end
 nh.OPTIONS = table.concat({
 	"OPTIONS=!autopickup,!tutorial,!legacy,!splash_screen,!rest_on_space",
 	"OPTIONS=time,showexp,!verbose,!mention_walls,suppress_alert:3.4.3",
-	"OPTIONS=pickup_burden:unencumbered,paranoid_confirmation:pray",
+	"OPTIONS=pickup_burden:unencumbered,paranoid_confirmation:pray,voices",
 }, "\n")
 
 function nh.start(name)

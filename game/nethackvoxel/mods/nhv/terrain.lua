@@ -69,10 +69,24 @@ local function liquid_node(name, desc, tex, light)
 		light_source = light, post_effect_color = {a = 120, r = 20, g = 40, b = 120},
 	})
 end
-liquid_node("water", "Water", tile_tex(1314) .. "^[opacity:200", nil)
+-- Flowing water: two frames, the tile and its mirror image, one second each.
+local function escape_combine(t)
+	return (t:gsub("%^", "\\^"):gsub(":", "\\:"))
+end
+local function flowing(tex, opacity)
+	local frames = ("[combine:16x32:0,0=%s:0,16=%s"):format(
+		escape_combine(tex), escape_combine(tex .. "^[transformFX"))
+	return {
+		name = frames .. "^[opacity:" .. opacity,
+		animation = {type = "vertical_frames", aspect_w = 16, aspect_h = 16, length = 2.0},
+	}
+end
+terrain.flowing = flowing
+
+liquid_node("water", "Water", flowing(tile_tex(1314), 200), nil)
 liquid_node("lava", "Molten lava", tile_tex(1316), 10)
 liquid_node("void_liquid", "Unexplored", BLACK, nil)
-liquid_node("waterwall", "Wall of water", tile_tex(1324) .. "^[opacity:180", nil)
+liquid_node("waterwall", "Wall of water", flowing(tile_tex(1324), 180), nil)
 
 -- invisible light carried with the hero
 reg("hero_light", {

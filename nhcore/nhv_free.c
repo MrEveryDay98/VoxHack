@@ -174,6 +174,7 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
         f.speed = mon_speed(m);
         f.size = m->data->msize;
         f.mux = m->mux, f.muy = m->muy;
+        f.hp = m->mhp, f.hpmax = m->mhpmax;
         if (m->mtame)
             f.flags |= NHV_MF_TAME;
         if (m->mpeaceful)
@@ -351,6 +352,15 @@ nhv_clear_missiles(void)
             obfree(missiles[i].obj, (struct obj *) 0);
             missiles[i].obj = 0;
         }
+}
+
+void
+nhv_combat_event(const char *kind, unsigned a, unsigned b, int melee)
+{
+    char buf[64];
+
+    Sprintf(buf, "%s %u %u %d", kind, a, b, melee);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
 /* runs on the game thread (see nhv_call) */

@@ -229,6 +229,7 @@ local function show_request(req)
 		show("nhv:req", key_dialog(req))
 	end
 	nhv.player.freeze(true)
+	nhv.sound.hook("dialog_open")
 end
 
 nh.on_request(function(req)

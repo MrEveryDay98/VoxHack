@@ -102,6 +102,7 @@ local function close(player, run)
 	local choice = run
 	state = nil
 	if choice then
+		nhv.sound.hook("wheel_select")
 		nhv.actions.run(choice, {kind = "wheel"})
 	end
 end
@@ -160,6 +161,7 @@ core.register_globalstep(function()
 	end
 	if not state.open and #state.list > 0
 			and core.get_us_time() - state.t0 > HOLD_US then
+		nhv.sound.hook("wheel_open")
 		state.open = true
 		draw(player)
 	end

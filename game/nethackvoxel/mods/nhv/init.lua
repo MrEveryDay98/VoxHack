@@ -65,6 +65,7 @@ dofile(path .. "ui.lua")
 dofile(path .. "actions.lua")
 dofile(path .. "wheel.lua")
 dofile(path .. "missiles.lua")
+dofile(path .. "sound.lua")
 dofile(path .. "loop.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists

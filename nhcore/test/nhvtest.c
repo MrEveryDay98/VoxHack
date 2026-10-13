@@ -20,6 +20,8 @@ drain_events(void)
         case NHV_EV_MESSAGE: printf("MSG: %s\n", ev.text); break;
         case NHV_EV_RAW: printf("RAW: %s\n", ev.text); break;
         case NHV_EV_MISSILE: printf("MISSILE: %s\n", ev.text); break;
+        case NHV_EV_SOUND: printf("SOUND: %s\n", ev.text); break;
+        case NHV_EV_COMBAT: printf("COMBAT: %s\n", ev.text); break;
         case NHV_EV_TEXT_BEGIN: printf("TEXT [%s] {\n", ev.text); break;
         case NHV_EV_TEXT_LINE: printf("  | %s\n", ev.text); break;
         case NHV_EV_TEXT_END: printf("}\n"); break;

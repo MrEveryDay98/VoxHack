@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetHack Voxel Sound Editor</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">♪</span>
+    <div>
+      <h1>Sound &amp; Voice Editor</h1>
+      <p class="sub">NetHack Voxel · changes apply in-game a couple of seconds after saving</p>
+    </div>
+  </div>
+  <div class="masters" id="masters"></div>
+  <div class="save">
+    <span id="dirty" class="dirty" hidden>Unsaved changes</span>
+    <button id="saveBtn" class="primary" disabled>Save</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="hooks" aria-selected="true">Sound hooks</button>
+  <button role="tab" data-tab="music">Music</button>
+  <button role="tab" data-tab="voices">Voices &amp; dialogue</button>
+  <button role="tab" data-tab="library">Sound library</button>
+</nav>
+
+<main>
+  <section id="tab-hooks" class="tab">
+    <div class="toolbar">
+      <input id="hookSearch" type="search" placeholder="Search hooks…">
+      <div class="chips" id="hookGroups"></div>
+      <label class="check"><input type="checkbox" id="hookUnassigned"> Only unassigned</label>
+      <span class="count" id="hookCount"></span>
+    </div>
+    <div class="list" id="hookList"></div>
+  </section>
+
+  <section id="tab-music" class="tab" hidden>
+    <div class="toolbar"><span class="hint">Music loops while the hero is in each place. Leave a place empty to keep the dungeon music.</span></div>
+    <div class="list" id="musicList"></div>
+  </section>
+
+  <section id="tab-voices" class="tab" hidden>
+    <div class="toolbar">
+      <input id="voiceSearch" type="search" placeholder="Search text, speaker or id…">
+      <select id="voiceCategory"></select>
+      <select id="voiceSpeaker"></select>
+      <select id="voiceState">
+        <option value="">All lines</option>
+        <option value="unvoiced">Not voiced yet</option>
+        <option value="voiced">Voiced</option>
+      </select>
+      <button id="exportScript">Export script (CSV)</button>
+      <span class="count" id="voiceCount"></span>
+    </div>
+    <p class="hint">Placeholders like <code>%s</code> or <code>%p</code> are names and numbers filled in during play. Drop a recording on a line (or use Upload) to attach it.</p>
+    <div class="list" id="voiceList"></div>
+    <div class="pager" id="voicePager"></div>
+  </section>
+
+  <section id="tab-library" class="tab" hidden>
+    <div class="toolbar">
+      <input id="libSearch" type="search" placeholder="Search sounds…">
+      <label class="button">Add sounds…<input type="file" id="libUpload" accept="audio/*" multiple hidden></label>
+      <span class="count" id="libCount"></span>
+    </div>
+    <p class="hint">Drop audio files anywhere on this tab to add them. They are converted to Ogg Vorbis for the game.</p>
+    <div class="grid" id="libList"></div>
+  </section>
+</main>
+
+<div id="picker" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+    <div class="modal-head">
+      <h2 id="pickerTitle">Choose a sound</h2>
+      <button class="icon" id="pickerClose" aria-label="Close">✕</button>
+    </div>
+    <input id="pickerSearch" type="search" placeholder="Search sounds…">
+    <div class="picker-list" id="pickerList"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>

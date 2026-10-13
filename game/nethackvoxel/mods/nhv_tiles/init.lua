@@ -45,6 +45,20 @@ function nhv_tiles.texture(tile)
 	return tex
 end
 
+-- combat flashes for monster sprites: a faint white one when attacking,
+-- red when hurt (entities swap to these items for a moment)
+nhv_tiles.FLASH = {
+	w = "^[colorize:#ffffff:70",
+	r = "^[colorize:#ff2020:150",
+}
+
+function nhv_tiles.flash_item(tile, kind)
+	if not tile or tile < 0 or tile >= meta.monsters or not nhv_tiles.FLASH[kind] then
+		return nhv_tiles.item(tile)
+	end
+	return string.format("nhv_tiles:t%04d_%s", tile, kind)
+end
+
 for i = 0, meta.count - 1 do
 	local tex = nhv_tiles.texture(i)
 	core.register_craftitem(nhv_tiles.item(i), {
@@ -54,4 +68,13 @@ for i = 0, meta.count - 1 do
 		stack_max = 65535,
 		groups = {not_in_creative_inventory = 1},
 	})
+	if i < meta.monsters then
+		for kind, mod in pairs(nhv_tiles.FLASH) do
+			core.register_craftitem(nhv_tiles.flash_item(i, kind), {
+				description = meta.names[i] or ("tile " .. i),
+				inventory_image = tex .. mod,
+				groups = {not_in_creative_inventory = 1},
+			})
+		end
+	end
 end
