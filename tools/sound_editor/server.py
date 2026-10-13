@@ -11,7 +11,8 @@ game/nethackvoxel/mods/nhv_sounds:
 
 Voice generation (ElevenLabs + Tenacity) lives in voicegen.py.
 
-Only listens on 127.0.0.1, and only answers API calls made by its own page
+Shuts itself down when the editor page is closed (and no voices are still
+being generated). Only listens on 127.0.0.1, and only answers API calls made by its own page
 (other websites can't use it to spend ElevenLabs credits). Uploaded audio is
 converted to Ogg Vorbis with ffmpeg. The game picks up changes to
 config.json within a couple of seconds.
@@ -26,6 +27,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
@@ -46,6 +48,19 @@ NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
 PORT = 8765
 config_lock = threading.Lock()
+
+# the page pings every 30 s and says goodbye when it closes
+SILENCE_LIMIT = 150   # no contact for this long: the browser is gone
+STARTUP_LIMIT = 300   # time allowed for the browser to open the page at first
+BYE_GRACE = 5         # after a goodbye, wait this long (a reload comes back)
+last_seen = time.time() + (STARTUP_LIMIT - SILENCE_LIMIT)
+bye_at = None
+
+
+def seen():
+    global last_seen, bye_at
+    last_seen = time.time()
+    bye_at = None
 
 
 def load_json(path, default):
@@ -160,9 +175,19 @@ VG = voicegen.VoiceGen(ROOT, MOD, SOUNDS, dialogue_by_id, load_config, save_conf
                        speakable.speakable)
 
 
+class Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # a page closed or reloaded mid-request: nothing to report
+        if not isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
+            super().handle_error(request, client_address)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        pass
+        if os.environ.get("NHV_EDITOR_LOG"):
+            sys.stderr.write("%s %s\n" % (time.strftime("%H:%M:%S"), fmt % args))
 
     def send(self, code, body, ctype="application/json"):
         if isinstance(body, (dict, list)):
@@ -190,7 +215,10 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         if origin and origin not in ("http://127.0.0.1:%d" % PORT, "http://localhost:%d" % PORT):
             return False
-        return self.headers.get("X-NHV") == "1"
+        if self.headers.get("X-NHV") != "1":
+            return False
+        seen()
+        return True
 
     def body_json(self):
         n = int(self.headers.get("Content-Length", "0"))
@@ -232,6 +260,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"error": str(e)})
 
     def api_get(self, path, q):
+        if path == "/api/ping":
+            return self.send(200, {"ok": True})
         if path == "/api/catalog":
             return self.send(200, {
                 "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", []),
@@ -306,7 +336,15 @@ class Handler(BaseHTTPRequestHandler):
 
     # -------------------------------------------------------------- POST
     def do_POST(self):
+        global bye_at
         url = urlparse(self.path)
+        if url.path == "/api/bye":
+            # sent by the closing page (navigator.sendBeacon can't add headers,
+            # so the browser's Origin header is what's checked)
+            if self.headers.get("Origin") in ("http://127.0.0.1:%d" % PORT, "http://localhost:%d" % PORT):
+                bye_at = time.time() + BYE_GRACE
+                return self.send(200, {"ok": True})
+            return self.send(403, {"error": "forbidden"})
         if not self.allowed():
             return self.send(403, {"error": "forbidden"})
         q = parse_qs(url.query)
@@ -423,12 +461,26 @@ def main():
     ports = [a for a in sys.argv[1:] if a.isdigit()]
     PORT = int(ports[0]) if ports else 8765
     os.makedirs(SOUNDS, exist_ok=True)
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    srv = Server(("127.0.0.1", PORT), Handler)
     url = "http://127.0.0.1:%d/" % PORT
-    print("NetHack Voxel sound editor: " + url + "  (close this window to stop)")
+    print("NetHack Voxel sound editor: " + url + "  (stops when the editor tab is closed)")
     if "--no-browser" not in sys.argv:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    if "--stay" not in sys.argv:
+        threading.Thread(target=watchdog, args=(srv,), daemon=True).start()
     srv.serve_forever()
+    print("The editor page was closed, so the editor stopped.")
+
+
+def watchdog(srv):
+    while True:
+        time.sleep(1)
+        if VG.busy():
+            continue  # let queued voice lines finish first
+        now = time.time()
+        if (bye_at and now > bye_at) or now - last_seen > SILENCE_LIMIT:
+            srv.shutdown()
+            return
 
 
 if __name__ == "__main__":

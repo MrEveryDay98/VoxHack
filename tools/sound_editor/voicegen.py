@@ -331,6 +331,10 @@ class VoiceGen:
         self.wake.set()
         return added
 
+    def busy(self):
+        with self.lock:
+            return any(j["status"] in ("queued", "running") for j in self.jobs)
+
     def cancel(self):
         with self.lock:
             for j in self.jobs:

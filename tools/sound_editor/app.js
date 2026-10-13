@@ -542,3 +542,8 @@ document.addEventListener("keydown", (e) => {
 window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 
 load().catch((e) => toast("Could not load: " + e.message));
+
+// keep the server running while this page is open; it stops itself a few
+// seconds after the page closes
+setInterval(() => api("/api/ping").catch(() => toast("The editor server has stopped — run the editor again to keep working.")), 30000);
+window.addEventListener("pagehide", () => navigator.sendBeacon("/api/bye"));
