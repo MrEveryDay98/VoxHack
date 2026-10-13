@@ -14,6 +14,13 @@ const Blocks = (() => {
   let dirty = false;
   let texTab = "sheet";
   let sheetQuery = "";
+  // the game's own blocks ("Game blocks" tab)
+  let mode = "custom";      // "custom" | "game"
+  let game = null;          // catalog the game wrote (null: not yet)
+  let overrides = {};       // block name -> changed fields
+  let gameSel = null;
+  let gameQuery = "";
+  let gameDirty = false;
 
   const touch = () => { dirty = true; $("#blkSave").disabled = false; $("#blkDirty").hidden = false; };
 
@@ -22,6 +29,8 @@ const Blocks = (() => {
     data = res.data;
     textures = res.textures;
     sheet = res.sheet;
+    game = res.game;
+    overrides = res.overrides || {};
     const b = data.blocks[sel];
     texTab = b && b.texture && b.texture.file ? "file" : "sheet";
     render();
@@ -29,6 +38,11 @@ const Blocks = (() => {
 
   async function save() {
     try {
+      if (gameDirty) {
+        const r = await api("/api/blocks/overrides", { method: "PUT", json: { blocks: overrides } });
+        overrides = r.overrides;
+        gameDirty = false;
+      }
       const res = await api("/api/blocks", { method: "PUT", json: data });
       data.blocks = res.blocks;
       dirty = false;
@@ -49,9 +63,11 @@ const Blocks = (() => {
   // an element showing a texture (sheet sprite or file) at size px
   function texView(t, size) {
     const d = el("div", { class: "tex", style: `width:${size}px;height:${size}px` });
-    if (t && t.file) {
-      d.style.backgroundImage = `url(/blocktex/${t.file})`;
+    if (t && (t.file || t.gamefile)) {
+      d.style.backgroundImage = t.file ? `url(/blocktex/${t.file})` : `url(/gametex/${t.gamefile})`;
       d.style.backgroundSize = "100% 100%";
+    } else if (t && t.color) {
+      d.style.background = t.color;
     } else if (t && t.sheet != null) {
       const k = size / 16;
       d.style.backgroundImage = "url(/sheet.png)";
@@ -66,6 +82,8 @@ const Blocks = (() => {
   function texCss(t) {
     // CSS for a face of the preview (background stretched over the face)
     if (t && t.file) return `background-image:url(/blocktex/${t.file});background-size:100% 100%;`;
+    if (t && t.gamefile) return `background-image:url(/gametex/${t.gamefile});background-size:100% 100%;`;
+    if (t && t.color) return `background:${t.color};`;
     if (t && t.sheet != null) {
       const c = sheet.cols, r = sheet.rows;
       const x = t.sheet % c, y = Math.floor(t.sheet / c);
@@ -183,8 +201,10 @@ const Blocks = (() => {
   // which sides are also drawn from behind (seen from inside the block)
   const SIDES = [["top", "Top"], ["bottom", "Bottom"], ["north", "North"], ["south", "South"],
     ["east", "East"], ["west", "West"]];
-  function backfaces(b) {
-    const bf = b.backfaces || (b.backfaces = {});
+  // commit(sides) stores the new set of sides (defaults to the block's own)
+  function backfaces(b, commit) {
+    const bf = Object.assign({}, b.backfaces || {});
+    const done = commit || ((v) => { b.backfaces = v; touch(); render(); });
     return el("div", {},
       el("h4", {}, "Back faces"),
       el("p", { class: "muted", style: "margin:0 0 6px" },
@@ -192,11 +212,11 @@ const Blocks = (() => {
       el("div", { class: "inline" }, ...SIDES.map(([k, l]) => el("label", { class: "check" },
         el("input", { type: "checkbox", checked: bf[k] || null, onchange: (e) => {
           if (e.target.checked) bf[k] = true; else delete bf[k];
-          touch(); render();
+          done(bf);
         } }), l))),
       el("div", { class: "inline" },
-        el("button", { class: "small", onclick: () => { SIDES.forEach(([k]) => { bf[k] = true; }); touch(); render(); } }, "All sides"),
-        el("button", { class: "small", onclick: () => { b.backfaces = {}; touch(); render(); } }, "None")));
+        el("button", { class: "small", onclick: () => { SIDES.forEach(([k]) => { bf[k] = true; }); done(bf); } }, "All sides"),
+        el("button", { class: "small", onclick: () => done({}) }, "None")));
   }
 
   function editor(b) {
@@ -232,6 +252,15 @@ const Blocks = (() => {
   function render() {
     const root = $("#blocksBody");
     if (!root) return;
+    const tabs = el("div", { class: "chips", style: "margin-bottom:12px" },
+      el("button", { class: "chip", "aria-pressed": String(mode === "custom"), onclick: () => { mode = "custom"; render(); } },
+        `Your blocks (${data.blocks.length})`),
+      el("button", { class: "chip", "aria-pressed": String(mode === "game"), onclick: () => { mode = "game"; render(); } },
+        `Game blocks (${game ? game.length : "?"})`));
+    if (mode === "game") {
+      root.replaceChildren(tabs, renderGame());
+      return;
+    }
     if (sel >= data.blocks.length) sel = Math.max(0, data.blocks.length - 1);
     const list = el("div", { class: "blk-list" },
       ...data.blocks.map((b, i) => el("button", { class: "folder blk-item", "aria-pressed": String(i === sel),
@@ -254,9 +283,109 @@ const Blocks = (() => {
         if (!confirm(`Delete the block "${b.name || b.id}"? Prefabs using it will show air there.`)) return;
         data.blocks.splice(sel, 1); touch(); render();
       } }, "Delete")) : null;
-    root.replaceChildren(el("div", { class: "blk-layout" }, list,
+    root.replaceChildren(tabs, el("div", { class: "blk-layout" }, list,
       b ? el("div", {}, actions, editor(b)) : el("p", { class: "muted" }, "No blocks yet: make one with “+ New block”.")));
   }
 
-  return { load, save, render, isDirty: () => dirty };
+  // ------------------------------------------------------------ game blocks
+  const touchGame = () => { gameDirty = true; $("#blkSave").disabled = false; $("#blkDirty").hidden = false; };
+
+  function gameGroup(g) {
+    if (["nhv:trigger", "nhv:mpath", "nhv:carve"].includes(g.name)) return "Markers";
+    if (g.prop) return "Objects";
+    if (g.name.startsWith("nhv:b_")) return "Building blocks";
+    if (g.name.startsWith("nhv:editor") || g.name === "nhv:void" || g.name === "nhv:void_floor") return "Editor / internal";
+    return "Terrain";
+  }
+
+  function gameShape(g) {
+    if (g.prop) return "object";
+    return { normal: "cube", glasslike: "cube", liquid: "cube", plantlike: "x", airlike: "invisible",
+      nodebox: "cube", allfaces: "cube" }[g.drawtype] || "cube";
+  }
+
+  // the block as it will be in the game: its own values with your changes on top
+  function effective(g) {
+    const o = overrides[g.name] || {};
+    const has = (k) => o[k] !== undefined;
+    return {
+      id: g.name.replace(/^nhv:/, ""), name: has("name") ? o.name : g.description,
+      shape: gameShape(g), texture: has("texture") ? o.texture : g.look,
+      solid: has("solid") ? o.solid : g.solid, climbable: has("climbable") ? o.climbable : g.climbable,
+      light: has("light") ? o.light : g.light, damage: o.damage || "", repeat: o.repeat || 0,
+      cause: o.cause || "", backfaces: o.backfaces || {}, scale: 1,
+    };
+  }
+
+  function renderGame() {
+    if (!game) {
+      return el("p", { class: "muted" }, "Start the game or the prefab editor once: it writes the list of its blocks for this tab.");
+    }
+    const q = gameQuery.trim().toLowerCase();
+    const groups = {};
+    for (const g of game) {
+      if (q && !(g.name.includes(q) || (g.description || "").toLowerCase().includes(q))) continue;
+      (groups[gameGroup(g)] = groups[gameGroup(g)] || []).push(g);
+    }
+    if (!gameSel || !game.find((g) => g.name === gameSel)) gameSel = game[0] && game[0].name;
+    const list = el("div", { class: "blk-list" },
+      el("input", { type: "search", placeholder: "Search blocks…", value: gameQuery,
+        oninput: (e) => { gameQuery = e.target.value; render(); $("#blocksBody input[type=search]").focus(); } }));
+    for (const name of ["Terrain", "Building blocks", "Objects", "Markers", "Editor / internal"]) {
+      if (!groups[name]) continue;
+      list.append(el("div", { class: "blk-group" }, name));
+      for (const g of groups[name]) {
+        const eff = effective(g);
+        list.append(el("button", { class: "folder blk-item", "aria-pressed": String(g.name === gameSel),
+          onclick: () => { gameSel = g.name; texTab = "sheet"; render(); } },
+        texView(eff.texture, 24), el("span", {}, eff.name), overrides[g.name] ? el("span", { class: "blk-changed", title: "changed" }, "●") : null));
+      }
+    }
+    const g = game.find((x) => x.name === gameSel);
+    return el("div", { class: "blk-layout" }, list, g ? gameEditor(g) : el("p", {}, ""));
+  }
+
+  function gameEditor(g) {
+    const o = overrides[g.name] || {};
+    const b = effective(g);
+    const set = (k, v) => {
+      overrides[g.name] = Object.assign(overrides[g.name] || {}, { [k]: v });
+      touchGame(); render();
+    };
+    // the texture picker sets b.texture: record that as a change instead
+    const proxy = new Proxy(b, {
+      set(target, k, v) { target[k] = v; overrides[g.name] = Object.assign(overrides[g.name] || {}, { [k]: v }); touchGame(); return true; },
+    });
+    const text = (k, ph, w) => el("input", { type: "text", value: b[k] ?? "", placeholder: ph || "", style: w ? `width:${w}` : null,
+      onchange: (e) => set(k, e.target.value) });
+    const num = (k, min, max, step) => el("input", { type: "number", value: b[k] ?? 0, min, max, step,
+      onchange: (e) => set(k, +e.target.value) });
+    const check = (k, label) => el("label", { class: "check" },
+      el("input", { type: "checkbox", checked: b[k] || null, onchange: (e) => set(k, e.target.checked) }), label);
+    const changed = Object.keys(o).length > 0;
+    return el("div", {},
+      el("div", { class: "inline" },
+        el("code", {}, g.name),
+        changed ? el("span", { class: "dirty" }, "changed from the game's default") : el("span", { class: "muted" }, "as in the game"),
+        changed ? el("button", { class: "small", onclick: () => { delete overrides[g.name]; touchGame(); render(); } },
+          "Reset to the game's default") : null),
+      el("div", { class: "blk-editor" },
+        el("div", { class: "blk-top" },
+          el("div", { class: "blk-preview" }, preview(b),
+            el("div", { class: "muted", style: "text-align:center" }, `${g.drawtype}${g.prop ? " (object)" : ""}`)),
+          el("div", { class: "blk-props" },
+            field("Name", text("name", g.description)),
+            field("Shape", el("span", {}, b.shape + " — fixed for the game's own blocks")),
+            el("div", { class: "inline" }, check("solid", "Solid (can't walk through)"), check("climbable", "Climbable")),
+            field("Light", num("light", 0, 14, 1), "0 = none, 14 = brightest"),
+            el("h4", {}, "Damage"),
+            el("div", { class: "inline" },
+              field("When you step in", text("damage", "e.g. 1d4", "7em")),
+              field("Again every (s)", num("repeat", 0, 60, 0.5), "0 = only on entering"),
+              field("Cause of death", text("cause", g.description), "“killed by …”")))),
+        ["cube", "slab", "pane", "floor"].includes(b.shape) && g.drawtype !== "liquid" ? backfaces(b, (v) => set("backfaces", v)) : null,
+        el("h4", {}, "Texture"), texturePicker(proxy)));
+  }
+
+  return { load, save, render, isDirty: () => dirty || gameDirty };
 })();

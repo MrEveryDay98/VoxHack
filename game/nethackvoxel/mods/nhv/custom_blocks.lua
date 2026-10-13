@@ -140,6 +140,110 @@ local function load()
 end
 load()
 
+-- ---------------------------------------------------------------- game blocks
+-- The block editor's "Game blocks" tab: the game writes what its own blocks
+-- look like (blocks_catalog.json in its mod data folder), and the changes
+-- made there (mods/nhv_blocks/overrides.json: block name -> name, texture,
+-- light, solid, climbable, damage, repeat, cause, backfaces) are applied
+-- here once every mod has registered its blocks.
+local OVERRIDES = MODPATH and (MODPATH .. DIR_DELIM .. "overrides.json")
+local DATA_DIR = core.get_mod_data_path() -- (only available while mods load)
+local CATALOG = DATA_DIR .. DIR_DELIM .. "blocks_catalog.json"
+local SIDES = {"top", "bottom", "east", "west", "north", "south"}
+
+local function first_tile(def)
+	local t = def.tiles and def.tiles[1]
+	if type(t) == "table" then
+		t = t.name
+	end
+	return t or def.inventory_image or ""
+end
+
+local function write_catalog()
+	local cat = {}
+	for name, def in pairs(core.registered_nodes) do
+		if name:match("^nhv:") and not name:match("^nhv:x_")
+				and def.groups and (def.groups.editor or def.groups.nhv_prop) then
+			cat[#cat + 1] = {
+				name = name, description = def.description or name,
+				drawtype = def.drawtype or "normal", texture = first_tile(def),
+				solid = def.walkable ~= false, climbable = def.climbable == true,
+				light = def.light_source or 0, prop = def.groups.nhv_prop and true or nil,
+			}
+		end
+	end
+	table.sort(cat, function(a, b) return a.name < b.name end)
+	core.mkdir(DATA_DIR)
+	core.safe_file_write(CATALOG, core.write_json(cat, true))
+end
+
+local function apply_override(name, o)
+	local def = core.registered_nodes[name]
+	if not def or type(o) ~= "table" then
+		return
+	end
+	local ch = {}
+	if o.name and o.name ~= "" then
+		ch.description = o.name
+	end
+	local tiles = def.tiles
+	if type(o.texture) == "table" and (o.texture.file or o.texture.sheet) then
+		local tex = texture_of(o.texture)
+		tiles = {}
+		for i, t in ipairs(def.tiles or {tex}) do
+			tiles[i] = {name = tex, backface_culling = type(t) == "table" and t.backface_culling or nil}
+		end
+		ch.tiles = tiles
+		ch.inventory_image = tex
+		if def.groups and def.groups.nhv_prop then
+			ch.wield_image = tex -- objects are drawn from this
+		end
+	end
+	if type(o.backfaces) == "table" and next(o.backfaces) then
+		local out = {}
+		for i, side in ipairs(SIDES) do
+			local t = (tiles or {})[math.min(i, #(tiles or {}))] or first_tile(def)
+			t = type(t) == "table" and table.copy(t) or {name = t}
+			t.backface_culling = not o.backfaces[side]
+			out[i] = t
+		end
+		ch.tiles = out
+	end
+	if o.light ~= nil then
+		ch.light_source = math.max(0, math.min(14, tonumber(o.light) or 0))
+	end
+	if o.solid ~= nil then
+		ch.walkable = o.solid == true
+	end
+	if o.climbable ~= nil then
+		ch.climbable = o.climbable == true
+	end
+	if next(ch) then
+		core.override_item(name, ch)
+	end
+	if o.damage and o.damage ~= "" then
+		cblocks.defs[name] = {damage = o.damage, repeat_s = tonumber(o["repeat"]) or 0,
+			cause = (o.cause and o.cause ~= "") and o.cause or (o.name or def.description or name)}
+	end
+end
+
+core.register_on_mods_loaded(function()
+	write_catalog() -- (before the changes: the editor shows both)
+	local f = OVERRIDES and io.open(OVERRIDES, "rb")
+	if not f then
+		return
+	end
+	local data = core.parse_json(f:read("*a"))
+	f:close()
+	if type(data) ~= "table" then
+		core.log("warning", "[nhv] mods/nhv_blocks/overrides.json isn't valid")
+		return
+	end
+	for name, o in pairs(data.blocks or data) do
+		apply_override(name, o)
+	end
+end)
+
 -- ---------------------------------------------------------------- damage
 -- "1d4" / "2d6+1" / "3" -> a roll
 local function roll(dice)

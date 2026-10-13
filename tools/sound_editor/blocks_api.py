@@ -127,3 +127,100 @@ def texture_path(fname):
         return None
     p = os.path.join(TEXTURES, fname)
     return p if os.path.isfile(p) else None
+
+
+# ---------------------------------------------------------------- game blocks
+# The game writes blocks_catalog.json (its own blocks, as they are without
+# any changes) into its mod data folder; changes made in the editor go to
+# nhv_blocks/overrides.json and are applied when the game starts.
+CATALOG = os.path.join(ROOT, "external", "luanti", "mod_data", "nhv", "blocks_catalog.json")
+OVERRIDES = os.path.join(BLOCKS, "overrides.json")
+OVERRIDE_KEYS = ("name", "texture", "light", "solid", "climbable", "damage", "repeat",
+                 "cause", "backfaces")
+
+
+def describe_texture(tex, cols):
+    """A texture string -> something the page can show."""
+    tex = tex or ""
+    m = re.search(r"\[sheet:\d+x\d+:(\d+),(\d+)", tex)
+    if m and "nhv_tiles.png" in tex:
+        return {"sheet": int(m.group(2)) * cols + int(m.group(1))}
+    m = re.search(r"([A-Za-z0-9_.-]+\.png)", tex)
+    if m:
+        return {"gamefile": m.group(1)}
+    m = re.search(r"\[fill:\d+x\d+:(#[0-9A-Fa-f]{6,8})", tex)
+    if m:
+        return {"color": m.group(1)[:7]}
+    return {}
+
+
+def catalog():
+    try:
+        with open(CATALOG, encoding="utf-8") as f:
+            cat = json.load(f)
+    except (OSError, ValueError):
+        return None
+    cols = sheet_info()["cols"]
+    for b in cat:
+        b["look"] = describe_texture(b.get("texture"), cols)
+    return cat
+
+
+def load_overrides():
+    try:
+        with open(OVERRIDES, encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("blocks", data)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_overrides(data):
+    out = {}
+    for name, o in (data or {}).items():
+        if not re.match(r"^nhv:[a-z0-9_]+$", name) or not isinstance(o, dict):
+            raise ValueError("bad block name: %s" % name)
+        c = {}
+        for k in OVERRIDE_KEYS:
+            if k in o and o[k] is not None:
+                c[k] = o[k]
+        if "texture" in c:
+            t = c["texture"] or {}
+            if t.get("file"):
+                if not re.match(r"^[A-Za-z0-9_.-]+\.png$", t["file"]):
+                    raise ValueError("bad texture file name")
+                c["texture"] = {"file": t["file"]}
+            elif t.get("sheet") is not None:
+                c["texture"] = {"sheet": int(t["sheet"])}
+            else:
+                del c["texture"]
+        if "light" in c:
+            c["light"] = max(0, min(14, int(c["light"])))
+        for k in ("solid", "climbable"):
+            if k in c:
+                c[k] = bool(c[k])
+        if "damage" in c:
+            c["damage"] = str(c["damage"]).strip()
+            if c["damage"] and not re.match(r"^\d*d\d+\s*([+-]\s*\d+)?$|^\d+$", c["damage"]):
+                raise ValueError("damage must be like 1d4, 2d6+1 or 3")
+        if "backfaces" in c:
+            c["backfaces"] = {s: True for s in SIDES if (c["backfaces"] or {}).get(s)}
+        if c:
+            out[name] = c
+    os.makedirs(BLOCKS, exist_ok=True)
+    tmp = OVERRIDES + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"version": 1, "blocks": out}, f, indent=1, sort_keys=True)
+    os.replace(tmp, OVERRIDES)
+    return out
+
+
+def game_texture_path(fname):
+    """A texture file from any of the game's mods (for previews)."""
+    if not re.match(r"^[A-Za-z0-9_.-]+\.png$", fname):
+        return None
+    for mod in sorted(os.listdir(MODS)):
+        p = os.path.join(MODS, mod, "textures", fname)
+        if os.path.isfile(p):
+            return p
+    return None

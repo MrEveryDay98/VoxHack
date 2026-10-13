@@ -1,0 +1,21 @@
+{
+ "version": 1,
+ "blocks": [
+  {
+   "id": "spikes",
+   "name": "Spikes",
+   "shape": "x",
+   "texture": {
+    "file": "nhvb_spikes.png"
+   },
+   "scale": 1.0,
+   "solid": false,
+   "climbable": false,
+   "light": 0,
+   "damage": "1d4",
+   "repeat": 0.0,
+   "cause": "sharp spikes",
+   "backfaces": {}
+  }
+ ]
+}

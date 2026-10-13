@@ -258,6 +258,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/blocktex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             return self.send_file(blocks_api.texture_path(m.group(1)), "image/png")
+        m = re.match(r"^/gametex/([A-Za-z0-9_.-]+\.png)$", url.path)
+        if m:
+            return self.send_file(blocks_api.game_texture_path(m.group(1)), "image/png")
         if not url.path.startswith("/api/"):
             return self.send(404, {"error": "not found"})
         if not self.allowed():
@@ -274,7 +277,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"ok": True})
         if path == "/api/blocks":
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
-                                   "sheet": blocks_api.sheet_info()})
+                                   "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
+                                   "overrides": blocks_api.load_overrides()})
         if path == "/api/catalog":
             return self.send(200, {
                 "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", []),
@@ -340,6 +344,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/blocks":
             try:
                 return self.send(200, {"blocks": blocks_api.save(data)})
+            except (ValueError, TypeError) as e:
+                return self.send(400, {"error": str(e)})
+        if path == "/api/blocks/overrides":
+            try:
+                return self.send(200, {"overrides": blocks_api.save_overrides(data.get("blocks", {}))})
             except (ValueError, TypeError) as e:
                 return self.send(400, {"error": str(e)})
         if path == "/api/cast":
