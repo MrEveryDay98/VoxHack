@@ -194,7 +194,7 @@ end
 -- Tabs of blocks (I to open). Click one to put it in your hotbar slot.
 local TABS = {
 	{"markers", "Markers"}, {"blocks", "Blocks"}, {"shapes", "Slabs, stairs, panes"},
-	{"terrain", "Terrain"}, {"objects", "Objects"},
+	{"terrain", "Terrain"}, {"custom", "Your blocks"}, {"objects", "Objects"},
 }
 local MARKERS = {["nhv:trigger"] = true, ["nhv:mpath"] = true, ["nhv:carve"] = true}
 local palette = {}     -- tab id -> sorted node names
@@ -205,6 +205,8 @@ local function category(name, def)
 		return "markers"
 	elseif def.groups and def.groups.nhv_prop then
 		return "objects"
+	elseif def.groups and def.groups.nhv_custom then
+		return "custom" -- made in the block editor
 	elseif name:match("^nhv:b_") then
 		for _, shape in ipairs({"_slab$", "_stair$", "_pane$", "_post$"}) do
 			if name:match(shape) then
@@ -234,10 +236,14 @@ end
 
 local function palette_formspec(pname)
 	local ti = tab_of[pname] or 2
+	if not TABS[ti] then
+		ti = 2
+	end
 	local list = palette[TABS[ti][1]] or {}
 	local names = {}
 	for i, t in ipairs(TABS) do
-		names[i] = ("%s (%d)"):format(t[2], #(palette[t[1]] or {}))
+		-- (commas in a tab name would split it into more tabs)
+		names[i] = core.formspec_escape(("%s (%d)"):format(t[2], #(palette[t[1]] or {})))
 	end
 	local cols, step = 15, 1.05
 	local rows = math.ceil(#list / cols)
@@ -271,7 +277,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	local pname = player:get_player_name()
 	if fields.paltab then
-		tab_of[pname] = tonumber(fields.paltab) or 2
+		local t = tonumber(fields.paltab)
+		tab_of[pname] = (t and TABS[t]) and t or 2
 		player:set_inventory_formspec(palette_formspec(pname))
 		return true
 	end
