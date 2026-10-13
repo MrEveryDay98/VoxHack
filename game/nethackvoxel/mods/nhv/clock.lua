@@ -7,6 +7,10 @@
 -- Actions (attacks, using items) cost NetHack time: they add "debt",
 -- during which time runs at full rate until the action's cost is paid.
 --
+-- Options > Time "Real time" (setting nhv_time_mode = realtime) turns the
+-- Superhot part off: time always runs at the full rate. (Menus and prompts
+-- still pause it, and the action wheel still slows it.)
+--
 -- Game time is measured in NetHack turns. At full rate RATE turns pass
 -- per second, which matches walking one square per turn at speed 12.
 
@@ -25,6 +29,10 @@ clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0.12
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
+
+function clock.realtime()
+	return core.settings:get("nhv_time_mode") == "realtime"
+end
 
 -- NetHack speed of the hero (12 = normal)
 function clock.hero_speed()
@@ -67,7 +75,7 @@ function clock.update(dtime, player)
 	local speed = math.sqrt(v.x * v.x + v.z * v.z)
 	local walk = clock.WALK * clock.hero_speed() / 12
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
-	if clock.debt > 0 then
+	if clock.debt > 0 or clock.realtime() then
 		target = 1
 	end
 	if nhv.wheel and nhv.wheel.is_open() then

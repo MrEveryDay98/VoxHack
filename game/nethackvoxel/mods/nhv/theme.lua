@@ -51,9 +51,9 @@ end
 -- ---------------------------------------------------------------- font
 -- Retro uses the pixel font at whole multiples of its height so it stays
 -- sharp; Modern removes those settings (back to Luanti's own font).
--- Text size multiplies the font size: whole steps only with the pixel font.
-local MODERN_PX = 16 -- Luanti's default font size
-
+-- Text size is for HUD text only (the NetHack Voxel build of Luanti reads
+-- nhv_text_scale there; whole steps with the pixel font). Menu text grows
+-- with the menu size instead, with its boxes, so it always fits.
 function theme.text_scale()
 	local k = tonumber(core.settings:get("nhv_text_scale")) or 1
 	if theme.retro() then
@@ -76,16 +76,14 @@ function theme.box_scale()
 end
 
 local function font_settings()
-	local k = theme.text_scale()
 	if theme.retro() then
-		local px = tostring(FONT_PX * k)
+		local px = tostring(FONT_PX)
 		return {
 			font_path = FONT, mono_font_path = FONT, font_size = px, mono_font_size = px,
 			font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(FONT_PX),
 		}
 	end
-	local px = k ~= 1 and tostring(math.floor(MODERN_PX * k + 0.5)) or nil
-	return {font_size = px, mono_font_size = px} -- (nil: Luanti's default)
+	return {} -- (all removed: Luanti's default font and size)
 end
 local FONT_KEYS = {"font_path", "mono_font_path", "font_size", "mono_font_size",
 	"font_size_divisible_by", "mono_font_size_divisible_by"}

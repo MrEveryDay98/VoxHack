@@ -1,4 +1,5 @@
--- Graphics options (the Graphics button in the inventory screen):
+-- Options (the Options button in the inventory screen):
+--   * time: Superhot (time moves when you move) or real time
 --   * interface style: Retro (pixel font, old PC boxes) or Modern
 --   * HUD size, menu size and map size
 --   * sprites drawn extruded (voxel models) or flat
@@ -15,6 +16,7 @@ nhv.graphics = graphics
 local E = core.formspec_escape
 local theme = nhv.theme
 local STYLE = {"Retro", "Modern"}
+local TIME = {"Superhot", "Real time"}
 local SPRITES = {"Extruded (3D)", "Flat"}
 local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local RES = {
@@ -58,20 +60,20 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 10.3),
-		"label[0.5,0.6;", theme.title("Graphics"), "]",
-		row(1.0, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2),
-		row(1.9, "HUD size", "hud", labels(HUD), pick(HUD, "hud_scaling", 1)),
-		row(2.8, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)),
-		row(3.7, "Text size", "text", labels(text_list()), pick(text_list(), "nhv_text_scale", 1)),
-		row(4.6, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
-		row(5.5, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
-		row(6.4, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
-		row(7.3, "Distant textures", "distant", table.concat(DISTANT, ","),
+		theme.head(10, 11.2),
+		"label[0.5,0.6;", theme.title("Options"), "]",
+		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
+		"label[0.5,2.1;", theme.dim("Graphics"), "]",
+		row(2.4, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2),
+		row(3.3, "HUD size", "hud", labels(HUD), pick(HUD, "hud_scaling", 1)),
+		row(4.2, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)),
+		row(5.1, "Text size", "text", labels(text_list()), pick(text_list(), "nhv_text_scale", 1)),
+		row(6.0, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
+		row(6.9, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
+		row(7.8, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
+		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		"label[0.5,8.4;", theme.dim(E("Lower resolutions draw the world with big, sharp pixels.")), "]",
-		"label[0.5,8.8;", theme.dim(E("Turning smoothing back on may need a restart.")), "]",
-		"button_exit[3.75,9.3;2.5,0.8;close;Done]",
+		"button_exit[3.75,10.2;2.5,0.8;close;Done]",
 	})
 end
 
@@ -98,6 +100,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		return false
 	end
 	local changed, reshow = false, false
+	local tm = tonumber(fields.time)
+	if tm and (tm == 2) ~= nhv.clock.realtime() then
+		core.settings:set("nhv_time_mode", tm == 2 and "realtime" or "superhot")
+		changed = true
+	end
 	local st = tonumber(fields.style)
 	local restyled = st and (st == 1) ~= theme.retro()
 	if restyled then
