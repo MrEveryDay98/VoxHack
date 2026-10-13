@@ -30,7 +30,16 @@ end
 -- solid, opaque
 reg("void", {description = "Unexplored", tiles = {BLACK}, paramtype = "none"})
 reg("rock", {description = "Stone", tiles = {tile_tex(1272)}, paramtype = "none"})
-reg("wall", {description = "Wall", tiles = {tile_tex(1274)}, paramtype = "none"})
+-- walls: one per NetHack wall set, with seamless textures made from its
+-- sprite (tools/make_wall_textures.py; nhv_tiles/textures/nhv_wall_*.png)
+terrain.WALL_STYLES = {"main", "mines", "gehennom", "knox", "sokoban"}
+reg("wall", {description = "Wall", tiles = {"nhv_wall_main.png"}, paramtype = "none"})
+for _, style in ipairs(terrain.WALL_STYLES) do
+	if style ~= "main" then
+		reg("wall_" .. style, {description = "Wall (" .. style .. ")",
+			tiles = {"nhv_wall_" .. style .. ".png"}, paramtype = "none"})
+	end
+end
 reg("ceiling", {description = "Ceiling", tiles = {{name = tile_tex(1272) .. "^[multiply:#606060",
 	align_style = "world", scale = U.TILE}}, paramtype = "none"})
 reg("door_closed", {description = "Closed door",
@@ -257,14 +266,23 @@ local function write_void(data, area, tx, ty, typ)
 	end
 end
 
+-- prefabs are built with the main walls; other levels swap in their own
+local WALL_NODES = {["nhv:wall"] = true, ["nhv:brick"] = true}
+local function styled_cid(name)
+	if WALL_NODES[name] and terrain.wall_style ~= "main" then
+		name = "nhv:wall_" .. terrain.wall_style
+	end
+	return cid(name)
+end
+
 local function write_square(data, area, sq)
 	if not sq.seen then
 		write_void(data, area, sq.tx, sq.ty, sq.typ)
 		return
 	end
-	prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, cid)
+	prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 	if sq.overlay then
-		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, cid)
+		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
 	end
 	if sq.lit and open_typ(sq.typ) then
 		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
@@ -331,7 +349,28 @@ local function describe(map, tx, ty)
 	return i, sq
 end
 
+-- The level's wall set (main dungeon, mines, gehennom, knox, sokoban), from
+-- the wall sprites NetHack shows for it.
+terrain.wall_style = "main"
+local function detect_wall_style(map)
+	for i, typ in pairs(map.typ) do
+		if typ >= 1 and typ <= T.DBWALL and map.flags[i] % 2 == 1 then
+			local name = nhv_tiles.name(map.mem_tile[i]) or ""
+			local style = name:match("^(%a+) walls ")
+			if style then
+				return style
+			end
+		end
+	end
+	return nil
+end
+
 function terrain.update(map, force)
+	local style = detect_wall_style(map)
+	if style and style ~= terrain.wall_style then
+		terrain.wall_style = style
+		force = true -- redraw what's already built with this level's walls
+	end
 	local sqs = {}
 	for tx = 1, U.COLNO - 1 do
 		for ty = 0, U.ROWNO - 1 do
@@ -350,6 +389,7 @@ end
 -- Rebuild everything (level change, or prefabs changed).
 function terrain.build_all(map)
 	terrain.built = {}
+	terrain.wall_style = detect_wall_style(map) or "main"
 	terrain.hero_light_pos = nil
 	terrain.update(map, true)
 	-- column 0 is never part of the map; fill it with rock
@@ -389,22 +429,27 @@ function terrain.is_door(map, tx, ty)
 	return U.in_map(tx, ty) and map.typ[U.idx(tx, ty)] == T.DOOR
 end
 
--- Move the hero's light to a square.
-function terrain.place_hero_light(tx, ty)
-	local p = vector.round(U.tile_center(tx, ty, U.FLOOR_Y + 3))
+-- Move the hero's light to where the player's head is. It follows the
+-- body node by node (not square by square), and smooth lighting blends
+-- the steps, so walking into the dark fades instead of jumping.
+function terrain.place_hero_light(pos)
+	local p = vector.round(vector.new(pos.x, pos.y + 1.5, pos.z))
 	local old = terrain.hero_light_pos
 	if old and vector.equals(old, p) then
 		return
 	end
-	if old and core.get_node(old).name == "nhv:hero_light" then
+	if core.get_node(p).name ~= "air" then
+		p = vector.offset(p, 0, -1, 0) -- head in a low ceiling or a block
+	end
+	-- light the new spot first, then put out the old one (no dark frame)
+	local placed = core.get_node(p).name == "air"
+	if placed then
+		core.set_node(p, {name = "nhv:hero_light"})
+	end
+	if old and not vector.equals(old, p) and core.get_node(old).name == "nhv:hero_light" then
 		core.set_node(old, {name = "air"})
 	end
-	if core.get_node(p).name == "air" then
-		core.set_node(p, {name = "nhv:hero_light"})
-		terrain.hero_light_pos = p
-	else
-		terrain.hero_light_pos = nil
-	end
+	terrain.hero_light_pos = placed and p or nil
 end
 
 return terrain

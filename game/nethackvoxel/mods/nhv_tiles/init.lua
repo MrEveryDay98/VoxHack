@@ -26,6 +26,11 @@ function nhv_tiles.item(tile)
 	return string.format("nhv_tiles:t%04d", tile)
 end
 
+-- NetHack's name for a tile ("main walls horizontal", "newt", ...)
+function nhv_tiles.name(tile)
+	return meta.names[tile]
+end
+
 -- sheet position of a NetHack tile
 function nhv_tiles.sheet_index(tile)
 	if not tile or tile < 0 or tile >= meta.count then
@@ -51,6 +56,37 @@ nhv_tiles.FLASH = {
 	w = "^[colorize:#ffffff:70",
 	r = "^[colorize:#ff2020:150",
 }
+
+-- Entity properties that draw a tile `height` nodes tall, either as an
+-- extruded voxel model (default) or, with the setting nhv_flat_sprites,
+-- as a flat sprite. kind: nil, or a FLASH key ("w"/"r") for a combat flash.
+function nhv_tiles.flat()
+	return core.settings:get_bool("nhv_flat_sprites", false)
+end
+
+function nhv_tiles.look(tile, height, kind)
+	if nhv_tiles.flat() then
+		local tex = nhv_tiles.texture(tile) .. (kind and nhv_tiles.FLASH[kind] or "")
+		return {
+			visual = "upright_sprite",
+			textures = {tex, tex .. "^[transformFX"},
+			visual_size = {x = height, y = height, z = height},
+		}
+	end
+	local s = height / 2
+	return {
+		visual = "wielditem",
+		wield_item = kind and nhv_tiles.flash_item(tile, kind) or nhv_tiles.item(tile),
+		visual_size = {x = s, y = s, z = s},
+	}
+end
+
+-- visual_size for a tile `height` nodes tall, squashed/stretched by w
+function nhv_tiles.size(height, w)
+	local s = nhv_tiles.flat() and height or height / 2
+	w = w or 1
+	return {x = s * w, y = s / w, z = s}
+end
 
 function nhv_tiles.flash_item(tile, kind)
 	if not tile or tile < 0 or tile >= meta.monsters or not nhv_tiles.FLASH[kind] then

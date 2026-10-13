@@ -235,7 +235,6 @@ nh.on_snapshot(function(snap, action)
 			teleport(player, U.tile_center(h.x, h.y))
 		end
 	end
-	terrain.place_hero_light(h.x, h.y)
 end)
 
 -- touching an nhv:trigger node uses the stairs/ladder it belongs to
@@ -274,6 +273,7 @@ core.register_globalstep(function()
 		try_escape(player)
 		step(player)
 		check_trigger(player)
+		terrain.place_hero_light(player:get_pos())
 	end
 end)
 

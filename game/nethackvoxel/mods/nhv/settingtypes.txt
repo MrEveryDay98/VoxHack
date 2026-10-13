@@ -1,0 +1,3 @@
+# Draw monsters, items and features as flat sprites instead of extruded
+# voxel models. (Also in the game: Inventory > Graphics.)
+nhv_flat_sprites (Flat sprites) bool false

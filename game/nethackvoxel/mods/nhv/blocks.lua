@@ -13,8 +13,8 @@ end
 -- name, description, texture, extra node fields
 local MATERIALS = {
 	{"stone", "Stone", tile_tex(1272)},
-	{"brick", "Wall brick", tile_tex(1274)},
-	{"brick_dark", "Dark wall brick", tile_tex(1274) .. "^[multiply:#808080"},
+	{"brick", "Wall brick", "nhv_wall_main.png"},
+	{"brick_dark", "Dark wall brick", "nhv_wall_main.png^[multiply:#808080"},
 	{"door", "Door wood", tile_tex(1288)},
 	{"floor", "Room floor", tile_tex(1291)},
 	{"corridor", "Corridor floor", tile_tex(1294)},

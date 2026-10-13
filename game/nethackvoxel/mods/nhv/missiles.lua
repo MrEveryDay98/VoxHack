@@ -69,7 +69,7 @@ local function launch(info)
 	local start = vector.add(from, vector.multiply(dir, body and (body.r + 0.2) or 0.5))
 	local obj = core.add_entity(start, "nhv:missile")
 	if obj then
-		obj:set_properties({wield_item = nhv_tiles.item(info.tile)})
+		obj:set_properties(nhv_tiles.look(info.tile, 0.7))
 		obj:set_yaw(math.atan2(dir.z, dir.x))
 	end
 	nhv.sound.hook("missile_launch", {pos = start})

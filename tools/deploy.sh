@@ -18,6 +18,8 @@ ninja -C "$LUANTI/build"
 if [ ! -f "$GAME/mods/nhv_tiles/textures/nhv_tiles.png" ]; then
 	python -I "$ROOT/tools/tiles2png.py" "$ROOT/external/nethack" "$GAME/mods/nhv_tiles/textures" "$GAME/mods/nhv_tiles/tilenames.lua"
 fi
+# seamless wall textures (only the missing ones are made; edit them freely)
+python -I "$ROOT/tools/make_wall_textures.py" "$GAME/mods/nhv_tiles/textures"
 
 # 4. assemble
 cp "$ROOT/build/nhcore/nethack.dll" "$LUANTI/bin/"

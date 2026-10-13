@@ -1,8 +1,8 @@
 -- Entities for what NetHack displays on top of the terrain: monsters,
 -- objects and dungeon features (fountains, altars, traps, ...).
 --
--- Every sprite is a NetHack tile rendered with visual = "wielditem",
--- which Luanti draws as an extruded voxel model.
+-- Every sprite is a NetHack tile, drawn as an extruded voxel model or, with
+-- the "flat sprites" graphics option, as a flat sprite (nhv_tiles.look).
 --
 -- Monsters are drawn where their bodies are in nhv.sim (continuous
 -- positions); only the ones NetHack says the hero perceives are shown.
@@ -19,11 +19,9 @@ nhv.mobs = mobs
 
 local function sprite_props(tile, height)
 	local s = height / 2
-	return {
-		wield_item = nhv_tiles.item(tile),
-		visual_size = {x = s, y = s, z = s},
-		selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6},
-	}
+	local props = nhv_tiles.look(tile, height)
+	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
+	return props
 end
 
 local function base_props()
@@ -100,16 +98,17 @@ end
 
 local function apply_sprite(e, m)
 	local h = scale.height(m.size, m.mndx)
-	if e.tile ~= m.tile or e.h ~= h then
+	-- a solid body the size of the sprite (Luanti only collides with
+	-- "physical" objects); pets stay passable, as you swap places with them
+	local solid = m.id > 0 and not U.has(m.flags, U.MON_PET)
+	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid then
 		local props = sprite_props(m.tile, h)
 		local w = scale.radius(m.size, m.mndx)
-		-- solid body for the player, the size of the sprite
-		if m.id > 0 then
-			props.collide_with_objects = true
-			props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}
-		end
+		props.physical = solid
+		props.collide_with_objects = solid
+		props.collisionbox = solid and {-w, -h / 2, -w, w, h / 2, w} or {0, 0, 0, 0, 0, 0}
 		e.obj:set_properties(props)
-		e.tile, e.h = m.tile, h
+		e.tile, e.h, e.solid = m.tile, h, solid
 	end
 end
 
@@ -154,6 +153,12 @@ function mobs.refresh_sizes()
 		if e.mon and e.obj:get_pos() then
 			e.tile = nil
 			apply_sprite(e, e.mon)
+		end
+	end
+	-- objects and features are redrawn too (e.g. after switching flat sprites)
+	for _, tbl in ipairs({mobs.objs, mobs.feats}) do
+		for _, e in pairs(tbl) do
+			e.tile = nil
 		end
 	end
 	nhv.sim.sync()
@@ -213,9 +218,11 @@ local function update_objects(snap)
 					if name == "boulder" then
 						-- boulders are solid; pushing into one tries to roll it
 						local w = h * 0.45
+						props.physical = true
 						props.collide_with_objects = true
 						props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}
 					else
+						props.physical = false
 						props.collide_with_objects = false
 						props.collisionbox = {0, 0, 0, 0, 0, 0}
 					end
@@ -341,7 +348,7 @@ function mobs.flash(id, kind, secs)
 		return
 	end
 	e.flash_until = core.get_us_time() + (secs or 0.15) * 1e6
-	e.obj:set_properties({wield_item = nhv_tiles.flash_item(e.tile, kind)})
+	e.obj:set_properties(nhv_tiles.look(e.tile, e.h, kind))
 end
 
 -- a quick swipe in front of an attacking monster, toward its target
@@ -394,7 +401,7 @@ core.register_globalstep(function(dtime)
 		local obj = e.obj
 		if e.flash_until and now > e.flash_until and obj:get_pos() then
 			e.flash_until = nil
-			obj:set_properties({wield_item = nhv_tiles.item(e.tile)})
+			obj:set_properties(nhv_tiles.look(e.tile, e.h))
 		end
 		if obj:get_pos() and e.h then
 			local pos = mon_draw_pos(e)
@@ -404,9 +411,8 @@ core.register_globalstep(function(dtime)
 				local yaw = math.atan2(d.z, d.x) - math.pi / 2
 				if e.wavy then
 					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
-					local s = e.h / 2
 					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
-					obj:set_properties({visual_size = {x = s * w, y = s / w, z = s}})
+					obj:set_properties({visual_size = nhv_tiles.size(e.h, w)})
 				end
 				obj:set_yaw(yaw)
 			end

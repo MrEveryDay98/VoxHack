@@ -73,6 +73,13 @@ pathfinding when they can't see you.
 - **Containers and corpses:** chests, large boxes and ice boxes face you instead of spinning;
   corpses lie flat.
 
+## Graphics options
+Inventory > Graphics (applies immediately, remembered):
+- **Sprites:** extruded voxel models, or flat sprites (setting `nhv_flat_sprites`).
+- **Render resolution:** full down to 1/8. The world is drawn smaller and scaled up with sharp
+  pixels for a retro look; the HUD and menus stay sharp (Luanti's `undersampling`, which the
+  NetHack Voxel build of Luanti now applies without a restart).
+
 ## Sprites (moddable)
 All sprites and tile textures come from one sprite sheet:
 `game/nethackvoxel/mods/nhv_tiles/textures/nhv_tiles.png`.
@@ -87,6 +94,10 @@ All sprites and tile textures come from one sprite sheet:
   - what is at each sheet position (`sheet_names`),
   - which sheet position each NetHack tile uses (`sheet`),
   - which tiles are statues.
+- **Walls:** each NetHack wall set (main dungeon, Gnomish Mines, Gehennom, Fort Ludios, Sokoban)
+  has a seamless texture, `nhv_wall_<set>.png`, made from its sprite by
+  `tools/make_wall_textures.py`. Levels use their own set. Edit them freely; missing ones are
+  remade on deploy.
 - **Editing:** changes show up the next time the game starts. The sheet is only generated when
   it's missing (delete it and run the deploy script to start over).
 
