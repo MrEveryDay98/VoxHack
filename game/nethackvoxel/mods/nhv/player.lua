@@ -261,6 +261,12 @@ local function check_trigger(player)
 	local h = player_mod.hero
 	local slot = terrain.slot_at(h.x, h.y)
 	local key = slot and TRIGGER_KEYS[slot]
+	-- level 1's up stairs leave the dungeon (and end the game), which NetHack
+	-- asks about; walking into the trigger never does that (right-click does)
+	local snap_hero = nh.snap and nh.snap.hero
+	if key == "<" and snap_hero and snap_hero.depth == 1 then
+		key = nil
+	end
 	if key then
 		in_trigger = true
 		nhv.clock.act(key, {kind = "stairs"})

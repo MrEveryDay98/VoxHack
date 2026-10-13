@@ -11,6 +11,8 @@ local doors = {ents = {}} -- key "x,y,z|sx,sy,sz" -> {obj=, minp=, maxp=}
 nhv.doors = doors
 
 doors.TEXTURE = "nhv_wall_door.png"
+-- the door's edges: the darkest brown of the door texture
+doors.EDGE = "[fill:1x1:#914700"
 doors.NODES = {"nhv:door_closed", "nhv:b_door"}
 local MAX_GROUP = 256
 
@@ -51,12 +53,33 @@ local function overlaps(a1, a2, b1, b2)
 		and a1.z <= b2.z and a2.z >= b1.z
 end
 
+local function solid(pos)
+	local def = core.registered_nodes[core.get_node(pos).name]
+	return def and def.walkable and not (def.groups and def.groups.nhv_door)
+end
+
+-- which way a door faces: the axis it's thinnest along ("x" or "z"); a
+-- door as thick as it is wide faces away from the walls beside it
+local function facing(minp, size)
+	if size.x ~= size.z then
+		return size.x < size.z and "x" or "z"
+	end
+	if solid(vector.new(minp.x - 1, minp.y, minp.z)) or solid(vector.new(minp.x + size.x, minp.y, minp.z)) then
+		return "z" -- walls to the east/west: the door spans x, faces z
+	end
+	return "x"
+end
+
 local function add_panel(minp, maxp)
 	local size = vector.add(vector.subtract(maxp, minp), 1)
 	local center = vector.multiply(vector.add(minp, maxp), 0.5)
 	local obj = core.add_entity(center, "nhv:door_panel")
 	if obj then
-		obj:set_properties({visual_size = size})
+		-- cube faces: +y, -y, +x, -x, +z, -z; the picture goes on the two
+		-- big faces, the edges are plain dark brown
+		local P, D = doors.TEXTURE, doors.EDGE
+		local tex = facing(minp, size) == "x" and {D, D, P, P, D, D} or {D, D, D, D, P, P}
+		obj:set_properties({visual_size = size, textures = tex})
 		doors.ents[hash(minp) .. "|" .. hash(size)] = {obj = obj, minp = minp, maxp = maxp}
 	end
 end
