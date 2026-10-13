@@ -1286,6 +1286,21 @@
    "desc": "The hero pushes a boulder"
   },
   {
+   "id": "ray_fire",
+   "group": "game",
+   "desc": "A wand, spell or breath ray is fired"
+  },
+  {
+   "id": "ray_bounce",
+   "group": "game",
+   "desc": "A ray bounces off a wall"
+  },
+  {
+   "id": "ray_hit",
+   "group": "game",
+   "desc": "A ray hits a body"
+  },
+  {
    "id": "level_enter_down",
    "group": "game",
    "desc": "Arriving on a deeper level"

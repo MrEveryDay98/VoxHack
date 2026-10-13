@@ -22,6 +22,7 @@ drain_events(void)
         case NHV_EV_MISSILE: printf("MISSILE: %s\n", ev.text); break;
         case NHV_EV_SOUND: printf("SOUND: %s\n", ev.text); break;
         case NHV_EV_COMBAT: printf("COMBAT: %s\n", ev.text); break;
+        case NHV_EV_RAY: printf("RAYEV: %s\n", ev.text); break;
         case NHV_EV_TEXT_BEGIN: printf("TEXT [%s] {\n", ev.text); break;
         case NHV_EV_TEXT_LINE: printf("  | %s\n", ev.text); break;
         case NHV_EV_TEXT_END: printf("}\n"); break;
@@ -134,6 +135,23 @@ send_arg(const char *a)
         if (sscanf(a + 5, "%u,%d,%d", &id, &x, &y) == 3)
             printf("STEP -> %d\n", nhv_move_monster(id, x, y));
         nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strcmp(a, "rays")) {
+        /* list new rays; the first one ends where it started */
+        nhv_ray rs[8];
+        int n = nhv_get_rays(rs, 8), k;
+        char buf[64];
+
+        for (k = 0; k < n; k++)
+            printf("  RAY rid=%u type=%d kind=%d at %d,%d dir %d,%d range %d hero=%d caster=%u\n",
+                   rs[k].rid, rs[k].type, rs[k].kind, rs[k].x, rs[k].y,
+                   rs[k].dx, rs[k].dy, rs[k].range, rs[k].from_hero,
+                   rs[k].caster);
+        if (n > 0) {
+            sprintf(buf, "nhvrayend %u %d %d", rs[0].rid, rs[0].x, rs[0].y);
+            nhv_send_key('#'), nhv_send_text(buf);
+        } else {
+            nhv_send_key('#'), nhv_send_text("nhvtick");
+        }
     } else if (!strcmp(a, "save"))
         nhv_send_key('S'), nhv_send_key('y');
     else

@@ -49,6 +49,8 @@ nh.on_snapshot(function(snap)
 		if nhv.missiles then
 			nhv.missiles.clear()
 			core.nh_clear_missiles()
+			nhv.rays.clear()
+			core.nh_clear_rays()
 		end
 		nhv.terrain.build_all(snap.map)
 	else
@@ -65,6 +67,7 @@ dofile(path .. "ui.lua")
 dofile(path .. "actions.lua")
 dofile(path .. "wheel.lua")
 dofile(path .. "missiles.lua")
+dofile(path .. "rays.lua")
 dofile(path .. "sound.lua")
 dofile(path .. "loop.lua")
 

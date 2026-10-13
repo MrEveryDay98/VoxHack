@@ -15,7 +15,8 @@ typedef struct nhv_qitem {
 } nhv_qitem;
 
 /* nhv_free.c */
-extern int nhv_cmd_args[4];
+#define NHV_MAXARGS 16
+extern int nhv_cmd_args[NHV_MAXARGS];
 int nhv_exec_mon_step(unsigned id, int x, int y);
 
 /* nhv_main.c */

@@ -528,7 +528,7 @@ nhv_get_ext_cmd(void)
             char *p = sp;
 
             *sp = '\0';
-            while (k < 4 && *++p) {
+            while (k < NHV_MAXARGS && *++p) {
                 nhv_cmd_args[k++] = atoi(p);
                 while (*p && *p != ' ')
                     p++;

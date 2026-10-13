@@ -38,6 +38,7 @@ core.register_globalstep(function(dtime)
 	local dturns = nhv.clock.update(dtime, player)
 	nhv.sim.update(dturns)
 	nhv.missiles.update(dturns)
+	nhv.rays.update(dturns)
 	nhv.sim.push_states()
 	if nhv.sim.dirty then
 		nhv.sim.dirty = false

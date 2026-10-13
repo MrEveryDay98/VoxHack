@@ -62,6 +62,14 @@ pathfinding when they can't see you.
   - Missiles also hit monsters in their path, and drop where they stop.
 - **Archers** and other ranged attackers keep 2.5–4.5 squares away. They can shoot from any
   angle with a clear line of sight, not only the eight grid directions.
+- **Wands, spells and breath** are ray projectiles, not grid lines.
+  - Your own zaps go where you look; a monster's are aimed at your body.
+  - They fly at game-time speed, reach up to NetHack's range in squares, and bounce off walls
+    up to 2 times. Change these with the settings `nhv_ray_bounces` and `nhv_ray_range_scale`.
+  - Each body a ray passes through gets NetHack's hit roll; reflection turns the ray around.
+  - Every square it crosses still gets NetHack's effects (burning, freezing water and so on).
+- **Combat flashes:** a monster flashes faintly white with a swipe when it attacks, and red when
+  it is hurt.
 - **Containers and corpses:** chests, large boxes and ice boxes face you instead of spinning;
   corpses lie flat.
 
@@ -82,6 +90,16 @@ All sprites and tile textures come from one sprite sheet:
 - **Editing:** changes show up the next time the game starts. The sheet is only generated when
   it's missing (delete it and run the deploy script to start over).
 
+## Sounds and voice lines
+- **Sound editor:** run `NetHack Voxel Sound Editor.bat`. It opens a browser page where you
+  assign sounds to hooks. Changes are picked up by a running game within about 2 seconds.
+- **Hooks** are called from NetHack's code (`NHV_HOOK`), traps, NetHack's own sound effects,
+  game events and music. They are not read from the message feed. The list is in
+  `mods/nhv_sounds/catalog/hooks.json`; rebuild it with `tools/build_sound_catalog.py`.
+- **Dialogue:** every spoken line, quest text and narration is listed and labelled in the editor
+  (`catalog/dialogue.json`), ready for voice acting.
+- **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
+
 ## Architecture
 - `nhcore/`: NetHack 3.7 built as `nethack.dll` with a C API (`nhv_api.h`). NetHack runs on its
   own thread; a custom window port turns its output into events and blocks for input.
@@ -100,8 +118,9 @@ New game with NetHack's role menus; walking (time frozen while standing still); 
 melee kills; pet follows; inventory and item menus; y/n prompts; save on close and restore.
 
 ## Not yet verified or not built
-- **Projectiles:** only thrown and shot missiles fly physically (arrows, daggers, spit venom,
-  potions). Wand zaps and breath weapons still resolve on NetHack's grid.
+- **Rays:** hitting monsters, reflection, and monster breath are coded but untested in game
+  (the hero's wand of fire was tested: it flies, bounces and ends).
+- Combat flashes, flowing water and sounds have not been checked in game yet.
 - Monsters following the green path markers.
 - Level changes (stairs) are coded but untested.
 - Death and end screens are coded but untested.

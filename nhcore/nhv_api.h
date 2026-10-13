@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 4
+#define NHV_API_VERSION 5
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -118,7 +118,8 @@ enum nhv_event_kind {
     NHV_EV_DELAY,       /* animation frame boundary (delay_output) */
     NHV_EV_MISSILE,     /* missile outcome: "hit|miss|stop|pass|land <pid>" */
     NHV_EV_COMBAT,      /* "attack <attacker m_id> <target m_id, 0 = hero> <melee>" */
-    NHV_EV_SOUND        /* sound/voice hook, see nhv_sound.c */
+    NHV_EV_SOUND,       /* sound/voice hook, see nhv_sound.c */
+    NHV_EV_RAY          /* ray outcome: "hit|miss|reflect|stop <rid>" */
 };
 
 typedef struct nhv_event {
@@ -341,6 +342,23 @@ typedef struct nhv_missile {
 /* missiles launched since the last call */
 NHV_API int nhv_get_missiles(nhv_missile *buf, int max);
 NHV_API void nhv_clear_missiles(void);
+
+/* Rays (wands, spells, breath) are handed to the host too. It flies and
+ * bounces them and reports: "#nhvrayhit rid m_id" (reached a body; m_id 0
+ * = hero; NHV_EV_RAY says hit/miss/reflect/stop), "#nhvraysq rid x y ..."
+ * (crossed squares: burning, freezing...), "#nhvrayend rid x y" (spent). */
+typedef struct nhv_ray {
+    unsigned rid;
+    int type;           /* NetHack ray type (see dobuzz) */
+    int kind;           /* 0 magic missile, 1 fire, 2 cold, 3 sleep, 4 death,
+                           5 lightning, 6 poison gas, 7 acid */
+    int x, y, dx, dy;   /* start square and grid direction */
+    int range;          /* squares */
+    int from_hero;
+    unsigned caster;    /* m_id of the monster that fired it, or 0 */
+} nhv_ray;
+NHV_API int nhv_get_rays(nhv_ray *buf, int max);
+NHV_API void nhv_clear_rays(void);
 
 #ifdef __cplusplus
 }

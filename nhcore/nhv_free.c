@@ -17,7 +17,7 @@ static nhv_monstate states[MAXSTATES];
 static int nstates;
 
 /* arguments of the #nhv* extended command being run */
-int nhv_cmd_args[4];
+int nhv_cmd_args[NHV_MAXARGS];
 
 static const nhv_monstate *
 state_of(struct monst *mtmp)
@@ -352,6 +352,156 @@ nhv_clear_missiles(void)
             obfree(missiles[i].obj, (struct obj *) 0);
             missiles[i].obj = 0;
         }
+}
+
+/* ---------------------------------------------------------------- rays
+ * Rays (wands, spells, breath) handed over by dobuzz(); the host flies
+ * and bounces them and reports what they reach. */
+#define MAXRAYS 32
+static struct nhv_rayrec {
+    unsigned rid;
+    int type, nd;
+    coordxy sx, sy;
+    int dx, dy, range;
+    boolean sayhit, saymiss, forcemiss, shopdamage, fresh, used;
+    unsigned caster;
+} rays[MAXRAYS];
+static unsigned next_rid = 1;
+
+void
+nhv_ray_launch(int type, int nd, coordxy sx, coordxy sy, int dx, int dy,
+               int range, boolean sayhit, boolean saymiss, boolean forcemiss,
+               unsigned caster)
+{
+    int i;
+
+    for (i = 0; i < MAXRAYS; i++)
+        if (!rays[i].used) {
+            struct nhv_rayrec *r = &rays[i];
+
+            memset(r, 0, sizeof *r);
+            r->rid = next_rid++;
+            r->type = type, r->nd = nd;
+            r->sx = sx, r->sy = sy, r->dx = dx, r->dy = dy;
+            r->range = range;
+            r->sayhit = sayhit, r->saymiss = saymiss, r->forcemiss = forcemiss;
+            r->caster = caster;
+            r->fresh = r->used = TRUE;
+            return;
+        }
+}
+
+static struct nhv_rayrec *
+ray_by_rid(unsigned rid)
+{
+    int i;
+
+    for (i = 0; i < MAXRAYS; i++)
+        if (rays[i].used && rays[i].rid == rid)
+            return &rays[i];
+    return (struct nhv_rayrec *) 0;
+}
+
+static void
+ray_event(const char *what, unsigned rid)
+{
+    char buf[64];
+
+    Sprintf(buf, "%s %u", what, rid);
+    nhv_push_event(NHV_EV_RAY, 0, buf);
+}
+
+/* #nhvrayhit rid m_id: the ray reached a body (m_id 0 = the hero) */
+int
+donhvrayhit(void)
+{
+    struct nhv_rayrec *r = ray_by_rid((unsigned) nhv_cmd_args[0]);
+    unsigned mid = (unsigned) nhv_cmd_args[1];
+    int res;
+
+    if (!r)
+        return ECMD_OK;
+    if (mid == 0) {
+        res = nhv_ray_hits_hero(r->type, r->nd, r->dx, r->dy, r->forcemiss);
+    } else {
+        struct monst *m = mon_by_id(mid);
+
+        res = m ? nhv_ray_hits_mon(r->type, r->nd, m, r->forcemiss,
+                                   r->sayhit, r->saymiss)
+                : 0;
+    }
+    ray_event(res == 2 ? "reflect" : res == 3 ? "stop" : res == 1 ? "hit"
+                                                                  : "miss",
+              r->rid);
+    return ECMD_OK;
+}
+
+/* #nhvraysq rid x y [x y ...]: the ray crossed these squares */
+int
+donhvraysq(void)
+{
+    struct nhv_rayrec *r = ray_by_rid((unsigned) nhv_cmd_args[0]);
+    int k;
+
+    if (!r)
+        return ECMD_OK;
+    for (k = 1; k + 1 < NHV_MAXARGS; k += 2) {
+        if (!nhv_cmd_args[k] && !nhv_cmd_args[k + 1])
+            break;
+        nhv_ray_square(r->type, (coordxy) nhv_cmd_args[k],
+                       (coordxy) nhv_cmd_args[k + 1], &r->shopdamage);
+    }
+    return ECMD_OK;
+}
+
+/* #nhvrayend rid x y: the ray is spent at <x,y> */
+int
+donhvrayend(void)
+{
+    struct nhv_rayrec *r = ray_by_rid((unsigned) nhv_cmd_args[0]);
+
+    if (!r)
+        return ECMD_OK;
+    nhv_ray_end(r->type, (coordxy) nhv_cmd_args[1], (coordxy) nhv_cmd_args[2],
+                r->shopdamage);
+    r->used = FALSE;
+    return ECMD_OK;
+}
+
+NHV_API int
+nhv_get_rays(nhv_ray *buf, int max)
+{
+    int i, n = 0;
+
+    if (nhv_state() != NHV_WAITING)
+        return 0;
+    for (i = 0; i < MAXRAYS && n < max; i++) {
+        struct nhv_rayrec *r = &rays[i];
+
+        if (!r->used || !r->fresh)
+            continue;
+        r->fresh = FALSE;
+        memset(&buf[n], 0, sizeof buf[n]);
+        buf[n].rid = r->rid;
+        buf[n].type = r->type;
+        buf[n].kind = abs(r->type) % 10;
+        buf[n].x = r->sx, buf[n].y = r->sy;
+        buf[n].dx = r->dx, buf[n].dy = r->dy;
+        buf[n].range = r->range;
+        buf[n].from_hero = r->type >= 0 && r->type < 20; /* 20+: breath */
+        buf[n].caster = r->caster;
+        n++;
+    }
+    return n;
+}
+
+NHV_API void
+nhv_clear_rays(void)
+{
+    int i;
+
+    for (i = 0; i < MAXRAYS; i++)
+        rays[i].used = FALSE;
 }
 
 void
