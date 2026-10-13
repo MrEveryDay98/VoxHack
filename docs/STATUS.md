@@ -82,6 +82,17 @@ server or version information; loading shows "Loading...".
 
 ## Graphics options
 Inventory > Graphics (applies immediately, remembered):
+- **Interface:** Retro (default) or Modern (setting `nhv_interface`). Retro uses NetHack's
+  public-domain IBM PC pixel font (`mods/nhv/fonts/nhv_retro.ttf`, made from
+  `external/nethack/win/X11/ibm.bdf` by `tools/make_pixel_font.py`; plain ASCII only, other
+  characters come from the fallback font) at whole multiples of 14 px, and old-PC style boxes and
+  buttons (`nhv_tiles/textures/nhv_ui_*.png`, from `tools/make_ui_textures.py`) given to every
+  screen through the formspec prepend (`theme.lua`).
+- **HUD size / Menu size:** Luanti's `hud_scaling` / `gui_scaling`. The NetHack Voxel build of
+  Luanti sizes HUD text by the HUD size (not the menu size) and rounds it down to the pixel font's
+  steps, so labels stay inside their boxes.
+- **Map size:** the corner map's pixels per square (`nhv_map_scale`, 0 hides it); the big map
+  fits the window.
 - **Sprites:** extruded voxel models, or flat sprites (setting `nhv_flat_sprites`).
 - **Render resolution:** full down to 1/8. The world is drawn smaller and scaled up with sharp
   pixels for a retro look; the HUD and menus stay sharp (Luanti's `undersampling`, which the
