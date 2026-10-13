@@ -286,15 +286,47 @@ local function hurting_block(pos)
 	end
 end
 
--- on a NetHack pit the fall already hurt you (NetHack rolls that)
-local function on_pit(h)
+-- the trap on the hero's square ("S_pit", "S_spiked_pit", ...)
+local function square_cmap(h)
 	local sq = h and nhv.terrain and nhv.terrain.built[nhv.util.idx(h.x, h.y)]
-	local c = sq and sq.memcmap or ""
-	return c:match("pit") ~= nil
+	return sq and sq.memcmap or ""
 end
 
 local inside, next_hit = nil, 0
 local queue = {}
+
+local function hurt(dmg, cause)
+	if dmg > 0 then
+		queue[#queue + 1] = {{key = "#"}, {text = ("nhvhurt %d %s"):format(dmg, cause)}}
+	end
+end
+
+-- Pits (NetHack doesn't hurt you for them in free mode): a plain pit hurts
+-- when you drop to its bottom, like NetHack's fall (1d6); walking about
+-- down there doesn't. A spiked pit hurts only through its spike blocks.
+local PIT_DROP = 1.5 -- nodes you must fall (a jump inside the pit is less)
+local fall_top -- height you started falling from, while falling
+
+local function check_fall(pos, vel, h)
+	if vel.y < -0.5 then
+		fall_top = math.max(fall_top or pos.y, pos.y)
+		return
+	end
+	if not fall_top or vel.y < -0.05 then
+		return
+	end
+	local drop = fall_top - pos.y
+	fall_top = nil
+	if drop >= PIT_DROP and pos.y < nhv.util.STAND_Y - 1 then
+		local cmap = square_cmap(h)
+		if cmap == "S_pit" then
+			nhv.hud.message("You fall into a pit!")
+			hurt(math.random(6), "fell into a pit")
+		elseif cmap == "S_spiked_pit" then
+			nhv.hud.message("You fall into a pit of spikes!")
+		end
+	end
+end
 
 if not nhv.EDITOR then
 	core.register_globalstep(function()
@@ -303,20 +335,15 @@ if not nhv.EDITOR then
 		if not player or not nh.snap then
 			return
 		end
+		check_fall(player:get_pos(), player:get_velocity(), nh.snap.hero)
 		local name, info = hurting_block(player:get_pos())
 		local now = core.get_us_time()
 		if not name then
 			inside = nil
 		elseif inside ~= name or (info.repeat_s > 0 and now >= next_hit) then
-			local entering = inside ~= name
 			inside = name
 			next_hit = now + info.repeat_s * 1e6
-			if not (entering and on_pit(nh.snap.hero)) then
-				local dmg = roll(info.damage)
-				if dmg > 0 then
-					queue[#queue + 1] = {{key = "#"}, {text = ("nhvhurt %d %s"):format(dmg, info.cause)}}
-				end
-			end
+			hurt(roll(info.damage), info.cause)
 		end
 		while #queue > 0 and nh.ready() do
 			nh.act(table.remove(queue, 1), {kind = "hurt"})
