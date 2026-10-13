@@ -158,7 +158,7 @@ end
 
 -- the big map fills most of the window's width (in whole pixels per square)
 local function big_map_scale(player)
-	local info = player.get_window_information and player:get_window_information()
+	local info = core.get_player_window_information(player:get_player_name())
 	if not info or not info.size or not info.real_hud_scaling then
 		return 10
 	end
@@ -191,6 +191,13 @@ local function place_map(player)
 	end
 end
 hud.place_map = place_map
+
+-- the status line's distance from the bottom of the screen (above the hotbar)
+function hud.place_status(player, above)
+	if hud.ids.status then
+		player:hud_change(hud.ids.status, "offset", {x = 0, y = -above})
+	end
+end
 
 function hud.toggle_map()
 	hud.big_map = not hud.big_map

@@ -22,6 +22,12 @@ local RES = {
 }
 local HUD = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}, {3, "Giant"}}
 local MENU = {{0.75, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}}
+-- (the pixel font only has whole steps)
+local TEXT_RETRO = {{1, "Normal"}, {2, "Large"}, {3, "Huge"}}
+local TEXT_MODERN = {{0.85, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Larger"}, {2, "Huge"}}
+local function text_list()
+	return theme.retro() and TEXT_RETRO or TEXT_MODERN
+end
 local MAP = {{0, "Hidden"}, {2, "Small"}, {3, "Normal"}, {4, "Large"}, {5, "Larger"}, {6, "Huge"}}
 
 -- index of the choice nearest the setting's value
@@ -52,19 +58,20 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 9.4),
+		theme.head(10, 10.3),
 		"label[0.5,0.6;", theme.title("Graphics"), "]",
 		row(1.0, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2),
 		row(1.9, "HUD size", "hud", labels(HUD), pick(HUD, "hud_scaling", 1)),
 		row(2.8, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)),
-		row(3.7, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
-		row(4.6, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
-		row(5.5, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
-		row(6.4, "Distant textures", "distant", table.concat(DISTANT, ","),
+		row(3.7, "Text size", "text", labels(text_list()), pick(text_list(), "nhv_text_scale", 1)),
+		row(4.6, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
+		row(5.5, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
+		row(6.4, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
+		row(7.3, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		"label[0.5,7.5;", theme.dim(E("Lower resolutions draw the world with big, sharp pixels.")), "]",
-		"label[0.5,7.9;", theme.dim(E("Turning smoothing back on may need a restart.")), "]",
-		"button_exit[3.75,8.4;2.5,0.8;close;Done]",
+		"label[0.5,8.4;", theme.dim(E("Lower resolutions draw the world with big, sharp pixels.")), "]",
+		"label[0.5,8.8;", theme.dim(E("Turning smoothing back on may need a restart.")), "]",
+		"button_exit[3.75,9.3;2.5,0.8;close;Done]",
 	})
 end
 
@@ -92,13 +99,19 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	local changed, reshow = false, false
 	local st = tonumber(fields.style)
-	if st and (st == 1) ~= theme.retro() then
+	local restyled = st and (st == 1) ~= theme.retro()
+	if restyled then
 		core.settings:set("nhv_interface", st == 1 and "retro" or "modern")
 		theme.apply(player)
 		changed, reshow = true, true
 	end
 	if set_num(HUD, fields.hud, "hud_scaling", 1) then
 		changed = true
+	end
+	-- (the text size list differs between styles: skip it on a style change)
+	if not restyled and set_num(text_list(), fields.text, "nhv_text_scale", 1) then
+		theme.apply(player)
+		changed, reshow = true, true
 	end
 	if set_num(MENU, fields.menu, "gui_scaling", 1) then
 		changed, reshow = true, true

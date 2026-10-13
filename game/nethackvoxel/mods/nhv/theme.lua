@@ -1,8 +1,9 @@
 -- Interface style and sizes (set in Inventory > Graphics):
 --   * "Retro" (old PC style: NetHack's own IBM PC pixel font, bevelled grey
 --     boxes, the 16-colour palette) or "Modern" (Luanti's font and look)
---   * HUD size (Luanti's "hud_scaling"), menu size ("gui_scaling") and map
---     size (the corner map; the big map fits the window)
+--   * HUD size (Luanti's "hud_scaling"), menu size ("gui_scaling"), text
+--     size ("nhv_text_scale": the font size, in menus and on the HUD) and
+--     map size (the corner map; the big map fits the window)
 -- Every screen gets the style through the player's formspec prepend;
 -- screens built with theme.head() get it as well.
 
@@ -50,16 +51,37 @@ end
 -- ---------------------------------------------------------------- font
 -- Retro uses the pixel font at whole multiples of its height so it stays
 -- sharp; Modern removes those settings (back to Luanti's own font).
-local FONT_SETTINGS = {
-	font_path = FONT, mono_font_path = FONT,
-	font_size = tostring(FONT_PX), mono_font_size = tostring(FONT_PX),
-	font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(FONT_PX),
-}
+-- Text size multiplies the font size: whole steps only with the pixel font.
+local MODERN_PX = 16 -- Luanti's default font size
+
+function theme.text_scale()
+	local k = tonumber(core.settings:get("nhv_text_scale")) or 1
+	if theme.retro() then
+		return math.max(1, math.floor(k + 0.01))
+	end
+	return math.max(0.5, math.min(4, k))
+end
+
+local function font_settings()
+	local k = theme.text_scale()
+	if theme.retro() then
+		local px = tostring(FONT_PX * k)
+		return {
+			font_path = FONT, mono_font_path = FONT, font_size = px, mono_font_size = px,
+			font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(FONT_PX),
+		}
+	end
+	local px = k ~= 1 and tostring(math.floor(MODERN_PX * k + 0.5)) or nil
+	return {font_size = px, mono_font_size = px} -- (nil: Luanti's default)
+end
+local FONT_KEYS = {"font_path", "mono_font_path", "font_size", "mono_font_size",
+	"font_size_divisible_by", "mono_font_size_divisible_by"}
 
 function theme.apply_font()
 	local changed = false
-	for k, v in pairs(FONT_SETTINGS) do
-		local want = theme.retro() and v or nil
+	local want_all = font_settings()
+	for _, k in ipairs(FONT_KEYS) do
+		local want = want_all[k]
 		if core.settings:get(k) ~= want then
 			if want then
 				core.settings:set(k, want)
@@ -77,6 +99,9 @@ end
 function theme.apply(player)
 	theme.apply_font()
 	player:set_formspec_prepend(theme.styles())
+	if nhv.hotbar and nhv.hotbar.rebuild then
+		nhv.hotbar.rebuild(player) -- (slots sized for the text)
+	end
 end
 
 core.register_on_joinplayer(function(player)

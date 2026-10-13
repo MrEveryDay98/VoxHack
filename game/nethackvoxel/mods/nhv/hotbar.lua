@@ -27,9 +27,24 @@ hotbar.ACTIONS = {
 }
 
 local W = {WEP = 0x100, SWAPWEP = 0x400}
-local SLOT = 64      -- slot size on screen (pixels)
-local GAP = 6
+local SLOT, GAP, Y   -- slot size, gap and height on screen (pixels; see measure)
 local hud = {}       -- element ids
+
+-- slots grow with Graphics > Text size so their labels fit, as far as
+-- the window's width allows
+local function measure(player)
+	local k = nhv.theme.text_scale()
+	SLOT = math.floor(64 * k)
+	GAP = 6
+	local info = player and core.get_player_window_information(player:get_player_name())
+	if info and info.size and info.real_hud_scaling then
+		-- (7 slots, 6 gaps and the half-slot gap, in HUD pixels)
+		local room = 0.96 * info.size.x / info.real_hud_scaling
+		SLOT = math.max(48, math.min(SLOT, math.floor((room - 6 * GAP) / 7.5)))
+	end
+	Y = -SLOT / 2 - 8
+end
+measure()
 
 local function has_mask(o, m)
 	return (o.worn or 0) % (m * 2) >= m
@@ -65,22 +80,24 @@ local function add(player, def)
 	return player:hud_add(def)
 end
 
-local Y = -SLOT / 2 - 8
-
 local function frame(color)
 	return ("[fill:%dx%d:%s^[fill:%dx%d:3,3:#141418E0"):format(SLOT, SLOT, color, SLOT - 6, SLOT - 6)
 end
 
 local function build(player)
+	measure(player)
+	if nhv.hud.place_status then
+		nhv.hud.place_status(player, SLOT + 20) -- (the status line sits just above)
+	end
 	for k = 1, 7 do
 		hud["bg" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y},
 			scale = {x = 1, y = 1}, text = frame("#50505A"), z_index = 50})
 		hud["icon" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y - 4},
-			scale = {x = 2.5, y = 2.5}, text = "blank.png", z_index = 51})
+			scale = {x = 2.5 * SLOT / 64, y = 2.5 * SLOT / 64}, text = "blank.png", z_index = 51})
 	end
 	for k = 3, 7 do
 		local a = hotbar.ACTIONS[k - 2]
-		hud["key" .. k] = add(player, {type = "text", offset = {x = slot_x(k) - SLOT / 2 + 9, y = Y - SLOT / 2 + 10},
+		hud["key" .. k] = add(player, {type = "text", offset = {x = slot_x(k) - SLOT / 2 + 9 * SLOT / 64, y = Y - SLOT / 2 + 10 * SLOT / 64},
 			number = 0xFFD080, text = tostring(k - 2), z_index = 52})
 		hud["label" .. k] = add(player, {type = "text", offset = {x = slot_x(k), y = Y + 2},
 			number = 0xFFFFFF, text = a and a[1] or "", z_index = 52})
@@ -111,6 +128,21 @@ local function refresh(player, inv)
 	pinv:set_list("main", {st})
 end
 
+-- redraw at a new size (Graphics > Text size)
+function hotbar.rebuild(player)
+	if not hud.bg1 then
+		return -- (not built yet: it will be at the new size)
+	end
+	for k, id in pairs(hud) do
+		player:hud_remove(id)
+		hud[k] = nil
+	end
+	build(player)
+	if nh.snap then
+		refresh(player, nh.snap.inventory)
+	end
+end
+
 core.register_on_joinplayer(function(player)
 	player:hud_set_hotbar_itemcount(1)
 	-- no built-in hotbar or chat text; number keys and the chat prompt are ours
@@ -122,6 +154,12 @@ core.register_on_joinplayer(function(player)
 			if nh.snap then
 				refresh(player, nh.snap.inventory)
 			end
+		end
+	end)
+	-- (the window's size is only known a little after joining: fit to it then)
+	core.after(1.5, function()
+		if player:is_player() then
+			hotbar.rebuild(player)
 		end
 	end)
 end)
