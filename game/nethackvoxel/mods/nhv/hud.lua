@@ -312,15 +312,14 @@ function hud.rebuild_meters(player)
 	end
 end
 
--- red flash when hurt
-local flash_until = 0
-function hud.flash(color)
-	local player = nhv.player.get()
-	if not player then
-		return
-	end
-	player:hud_change(hud.ids.flash, "text", "[fill:1x1:" .. (color or "#ff000060"))
-	flash_until = core.get_us_time() + 250000
+-- A coloured vignette (the screen's edges) that flashes and fades: red
+-- when hurt (stronger for bigger hits), green when healed a good amount.
+local FLASH_S = 0.6
+local flash = nil -- {color=, t0=, strength=}
+local flash_shown = nil
+function hud.flash(color, strength)
+	flash = {color = color or "#FF2020", t0 = core.get_us_time(),
+		strength = math.max(0.3, math.min(1, strength or 1))}
 end
 
 local tick = 0
@@ -330,9 +329,20 @@ core.register_globalstep(function(dtime)
 	if not player or not hud.ids.msg then
 		return
 	end
-	if flash_until > 0 and core.get_us_time() > flash_until then
-		flash_until = 0
-		player:hud_change(hud.ids.flash, "text", "blank.png")
+	if flash then
+		local t = (core.get_us_time() - flash.t0) / 1e6 / FLASH_S
+		local tex = "blank.png"
+		if t < 1 then
+			-- (steps of 16 keep the number of different textures small)
+			local a = math.floor((1 - t) * 230 * flash.strength / 16) * 16
+			tex = ("nhv_vignette.png^[multiply:%s^[opacity:%d"):format(flash.color, a)
+		else
+			flash = nil
+		end
+		if tex ~= flash_shown then
+			flash_shown = tex
+			player:hud_change(hud.ids.flash, "text", tex)
+		end
 	end
 	if tick > 1 then
 		tick = 0
@@ -384,7 +394,9 @@ nh.on_snapshot(function(snap)
 	update_meters(player, h)
 	player:hud_change(hud.ids.map, "text", map_png(snap))
 	if last_hp and h.hp < last_hp then
-		hud.flash()
+		hud.flash("#FF2020", 0.5 + (last_hp - h.hp) / math.max(1, h.hpmax) * 2.5)
+	elseif last_hp and h.hp >= last_hp + math.max(3, h.hpmax / 5) then
+		hud.flash("#30FF60", 0.7) -- (healed a good chunk; not each point regained)
 	end
 	last_hp = h.hp
 	-- blindness: black fog that hides everything beyond arm's reach

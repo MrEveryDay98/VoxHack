@@ -51,6 +51,22 @@ def panel():
     return im
 
 
+def vignette(size=128):
+    """White, see-through in the middle, solid toward the edges (the HUD
+    tints it: red when hurt, green when healed)."""
+    im = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    px = im.load()
+    c = (size - 1) / 2
+    for y in range(size):
+        for x in range(size):
+            # (an ellipse that touches the edges; corners darkest)
+            d = (((x - c) / c) ** 2 + ((y - c) / c) ** 2) ** 0.5
+            t = max(0.0, min(1.0, (d - 0.55) / 0.6))
+            a = int(255 * t * t * (3 - 2 * t))
+            px[x, y] = (255, 255, 255, a)
+    return im
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     pieces = {
@@ -60,6 +76,7 @@ def main():
         "nhv_ui_button_pressed.png": box(8, (0, 0, 120, 255), BLACK, (85, 85, 255, 255), outline=BLACK),
         "nhv_ui_field.png": box(8, BLACK, DGREY, LGREY, border=1),
         "nhv_ui_slot.png": box(8, (20, 20, 30, 255), BLACK, DGREY, border=1),
+        "nhv_vignette.png": vignette(),
     }
     for name, im in pieces.items():
         im.save(os.path.join(OUT, name))
