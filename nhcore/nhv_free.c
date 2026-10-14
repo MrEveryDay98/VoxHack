@@ -93,7 +93,10 @@ donhvmove(void)
     /* walking never fights; it may swap places with a pet. (The
        no-fighting flag also means "don't push boulders", so walking into
        a boulder with nobody there goes without it: it pushes) */
-    svc.context.nopick = !(mtmp && mtmp->mtame && canspotmon(mtmp))
+    svc.context.nopick = !(mtmp && mtmp->mtame && canspotmon(mtmp)
+                           /* (confused or stunned, NetHack would attack
+                              the pet instead of swapping: just bump) */
+                           && !Stunned && !Confusion)
                          && !(sobj_at(BOULDER, x, y) && !mtmp);
     svc.context.forcefight = 0;
     domove();
