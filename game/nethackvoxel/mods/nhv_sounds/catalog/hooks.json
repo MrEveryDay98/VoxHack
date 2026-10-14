@@ -926,10 +926,22 @@
    "desc": "zap then explosion"
   },
   {
+   "id": "whip_snap",
+   "group": "events",
+   "desc": "Cracking a bullwhip (Snap!)",
+   "source": "apply.c"
+  },
+  {
    "id": "secret_found",
    "group": "events",
    "desc": "A secret door or passage is found",
    "source": "detect.c"
+  },
+  {
+   "id": "dig_too_hard",
+   "group": "events",
+   "desc": "Something is too hard to dig",
+   "source": "dig.c"
   },
   {
    "id": "dig",
@@ -944,9 +956,27 @@
    "source": "dig.c"
   },
   {
+   "id": "lid_slams_open_falls_shut",
+   "group": "events",
+   "desc": "Kicking a box: the lid slams open, then shut",
+   "source": "dokick.c"
+  },
+  {
+   "id": "kick_door_whamm",
+   "group": "events",
+   "desc": "Kicking a door that holds (WHAMM!)",
+   "source": "dokick.c"
+  },
+  {
    "id": "eat_done",
    "group": "events",
    "desc": "The hero finishes eating",
+   "source": "eat.c"
+  },
+  {
+   "id": "tin_opened",
+   "group": "events",
+   "desc": "The hero opens a tin",
    "source": "eat.c"
   },
   {
@@ -968,10 +998,22 @@
    "source": "eat.c"
   },
   {
+   "id": "blinded_by_flash",
+   "group": "events",
+   "desc": "Blinded by a flash",
+   "source": "engrave.c"
+  },
+  {
    "id": "level_up",
    "group": "events",
    "desc": "The hero gains an experience level",
    "source": "exper.c"
+  },
+  {
+   "id": "water_gushes",
+   "group": "events",
+   "desc": "Water gushes from a fountain",
+   "source": "fountain.c"
   },
   {
    "id": "fountain_refresh",
@@ -980,9 +1022,21 @@
    "source": "fountain.c"
   },
   {
+   "id": "delphi_welcome",
+   "group": "events",
+   "desc": "Welcomed to Delphi by the Oracle",
+   "source": "hack.c"
+  },
+  {
    "id": "door_locked",
    "group": "events",
    "desc": "A door is found locked",
+   "source": "lock.c"
+  },
+  {
+   "id": "door_opens",
+   "group": "events",
+   "desc": "The hero opens a door",
    "source": "lock.c"
   },
   {
@@ -1018,8 +1072,20 @@
   {
    "id": "quaff_potion",
    "group": "events",
-   "desc": "quaff potion",
+   "desc": "The hero drinks a potion",
    "source": "potion.c"
+  },
+  {
+   "id": "magic_energy",
+   "group": "events",
+   "desc": "Shimmering light / magical energy restores you",
+   "source": "potion.c"
+  },
+  {
+   "id": "god_gift",
+   "group": "events",
+   "desc": "A god's gift appears at your feet",
+   "source": "pray.c"
   },
   {
    "id": "prayer_answered",
@@ -1036,13 +1102,31 @@
   {
    "id": "read_spellbook",
    "group": "events",
-   "desc": "read spellbook",
+   "desc": "The hero reads a spellbook",
    "source": "read.c"
   },
   {
    "id": "read_scroll",
    "group": "events",
-   "desc": "read scroll",
+   "desc": "The hero reads a scroll",
+   "source": "read.c"
+  },
+  {
+   "id": "item_glows",
+   "group": "events",
+   "desc": "An item glows (blessed, enchanted...)",
+   "source": "read.c"
+  },
+  {
+   "id": "item_glows_black",
+   "group": "events",
+   "desc": "An item glows black (cursed)",
+   "source": "read.c"
+  },
+  {
+   "id": "punished",
+   "group": "events",
+   "desc": "Punished: a ball and chain",
    "source": "read.c"
   },
   {
@@ -1062,6 +1146,48 @@
    "group": "events",
    "desc": "The hero sits down",
    "source": "sit.c"
+  },
+  {
+   "id": "ambient_bubbling",
+   "group": "events",
+   "desc": "A fountain on the level: bubbling water",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_coins",
+   "group": "events",
+   "desc": "A fountain: water falling on coins",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_naiad",
+   "group": "events",
+   "desc": "A fountain: the splashing of a naiad",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_soda",
+   "group": "events",
+   "desc": "A fountain (hallucinating): a soda fountain",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_sink_drip",
+   "group": "events",
+   "desc": "A sink on the level: a slow drip",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_sink_gurgle",
+   "group": "events",
+   "desc": "A sink: a gurgling noise",
+   "source": "sounds.c"
+  },
+  {
+   "id": "ambient_sink_dishes",
+   "group": "events",
+   "desc": "A sink (hallucinating): dishes being washed",
+   "source": "sounds.c"
   },
   {
    "id": "study_book",
@@ -1088,6 +1214,12 @@
    "source": "teleport.c"
   },
   {
+   "id": "lot_of_noise",
+   "group": "events",
+   "desc": "The hero makes a lot of noise",
+   "source": "timeout.c"
+  },
+  {
    "id": "fall_asleep",
    "group": "events",
    "desc": "The hero falls asleep",
@@ -1109,6 +1241,12 @@
    "id": "hero_misses",
    "group": "events",
    "desc": "The hero misses a monster",
+   "source": "uhitm.c"
+  },
+  {
+   "id": "mimic_revealed",
+   "group": "events",
+   "desc": "Bumping into a mimic",
    "source": "uhitm.c"
   },
   {

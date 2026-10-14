@@ -92,6 +92,20 @@ DESCRIBE_EVENTS = {
     "sit": "The hero sits down", "door_close": "A door closes", "door_resists": "A door resists",
     "door_locked": "A door is found locked", "skill_ready ": "", "eat_dog_food": "Eating dog food",
     "eat_rotten": "Eating something rotten", "fountain_refresh": "A refreshing drink from a fountain",
+    "door_opens": "The hero opens a door", "kick_door_whamm": "Kicking a door that holds (WHAMM!)",
+    "lid_slams_open_falls_shut": "Kicking a box: the lid slams open, then shut",
+    "whip_snap": "Cracking a bullwhip (Snap!)", "dig_too_hard": "Something is too hard to dig",
+    "item_glows": "An item glows (blessed, enchanted...)", "item_glows_black": "An item glows black (cursed)",
+    "punished": "Punished: a ball and chain", "magic_energy": "Shimmering light / magical energy restores you",
+    "god_gift": "A god's gift appears at your feet", "water_gushes": "Water gushes from a fountain",
+    "tin_opened": "The hero opens a tin", "lot_of_noise": "The hero makes a lot of noise",
+    "delphi_welcome": "Welcomed to Delphi by the Oracle", "blinded_by_flash": "Blinded by a flash",
+    "mimic_revealed": "Bumping into a mimic", "read_scroll": "The hero reads a scroll",
+    "read_spellbook": "The hero reads a spellbook", "quaff_potion": "The hero drinks a potion",
+    "ambient_bubbling": "A fountain on the level: bubbling water", "ambient_coins": "A fountain: water falling on coins",
+    "ambient_naiad": "A fountain: the splashing of a naiad", "ambient_soda": "A fountain (hallucinating): a soda fountain",
+    "ambient_sink_drip": "A sink on the level: a slow drip", "ambient_sink_gurgle": "A sink: a gurgling noise",
+    "ambient_sink_dishes": "A sink (hallucinating): dishes being washed",
 }
 
 
@@ -107,7 +121,14 @@ def main():
     for fname in sorted(os.listdir(os.path.join(root, "src"))):
         if fname.endswith(".c"):
             src = open(os.path.join(root, "src", fname), encoding="latin-1").read()
-            for hid in re.findall(r'NHV_HOOK\("([a-z_0-9]+)"\)', src):
+            # NHV_HOOK("name"), NHV_HOOK(cond ? "a" : "b") and lists of hook
+            # names chosen in code (static const char *const ..._hook[] = {...})
+            names = []
+            for call in re.findall(r'NHV_HOOK\(([^;]*?)\)\s*[;,]', src):
+                names += re.findall(r'"([a-z_0-9]+)"', call)
+            for body in re.findall(r'_hook\[\d*\]\s*=\s*\{([^}]*)\}', src):
+                names += re.findall(r'"([a-z_0-9]+)"', body)
+            for hid in names:
                 if hid not in found:
                     found.add(hid)
                     hooks.append({"id": hid, "group": "events",
