@@ -27,12 +27,14 @@ local CFG_PATH = MODPATH .. DIR_DELIM .. "config.json"
 local SOUND_DIR = MODPATH .. DIR_DELIM .. "sounds"
 
 -- ---------------------------------------------------------------- config
--- every .ogg under sounds/, folders included: {name = path}
+-- every sound under sounds/, folders included: {name = path}. .ogg, and
+-- .mid / .midi music, which the NetHack Voxel build of Luanti renders with
+-- the SoundFont in mods/nhv_sounds/soundfonts (see below).
 -- (names are global in Luanti, so the editor keeps them unique)
 local function scan(dir, out)
 	out = out or {}
 	for _, f in ipairs(core.get_dir_list(dir, false) or {}) do
-		local n = f:match("^(.+)%.ogg$")
+		local n = f:match("^(.+)%.ogg$") or f:match("^(.+)%.mid$") or f:match("^(.+)%.midi$")
 		if n then
 			out[n] = dir .. DIR_DELIM .. f
 		end
@@ -44,6 +46,18 @@ local function scan(dir, out)
 end
 
 local known = scan(SOUND_DIR)   -- sound names the client has
+
+-- MIDI music: the engine renders it with the first SoundFont (.sf2) in
+-- mods/nhv_sounds/soundfonts (GeneralUser GS by S. Christian Collins)
+do
+	local dir = MODPATH .. DIR_DELIM .. "soundfonts"
+	for _, f in ipairs(core.get_dir_list(dir, false) or {}) do
+		if f:lower():match("%.sf2$") then
+			core.settings:set("nhv_soundfont", dir .. DIR_DELIM .. f)
+			break
+		end
+	end
+end
 
 local cfg_text = nil
 local function load_config()
@@ -132,6 +146,28 @@ function sound.hook(id, opts)
 	-- play at once; every effect gets its own handle, so they all overlap
 	core.sound_play(name, params)
 end
+
+-- "/nhvplay <sound>" (e.g. in the command line): play any sound by name,
+-- to try one out; "/nhvplay" alone stops the last one
+local tried
+core.register_chatcommand("nhvplay", {
+	params = "[sound name]",
+	description = "(NetHack Voxel) play a sound or music track to try it",
+	func = function(name, param)
+		if tried then
+			core.sound_stop(tried)
+			tried = nil
+		end
+		if param == "" then
+			return true, "Stopped."
+		end
+		if not known[param] then
+			return false, "No sound called " .. param
+		end
+		tried = core.sound_play(param, {to_player = name, gain = 1})
+		return true, "Playing " .. param
+	end,
+})
 
 -- ---------------------------------------------------------------- music
 function sound.stop_music()

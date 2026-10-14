@@ -56,6 +56,11 @@ function markDirty() {
 }
 
 function play(name) {
+  const s = catalog.sounds.find((x) => x.name === name);
+  if (s && s.midi) {
+    toast("MIDI music plays in the game (with its SoundFont); there's no preview here.");
+    return;
+  }
   playUrl(`/sounds/${name}.ogg`, name);
 }
 
@@ -103,7 +108,7 @@ async function upload(file, name, folder = "", replace = false) {
   const q = new URLSearchParams({ name, filename: file.name, folder, replace: replace ? "1" : "0" });
   const res = await api("/api/upload?" + q, { method: "POST", body: file });
   catalog.sounds = catalog.sounds.filter((s) => s.name !== res.name);
-  catalog.sounds.push({ name: res.name, folder: res.folder, size: file.size });
+  catalog.sounds.push({ name: res.name, folder: res.folder, size: file.size, midi: !!res.midi });
   catalog.sounds.sort((a, b) => a.name.localeCompare(b.name));
   addFolderPath(res.folder);
   return res.name;
@@ -142,8 +147,11 @@ function renderMasters() {
 
 // ------------------------------------------------------------ sound picker
 let pickerCallback = null;
-function openPicker(title, cb) {
+// (music: MIDI tracks are offered too; other hooks only get .ogg sounds)
+let pickerMusic = false;
+function openPicker(title, cb, music = false) {
   pickerCallback = cb;
+  pickerMusic = music;
   $("#pickerTitle").textContent = title;
   $("#pickerSearch").value = "";
   renderPicker();
@@ -157,9 +165,11 @@ function renderPicker() {
   list.textContent = "";
   for (const s of catalog.sounds) {
     if (q && !(s.name.includes(q) || (s.folder || "").includes(q))) continue;
+    if (s.midi && !pickerMusic) continue;
     list.append(el("div", { class: "pick" },
       el("button", { class: "icon", "aria-label": "Play " + s.name, onclick: () => play(s.name) }, "▶"),
       s.folder ? el("span", { class: "folder-tag" }, s.folder) : null,
+      s.midi ? el("span", { class: "folder-tag" }, "MIDI") : null,
       el("span", { class: "name", role: "button", tabindex: 0,
         onclick: () => { const cb = pickerCallback; closePicker(); cb && cb(s.name); },
         onkeydown: (e) => { if (e.key === "Enter") e.target.click(); } }, s.name)));
@@ -185,7 +195,7 @@ function hookRow(h, isMusic) {
     const e = config.hooks[h.id] || (config.hooks[h.id] = { sounds: [], volume: 100, pitch_var: isMusic ? 0 : 0.05 });
     if (isMusic) { e.sounds = [name]; e.loop = true; } else if (!e.sounds.includes(name)) e.sounds.push(name);
     markDirty(); redraw();
-  }) }, isMusic ? (entry ? "Change…" : "+ Choose music") : "+ Add sound"));
+  }, isMusic) }, isMusic ? (entry ? "Change…" : "+ Choose music") : "+ Add sound"));
 
   const controls = el("div", { class: "controls" });
   if (entry) {
@@ -473,7 +483,7 @@ function renderLibrary() {
     ...folderOptions.map((o) => el("option", { value: o, selected: o === f || null }, o || "(top level)")));
     const card = el("div", { class: "card" + (used[s.name] ? "" : " unused"), draggable: "true" },
       el("button", { class: "icon", "aria-label": "Play " + s.name, onclick: () => play(s.name) }, "▶"),
-      el("div", { class: "info" }, el("div", { class: "name" }, s.name),
+      el("div", { class: "info" }, el("div", { class: "name" }, s.name, s.midi ? el("span", { class: "folder-tag" }, " MIDI") : null),
         el("div", { class: "uses" }, used[s.name] ? `used ${used[s.name]}×` : "not used yet"),
         libFolder === null || q ? el("div", { class: "folder-tag" }, f || "(top level)") : null),
       move);

@@ -135,16 +135,23 @@ def clean_folder(folder):
     return "/".join(parts)
 
 
+# sound files: .ogg, and .mid / .midi music (the game renders MIDI with its
+# SoundFont, mods/nhv_sounds/soundfonts/*.sf2)
+SOUND_EXTS = (".ogg", ".mid", ".midi")
+MIDI_EXTS = (".mid", ".midi")
+
+
 def sound_index():
-    """{name: folder} for every .ogg under sounds/"""
+    """{name: folder} for every sound file under sounds/"""
     out = {}
     for dirpath, dirs, files in os.walk(SOUNDS):
         dirs.sort()
         rel = os.path.relpath(dirpath, SOUNDS).replace("\\", "/")
         rel = "" if rel == "." else rel
         for f in sorted(files):
-            if f.endswith(".ogg"):
-                out.setdefault(f[:-4], rel)
+            base, ext = os.path.splitext(f)
+            if ext.lower() in SOUND_EXTS:
+                out.setdefault(base, rel)
     return out
 
 
@@ -153,13 +160,22 @@ def sound_path(name, folder=None):
         folder = sound_index().get(name)
         if folder is None:
             return None
-    return os.path.join(SOUNDS, *(folder.split("/") if folder else []), name + ".ogg")
+    base = os.path.join(SOUNDS, *(folder.split("/") if folder else []), name)
+    for ext in SOUND_EXTS:
+        if os.path.isfile(base + ext):
+            return base + ext
+    return base + ".ogg"
+
+
+def is_midi(path):
+    return bool(path) and os.path.splitext(path)[1].lower() in MIDI_EXTS
 
 
 def list_sounds():
     out = []
     for name, folder in sorted(sound_index().items()):
-        out.append({"name": name, "folder": folder, "size": os.path.getsize(sound_path(name, folder))})
+        p = sound_path(name, folder)
+        out.append({"name": name, "folder": folder, "size": os.path.getsize(p), "midi": is_midi(p)})
     return out
 
 
@@ -444,10 +460,16 @@ class Handler(BaseHTTPRequestHandler):
             t.write(data)
             tmpname = t.name
         try:
-            convert(tmpname, os.path.join(dst_dir, name + ".ogg"))
+            if ext in MIDI_EXTS:
+                # MIDI is kept as it is (the game renders it)
+                if not data.startswith(b"MThd"):
+                    raise ValueError("that isn't a MIDI file")
+                shutil.copyfile(tmpname, os.path.join(dst_dir, name + ".mid"))
+            else:
+                convert(tmpname, os.path.join(dst_dir, name + ".ogg"))
         finally:
             os.unlink(tmpname)
-        return self.send(200, {"name": name, "folder": folder})
+        return self.send(200, {"name": name, "folder": folder, "midi": ext in MIDI_EXTS})
 
     def api_post(self, path, data):
         if path == "/api/folders":
@@ -473,7 +495,8 @@ class Handler(BaseHTTPRequestHandler):
                 if name in index and index[name] != folder:
                     dst_dir = os.path.join(SOUNDS, *(folder.split("/") if folder else []))
                     os.makedirs(dst_dir, exist_ok=True)
-                    shutil.move(sound_path(name, index[name]), os.path.join(dst_dir, name + ".ogg"))
+                    src = sound_path(name, index[name])
+                    shutil.move(src, os.path.join(dst_dir, name + os.path.splitext(src)[1]))
                     moved.append(name)
             return self.send(200, {"moved": moved})
         if path == "/api/voice/queue":
