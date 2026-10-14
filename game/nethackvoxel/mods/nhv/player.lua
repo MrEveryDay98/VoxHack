@@ -271,6 +271,13 @@ nh.on_snapshot(function(snap, action)
 		return
 	end
 	set_speed(player)
+	-- confused / stunned: the NetHack Voxel build of Luanti scrambles the
+	-- controls (rotated / reversed walking, inverted looking up and down)
+	local conf, stun = U.has(h.flags, U.HERO.CONF), U.has(h.flags, U.HERO.STUN)
+	if conf ~= player_mod.confused or stun ~= player_mod.stunned then
+		player_mod.confused, player_mod.stunned = conf, stun
+		player:hud_set_flags({nhv_confused = conf, nhv_stunned = stun})
+	end
 	local level_changed = player_mod.ledger ~= h.ledger
 	player_mod.ledger = h.ledger
 
