@@ -352,6 +352,8 @@ local SILENCED = {
 	"^You already found a monster", "^There's a .* in the way",
 	"^You hear a monster behind the boulder", "blocks your way", "blocks your path",
 	"^You can.t move past", "in the way%.$", "^You swap places with",
+	-- (the game's NetHack options are applied quietly at every start)
+	"^Fruit is now ", "option toggled o[nf]f?%.$",
 }
 
 function hud.silenced(text)

@@ -522,6 +522,21 @@ donhvhurt(void)
     return ECMD_OK;
 }
 
+/* #nhvopt <option>: set a NetHack option, as a config file line or the
+   'O' menu would ("fruit:apple", "!autopickup", "pickup_burden:burdened");
+   the game's NetHack options page uses it. Takes no time. */
+int
+donhvopt(void)
+{
+    char buf[BUFSZ];
+
+    Snprintf(buf, sizeof buf, "%s", nhv_cmd_text);
+    /* (pickup_burden is only accepted the way the start-up options are) */
+    if (*buf)
+        (void) parseoptions(buf, !strncmpi(buf, "pickup_burden", 13), FALSE);
+    return ECMD_OK;
+}
+
 /* #nhvspike <damage> [cause]: you stepped into iron spikes (a spike
    block). Like a spiked pit's: iron boots protect you, and 1 time in 6
    they're poisoned. */

@@ -59,10 +59,10 @@ local function userdir()
 	return core.get_worldpath() .. DIR_DELIM .. "nethack"
 end
 
+-- (the player's own choices come from Options > NetHack options, nhopts.lua)
 nh.OPTIONS = table.concat({
-	"OPTIONS=!autopickup,!tutorial,!legacy,!splash_screen,!rest_on_space",
-	"OPTIONS=time,showexp,!verbose,!mention_walls,suppress_alert:3.4.3",
-	"OPTIONS=pickup_burden:unencumbered,paranoid_confirmation:pray,voices",
+	"OPTIONS=!tutorial,!legacy,!splash_screen,!rest_on_space",
+	"OPTIONS=time,showexp,!mention_walls,suppress_alert:3.4.3,voices",
 }, "\n")
 
 function nh.start(name)
@@ -82,7 +82,8 @@ function nh.start(name)
 		dbg:close()
 		extra = extra .. "\nOPTIONS=playmode:debug"
 	end
-	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS .. "\n" .. extra, name)
+	local own = nhv.nhopts and nhv.nhopts.start_options() or ""
+	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS .. "\n" .. own .. "\n" .. extra, name)
 	if not ok then
 		core.log("error", "[nhv] could not start NetHack: " .. tostring(err))
 		return false, err

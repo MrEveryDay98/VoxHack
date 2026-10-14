@@ -73,7 +73,8 @@ function graphics.formspec()
 		row(7.8, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
 		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		"button_exit[3.75,10.2;2.5,0.8;close;Done]",
+		"button[0.5,10.2;4.4,0.8;nhoptions;NetHack options...]",
+		"button_exit[5.1,10.2;4.4,0.8;close;Done]",
 	})
 end
 
@@ -98,6 +99,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if formname ~= "nhv:graphics" then
 		return false
+	end
+	if fields.nhoptions then
+		nhv.nhopts.show(player)
+		return true
 	end
 	local changed, reshow = false, false
 	local tm = tonumber(fields.time)
