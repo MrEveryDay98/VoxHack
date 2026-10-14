@@ -344,9 +344,13 @@ local function update_features(snap)
 				if flat == nil and is_trap(name, gi) then
 					flat = true
 				end
-				-- a hand-built prefab (or one like the pits' holes) replaces the sprite
+				-- a hand-built prefab replaces the sprite; so does a trap's
+				-- default one that has blocks (the pits' holes). (An altar's,
+				-- fountain's... default is just the room around it.)
 				local fslot = nhv.terrain.feature_slot(name)
-				if fslot and (nhv.prefabs.custom(fslot) or next(nhv.prefabs.get(fslot).nodes)) then
+				local info = fslot and nhv.prefabs.SLOT_INFO[fslot]
+				if fslot and (nhv.prefabs.custom(fslot) or (info and info.kind ~= "base"
+						and next(nhv.prefabs.get(fslot).nodes))) then
 					flat = nil
 				end
 				if flat ~= nil then

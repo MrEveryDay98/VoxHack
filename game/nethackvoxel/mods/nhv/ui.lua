@@ -368,7 +368,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		return true
 	elseif formname == "" then
-		-- inventory screen
+		-- inventory screen (keep where the list was scrolled to)
+		local sc = fields.invscroll and tonumber(fields.invscroll:match("%d+"))
+		if sc then
+			ui.inv_scroll = sc
+		end
 		for k in pairs(fields) do
 			local l = k:match("^inv_(%d+)$")
 			if l then
@@ -521,6 +525,13 @@ end
 ui.CLASS_NAMES = CLASS_NAMES
 ui.head = head
 
+-- NetHack's usual inventory order: $ " ) [ % ? + ! = / ( * ` 0 _
+local INV_ORDER = {}
+for i, c in ipairs({OC.COIN, OC.AMULET, OC.WEAPON, OC.ARMOR, OC.FOOD, OC.SCROLL, OC.SPBOOK,
+		OC.POTION, OC.RING, OC.WAND, OC.TOOL, OC.GEM, OC.ROCK, OC.BALL, OC.CHAIN, OC.VENOM}) do
+	INV_ORDER[c] = i
+end
+
 local function inventory_formspec(inv)
 	local fs = {head(19, 11), "label[0.4,0.5;Equipment]",
 		"label[5.6,0.5;Inventory  (click an item for actions)]",
@@ -541,25 +552,43 @@ local function inventory_formspec(inv)
 		fs[#fs + 1] = ("label[%f,%f;%s]"):format(x, y + 1.45,
 			core.colorize("#B0B0B0", E(slot.label)))
 	end
-	-- inventory list
-	local x, y = 5.6, 1.0
-	local col_w = 6.7
+	-- inventory list: one scrolling column, grouped by kind in NetHack's
+	-- usual order, letters in order within each group
+	local sorted = {}
+	for i, o in ipairs(inv) do
+		sorted[i] = o
+	end
+	table.sort(sorted, function(a, b)
+		local ca, cb = INV_ORDER[a.oclass] or 99, INV_ORDER[b.oclass] or 99
+		if ca ~= cb then
+			return ca < cb
+		end
+		return a.invlet < b.invlet
+	end)
+	local VIEW_H = 9.8
+	local rows, y = {}, 0.05
 	local last_class
-	for _, o in ipairs(inv) do
+	for _, o in ipairs(sorted) do
 		if o.oclass ~= last_class then
 			last_class = o.oclass
-			if y > 9.8 then
-				x, y = x + col_w, 1.0
-			end
-			fs[#fs + 1] = ("label[%f,%f;%s]"):format(x, y + 0.25,
+			rows[#rows + 1] = ("label[0.1,%f;%s]"):format(y + 0.25,
 				core.colorize("#FFD080", CLASS_NAMES[o.oclass] or "Other"))
 			y = y + 0.55
 		end
-		if y > 10.2 then
-			x, y = x + col_w, 1.0
-		end
-		ui.item_row(fs, o, x, y, "inv_" .. o.invlet:byte(), 5.8, o.invlet .. " - " .. o.name)
+		ui.item_row(rows, o, 0.1, y, "inv_" .. o.invlet:byte(), 11.6, o.invlet .. " - " .. o.name)
 		y = y + 0.75
+	end
+	fs[#fs + 1] = ("scroll_container[5.4,0.95;12.9,%s;invscroll;vertical;0.1]"):format(VIEW_H)
+	fs[#fs + 1] = table.concat(rows)
+	fs[#fs + 1] = "scroll_container_end[]"
+	local over = y - VIEW_H
+	if over > 0 then
+		local max = math.ceil(over / 0.1)
+		ui.inv_scroll = math.min(ui.inv_scroll or 0, max)
+		fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=5;largestep=40]"):format(max)
+		fs[#fs + 1] = ("scrollbar[18.45,0.95;0.35,%s;vertical;invscroll;%d]"):format(VIEW_H, ui.inv_scroll)
+	else
+		ui.inv_scroll = 0
 	end
 	if #inv == 0 then
 		fs[#fs + 1] = "label[5.6,1.5;Not carrying anything.]"
