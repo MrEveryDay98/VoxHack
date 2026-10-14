@@ -735,20 +735,17 @@ function ui.show_death()
 	show("nhv:dead", head(14, 11)
 		.. "label[0.5,0.6;" .. E(ui.end_title or "Your game is over.") .. "]"
 		.. ("textarea[0.5,1;13,8.6;;;%s]"):format(E(table.concat(lines, "\n")))
-		.. "button[0.5,9.9;6,0.9;newgame;" .. (ui.end_title:find("saved") and "Continue" or "Start a new game") .. "]"
-		.. "button[7.5,9.9;6,0.9;quitgame;Quit to menu]")
+		.. "button[4,9.9;6,0.9;totitle;Back to the title screen]")
 end
 
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "nhv:dead" then
 		return
 	end
-	if fields.newgame then
+	if fields.totitle then
 		ui.dead = false
 		close("nhv:dead")
-		nhv.new_game(player)
-	elseif fields.quitgame then
-		core.disconnect_player(player:get_player_name(), "Farewell.")
+		nhv.title.show(player)
 	elseif fields.quit and ui.dead then
 		ui.show_death()
 	end
@@ -765,7 +762,7 @@ nh.on_snapshot(function(snap, info)
 	end
 	nhv.player.freeze(true)
 	ui.dead = true
-	ui.end_title = ui.saving and "Game saved. Rejoin this world to continue."
+	ui.end_title = ui.saving and "Game saved. Continue it from the title screen."
 		or "Your game is over."
 	ui.saving = false
 	core.after(0.2, ui.show_death)

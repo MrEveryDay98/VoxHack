@@ -213,7 +213,8 @@ end
 
 function theme.widen(fs, k)
 	k = k or (nhv.EDITOR and 1 or theme.text_scale())
-	if k <= 1.001 or type(fs) ~= "string" then
+	-- (screens with their own fixed layout, like the title, are left alone)
+	if k <= 1.001 or type(fs) ~= "string" or fs:find("no_prepend[]", 1, true) then
 		return fs
 	end
 	local out, i, n = {}, 1, #fs

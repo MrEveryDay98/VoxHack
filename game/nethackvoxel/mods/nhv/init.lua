@@ -72,6 +72,7 @@ dofile(path .. "hud.lua")
 dofile(path .. "ui.lua")
 dofile(path .. "graphics.lua")
 dofile(path .. "nhopts.lua")
+dofile(path .. "title.lua")
 dofile(path .. "hotbar.lua")
 dofile(path .. "containers.lua")
 dofile(path .. "actions.lua")
@@ -101,14 +102,15 @@ local function with_area(cb)
 	end)
 end
 
-function nhv.new_game(player)
+-- start (or continue) NetHack as character `name` (default: the usual)
+function nhv.new_game(player, name)
 	world.ledger = nil
 	nhv.player.ledger = nil
 	nhv.player.hero = nil
 	nhv.mobs.clear()
 	nhv.sim.clear()
 	with_area(function()
-		local ok, err = nh.start(nhv.nhopts.character_name(player:get_player_name()))
+		local ok, err = nh.start(name or nhv.nhopts.character_name(player:get_player_name()))
 		if not ok then
 			core.chat_send_all("Could not start NetHack: " .. tostring(err))
 		end
@@ -119,9 +121,10 @@ core.register_on_joinplayer(function(player)
 	-- park the player somewhere safe until the level is built
 	player:set_pos(vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10))
 	nhv.player.freeze(true)
+	-- the title screen: continue, new character, options, quit
 	core.after(0.5, function()
 		if player:is_player() then
-			nhv.new_game(player)
+			nhv.title.show(player)
 		end
 	end)
 end)

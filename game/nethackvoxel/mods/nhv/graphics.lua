@@ -153,6 +153,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if reshow and not fields.quit then
 		graphics.show(player) -- (redrawn in the new style / size)
+	elseif (fields.quit or fields.close) and nhv.title and nhv.title.open then
+		nhv.title.show(player) -- (opened from the title screen: back to it)
 	end
 	return true
 end)

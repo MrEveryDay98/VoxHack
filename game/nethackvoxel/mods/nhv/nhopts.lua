@@ -106,6 +106,10 @@ local function set(key, v)
 	end
 end
 
+nhopts.set = set
+nhopts.BY_KEY = BY_KEY
+nhopts.clean_name = function(s) return (tostring(s or ""):gsub("[^%w _%-]", ""):gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 30)) end
+
 -- the NetHack option line for one option (nil = leave NetHack's default)
 local function option_text(o)
 	local v = nhopts.get(o.key)
