@@ -46,6 +46,7 @@ U.MON_PEACEFUL = 0x02
 U.MON_INVIS = 0x04
 U.MON_DETECTED = 0x08
 U.MON_WARNING = 0x10
+U.MON_SHOPKEEPER = 0x20 -- (in its own shop)
 
 -- nhv_hero.flags
 U.HERO = {

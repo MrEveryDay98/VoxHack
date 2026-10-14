@@ -162,6 +162,7 @@ NHV_API void nhv_get_map(nhv_loc *buf);
 #define NHV_MON_INVIS    0x04 /* remembered/unseen 'I' marker */
 #define NHV_MON_DETECTED 0x08 /* sensed via telepathy/warning/detection */
 #define NHV_MON_WARNING  0x10 /* warning number glyph */
+#define NHV_MON_SHOPKEEPER 0x20 /* a shopkeeper in its own shop */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */

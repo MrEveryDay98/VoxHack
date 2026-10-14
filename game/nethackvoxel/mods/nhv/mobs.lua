@@ -174,14 +174,17 @@ local function apply_sprite(e, m)
 	-- a solid body the size of the sprite (Luanti only collides with
 	-- "physical" objects); pets stay passable, as you swap places with them
 	local solid = m.id > 0 and not U.has(m.flags, U.MON_PET)
-	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid then
+	-- a shopkeeper in its shop fills its whole square, so standing inside
+	-- the door it really blocks the way out, as in NetHack
+	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
+	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk then
 		local props = sprite_props(m.tile, h)
-		local w = scale.radius(m.size, m.mndx)
+		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
 		props.physical = solid
 		props.collide_with_objects = solid
 		props.collisionbox = solid and {-w, -h / 2, -w, w, h / 2, w} or {0, 0, 0, 0, 0, 0}
 		e.obj:set_properties(props)
-		e.tile, e.h, e.solid = m.tile, h, solid
+		e.tile, e.h, e.solid, e.shk = m.tile, h, solid, shk
 	end
 end
 

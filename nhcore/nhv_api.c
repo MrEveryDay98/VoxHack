@@ -393,6 +393,8 @@ nhv_get_monsters(nhv_mon *buf, int max)
                     m.id = mtmp->m_id;
                     if (mtmp->mpeaceful && canspotmon(mtmp))
                         m.flags |= NHV_MON_PEACEFUL;
+                    if (mtmp->isshk && inhishop(mtmp))
+                        m.flags |= NHV_MON_SHOPKEEPER;
                 }
             }
             if (n < max)
