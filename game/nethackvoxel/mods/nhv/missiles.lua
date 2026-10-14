@@ -175,7 +175,7 @@ function missiles.float_text(text, color)
 	local id = player:hud_add({
 		type = "text", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		offset = {x = 0, y = -30}, number = color or 0x80FF80, text = text,
-		size = {x = 2}, z_index = 50,
+		size = {x = 2, y = 2}, z_index = 50,
 	})
 	table.insert(floaters, {id = id, t = 0})
 end
