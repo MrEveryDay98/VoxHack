@@ -4,3 +4,6 @@
 *.log
 /voice_work/
 __pycache__/
+# editor backups
+*.bak
+*.before-*
