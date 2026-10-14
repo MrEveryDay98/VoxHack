@@ -591,6 +591,8 @@ nhv_exec_mon_step(unsigned id, int x, int y)
 
     if (!mtmp)
         return -1;
+    if (isok(x, y) && (u_at(x, y) || m_at(x, y)))
+        return -3; /* occupied for now */
     r = nhv_mon_step(mtmp, (coordxy) x, (coordxy) y);
     if (r == MMOVE_MOVED) {
         if (gv.vision_full_recalc)

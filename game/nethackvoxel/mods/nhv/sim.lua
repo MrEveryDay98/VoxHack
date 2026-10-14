@@ -154,6 +154,10 @@ local function try_move(e, map, dx, dz, hp)
 		if r == 1 then
 			e.x, e.y = tx, ty
 			sim.dirty = true
+		elseif r == -2 or r == -3 then
+			-- NetHack is busy, or someone stands there: wait at the edge
+			-- (not a wall: the path stays)
+			return false
 		else
 			-- refused: treat that square as a wall for a while
 			e.blocked[tx * 32 + ty] = nhv.clock.game + 2

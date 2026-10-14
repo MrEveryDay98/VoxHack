@@ -253,7 +253,7 @@ nhv_move_monster(unsigned id, int x, int y)
     EnterCriticalSection(&cs);
     if (game_state != NHV_WAITING || q_count != 0) {
         LeaveCriticalSection(&cs);
-        return 0;
+        return -2; /* (busy: not a refusal) */
     }
     call_done = 0;
     queue[(q_head + q_count) % QMAX] = it;

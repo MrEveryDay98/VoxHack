@@ -332,8 +332,10 @@ typedef struct nhv_monfull {
 NHV_API int nhv_get_all_monsters(nhv_monfull *buf, int max);
 
 /* Move monster <id> onto adjacent square <x,y>. Only while WAITING; runs
- * synchronously on the game thread. Returns 1 moved, 0 refused, -1 the
- * monster is gone (e.g. died in a trap). */
+ * synchronously on the game thread. Returns 1 moved, 0 refused (the
+ * square itself won't do), -1 the monster is gone (e.g. died in a trap),
+ * -2 not now (the game is busy; try again shortly), -3 someone is
+ * standing there (the hero or another monster; it may clear soon). */
 NHV_API int nhv_move_monster(unsigned id, int x, int y);
 
 /* Missiles monsters throw at the hero don't resolve on the grid: they are
