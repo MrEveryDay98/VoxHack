@@ -306,6 +306,52 @@ local function door_open(door)
 	return has_bit(door, U.D_ISOPEN)
 end
 
+-- Which way to kick: the kickable thing next to you (a monster, an object
+-- such as a chest or boulder, a closed door) nearest to where you look,
+-- within about 65 degrees; otherwise straight where you face. Forgiving on
+-- purpose: aiming the crosshair exactly at a small chest is fiddly.
+local KICK_CONE = math.rad(65)
+function actions.kick_dir_key(player)
+	local h = hero()
+	local pos = player:get_pos()
+	local look = player:get_look_dir()
+	local fwd = vector.normalize(vector.new(look.x, 0, look.z))
+	local best, best_a
+	for dx = -1, 1 do
+		for dy = -1, 1 do
+			if dx ~= 0 or dy ~= 0 then
+				local tx, ty = h.x + dx, h.y + dy
+				local target
+				local mon = U.in_map(tx, ty) and nhv.mobs.monster_at(tx, ty)
+				if mon and mon.obj:get_pos() then
+					target = mon.obj:get_pos()
+				elseif U.in_map(tx, ty) then
+					local sq = square_info(tx, ty)
+					if sq.has_obj or (sq.typ == U.TYP.DOOR and door_closed(sq.door)) then
+						target = U.tile_center(tx, ty)
+					end
+				end
+				if target then
+					local to = vector.new(target.x - pos.x, 0, target.z - pos.z)
+					local d = vector.length(to)
+					if d > 0.01 then
+						local a = math.acos(math.max(-1, math.min(1, vector.dot(fwd, to) / d)))
+						if a <= KICK_CONE and (not best_a or a < best_a) then
+							best, best_a = {dx, dy}, a
+						end
+					end
+				end
+			end
+		end
+	end
+	if best then
+		return U.dir_key(best[1], best[2])
+	end
+	local dx, dy = U.vec_to_dir(fwd)
+	return U.dir_key(dx, dy)
+end
+
+
 local function stair_key(sq)
 	local c = sq.cmap or ""
 	if c:match("dnstair") or c:match("dnladder") then

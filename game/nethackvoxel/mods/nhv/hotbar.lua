@@ -20,7 +20,7 @@ nhv.hotbar = hotbar
 -- you look, like everywhere else)
 hotbar.ACTIONS = {
 	{"Fire", "f"},
-	{"Kick", "\4"},
+	{"Kick", "\4", aim = "kick"}, -- (the direction: actions.kick_dir_key)
 	{"Pick up", ","},
 	{"Search", "s"},
 	{"Eat", "e"},
@@ -185,7 +185,7 @@ end
 
 core.register_chatcommand("nhvkey", {
 	description = "(NetHack Voxel) action key",
-	func = function(_, param)
+	func = function(pname, param)
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n]
 		-- (a held key repeats: each press waits until the last action has
@@ -197,6 +197,10 @@ core.register_chatcommand("nhvkey", {
 		local keys = {}
 		for c in a[2]:gmatch(".") do
 			keys[#keys + 1] = {key = c}
+		end
+		local player = core.get_player_by_name(pname)
+		if a.aim == "kick" and player then
+			keys[#keys + 1] = {key = nhv.actions.kick_dir_key(player)}
 		end
 		nhv.actions.run({label = a[1], keys = keys}, {kind = "hotkey"})
 		return true
