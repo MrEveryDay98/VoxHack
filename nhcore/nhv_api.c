@@ -452,7 +452,14 @@ nhv_get_hero(nhv_hero *out)
     if (Fast) f |= NHV_HERO_FAST;
     if (Very_fast) f |= NHV_HERO_VFAST;
     if (program_state.gameover) f |= NHV_HERO_DEAD;
-    if (*u.ushops) f |= NHV_HERO_INSHOP;
+    if (*u.ushops) {
+        struct monst *shkp = shop_keeper(*u.ushops);
+
+        f |= NHV_HERO_INSHOP;
+        if (shkp && inhishop(shkp)
+            && (ESHK(shkp)->billct || ESHK(shkp)->debit))
+            f |= NHV_HERO_OWES;
+    }
     if (temple_occupied(u.urooms)) f |= NHV_HERO_INTEMPLE;
     out->flags = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);

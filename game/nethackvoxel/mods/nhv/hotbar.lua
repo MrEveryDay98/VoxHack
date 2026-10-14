@@ -13,6 +13,7 @@
 --   s, 20s, Ea ...     keys, as you'd type them in NetHack (^D = Ctrl+D)
 
 local nh = nhv.nh
+local U = nhv.util
 local hotbar = {}
 nhv.hotbar = hotbar
 
@@ -25,8 +26,10 @@ hotbar.ACTIONS = {
 	{"Spell", "Z"},
 	{"Eat", "e"},
 }
--- X (the NetHack Voxel build of Luanti sends "/nhvkey search")
+-- X and P (the NetHack Voxel build of Luanti sends "/nhvkey search" and
+-- "/nhvkey pay"; paying only works in a shop)
 hotbar.SEARCH = {"Search", "s"}
+hotbar.PAY = {"Pay", "p", shop = true}
 
 local W = {WEP = 0x100, SWAPWEP = 0x400}
 local SLOT, GAP, Y   -- slot size, gap and height on screen (pixels; see measure)
@@ -86,6 +89,7 @@ local function frame(color)
 end
 
 local SEARCH_DIM = 0x90C8C8C8 -- (see-through grey: the alpha byte is first)
+local HINT_LIT = 0xFFFFD080
 
 local function build(player)
 	measure(player)
@@ -105,16 +109,20 @@ local function build(player)
 		hud["label" .. k] = add(player, {type = "text", offset = {x = slot_x(k), y = Y + 2},
 			number = 0xFFFFFF, text = a and a[1] or "", z_index = 52})
 	end
-	-- X searches: a faint hint beside the hotbar (lights up when used)
-	hud.search = add(player, {type = "text", offset = {x = slot_x(7) + SLOT / 2 + 14, y = Y},
+	-- X searches: a faint hint beside the hotbar (lights up when used);
+	-- in a shop "P  Pay Shop" goes under it (see update_pay)
+	local hx = slot_x(7) + SLOT / 2 + 14
+	hud.search = add(player, {type = "text", offset = {x = hx, y = Y - SLOT * 0.2},
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "X  Search", z_index = 52})
+	hud.pay = add(player, {type = "text", offset = {x = hx, y = Y + SLOT * 0.2},
+		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
 end
 
 -- the hint lights up for a moment when X is pressed
 function hotbar.flash_search()
 	local player = nhv.player.get()
 	if player and hud.search then
-		player:hud_change(hud.search, "number", 0xFFFFD080)
+		player:hud_change(hud.search, "number", HINT_LIT)
 		core.after(0.2, function()
 			if player:is_player() and hud.search then
 				player:hud_change(hud.search, "number", SEARCH_DIM)
@@ -122,6 +130,58 @@ function hotbar.flash_search()
 		end)
 	end
 end
+
+-- "P  Pay Shop": shown while you're in a shop; grey, pulsing yellow while
+-- you owe it something (picked up something for sale, used something up)
+local pay = {shown = false, owes = false, color = nil}
+
+local function set_pay_color(player, c)
+	if pay.color ~= c then
+		pay.color = c
+		player:hud_change(hud.pay, "number", c)
+	end
+end
+
+local function update_pay(player, hero)
+	if not hud.pay then
+		return
+	end
+	local shown = hero and U.has(hero.flags, U.HERO.INSHOP) or false
+	pay.owes = shown and U.has(hero.flags, U.HERO.OWES)
+	if shown ~= pay.shown then
+		pay.shown = shown
+		player:hud_change(hud.pay, "text", shown and "P  Pay Shop" or "")
+	end
+	if not pay.owes then
+		set_pay_color(player, SEARCH_DIM)
+	end
+end
+
+-- (a channel of a colour: c is 0xAARRGGBB, shift 24 / 16 / 8 / 0)
+local function channel(c, shift)
+	return math.floor(c / 2 ^ shift) % 256
+end
+
+local pulse_t = 0
+core.register_globalstep(function(dtime)
+	if not (pay.owes and hud.pay) then
+		return
+	end
+	pulse_t = pulse_t + dtime
+	local player = nhv.player.get()
+	if not player then
+		return
+	end
+	-- grey -> yellow -> grey, about once a second (in steps, so it isn't
+	-- sent to the screen every frame)
+	local k = math.floor((0.5 - 0.5 * math.cos(pulse_t * 2 * math.pi)) * 8 + 0.5) / 8
+	local c = 0
+	for _, shift in ipairs({24, 16, 8, 0}) do
+		local a, b = channel(SEARCH_DIM, shift), channel(0xFFFFD040, shift)
+		c = c + math.floor(a + (b - a) * k + 0.5) * 2 ^ shift
+	end
+	set_pay_color(player, c)
+end)
 
 local function refresh(player, inv)
 	if not hud.bg1 then
@@ -160,6 +220,8 @@ function hotbar.rebuild(player)
 	if nh.snap then
 		refresh(player, nh.snap.inventory)
 	end
+	pay.shown, pay.color = false, nil
+	update_pay(player, nh.snap and nh.snap.hero)
 end
 
 core.register_on_joinplayer(function(player)
@@ -187,6 +249,7 @@ nh.on_snapshot(function(snap)
 	local player = nhv.player.get()
 	if snap and player then
 		refresh(player, snap.inventory)
+		update_pay(player, snap.hero)
 	end
 end)
 
@@ -208,14 +271,19 @@ core.register_chatcommand("nhvkey", {
 	func = function(pname, param)
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
+			or (param == "pay" and hotbar.PAY)
 		-- (a held key repeats: each press waits until the last action has
 		-- played out, so it repeats at action speed instead of piling up)
 		if not a or nhv.ui.open or not nh.ready() or nhv.clock.busy() then
 			return true
 		end
+		local hero = nh.snap and nh.snap.hero
+		if a.shop and not (hero and U.has(hero.flags, U.HERO.INSHOP)) then
+			return true -- (no shopkeeper to pay)
+		end
 		if n then
 			flash_slot(n + 2)
-		else
+		elseif a == hotbar.SEARCH then
 			hotbar.flash_search()
 		end
 		local keys = {}
