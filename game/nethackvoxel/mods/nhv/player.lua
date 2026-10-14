@@ -226,9 +226,31 @@ local function step(player)
 		return
 	end
 	player_mod.retry_at = nil
-	-- more than one square away (e.g. after waiting): step toward it
-	tx = h.x + U.sign(tx - h.x)
-	ty = h.y + U.sign(ty - h.y)
+	local far = math.max(math.abs(tx - h.x), math.abs(ty - h.y)) > 1
+	-- the body got away from the hero (NetHack kept refusing, or the
+	-- path back is gone): put it back, so the two never part for good
+	if far and (player_mod.refusals or 0) >= 2 then
+		player_mod.refusals = 0
+		teleport(player, U.tile_center(h.x, h.y))
+		return
+	end
+	-- catch up a square at a time along a path NetHack allows (no diagonal
+	-- steps into or out of a doorway with a door, e.g. a shop's)
+	local map = nh.snap and nh.snap.map
+	local route = map and nhv.path.find(h.x, h.y, tx, ty,
+		function(x, y) return terrain.passable(map, x, y) end,
+		function(x, y)
+			return terrain.is_door(map, x, y) and (map.door[U.idx(x, y)] or 0) >= 2
+		end, 300)
+	if route and route[1] then
+		tx, ty = route[1].x, route[1].y
+	elseif far then
+		player_mod.refusals = 2 -- (no way back: put the body back next step)
+		return
+	else
+		tx = h.x + U.sign(tx - h.x)
+		ty = h.y + U.sign(ty - h.y)
+	end
 	nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(tx, ty)}},
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
 end
@@ -293,10 +315,15 @@ nh.on_snapshot(function(snap, action)
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
-			-- refused: no teleporting the body back; retry later
+			-- refused: no teleporting the body back; retry later (step()
+			-- puts it back if it keeps being refused while it walks off)
 			player_mod.retry_at = core.get_us_time() + 500000
-		elseif h.x ~= action.tx or h.y ~= action.ty then
-			teleport(player, U.tile_center(h.x, h.y)) -- moved elsewhere
+			player_mod.refusals = (player_mod.refusals or 0) + 1
+		else
+			player_mod.refusals = 0
+			if h.x ~= action.tx or h.y ~= action.ty then
+				teleport(player, U.tile_center(h.x, h.y)) -- moved elsewhere
+			end
 		end
 	elseif prev.x ~= h.x or prev.y ~= h.y then
 		local tx, ty = U.pos_to_tile(player:get_pos())

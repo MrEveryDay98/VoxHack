@@ -60,8 +60,8 @@ core.register_entity("nhv:feat", {
 
 -- ---------------------------------------------------------------- fading
 -- Monsters, objects and features NetHack starts or stops showing fade in
--- and out instead of popping: flat sprites through transparency, 3D models
--- by growing / shrinking (they can't be see-through).
+-- and out instead of popping, as flat sprites (through transparency). 3D
+-- models can't be see-through: they just appear and go.
 local FADE_S = 0.35
 local fading = {} -- {e=, t0=, out=}
 
@@ -80,6 +80,9 @@ local function fade_apply(e, a)
 end
 
 local function fade_in(e)
+	if not nhv_tiles.flat() then
+		return
+	end
 	fading[#fading + 1] = {e = e, t0 = core.get_us_time()}
 	fade_apply(e, 0)
 end
@@ -87,6 +90,10 @@ end
 -- (the entity is taken out of its table; it's removed when it has faded)
 local function fade_out(e)
 	if not e.obj:get_pos() then
+		return
+	end
+	if not nhv_tiles.flat() then
+		e.obj:remove()
 		return
 	end
 	e.obj:set_properties({pointable = false})
@@ -265,9 +272,53 @@ local function obj_shape(gi)
 	return h, flat, name
 end
 
+local function is_obj_glyph(g)
+	local kind = nhv.glyph_info(g).kind
+	return kind == "obj" or kind == "body" or kind == "statue"
+end
+
+-- An object that's now a square away (a pushed boulder, ...) glides there
+-- instead of going and appearing again: its entity moves to the new square.
+local function match_moves(map)
+	local moved = {}
+	for j, e in pairs(mobs.objs) do
+		if e.tile and e.x and map.mem_tile[j] ~= e.tile and e.obj:get_pos() then
+			for dx = -1, 1 do
+				for dy = -1, 1 do
+					local kx, ky = e.x + dx, e.y + dy
+					local k = U.in_map(kx, ky) and U.idx(kx, ky)
+					local there = k and mobs.objs[k]
+					if k and k ~= j and not moved[k] and map.mem_tile[k] == e.tile
+							and is_obj_glyph(map.mem[k]) and not (there and there.tile == e.tile) then
+						moved[k] = {e = e, from = j, x = kx, y = ky}
+						goto next_entity
+					end
+				end
+			end
+		end
+		::next_entity::
+	end
+	for k, m in pairs(moved) do
+		local displaced = mobs.objs[k]
+		if mobs.objs[m.from] == m.e then
+			-- (whatever was on the new square takes the old one, or goes)
+			mobs.objs[m.from] = nil
+			if displaced and is_obj_glyph(map.mem[m.from]) then
+				mobs.objs[m.from] = displaced
+			elseif displaced then
+				fade_out(displaced)
+			end
+			mobs.objs[k] = m.e
+			m.e.obj:move_to(U.tile_center(m.x, m.y, m.e.obj:get_pos().y), true)
+			m.e.x, m.e.y = m.x, m.y
+		end
+	end
+end
+
 local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
+	match_moves(map)
 	for tx = 1, U.COLNO - 1 do
 		for ty = 0, U.ROWNO - 1 do
 			local i = U.idx(tx, ty)
