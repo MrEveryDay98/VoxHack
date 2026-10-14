@@ -66,23 +66,48 @@ local function inventory_by_letter()
 end
 
 -- ---------------------------------------------------------------- y/n
-local function yn_dialog(req)
-	local choices = req.choices
-	local n = #choices
-	local w = math.max(8, n * 2.2 + 1)
-	local fs = {head(w, 4),
-		("label[0.5,0.7;%s]"):format(E(wrap(req.prompt, math.floor(w * 5))))}
-	local x = 0.5
-	for c in choices:gmatch(".") do
+-- The question's buttons, in a row starting at (x, y).
+local function yn_buttons(fs, req, x, y)
+	for c in req.choices:gmatch(".") do
 		if c ~= "\27" then
 			local label = CHOICE_LABELS[c] or c
 			if c == req.default then
 				label = label .. " *"
 			end
-			fs[#fs + 1] = ("button[%f,2.6;2,0.9;yn_%d;%s]"):format(x, c:byte(), E(label))
+			fs[#fs + 1] = ("button[%f,%f;2,0.9;yn_%d;%s]"):format(x, y, c:byte(), E(label))
 			x = x + 2.2
 		end
 	end
+end
+
+local function yn_dialog(req)
+	local n = #req.choices
+	local w = math.max(8, n * 2.2 + 1)
+	local fs = {head(w, 4),
+		("label[0.5,0.7;%s]"):format(E(wrap(req.prompt, math.floor(w * 5))))}
+	yn_buttons(fs, req, 0.5, 2.6)
+	return table.concat(fs)
+end
+
+-- A question that comes right after information windows (e.g. at the end
+-- of the game: your attributes, then "Do you want to see your conduct?"):
+-- one window, the information scrolling above and the question below.
+local function yn_with_text(req, texts)
+	local parts = {}
+	for _, t in ipairs(texts) do
+		if t.title and t.title ~= "" then
+			parts[#parts + 1] = t.title
+			parts[#parts + 1] = ""
+		end
+		for _, l in ipairs(t.lines) do
+			parts[#parts + 1] = l
+		end
+		parts[#parts + 1] = ""
+	end
+	local fs = {head(18, 11.5),
+		("textarea[0.5,0.5;17,8.2;;;%s]"):format(E(table.concat(parts, "\n"))),
+		("label[0.5,9.2;%s]"):format(E(wrap(req.prompt, 85)))}
+	yn_buttons(fs, req, 0.5, 10.1)
 	return table.concat(fs)
 end
 
@@ -210,7 +235,14 @@ local function show_request(req)
 	end
 	if req.kind == "yn" and req.choices ~= "" then
 		ui.open = "nhv:req"
-		show("nhv:req", yn_dialog(req))
+		if #ui.pending_text > 0 then
+			-- (the information waiting to be read goes above the question)
+			local texts = ui.pending_text
+			ui.pending_text = {}
+			show("nhv:req", yn_with_text(req, texts))
+		else
+			show("nhv:req", yn_dialog(req))
+		end
 	elseif req.kind == "menu" then
 		ui.menu_sel = {}
 		for _, it in ipairs(req.items or {}) do
