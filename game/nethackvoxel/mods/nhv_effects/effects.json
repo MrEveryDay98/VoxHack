@@ -1,0 +1,322 @@
+{
+ "version": 1,
+ "effects": [
+  {
+   "id": "magic_trap",
+   "name": "Magic trap flash",
+   "layers": [
+    {
+     "shape": "burst",
+     "texture": {
+      "builtin": "star"
+     },
+     "color": "#C060FF",
+     "amount": 60,
+     "duration": 0.15,
+     "spread": 0.3,
+     "height": 1.0,
+     "speed": [
+      2.0,
+      5.0
+     ],
+     "life": [
+      0.6,
+      1.2
+     ],
+     "size": [
+      1.5,
+      3.0
+     ],
+     "gravity": 0.0,
+     "glow": 14,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    },
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "dot"
+     },
+     "color": "#FFFFFF",
+     "amount": 30,
+     "duration": 0.6,
+     "spread": 0.6,
+     "height": 0.2,
+     "speed": [
+      1.0,
+      2.5
+     ],
+     "life": [
+      0.8,
+      1.5
+     ],
+     "size": [
+      0.8,
+      1.5
+     ],
+     "gravity": -1.0,
+     "glow": 14,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "trap_magic_trap"
+   ]
+  },
+  {
+   "id": "read_scroll",
+   "name": "Scroll read",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "spark"
+     },
+     "color": "#FFD860",
+     "amount": 24,
+     "duration": 0.5,
+     "spread": 0.4,
+     "height": 1.2,
+     "speed": [
+      0.5,
+      1.5
+     ],
+     "life": [
+      0.6,
+      1.2
+     ],
+     "size": [
+      1.0,
+      2.0
+     ],
+     "gravity": -0.5,
+     "glow": 12,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "read_scroll"
+   ]
+  },
+  {
+   "id": "teleport",
+   "name": "Teleport swirl",
+   "layers": [
+    {
+     "shape": "implode",
+     "texture": {
+      "builtin": "dot"
+     },
+     "color": "#60A0FF",
+     "amount": 80,
+     "duration": 0.5,
+     "spread": 1.6,
+     "height": 1.0,
+     "speed": [
+      3.0,
+      6.0
+     ],
+     "life": [
+      0.4,
+      0.8
+     ],
+     "size": [
+      1.0,
+      2.0
+     ],
+     "gravity": 0,
+     "glow": 14,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    },
+    {
+     "shape": "ring",
+     "texture": {
+      "builtin": "ring"
+     },
+     "color": "#A0D0FF",
+     "amount": 20,
+     "duration": 0.2,
+     "spread": 0.2,
+     "height": 0.1,
+     "speed": [
+      2.0,
+      4.0
+     ],
+     "life": [
+      0.5,
+      0.9
+     ],
+     "size": [
+      1.5,
+      2.5
+     ],
+     "gravity": 0,
+     "glow": 12,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "trap_level_teleporter",
+    "trap_magic_portal",
+    "trap_teleportation_trap"
+   ]
+  },
+  {
+   "id": "fire_trap",
+   "name": "Fire burst",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "square"
+     },
+     "color": "#FF7020",
+     "amount": 90,
+     "duration": 0.6,
+     "spread": 0.8,
+     "height": 0.1,
+     "speed": [
+      2.0,
+      4.0
+     ],
+     "life": [
+      0.4,
+      0.9
+     ],
+     "size": [
+      1.0,
+      2.5
+     ],
+     "gravity": -2.0,
+     "glow": 14,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "trap_fire_trap"
+   ]
+  },
+  {
+   "id": "quaff_potion",
+   "name": "Potion bubbles",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "ring"
+     },
+     "color": "#C0E8FF",
+     "amount": 14,
+     "duration": 0.6,
+     "spread": 0.3,
+     "height": 1.3,
+     "speed": [
+      0.4,
+      1.0
+     ],
+     "life": [
+      0.6,
+      1.1
+     ],
+     "size": [
+      0.6,
+      1.2
+     ],
+     "gravity": -0.3,
+     "glow": 6,
+     "additive": false,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "quaff_potion"
+   ]
+  },
+  {
+   "id": "polymorph_trap",
+   "name": "Polymorph shimmer",
+   "layers": [
+    {
+     "shape": "burst",
+     "texture": {
+      "builtin": "star"
+     },
+     "color": "#50FF80",
+     "amount": 70,
+     "duration": 0.3,
+     "spread": 0.5,
+     "height": 1.0,
+     "speed": [
+      1.0,
+      4.0
+     ],
+     "life": [
+      0.6,
+      1.3
+     ],
+     "size": [
+      1.0,
+      2.5
+     ],
+     "gravity": 0,
+     "glow": 14,
+     "additive": true,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "trap_polymorph_trap"
+   ]
+  },
+  {
+   "id": "sleeping_gas",
+   "name": "Sleeping gas cloud",
+   "layers": [
+    {
+     "shape": "burst",
+     "texture": {
+      "builtin": "dot"
+     },
+     "color": "#D0B0D8",
+     "amount": 120,
+     "duration": 1.0,
+     "spread": 1.0,
+     "height": 0.8,
+     "speed": [
+      0.2,
+      1.0
+     ],
+     "life": [
+      1.5,
+      3.0
+     ],
+     "size": [
+      3.0,
+      6.0
+     ],
+     "gravity": -0.1,
+     "glow": 2,
+     "additive": false,
+     "fade": true,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "trap_sleeping_gas_trap"
+   ]
+  }
+ ]
+}

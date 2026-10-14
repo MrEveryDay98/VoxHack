@@ -35,6 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks_api  # noqa: E402
+import effects_api  # noqa: E402
 import speakable  # noqa: E402
 import voicegen  # noqa: E402
 
@@ -60,7 +61,8 @@ CONFIG = os.path.join(MOD, "config.json")
 CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/voices.js": ("voices.js", "text/javascript"),
-          "/blocks.js": ("blocks.js", "text/javascript"), "/style.css": ("style.css", "text/css")}
+          "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"),
+          "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
 PORT = 8765
@@ -276,6 +278,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/gametex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             return self.send_file(blocks_api.game_texture_path(m.group(1)), "image/png")
+        m = re.match(r"^/fxtex/([A-Za-z0-9_.-]+\.png)$", url.path)
+        if m:
+            return self.send_file(effects_api.texture_path(m.group(1)), "image/png")
         if not url.path.startswith("/api/"):
             return self.send(404, {"error": "not found"})
         if not self.allowed():
@@ -295,6 +300,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
                                    "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
                                    "overrides": blocks_api.load_overrides()})
+        if path == "/api/effects":
+            return self.send(200, {"data": effects_api.load(), "textures": effects_api.textures(),
+                                   "sheet": blocks_api.sheet_info(),
+                                   "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", [])})
         if path == "/api/catalog":
             return self.send(200, {
                 "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", []),
@@ -369,6 +378,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"overrides": blocks_api.save_overrides(data.get("blocks", {}))})
             except (ValueError, TypeError) as e:
                 return self.send(400, {"error": str(e)})
+        if path == "/api/effects":
+            try:
+                return self.send(200, {"effects": effects_api.save(data)})
+            except (ValueError, TypeError) as e:
+                return self.send(400, {"error": str(e)})
         if path == "/api/cast":
             write_json(VG.cast_path, data, backup=True)
             return self.send(200, {"ok": True})
@@ -397,6 +411,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == "/api/upload":
                 return self.upload(q)
+            if url.path == "/api/effects/texture":
+                name = (q.get("name") or ["particle"])[0]
+                return self.send(200, {"file": effects_api.upload_texture(name, self.read_body())})
             if url.path == "/api/blocks/texture":
                 name = (q.get("name") or ["texture"])[0]
                 return self.send(200, {"file": blocks_api.upload_texture(name, self.read_body())})

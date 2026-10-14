@@ -1016,6 +1016,12 @@
    "source": "mon.c"
   },
   {
+   "id": "quaff_potion",
+   "group": "events",
+   "desc": "quaff potion",
+   "source": "potion.c"
+  },
+  {
    "id": "prayer_answered",
    "group": "events",
    "desc": "A god answers favourably",
@@ -1026,6 +1032,18 @@
    "group": "events",
    "desc": "The hero prays",
    "source": "pray.c"
+  },
+  {
+   "id": "read_spellbook",
+   "group": "events",
+   "desc": "read spellbook",
+   "source": "read.c"
+  },
+  {
+   "id": "read_scroll",
+   "group": "events",
+   "desc": "read scroll",
+   "source": "read.c"
   },
   {
    "id": "shop_enter",

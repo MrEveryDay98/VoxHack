@@ -1,0 +1,2 @@
+-- Particle effects (made in the editor's Effects tab) live in effects.json and
+-- textures/; the nhv mod (effects.lua) plays them.

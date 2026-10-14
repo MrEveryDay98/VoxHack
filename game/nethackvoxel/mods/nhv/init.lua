@@ -78,6 +78,7 @@ dofile(path .. "actions.lua")
 dofile(path .. "wheel.lua")
 dofile(path .. "missiles.lua")
 dofile(path .. "rays.lua")
+dofile(path .. "effects.lua")
 dofile(path .. "sound.lua")
 dofile(path .. "loop.lua")
 

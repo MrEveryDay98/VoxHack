@@ -107,6 +107,10 @@ end
 
 -- Play whatever is attached to a hook. opts: volume (0-100), pos.
 function sound.hook(id, opts)
+	-- (particle effects attach to the same hooks: effects.lua)
+	if nhv.effects then
+		nhv.effects.hook(id, opts)
+	end
 	local entry = sound.cfg.hooks[id]
 	local name = pick(entry)
 	local p = player()

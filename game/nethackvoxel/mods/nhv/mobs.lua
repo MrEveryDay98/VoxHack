@@ -132,6 +132,10 @@ function mobs.clear()
 	fading = {}
 	remove_all(mobs.mons)
 	remove_all(mobs.objs)
+	for _, pile in pairs(mobs.piles or {}) do
+		remove_all(pile.extras)
+	end
+	mobs.piles = {}
 	remove_all(mobs.feats)
 	-- stray entities from an earlier session
 	for _, obj in ipairs(core.get_objects_in_area(vector.new(-10, -10, -10),
@@ -244,6 +248,23 @@ local OBJ_H = 0.8
 local BILLBOARD = {["chest"] = true, ["large box"] = true, ["ice box"] = true}
 local BOULDER_H = 2.6
 
+-- how an object glyph is drawn: height, lies flat, object name
+local function obj_shape(gi)
+	local name = core.nh_obj_name(gi.index) or ""
+	local flat = gi.kind == "body"
+	local h = OBJ_H
+	if gi.kind == "statue" then
+		h = 2.0
+	elseif name == "boulder" then
+		h = BOULDER_H
+	elseif flat then
+		h = 1.4 -- corpses lie on the floor
+	elseif BILLBOARD[name] then
+		h = 1.4
+	end
+	return h, flat, name
+end
+
 local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
@@ -258,18 +279,7 @@ local function update_objects(snap)
 				if e and not e.obj:get_pos() then
 					e = nil
 				end
-				local h = OBJ_H
-				local name = core.nh_obj_name(gi.index) or ""
-				local flat = gi.kind == "body"
-				if gi.kind == "statue" then
-					h = 2.0
-				elseif name == "boulder" then
-					h = BOULDER_H
-				elseif flat then
-					h = 1.4 -- corpses lie on the floor
-				elseif BILLBOARD[name] then
-					h = 1.4
-				end
+				local h, flat, name = obj_shape(gi)
 				local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03) or (U.STAND_Y + h / 2))
 				local fresh = false
 				if not e then
@@ -318,6 +328,95 @@ local function update_objects(snap)
 			mobs.objs[i] = nil
 		end
 	end
+	mobs.update_piles(snap)
+end
+
+-- ---------------------------------------------------------------- piles
+-- Several objects on one square: the top one is drawn in the middle (as
+-- above) and up to PILE_MAX - 1 more close around it. What lies under the
+-- top object is only known on squares you can see (and your own); other
+-- squares keep the pile you last saw there while their top stays the same.
+local PILE_MAX = 5
+local PILE_OFS = {{0.6, 0.4}, {-0.55, 0.5}, {0.45, -0.6}, {-0.6, -0.45}}
+mobs.piles = {} -- square index -> {top = tile, items = {{tile=, glyph=}}, extras = {entity...}}
+
+local function set_extra(e, item, tx, ty, k)
+	local gi = nhv.glyph_info(item.glyph)
+	local h, flat = obj_shape(gi)
+	local ox, oz = PILE_OFS[k][1], PILE_OFS[k][2]
+	local c = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03 + k * 0.01) or (U.STAND_Y + h / 2))
+	local pos = vector.new(c.x + ox, c.y, c.z + oz)
+	if e.tile ~= item.tile or e.h ~= h or not vector.equals(e.pos or pos, pos) then
+		local props = sprite_props(item.tile, h)
+		props.physical = false
+		props.collisionbox = {0, 0, 0, 0, 0, 0}
+		e.obj:set_properties(props)
+		e.obj:set_pos(pos)
+		e.tile, e.h, e.pos, e.flat = item.tile, h, pos, flat
+		e.spin = (h == OBJ_H) and gi.kind == "obj"
+		if flat then
+			e.obj:set_rotation(vector.new(math.pi / 2, math.random() * math.pi * 2, 0))
+		end
+	end
+end
+
+function mobs.update_piles(snap)
+	local map, hero = snap.map, snap.hero
+	for i, top in pairs(mobs.objs) do
+		local pile = mobs.piles[i]
+		local items
+		local visible = U.has(map.flags[i], U.LOC_CANSEE) or (hero.x == top.x and hero.y == top.y)
+		if top.boulder then
+			items = {} -- (a boulder hides what's under it)
+		elseif visible then
+			items = {}
+			for k, o in ipairs(core.nh_get_floor_objects(top.x, top.y) or {}) do
+				if k > 1 and #items < PILE_MAX - 1 then
+					items[#items + 1] = {tile = o.tile, glyph = o.glyph}
+				end
+			end
+		elseif pile and pile.top == top.tile then
+			items = pile.items -- (as last seen)
+		else
+			items = {}
+		end
+		pile = pile or {extras = {}}
+		pile.top, pile.items = top.tile, items
+		mobs.piles[i] = pile
+		for k, item in ipairs(items) do
+			local e = pile.extras[k]
+			if e and not e.obj:get_pos() then
+				e = nil
+			end
+			local fresh = false
+			if not e then
+				local obj = core.add_entity(U.tile_center(top.x, top.y), "nhv:obj")
+				if obj then
+					e = {obj = obj}
+					pile.extras[k] = e
+					fresh = true
+				end
+			end
+			if e then
+				set_extra(e, item, top.x, top.y, k)
+				if fresh then
+					fade_in(e)
+				end
+			end
+		end
+		for k = #items + 1, #pile.extras do
+			fade_out(pile.extras[k])
+			pile.extras[k] = nil
+		end
+	end
+	for i, pile in pairs(mobs.piles) do
+		if not mobs.objs[i] then
+			for _, e in pairs(pile.extras) do
+				fade_out(e)
+			end
+			mobs.piles[i] = nil
+		end
+	end
 end
 
 -- ---------------------------------------------------------------- features
@@ -331,6 +430,24 @@ local function is_trap(name, gi)
 	return gi.sym == 94 or name == "S_web"
 end
 
+-- a feature's picture when objects hide it: the last one seen for that
+-- kind of feature, or the tile named after it
+local feature_tiles = {}
+local function feature_tile(name)
+	if feature_tiles[name] then
+		return feature_tiles[name]
+	end
+	local plain = name:gsub("^S_", ""):gsub("_", " ")
+	for t = 0, 6000 do
+		local n = nhv_tiles.name(t)
+		if n and (n == plain or n:sub(-#plain - 1) == " " .. plain) then
+			feature_tiles[name] = t
+			return t
+		end
+	end
+	return 0
+end
+
 local function update_features(snap)
 	local map = snap.map
 	local seen = {}
@@ -338,8 +455,21 @@ local function update_features(snap)
 		for ty = 0, U.ROWNO - 1 do
 			local i = U.idx(tx, ty)
 			local gi = nhv.glyph_info(map.mem[i])
-			if gi.kind == "cmap" then
-				local name = nhv.cmap_name(gi.index)
+			local name = gi.kind == "cmap" and nhv.cmap_name(gi.index)
+			local tile = map.mem_tile[i]
+			if name and FEATURES[name] == false then
+				feature_tiles[name] = tile
+			end
+			-- NetHack remembers only the top thing on a square: an altar,
+			-- fountain... with objects on it is still there once seen
+			if not name and U.has(map.flags[i], U.LOC_SEEN) and map.back and map.back[i] ~= 255 then
+				local real = nhv.cmap_name(map.back[i])
+				if FEATURES[real] == false then
+					name = real
+					tile = feature_tile(real)
+				end
+			end
+			if name then
 				local flat = FEATURES[name]
 				if flat == nil and is_trap(name, gi) then
 					flat = true
@@ -371,16 +501,16 @@ local function update_features(snap)
 							fresh = true
 						end
 					end
-					if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
+					if e and (e.tile ~= tile or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
 						e.pos = pos
-						local props = sprite_props(map.mem_tile[i], h)
+						local props = sprite_props(tile, h)
 						props.pointable = false
 						e.obj:set_properties(props)
 						e.obj:set_pos(pos)
 						if flat then
 							e.obj:set_rotation(vector.new(math.pi / 2, 0, 0))
 						end
-						e.tile, e.flat, e.h = map.mem_tile[i], flat, h
+						e.tile, e.flat, e.h = tile, flat, h
 					end
 					if fresh and e then
 						fade_in(e)
@@ -521,7 +651,8 @@ core.register_globalstep(function(dtime)
 			end
 		end
 	end
-	for _, e in pairs(mobs.objs) do
+	-- small items spin, the rest face you, corpses lie still
+	local function turn_obj(e)
 		if e.flat then -- luacheck: ignore 542
 			-- lies still
 		elseif e.spin and e.obj:get_pos() then
@@ -530,6 +661,14 @@ core.register_globalstep(function(dtime)
 			local pos = e.obj:get_pos()
 			local d = vector.subtract(ppos, pos)
 			e.obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
+		end
+	end
+	for _, e in pairs(mobs.objs) do
+		turn_obj(e)
+	end
+	for _, pile in pairs(mobs.piles) do
+		for _, e in pairs(pile.extras) do
+			turn_obj(e)
 		end
 	end
 	for _, e in pairs(mobs.feats) do

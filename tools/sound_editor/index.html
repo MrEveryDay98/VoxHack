@@ -29,6 +29,7 @@
   <button role="tab" data-tab="casting">Voice casting</button>
   <button role="tab" data-tab="library">Sound library</button>
   <button role="tab" data-tab="blocks">Blocks</button>
+  <button role="tab" data-tab="effects">Effects</button>
 </nav>
 
 <main>
@@ -86,6 +87,15 @@
     <div id="blocksBody"></div>
   </section>
 
+  <section id="tab-effects" class="tab" hidden>
+    <div class="toolbar">
+      <span class="hint" style="margin:0">Particle effects: pick what triggers each one (traps, reading a scroll, zapping...). The game picks up saved changes while it runs.</span>
+      <span id="fxDirty" class="dirty" hidden>Unsaved effects</span>
+      <button id="fxSave" class="primary" disabled>Save effects</button>
+    </div>
+    <div id="effectsBody"></div>
+  </section>
+
   <section id="tab-library" class="tab" hidden>
     <div class="toolbar">
       <input id="libSearch" type="search" placeholder="Search sounds…">
@@ -124,6 +134,7 @@
 <div id="toast" class="toast" hidden role="status"></div>
 <script src="/voices.js"></script>
 <script src="/blocks.js"></script>
+<script src="/effects.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

@@ -252,3 +252,7 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 @media (max-width: 860px) { .blk-layout, .blk-top { grid-template-columns: 1fr; } }
 
 [hidden] { display: none !important; }
+
+.fx-hooks { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 6px; background: #0b0b10; border-radius: 6px; }
+.fx-hooks .check { font-size: 12px; }
+.blk-group { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); margin: 8px 0 2px; }
