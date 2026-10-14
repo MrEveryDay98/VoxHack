@@ -306,49 +306,76 @@ local function door_open(door)
 	return has_bit(door, U.D_ISOPEN)
 end
 
--- Which way to kick: the kickable thing next to you (a monster, an object
--- such as a chest or boulder, a closed door) nearest to where you look,
--- within about 65 degrees; otherwise straight where you face. Forgiving on
--- purpose: aiming the crosshair exactly at a small chest is fiddly.
+-- The keys for a kick: at the kickable thing around you (a monster, an
+-- object such as a chest or boulder, a closed door) nearest to where you
+-- look, within about 65 degrees; otherwise straight where you face.
+-- Forgiving on purpose: aiming the crosshair exactly at a small chest is
+-- fiddly. An object on your own square (you can stand right beside a chest
+-- that's "on" your square) is kicked away from you.
 local KICK_CONE = math.rad(65)
-function actions.kick_dir_key(player)
+function actions.kick_keys(player)
 	local h = hero()
 	local pos = player:get_pos()
 	local look = player:get_look_dir()
 	local fwd = vector.normalize(vector.new(look.x, 0, look.z))
+	local keys = {}
+	-- kick from where the body really is: NetHack's square catches up first
+	-- (no jumping back to a square the body has left)
+	local bx, by = U.pos_to_tile(pos)
+	local base = {x = h.x, y = h.y}
+	if (bx ~= h.x or by ~= h.y) and math.abs(bx - h.x) <= 1 and math.abs(by - h.y) <= 1
+			and nhv.terrain.passable(nh.snap.map, bx, by) then
+		keys[#keys + 1] = {key = "#"}
+		keys[#keys + 1] = {text = ("nhvmove %d %d"):format(bx, by)}
+		base = {x = bx, y = by}
+	end
+	local function angle_to(target)
+		local to = vector.new(target.x - pos.x, 0, target.z - pos.z)
+		local d = vector.length(to)
+		if d < 0.01 then
+			return nil, d
+		end
+		return math.acos(math.max(-1, math.min(1, vector.dot(fwd, to) / d))), d
+	end
 	local best, best_a
 	for dx = -1, 1 do
 		for dy = -1, 1 do
-			if dx ~= 0 or dy ~= 0 then
-				local tx, ty = h.x + dx, h.y + dy
-				local target
-				local mon = U.in_map(tx, ty) and nhv.mobs.monster_at(tx, ty)
+			local tx, ty = base.x + dx, base.y + dy
+			local target
+			if U.in_map(tx, ty) then
+				local mon = (dx ~= 0 or dy ~= 0) and nhv.mobs.monster_at(tx, ty)
+				local o = nhv.mobs.objs[U.idx(tx, ty)]
 				if mon and mon.obj:get_pos() then
 					target = mon.obj:get_pos()
-				elseif U.in_map(tx, ty) then
+				elseif o and o.obj:get_pos() then
+					target = o.obj:get_pos() -- (a chest... even on your own square)
+				elseif dx ~= 0 or dy ~= 0 then
 					local sq = square_info(tx, ty)
-					if sq.has_obj or (sq.typ == U.TYP.DOOR and door_closed(sq.door)) then
+					if sq.typ == U.TYP.DOOR and door_closed(sq.door) then
 						target = U.tile_center(tx, ty)
 					end
 				end
-				if target then
-					local to = vector.new(target.x - pos.x, 0, target.z - pos.z)
-					local d = vector.length(to)
-					if d > 0.01 then
-						local a = math.acos(math.max(-1, math.min(1, vector.dot(fwd, to) / d)))
-						if a <= KICK_CONE and (not best_a or a < best_a) then
-							best, best_a = {dx, dy}, a
-						end
-					end
+			end
+			if target then
+				local a, d = angle_to(target)
+				-- (on your own square it must be right in front of you)
+				local ok = a and a <= KICK_CONE and (dx ~= 0 or dy ~= 0 or d < 2.2)
+				if ok and (not best_a or a < best_a) then
+					best, best_a = {dx, dy}, a
 				end
 			end
 		end
 	end
-	if best then
-		return U.dir_key(best[1], best[2])
+	local fx, fy = U.vec_to_dir(fwd)
+	if best and best[1] == 0 and best[2] == 0 then
+		-- NetHack can't kick what's on your own square: kick it away from you
+		keys[#keys + 1] = {key = "#"}
+		keys[#keys + 1] = {text = ("nhvkickhere %d %d"):format(fx, fy)}
+		return keys
 	end
-	local dx, dy = U.vec_to_dir(fwd)
-	return U.dir_key(dx, dy)
+	keys[#keys + 1] = {key = "\4"}
+	keys[#keys + 1] = {key = best and U.dir_key(best[1], best[2]) or U.dir_key(fx, fy)}
+	return keys
 end
 
 

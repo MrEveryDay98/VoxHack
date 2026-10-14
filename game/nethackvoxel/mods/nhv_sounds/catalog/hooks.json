@@ -956,6 +956,18 @@
    "source": "dig.c"
   },
   {
+   "id": "kick_box_thud",
+   "group": "events",
+   "desc": "kick box thud",
+   "source": "dokick.c"
+  },
+  {
+   "id": "break_open_lock",
+   "group": "events",
+   "desc": "break open lock",
+   "source": "dokick.c"
+  },
+  {
    "id": "lid_slams_open_falls_shut",
    "group": "events",
    "desc": "Kicking a box: the lid slams open, then shut",

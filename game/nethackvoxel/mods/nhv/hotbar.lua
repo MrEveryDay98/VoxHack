@@ -20,11 +20,13 @@ nhv.hotbar = hotbar
 -- you look, like everywhere else)
 hotbar.ACTIONS = {
 	{"Fire", "f"},
-	{"Kick", "\4", aim = "kick"}, -- (the direction: actions.kick_dir_key)
-	{"Pick up", ","},
-	{"Search", "s"},
+	{"Kick", "\4", aim = "kick"}, -- (the keys come from actions.kick_keys)
+	{"Zap", "z"},
+	{"Spell", "Z"},
 	{"Eat", "e"},
 }
+-- X (the NetHack Voxel build of Luanti sends "/nhvkey search")
+hotbar.SEARCH = {"Search", "s"}
 
 local W = {WEP = 0x100, SWAPWEP = 0x400}
 local SLOT, GAP, Y   -- slot size, gap and height on screen (pixels; see measure)
@@ -74,7 +76,7 @@ end
 
 local function add(player, def)
 	def.position = {x = 0.5, y = 1}
-	def.alignment = {x = 0, y = 0}
+	def.alignment = def.alignment or {x = 0, y = 0}
 	def.z_index = def.z_index or 50
 	return player:hud_add(def)
 end
@@ -82,6 +84,8 @@ end
 local function frame(color)
 	return ("[fill:%dx%d:%s^[fill:%dx%d:3,3:#141418E0"):format(SLOT, SLOT, color, SLOT - 6, SLOT - 6)
 end
+
+local SEARCH_DIM = 0x90C8C8C8 -- (see-through grey: the alpha byte is first)
 
 local function build(player)
 	measure(player)
@@ -100,6 +104,22 @@ local function build(player)
 			number = 0xFFD080, text = tostring(k - 2), z_index = 52})
 		hud["label" .. k] = add(player, {type = "text", offset = {x = slot_x(k), y = Y + 2},
 			number = 0xFFFFFF, text = a and a[1] or "", z_index = 52})
+	end
+	-- X searches: a faint hint beside the hotbar (lights up when used)
+	hud.search = add(player, {type = "text", offset = {x = slot_x(7) + SLOT / 2 + 14, y = Y},
+		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "X  Search", z_index = 52})
+end
+
+-- the hint lights up for a moment when X is pressed
+function hotbar.flash_search()
+	local player = nhv.player.get()
+	if player and hud.search then
+		player:hud_change(hud.search, "number", 0xFFFFD080)
+		core.after(0.2, function()
+			if player:is_player() and hud.search then
+				player:hud_change(hud.search, "number", SEARCH_DIM)
+			end
+		end)
 	end
 end
 
@@ -187,20 +207,24 @@ core.register_chatcommand("nhvkey", {
 	description = "(NetHack Voxel) action key",
 	func = function(pname, param)
 		local n = tonumber(param)
-		local a = n and hotbar.ACTIONS[n]
+		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
 		-- (a held key repeats: each press waits until the last action has
 		-- played out, so it repeats at action speed instead of piling up)
 		if not a or nhv.ui.open or not nh.ready() or nhv.clock.busy() then
 			return true
 		end
-		flash_slot(n + 2)
+		if n then
+			flash_slot(n + 2)
+		else
+			hotbar.flash_search()
+		end
 		local keys = {}
 		for c in a[2]:gmatch(".") do
 			keys[#keys + 1] = {key = c}
 		end
 		local player = core.get_player_by_name(pname)
 		if a.aim == "kick" and player then
-			keys[#keys + 1] = {key = nhv.actions.kick_dir_key(player)}
+			keys = nhv.actions.kick_keys(player)
 		end
 		nhv.actions.run({label = a[1], keys = keys}, {kind = "hotkey"})
 		return true
