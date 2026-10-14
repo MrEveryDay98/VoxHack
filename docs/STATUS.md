@@ -1,11 +1,15 @@
 # NetHack Voxel: status
 
 ## How to play
-Double-click `Play NetHack Voxel.bat` in the project folder. Closing the window saves the
+Double-click `Launchers/Play NetHack Voxel.bat` (or run `Create Play Shortcut.bat` once for a
+shortcut). The other launchers (debug, editors, reset save) are in `Launchers/` too. Closing the window saves the
 game; launching again continues it. Dying shows the end screen with a New Game button.
 
 To rebuild after code changes: `tools/clang64.sh 'sh tools/deploy.sh'`
 (Lua-only changes need no rebuild: the game folder is linked into Luanti.)
+
+To make a release zip (no saves, editors or dev tools): build, then
+`python -I tools/make_release.py` -> `dist/NetHackVoxel-<date>-<commit>.zip`.
 
 ## Controls
 | Input | Action |
@@ -122,7 +126,7 @@ All sprites and tile textures come from one sprite sheet:
   it's missing (delete it and run the deploy script to start over).
 
 ## Sounds and voice lines
-- **Sound editor:** run `NetHack Voxel Editor.bat` (sounds, voices and blocks). It opens a browser page where you
+- **Sound editor:** run `Launchers/NetHack Voxel Editor.bat` (sounds, voices and blocks). It opens a browser page where you
   assign sounds to hooks. Changes are picked up by a running game within about 2 seconds.
 - **Hooks** are called from NetHack's code (`NHV_HOOK`), traps, NetHack's own sound effects,
   game events and music. They are not read from the message feed. The list is in
