@@ -1,4 +1,14 @@
 {
- "blocks": {},
+ "blocks": {
+  "nhv:bars": {
+   "backfaces": {},
+   "hidden": {
+    "bottom": true,
+    "east": true,
+    "top": true,
+    "west": true
+   }
+  }
+ },
  "version": 1
 }

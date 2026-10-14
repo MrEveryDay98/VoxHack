@@ -110,9 +110,9 @@
     {
      "shape": "implode",
      "texture": {
-      "builtin": "dot"
+      "builtin": "square"
      },
-     "color": "#60A0FF",
+     "color": "#4DFF00",
      "amount": 80,
      "duration": 0.5,
      "spread": 1.6,
@@ -129,7 +129,7 @@
       1.0,
       2.0
      ],
-     "gravity": 0,
+     "gravity": 0.0,
      "glow": 14,
      "additive": true,
      "fade": true,
@@ -138,9 +138,9 @@
     {
      "shape": "ring",
      "texture": {
-      "builtin": "ring"
+      "builtin": "dot"
      },
-     "color": "#A0D0FF",
+     "color": "#AE00FF",
      "amount": 20,
      "duration": 0.2,
      "spread": 0.2,
@@ -157,7 +157,7 @@
       1.5,
       2.5
      ],
-     "gravity": 0,
+     "gravity": 0.0,
      "glow": 12,
      "additive": true,
      "fade": true,
@@ -270,7 +270,7 @@
       1.0,
       2.5
      ],
-     "gravity": 0,
+     "gravity": 0.0,
      "glow": 14,
      "additive": true,
      "fade": true,

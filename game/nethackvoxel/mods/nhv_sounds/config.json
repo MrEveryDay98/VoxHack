@@ -596,22 +596,213 @@
    "volume": 100,
    "loop": true
   },
-  "music_dungeon": {
-   "sounds": [
-    "yh_music_al"
-   ],
-   "volume": 100,
-   "loop": true
-  },
   "music_gehennom": {
    "sounds": [
     "yh_music_df"
    ],
    "volume": 100,
    "loop": true
+  },
+  "music_dungeon": {
+   "sounds": [
+    "yh_music_df"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "door_opens": {
+   "sounds": [
+    "yh_door2"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kick_door_whamm": {
+   "sounds": [
+    "yh_whammm"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "whip_snap": {
+   "sounds": [
+    "yh_snap"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "dig_too_hard": {
+   "sounds": [
+    "yh_vault"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "item_glows": {
+   "sounds": [
+    "yh_harp"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "item_glows_black": {
+   "sounds": [
+    "yh_black"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "punished": {
+   "sounds": [
+    "yh_chain"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "magic_energy": {
+   "sounds": [
+    "yh_shimmer"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "god_gift": {
+   "sounds": [
+    "yh_gift"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "water_gushes": {
+   "sounds": [
+    "yh_water"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "tin_opened": {
+   "sounds": [
+    "yh_tin"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "lot_of_noise": {
+   "sounds": [
+    "yh_noise"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "delphi_welcome": {
+   "sounds": [
+    "yh_fanfare"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "blinded_by_flash": {
+   "sounds": [
+    "yh_camera"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "mimic_revealed": {
+   "sounds": [
+    "yh_mimic1",
+    "yh_mimic2",
+    "yh_mimic3"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "ambient_bubbling": {
+   "sounds": [
+    "yh_bubbs"
+   ],
+   "volume": 60,
+   "pitch_var": 0.05
+  },
+  "ambient_coins": {
+   "sounds": [
+    "yh_coinsfall"
+   ],
+   "volume": 50,
+   "pitch_var": 0.05
+  },
+  "ambient_naiad": {
+   "sounds": [
+    "yh_naiad"
+   ],
+   "volume": 60,
+   "pitch_var": 0.05
+  },
+  "ambient_sink_drip": {
+   "sounds": [
+    "yh_drip"
+   ],
+   "volume": 60,
+   "pitch_var": 0.05
+  },
+  "ambient_sink_gurgle": {
+   "sounds": [
+    "yh_gurgling"
+   ],
+   "volume": 60,
+   "pitch_var": 0.05
+  },
+  "container_open": {
+   "sounds": [
+    "yh_creak"
+   ],
+   "volume": 50,
+   "pitch_var": 0.05
+  },
+  "ray_bounce": {
+   "sounds": [
+    "yh_bounces"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "bees": {
+   "sounds": [
+    "yh_beehive"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kick_box_thud": {
+   "sounds": [
+    "yh_thud"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "break_open_lock": {
+   "sounds": [
+    "yh_crack"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
- "voices": {},
+ "voices": {
+  "spoken.6e500ce192": {
+   "sound": "voice_spoken_6e500ce192_1399786",
+   "volume": 100
+  },
+  "spoken.67073d053d": {
+   "sound": "voice_spoken_67073d053d_1396d0d",
+   "volume": 100
+  },
+  "spoken.f01677ab19": {
+   "sound": "voice_spoken_f01677ab19_1396d1c",
+   "volume": 100
+  }
+ },
  "master": {
   "effects": 100,
   "music": 60,
