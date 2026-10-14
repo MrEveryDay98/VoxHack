@@ -98,9 +98,10 @@ function sim.sync()
 				path = nil, repath = 0, wander = nil}
 			sim.mons[m.id] = e
 		elseif e.x ~= m.x or e.y ~= m.y then
-			-- NetHack moved it itself (teleport, displacement, a grid mover)
+			-- NetHack moved it itself (teleport, displacement, dodging, a grid
+			-- mover): a step to the next square glides there, a jump snaps
 			local adj = math.abs(e.x - m.x) <= 1 and math.abs(e.y - m.y) <= 1
-			if adj and has(m.flags, MF.GRID) then
+			if adj then
 				e.glide = center_of(m.x, m.y)
 			else
 				e.pos = center_of(m.x, m.y)
@@ -253,18 +254,25 @@ end
 -- one monster's movement for this step
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
+	if e.glide then
+		-- NetHack already put it there: slide straight in, quickly (at
+		-- least a square per turn), through anything in the way
+		local d = flat_dist(e.pos, e.glide)
+		local step = math.min(d, math.max((e.speed or 12) / 12, 1.5) * dturns * TILE)
+		if d > 0 then
+			e.pos = vector.add(e.pos, vector.multiply(vector.direction(e.pos, e.glide), step))
+			e.pos.y = 0
+		end
+		if flat_dist(e.pos, e.glide) < 0.05 then
+			e.pos, e.glide = e.glide, nil
+		end
+		return
+	end
 	if not has(e.flags, MF.CANMOVE) or has(e.flags, MF.HIDDEN) then
 		return
 	end
 	local dist = (e.speed or 12) / 12 * dturns * TILE
 	if dist <= 0 then
-		return
-	end
-	if e.glide then
-		move_toward(e, map, e.glide, dist, 0, nil)
-		if flat_dist(e.pos, e.glide) < 0.05 then
-			e.glide = nil
-		end
 		return
 	end
 	if has(e.flags, MF.GRID) then

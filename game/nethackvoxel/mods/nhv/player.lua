@@ -111,7 +111,9 @@ local function set_speed(player)
 	if player_mod.frozen then
 		speed = 0
 	end
-	player:set_physics_override({speed = speed, jump = 0, sneak_glitch = false,
+	-- (no sneaking: Shift is for the action wheel and firing, and must not
+	-- stop you walking off ledges into pits)
+	player:set_physics_override({speed = speed, jump = 0, sneak = false, sneak_glitch = false,
 		new_move = true, gravity = h and 1 or 0})
 end
 
@@ -158,6 +160,10 @@ local function try_push(player)
 			local gx = math.max(0, math.abs(bp.x - pos.x) - w - 0.35)
 			local gz = math.max(0, math.abs(bp.z - pos.z) - w - 0.35)
 			local to = vector.normalize(vector.new(bp.x - pos.x, 0, bp.z - pos.z))
+			if core.settings:get_bool("nhv_debug") then
+				core.log("action", ("[nhv] push? gap %.2f,%.2f dot %.2f boulder %d,%d hero %d,%d"):format(
+					gx, gz, vector.dot(to, dir), e.x, e.y, h.x, h.y))
+			end
 			if gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.6 then
 				push_next = core.get_us_time() + 400000
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},

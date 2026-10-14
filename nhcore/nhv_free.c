@@ -90,8 +90,11 @@ donhvmove(void)
         return ECMD_OK;
     mtmp = m_at(x, y);
     u.dx = dx, u.dy = dy, u.dz = 0;
-    /* walking never fights; it may swap places with a pet */
-    svc.context.nopick = !(mtmp && mtmp->mtame && canspotmon(mtmp));
+    /* walking never fights; it may swap places with a pet. (The
+       no-fighting flag also means "don't push boulders", so walking into
+       a boulder with nobody there goes without it: it pushes) */
+    svc.context.nopick = !(mtmp && mtmp->mtame && canspotmon(mtmp))
+                         && !(sobj_at(BOULDER, x, y) && !mtmp);
     svc.context.forcefight = 0;
     domove();
     svc.context.nopick = 0;

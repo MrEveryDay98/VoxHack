@@ -253,8 +253,58 @@ local function styled_cid(name)
 	return cid(name)
 end
 
+-- Squeezing past a corner: NetHack lets you step diagonally between two
+-- open squares that touch only at a corner (both squares in between solid),
+-- but in 3D they'd meet along a single edge you can't fit through. Such
+-- corners get their corner column carved out of both solid squares, which
+-- leaves a one-block gap to slip through. Not next to a doorway with a door
+-- in it (no diagonal moves through those in NetHack either).
+local function diag_open(map, x, y)
+	if not U.in_map(x, y) then
+		return false
+	end
+	local i = U.idx(x, y)
+	local typ = map.typ[i]
+	if not typ or not open_typ(typ) then
+		return false
+	end
+	-- (a door that isn't missing or broken: no diagonal moves)
+	return not (typ == T.DOOR and (map.door[i] or 0) >= 2)
+end
+
+local function solid_at(map, x, y)
+	if not U.in_map(x, y) then
+		return true
+	end
+	local typ = map.typ[U.idx(x, y)]
+	return not typ or not open_typ(typ)
+end
+
+local function carve_corners(data, area, sq)
+	local map = terrain.map
+	if not map or open_typ(sq.typ) then
+		return
+	end
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	local air = cid("air")
+	for _, sx in ipairs({-1, 1}) do
+		for _, sy in ipairs({-1, 1}) do
+			if diag_open(map, sq.tx + sx, sq.ty) and diag_open(map, sq.tx, sq.ty + sy)
+					and solid_at(map, sq.tx + sx, sq.ty + sy) then
+				-- (world z runs opposite to map y)
+				local lx = sx > 0 and U.TILE - 1 or 0
+				local lz = sy < 0 and U.TILE - 1 or 0
+				for ly = prefabs.FLOOR + 1, prefabs.CEIL - 1 do
+					data.ids[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = air
+				end
+			end
+		end
+	end
+end
+
 local function write_square(data, area, sq)
 	prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
+	carve_corners(data, area, sq)
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
 	end
@@ -413,7 +463,8 @@ function terrain.update(map, force)
 		terrain.wall_style = style
 		force = true -- redraw what's already built with this level's walls
 	end
-	local sqs = {}
+	terrain.map = map
+	local sqs, queued = {}, {}
 	for tx = 1, U.COLNO - 1 do
 		for ty = 0, U.ROWNO - 1 do
 			local i, sq = describe(map, tx, ty)
@@ -424,6 +475,23 @@ function terrain.update(map, force)
 				end
 				terrain.built[i] = sq
 				sqs[#sqs + 1] = sq
+				queued[i] = true
+			end
+		end
+	end
+	-- (a square that changed can open or close a corner squeeze next to it)
+	if not force then
+		for k = 1, #sqs do
+			local sq = sqs[k]
+			for dx = -1, 1 do
+				for dy = -1, 1 do
+					local x, y = sq.tx + dx, sq.ty + dy
+					local j = U.in_map(x, y) and U.idx(x, y)
+					if j and not queued[j] and terrain.built[j] then
+						queued[j] = true
+						sqs[#sqs + 1] = terrain.built[j]
+					end
+				end
 			end
 		end
 	end

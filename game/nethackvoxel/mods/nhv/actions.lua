@@ -145,11 +145,52 @@ function actions.attack(player, prefer_id)
 	if t then
 		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
+	elseif actions.try_dig(player) then -- luacheck: ignore 542
+		-- (digging with the wielded pick-axe)
 	else
 		-- a swing at nothing still takes the time a swing takes
 		nhv.sound.hook("hero_swing_miss_air")
 		nhv.clock.act(ext("nhvtick"), {kind = "swing"})
 	end
+end
+
+-- With a pick-axe or mattock in hand, attacking rock or a wall next to you
+-- digs into it, and attacking while looking down digs down (NetHack's
+-- apply; its direction is where you look).
+local DIGGERS = {["pick-axe"] = true, ["dwarvish mattock"] = true}
+function actions.try_dig(player)
+	local h = hero()
+	local tool
+	for _, o in ipairs((nh.snap and nh.snap.inventory) or {}) do
+		local name = (o.name or ""):lower()
+		if (o.worn or 0) % 0x200 >= 0x100 then -- (wielded)
+			for d in pairs(DIGGERS) do
+				if name:find(d, 1, true) then
+					tool = o
+				end
+			end
+		end
+	end
+	if not tool then
+		return false
+	end
+	local dk = actions.pointed_dir_key(player, "dig")
+	if dk ~= ">" then
+		local p = actions.pointed(player)
+		local wx, wy = p.wx or p.tx, p.wy or p.ty
+		if not wx or math.abs(wx - h.x) > 1 or math.abs(wy - h.y) > 1
+				or (wx == h.x and wy == h.y) then
+			return false
+		end
+		local typ = nh.snap.map.typ[U.idx(wx, wy)]
+		local T = U.TYP
+		if not (typ and typ < T.POOL and typ ~= T.IRONBARS and typ ~= T.DOOR and typ ~= T.TREE) then
+			return false
+		end
+	end
+	actions.swing()
+	nhv.clock.act({{key = "a"}, {key = tool.invlet}}, {kind = "dig"})
+	return true
 end
 
 function actions.attack_entity(player, ent)
@@ -196,7 +237,9 @@ function actions.pointed(player)
 			end
 			local p = vector.multiply(vector.add(pt.under, pt.above), 0.5)
 			local tx, ty = U.pos_to_tile(p)
-			return {kind = "square", tx = tx, ty = ty}
+			-- (wx, wy: the square of the block itself, e.g. the wall)
+			local wx, wy = U.pos_to_tile(pt.under)
+			return {kind = "square", tx = tx, ty = ty, wx = wx, wy = wy}
 		end
 	end
 	local h = hero()
@@ -211,6 +254,11 @@ function actions.pointed_dir_key(player, prompt)
 	local h = hero()
 	local p = actions.pointed(player)
 	local dx, dy = p.tx - h.x, p.ty - h.y
+	-- a wall face on the edge of your own square: the wall's square
+	if dx == 0 and dy == 0 and p.wx and pitch <= 1.0
+			and math.abs(p.wx - h.x) <= 1 and math.abs(p.wy - h.y) <= 1 then
+		dx, dy = p.wx - h.x, p.wy - h.y
+	end
 	if math.abs(dx) <= 1 and math.abs(dy) <= 1 and (dx ~= 0 or dy ~= 0) then
 		return U.dir_key(dx, dy)
 	end
