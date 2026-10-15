@@ -406,6 +406,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		if fields.menu_cancel or fields.line_cancel or fields.quit then
 			answered()
+			-- (Esc already closed it; the Cancel button didn't)
+			close("nhv:req")
 			if req.kind == "menu" then
 				nh.answer_menu("")
 			elseif req.kind == "line" then
