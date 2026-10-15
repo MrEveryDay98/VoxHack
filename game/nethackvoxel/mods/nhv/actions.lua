@@ -143,12 +143,14 @@ function actions.attack(player, prefer_id)
 	end
 	local t = attack_target(player, prefer_id)
 	if t then
+		actions.swing()
 		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
 	elseif actions.try_dig(player) then -- luacheck: ignore 542
-		-- (digging with the wielded pick-axe)
+		-- (digging with the wielded pick-axe; it swings)
 	else
 		-- a swing at nothing still takes the time a swing takes
+		actions.swing()
 		nhv.sound.hook("hero_swing_miss_air")
 		nhv.clock.act(ext("nhvtick"), {kind = "swing"})
 	end

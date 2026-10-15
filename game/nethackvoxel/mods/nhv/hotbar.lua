@@ -34,6 +34,7 @@ hotbar.PAY = {"Pay", "p", shop = true}
 local W = {WEP = 0x100, SWAPWEP = 0x400}
 local SLOT, GAP, Y   -- slot size, gap and height on screen (pixels; see measure)
 local hud = {}       -- element ids
+local cooldown_w     -- the cooldown bar's width shown now (pixels)
 
 -- slots grow with Graphics > Text size so their labels fit, as far as
 -- the window's width allows
@@ -94,7 +95,7 @@ local HINT_LIT = 0xFFFFD080
 local function build(player)
 	measure(player)
 	if nhv.hud.place_status then
-		nhv.hud.place_status(player, SLOT + 20) -- (the status line sits just above)
+		nhv.hud.place_status(player, SLOT + 28) -- (the status line sits just above)
 	end
 	for k = 1, 7 do
 		hud["bg" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y},
@@ -116,6 +117,11 @@ local function build(player)
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "X  Search", z_index = 52})
 	hud.pay = add(player, {type = "text", offset = {x = hx, y = Y + SLOT * 0.2},
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
+	-- the cooldown bar: just above the hotbar while an action plays out
+	-- (until it's gone you can't act again); see update_cooldown
+	hud.cooldown = add(player, {type = "image", offset = {x = 0, y = Y - SLOT / 2 - 10},
+		scale = {x = 0, y = 4}, text = "[fill:1x1:#FFFFFF", z_index = 52})
+	cooldown_w = nil
 end
 
 -- the hint lights up for a moment when X is pressed
@@ -161,6 +167,25 @@ end
 local function channel(c, shift)
 	return math.floor(c / 2 ^ shift) % 256
 end
+
+-- the cooldown bar shrinks as the action plays out
+local function update_cooldown(player)
+	if not hud.cooldown then
+		return
+	end
+	local w = math.floor(SLOT * 2.5 * nhv.clock.cooldown() / 2 + 0.5) * 2 -- (even: stays centred)
+	if w ~= cooldown_w then
+		cooldown_w = w
+		player:hud_change(hud.cooldown, "scale", {x = w, y = 4})
+	end
+end
+
+core.register_globalstep(function()
+	local player = nhv.player.get()
+	if player then
+		update_cooldown(player)
+	end
+end)
 
 local pulse_t = 0
 core.register_globalstep(function(dtime)

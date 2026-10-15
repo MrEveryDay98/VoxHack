@@ -210,7 +210,9 @@ end
 
 core.register_on_joinplayer(function(player)
 	-- right-click doesn't swing the arm by itself (actions.run swings it)
-	player:hud_set_flags({nhv_no_place_swing = true})
+	-- (clicking doesn't swing the arm by itself: actions.swing does, when an
+	-- attack really happens)
+	player:hud_set_flags({nhv_no_place_swing = true, nhv_no_dig_swing = true})
 	player:hud_set_flags({minimap = false, minimap_radar = false, healthbar = false,
 		breathbar = false, basic_debug = false})
 	hud.ids.status = player:hud_add({

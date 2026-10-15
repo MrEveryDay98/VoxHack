@@ -24,6 +24,7 @@ local nh = nhv.nh
 local clock = {
 	scale = 0,     -- current time rate (0..1)
 	debt = 0,      -- turns an action still has to play out
+	debt_total = 0, -- ... out of this many (for the cooldown bar)
 	acc = 0,       -- turns accumulated toward the next tick
 	game = 0,      -- total game time passed (turns)
 }
@@ -56,9 +57,21 @@ function clock.hero_speed()
 	return s
 end
 
+-- NetHack's encumbrance slows you: Burdened 3/4, Stressed 1/2, Strained
+-- 1/4, Overtaxed 1/8 of your speed; Overloaded you can't move at all
+clock.ENCUMBRANCE = {[0] = 1, 0.75, 0.5, 0.25, 0.125, 0}
+
+-- how fast the hero really moves (12 = normal), carrying what it carries
+function clock.move_speed()
+	local h = nh.snap and nh.snap.hero
+	return clock.hero_speed() * (clock.ENCUMBRANCE[h and h.encumbrance or 0] or 1)
+end
+
 -- turns one hero action takes
 function clock.action_turns()
-	return 12 / clock.hero_speed()
+	-- (carrying more, each action spans more turns, as in NetHack; even
+	-- Overloaded, time still passes)
+	return 12 / math.max(1.5, clock.move_speed())
 end
 
 function clock.busy()
@@ -69,6 +82,15 @@ end
 clock.MAX_DEBT = 25
 function clock.add_debt(turns)
 	clock.debt = math.min(clock.debt + turns, clock.MAX_DEBT)
+	clock.debt_total = clock.debt <= turns and clock.debt or math.max(clock.debt_total, clock.debt)
+end
+
+-- how much of the current action is left to play out (1 .. 0)
+function clock.cooldown()
+	if clock.debt <= 0 or clock.debt_total <= 0 then
+		return 0
+	end
+	return math.min(1, clock.debt / clock.debt_total)
 end
 
 -- Advance the clock; returns game turns passed this step.
@@ -79,7 +101,8 @@ function clock.update(dtime, player)
 	end
 	local v = player:get_velocity()
 	local speed = math.sqrt(v.x * v.x + v.z * v.z)
-	local walk = clock.WALK * clock.hero_speed() / 12
+	-- (walking flat out at the speed you can manage is full speed)
+	local walk = math.max(0.1, clock.WALK * clock.move_speed() / 12)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
 	if clock.debt > 0 or clock.realtime() then
 		target = 1

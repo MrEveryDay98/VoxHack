@@ -101,12 +101,10 @@ end
 
 local function set_speed(player)
 	local h = player_mod.hero
-	local speed = nhv.clock.hero_speed() / 12
-	if h then
-		speed = speed * (({[0] = 1, 0.85, 0.7, 0.55, 0.4, 0.25})[h.encumbrance] or 1)
-		if stuck(h) then
-			speed = 0
-		end
+	-- NetHack speed, slowed by what you carry (see clock.move_speed)
+	local speed = nhv.clock.move_speed() / 12
+	if h and stuck(h) then
+		speed = 0
 	end
 	if player_mod.frozen then
 		speed = 0
