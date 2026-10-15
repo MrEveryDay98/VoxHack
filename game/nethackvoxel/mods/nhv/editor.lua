@@ -738,6 +738,7 @@ core.register_globalstep(function(dtime)
 			text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
 				info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
 		end
+		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 2x speed"
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
@@ -751,6 +752,19 @@ end)
 
 core.register_on_leaveplayer(function(player)
 	hud_ids[player:get_player_name()] = nil
+end)
+
+-- holding Ctrl moves you (flying or walking) at twice the speed
+local ctrl_held = {}
+core.register_globalstep(function()
+	for _, player in ipairs(core.get_connected_players()) do
+		local name = player:get_player_name()
+		local ctrl = player:get_player_control().nhv_ctrl or false
+		if ctrl ~= (ctrl_held[name] or false) then
+			ctrl_held[name] = ctrl
+			player:set_physics_override({speed = ctrl and 2 or 1})
+		end
+	end
 end)
 
 -- spawn / respawn in front of the first cell, and catch falls
