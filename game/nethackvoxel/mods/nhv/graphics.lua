@@ -60,7 +60,7 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 11.2),
+		theme.head(10, 12.1),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -74,7 +74,8 @@ function graphics.formspec()
 		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
 		"button[0.5,10.2;4.4,0.8;nhoptions;NetHack options...]",
-		"button_exit[5.1,10.2;4.4,0.8;close;Done]",
+		"button[5.1,10.2;4.4,0.8;guide;Controls & guide...]",
+		"button_exit[5.1,11.1;4.4,0.8;close;Done]",
 	})
 end
 
@@ -102,6 +103,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if fields.nhoptions then
 		nhv.nhopts.show(player)
+		return true
+	end
+	if fields.guide then
+		nhv.guide.from_options = true
+		nhv.guide.show(player, 1)
 		return true
 	end
 	local changed, reshow = false, false

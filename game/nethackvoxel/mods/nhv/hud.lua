@@ -145,8 +145,9 @@ local function update_messages(player)
 		table.remove(hud.messages, 1)
 	end
 	local lines = {}
-	-- (the chat console shows the whole log meanwhile)
-	if not nhv.ui.chat_open then
+	-- (the chat console shows the whole log meanwhile; the guide covers
+	-- the screen)
+	if not nhv.ui.chat_open and not (nhv.guide and nhv.guide.open) then
 		for _, m in ipairs(hud.messages) do
 			lines[#lines + 1] = m.text
 		end

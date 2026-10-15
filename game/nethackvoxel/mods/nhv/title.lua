@@ -75,6 +75,7 @@ local function start(player, name)
 	-- form or the replace question; only one with the right name closes)
 	core.close_formspec(player:get_player_name(), "")
 	title.open = false
+	nhv.guide.first_run() -- (the guide, the very first time)
 	nhv.new_game(player, name)
 end
 
