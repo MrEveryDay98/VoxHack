@@ -147,7 +147,7 @@ function player_mod.squeeze_reason(snap)
 		carried = carried + (o.weight or 0)
 	end
 	if carried > 600 then
-		return ("You're carrying too much to squeeze past boulders (%d of 600)."):format(carried)
+		return "You're carrying too much to squeeze past boulders."
 	end
 	return "You can't squeeze past boulders here."
 end
