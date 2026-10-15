@@ -324,7 +324,7 @@ end
 -- the box leaves room at the corners for that. Not when NetHack wouldn't
 -- let you (carrying over 600, too big, in Sokoban), nor beside a doorway
 -- with a door in it (no diagonal moves through those): full width then.
-local BOULDER_SQUEEZE_W = 0.7
+local BOULDER_SQUEEZE_W = 0.6 -- (0.9 nodes either side of it in its square)
 local function boulder_w(map, tx, ty, h, hero)
 	if hero and U.has(hero.flags, U.HERO.NOSQUEEZE) then
 		return h * 0.45

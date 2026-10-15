@@ -170,6 +170,14 @@ local function try_push(player)
 			-- squeezed past, and walls keep you from reaching it: more reach
 			local diag = e.x ~= h.x and e.y ~= h.y
 			local reach = diag and 0.6 or 0.15
+			-- (rock, a wall or bars beyond it: it can't roll there, so you're
+			-- squeezing past it, not pushing; a boulder beyond is still tried:
+			-- NetHack shows it then)
+			local bx, by = 2 * e.x - h.x, 2 * e.y - h.y
+			local beyond = U.in_map(bx, by) and nh.snap and nh.snap.map.typ[U.idx(bx, by)]
+			if not beyond or beyond < U.TYP.POOL or beyond == U.TYP.IRONBARS then
+				reach = -1
+			end
 			local push_dir = vector.normalize(vector.new(e.x - h.x, 0, -(e.y - h.y)))
 			if gx < reach and gz < reach and vector.dot(push_dir, dir) > 0.86
 					and vector.dot(to, dir) > 0 then
