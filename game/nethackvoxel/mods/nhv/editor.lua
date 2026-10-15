@@ -11,6 +11,7 @@
 --   /area                   list the special level areas
 --   /area <name>            go to an area's build plate (see areas.lua)
 --   /area reset <name>      start an area over from the usual prefabs
+--   /fullbright             see everything at full brightness (toggle)
 -- I opens the block palette. Placing never uses up blocks; digging is
 -- instant.
 
@@ -767,6 +768,21 @@ core.register_on_leaveplayer(function(player)
 	end
 	nhv.terrain.hero_light_pos = nil
 end)
+
+-- /fullbright: see everything at full brightness (the NetHack Voxel build
+-- of Luanti draws blocks and objects without light or shadow)
+core.register_chatcommand("fullbright", {
+	description = "Toggle seeing everything at full brightness",
+	func = function(pname)
+		local player = core.get_player_by_name(pname)
+		if not player then
+			return false
+		end
+		local on = not player:hud_get_flags().nhv_fullbright
+		player:hud_set_flags({nhv_fullbright = on})
+		return true, on and "Full brightness on (/fullbright to turn it off)." or "Full brightness off."
+	end,
+})
 
 -- holding Ctrl moves you (flying or walking) at twice the speed; a light
 -- goes with you, as in the game (never saved into a cell or area)
