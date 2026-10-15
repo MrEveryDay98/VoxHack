@@ -277,18 +277,42 @@ local function step(player)
 		local e = nhv.mobs.objs[U.idx(x, y)]
 		return e and e.boulder
 	end
-	if boulder_at(tx, ty) then
+	-- someone NetHack won't let you step onto (a pet you swap places with)
+	local function blocker_at(x, y)
+		local e = nhv.mobs.monster_at(x, y)
+		return e and e.id and e.id > 0 and not U.has(e.mon and e.mon.flags or 0, U.MON_PET)
+	end
+	-- (the body is beside a boulder or walking past someone, in their
+	-- square: wait for it to come out the other side)
+	if boulder_at(tx, ty) or blocker_at(tx, ty) then
 		return
 	end
 	-- catch up a square at a time along a path NetHack allows: around
-	-- boulders (squeezing past them diagonally is fine), no diagonal steps
-	-- into or out of a doorway with a door (e.g. a shop's)
+	-- boulders (squeezing past them diagonally is fine) and monsters, no
+	-- diagonal steps into or out of a doorway with a door (e.g. a shop's)
 	local map = nh.snap and nh.snap.map
-	local route = map and nhv.path.find(h.x, h.y, tx, ty,
-		function(x, y) return terrain.passable(map, x, y) and not boulder_at(x, y) end,
-		function(x, y)
-			return terrain.is_door(map, x, y) and (map.door[U.idx(x, y)] or 0) >= 2
-		end, 300, not U.has(h.flags, U.HERO.NOSQUEEZE))
+	local function find(around_monsters)
+		return map and nhv.path.find(h.x, h.y, tx, ty,
+			function(x, y)
+				return terrain.passable(map, x, y) and not boulder_at(x, y)
+					and not (around_monsters and blocker_at(x, y))
+			end,
+			function(x, y)
+				return terrain.is_door(map, x, y) and (map.door[U.idx(x, y)] or 0) >= 2
+			end, 300, not U.has(h.flags, U.HERO.NOSQUEEZE))
+	end
+	local route = find(true)
+	if not (route and route[1]) then
+		-- someone in the way (a 1-wide corridor): you walked past them in
+		-- 3D, so NetHack moves you two squares at once, over them
+		local past = find(false)
+		if past and past[2] and blocker_at(past[1].x, past[1].y) then
+			local to = past[2]
+			nh.act({{key = "#"}, {text = ("nhvpass %d %d"):format(to.x, to.y)}},
+				{kind = "hmove", tx = to.x, ty = to.y, from_x = h.x, from_y = h.y})
+			return
+		end
+	end
 	if route and route[1] then
 		tx, ty = route[1].x, route[1].y
 	elseif far then

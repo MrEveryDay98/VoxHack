@@ -114,6 +114,40 @@ send_arg(const char *a)
                 nhv_send_key('#'), nhv_send_text(buf);
             }
         }
+    } else if (!strcmp(a, "pass")) {
+        /* hop over the first monster next to the hero (#nhvpass) */
+        nhv_hero h;
+        nhv_monfull m[16];
+        int n = nhv_get_all_monsters(m, 16), k;
+        char buf[64];
+
+        static nhv_loc map[NHV_COLNO * NHV_ROWNO];
+        int dx, dy;
+
+        nhv_get_hero(&h);
+        nhv_get_map(map);
+        for (k = 0; k < n && k < 16; k++)
+            if (abs(m[k].x - h.x) <= 1 && abs(m[k].y - h.y) <= 1)
+                /* a floor square two steps away, next to the monster */
+                for (dx = -2; dx <= 2; dx++)
+                    for (dy = -2; dy <= 2; dy++) {
+                        int x = h.x + dx, y = h.y + dy;
+                        nhv_glyph_info gi;
+
+                        if ((abs(dx) != 2 && abs(dy) != 2) || x < 1 || y < 0
+                            || x >= NHV_COLNO || y >= NHV_ROWNO
+                            || abs(x - m[k].x) > 1 || abs(y - m[k].y) > 1)
+                            continue;
+                        nhv_get_glyph_info(map[x * NHV_ROWNO + y].glyph, &gi);
+                        if (gi.sym != '.')
+                            continue;
+                        sprintf(buf, "nhvpass %d %d", x, y);
+                        printf("PASS over %d,%d to %d,%d\n", m[k].x, m[k].y, x, y);
+                        nhv_send_key('#'), nhv_send_text(buf);
+                        return;
+                    }
+        printf("PASS: nobody next to the hero\n");
+        nhv_send_key('#'), nhv_send_text("nhvtick");
     } else if (!strcmp(a, "missiles")) {
         /* list new missiles; the first one reaches the hero */
         nhv_missile ms[16];

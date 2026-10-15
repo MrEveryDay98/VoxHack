@@ -105,6 +105,36 @@ donhvmove(void)
     return ECMD_OK;
 }
 
+/* #nhvpass x y: the hero's body walked past a monster (in NetHack two
+   can't share a square, but in 3D you walk by them): move two squares at
+   once, over the occupied one, when each of the two steps is a move NetHack
+   would allow but for whoever is in the way (walls, doors, squeezing past
+   corners all still count). Takes no time, like #nhvmove; traps, autopickup
+   and the like happen where you arrive. */
+int
+donhvpass(void)
+{
+    int x = nhv_cmd_args[0], y = nhv_cmd_args[1];
+    int dx = x - u.ux, dy = y - u.uy;
+    coordxy mx, my;
+
+    if (!isok(x, y) || max(abs(dx), abs(dy)) != 2 || m_at(x, y) || u.ustuck
+        || u.utrap || u.uswallow)
+        return ECMD_OK;
+    for (mx = u.ux - 1; mx <= u.ux + 1; mx++)
+        for (my = u.uy - 1; my <= u.uy + 1; my++) {
+            if (!isok(mx, my) || u_at(mx, my) || abs(x - mx) > 1
+                || abs(y - my) > 1 || !m_at(mx, my))
+                continue; /* (only to get past someone) */
+            if (test_move(u.ux, u.uy, mx - u.ux, my - u.uy, TEST_MOVE)
+                && test_move(mx, my, x - mx, y - my, TEST_MOVE)) {
+                teleds(x, y, TELEDS_ALLOW_DRAG);
+                return ECMD_OK;
+            }
+        }
+    return ECMD_OK;
+}
+
 /* #nhvtick: one hero action's worth of time passes. */
 int
 donhvtick(void)
