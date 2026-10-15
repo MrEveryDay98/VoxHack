@@ -255,14 +255,28 @@ function nhopts.show(player)
 	core.show_formspec(player:get_player_name(), FORM, nhopts.formspec())
 end
 
+-- (a checkbox's value comes only when it's clicked, as an event of its
+-- own, not with Save: the clicks are kept until Save or Back)
+local ticked = {} -- player name -> {field = "true"/"false"}
+
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= FORM then
 		return false
+	end
+	local pname = player:get_player_name()
+	ticked[pname] = ticked[pname] or {}
+	for _, o in ipairs(nhopts.OPTIONS) do
+		if o.kind == "bool" and fields["o_" .. o.key] ~= nil then
+			ticked[pname]["o_" .. o.key] = fields["o_" .. o.key]
+		end
 	end
 	if fields.save or fields.key_enter_field then
 		local changed = {}
 		for _, o in ipairs(nhopts.OPTIONS) do
 			local v = fields["o_" .. o.key]
+			if v == nil and o.kind == "bool" then
+				v = ticked[pname]["o_" .. o.key]
+			end
 			if v ~= nil then
 				if o.kind == "bool" then
 					v = v == "true"
@@ -282,9 +296,13 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			core.settings:write()
 			queue_runtime(changed)
 		end
+		ticked[pname] = nil
 		nhv.hud.message("NetHack options saved.")
 		nhv.graphics.show(player)
 		return true
+	end
+	if fields.back or fields.quit then
+		ticked[pname] = nil -- (not saved: forgotten)
 	end
 	if fields.back then
 		nhv.graphics.show(player)
