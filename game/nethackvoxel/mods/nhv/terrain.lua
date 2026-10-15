@@ -177,6 +177,44 @@ local function has_bit(v, b)
 	return v % (b * 2) >= b
 end
 
+-- Stairs and ladders face their way in: a prefab's front (the red block in
+-- the prefab editor, north at rotation 0; each quarter turn moves it on
+-- clockwise: east, south, west) goes to the side you can walk up to, so a
+-- staircase built against a wall can still be climbed. The side that opens
+-- most (the square in front, then the two beside it) wins; ties keep north.
+local FACING = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}} -- map dx, dy for rot 0..3
+local function walkable(map, tx, ty)
+	if not U.in_map(tx, ty) then
+		return false
+	end
+	local typ = map.typ[U.idx(tx, ty)]
+	return typ ~= nil and typ >= T.DOOR and typ ~= T.LAVAPOOL and typ ~= T.WATER
+		and typ ~= T.POOL and typ ~= T.MOAT
+end
+
+local function entrance_rot(map, tx, ty)
+	local best, best_score = 0, -1
+	for r = 0, 3 do
+		local f = FACING[r + 1]
+		local score = 0
+		if walkable(map, tx + f[1], ty + f[2]) then
+			score = 10
+			-- (the squares either side of the one in front: facing into
+			-- the room rather than along its wall)
+			for _, side in ipairs({1, -1}) do
+				local sx, sy = f[1] + side * f[2], f[2] - side * f[1]
+				if walkable(map, tx + sx, ty + sy) then
+					score = score + 1
+				end
+			end
+		end
+		if score > best_score then
+			best, best_score = r, score
+		end
+	end
+	return best
+end
+
 -- slot, rotation for a seen square
 local function base_slot(map, i, tx, ty, memcmap)
 	local typ = map.typ[i]
@@ -222,7 +260,7 @@ local function base_slot(map, i, tx, ty, memcmap)
 	elseif typ == T.CORR then
 		return "corridor", 0
 	elseif (typ == T.STAIRS or typ == T.LADDER) and STAIR_SLOTS[memcmap] then
-		return STAIR_SLOTS[memcmap], 0
+		return STAIR_SLOTS[memcmap], entrance_rot(map, tx, ty)
 	elseif FEATURE_SLOTS[memcmap] then
 		return FEATURE_SLOTS[memcmap], 0
 	elseif typ == T.FOUNTAIN then
