@@ -318,6 +318,22 @@ local function match_moves(map)
 	end
 end
 
+-- A boulder's solid box is narrower than its picture: in NetHack you can
+-- squeeze diagonally between a boulder and a wall (or another boulder), and
+-- the box leaves room at the corners for that. Not beside a doorway with a
+-- door in it (no diagonal moves through those).
+local BOULDER_SQUEEZE_W = 0.7
+local function boulder_w(map, tx, ty, h)
+	for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+		local x, y = tx + d[1], ty + d[2]
+		if U.in_map(x, y) and map.typ[U.idx(x, y)] == U.TYP.DOOR
+				and (map.door[U.idx(x, y)] or 0) >= 2 then
+			return h * 0.45
+		end
+	end
+	return BOULDER_SQUEEZE_W
+end
+
 local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
@@ -344,11 +360,13 @@ local function update_objects(snap)
 						fresh = true
 					end
 				end
-				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h) then
+				local bw = name == "boulder" and boulder_w(map, tx, ty, h) or nil
+				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or e.bw ~= bw) then
 					local props = sprite_props(map.mem_tile[i], h)
+					e.bw = bw
 					if name == "boulder" then
 						-- boulders are solid; pushing into one tries to roll it
-						local w = h * 0.45
+						local w = bw
 						props.physical = true
 						props.collide_with_objects = true
 						props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}

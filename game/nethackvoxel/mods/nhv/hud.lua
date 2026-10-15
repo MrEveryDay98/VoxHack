@@ -380,7 +380,7 @@ end)
 local SILENCED = {
 	"^You stop%.", "in your way", "^You move right into", "^Pardon me",
 	"^You try to move the boulder", "^Perhaps that's why you cannot move",
-	"^There is a boulder in your way", "^You cannot pass", "^You are carrying too much to get through",
+	"^There is a boulder in your way", "^You cannot pass",
 	"^You don't have enough room to maneuver", "^You can't move diagonally",
 	"^Your body is too large to fit", "^You try to squeeze",
 	"^There is an obstacle there", "^You harmlessly attack thin air",

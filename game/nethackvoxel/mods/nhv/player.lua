@@ -153,7 +153,7 @@ local function try_push(player)
 		if e.boulder and e.x and math.abs(e.x - h.x) <= 1 and math.abs(e.y - h.y) <= 1
 				and not (e.x == h.x and e.y == h.y) and e.obj:get_pos() then
 			local bp = e.obj:get_pos()
-			local w = e.h * 0.45
+			local w = e.bw or e.h * 0.45
 			-- gap between the player's body and the boulder's box
 			local gx = math.max(0, math.abs(bp.x - pos.x) - w - 0.35)
 			local gz = math.max(0, math.abs(bp.z - pos.z) - w - 0.35)
@@ -162,7 +162,9 @@ local function try_push(player)
 				core.log("action", ("[nhv] push? gap %.2f,%.2f dot %.2f boulder %d,%d hero %d,%d"):format(
 					gx, gz, vector.dot(to, dir), e.x, e.y, h.x, h.y))
 			end
-			if gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.6 then
+			-- (walking into it nearly head-on: squeezing past it at an angle
+			-- doesn't push it)
+			if gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.86 then
 				push_next = core.get_us_time() + 400000
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
 					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
