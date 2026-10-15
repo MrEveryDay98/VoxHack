@@ -57,6 +57,9 @@ local function launch(info)
 	end
 	local body = nhv.sim.body(info.mon_id)
 	local from
+	if info.mon_id and info.mon_id > 0 then
+		nhv.mobs.flash(info.mon_id, "w", 0.12) -- (the thrower attacks)
+	end
 	if body then
 		local h = nhv.scale.height(body.size, body.mndx)
 		from = vector.new(body.pos.x, U.STAND_Y + h * 0.6, body.pos.z)

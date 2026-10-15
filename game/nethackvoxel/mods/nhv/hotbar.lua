@@ -256,9 +256,41 @@ end)
 -- ---------------------------------------------------------------- looking
 -- The middle mouse button looks at what's under the crosshair (NetHack's
 -- farlook, ;): the monster, object or feature it's on, or the block's square
--- (a wall, the floor, a trap...). Up to LOOK_RANGE squares away.
+-- (a wall, the floor, a trap...). Up to LOOK_RANGE squares away. What was
+-- looked at flashes: a green box around it that fades.
 local LOOK_RANGE = 25
+local PING_S = 0.5
 
+core.register_entity("nhv:ping", {
+	initial_properties = {
+		visual = "cube", physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0}, use_texture_alpha = true, glow = 14,
+		shaded = false, backface_culling = false,
+	},
+	on_step = function(self, dtime)
+		self.age = (self.age or 0) + dtime
+		if self.age >= PING_S then
+			self.object:remove()
+			return
+		end
+		-- fades in steps (each change is sent to the screen)
+		local a = math.floor((1 - self.age / PING_S) * 6 + 0.5) * 20
+		if a ~= self.alpha then
+			self.alpha = a
+			local tex = "[fill:16x16:#40FF60^[opacity:" .. a
+			self.object:set_properties({textures = {tex, tex, tex, tex, tex, tex}})
+		end
+	end,
+})
+
+local function ping(center, size)
+	local obj = core.add_entity(center, "nhv:ping")
+	if obj then
+		obj:set_properties({visual_size = size})
+	end
+end
+
+-- the square under the crosshair, and the box to flash around what's there
 local function look_target(player)
 	local pos = player:get_pos()
 	local eye = vector.new(pos.x, pos.y + (player:get_properties().eye_height or 1.625), pos.z)
@@ -267,23 +299,32 @@ local function look_target(player)
 	for pointed in ray do
 		if pointed.type == "object" then
 			local ent = pointed.ref:get_luaentity()
-			if ent and ent.name:sub(1, 4) == "nhv:" and pointed.ref:get_pos() then
-				return U.pos_to_tile(pointed.ref:get_pos())
+			local p = pointed.ref:get_pos()
+			if ent and p and ent.name:sub(1, 4) == "nhv:" and ent.name ~= "nhv:ping" then
+				local b = pointed.ref:get_properties().selectionbox or {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5}
+				local tx, ty = U.pos_to_tile(p)
+				return tx, ty,
+					vector.offset(p, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2, (b[3] + b[6]) / 2),
+					vector.new((b[4] - b[1]) * 1.1, (b[5] - b[2]) * 1.1, (b[6] - b[3]) * 1.1)
 			end
 		elseif pointed.type == "node" then
 			-- (just inside the block that was hit, not on its face)
-			local p = pointed.intersection_point
-			return U.pos_to_tile(vector.add(p, vector.multiply(dir, 0.05)))
+			local inside = vector.add(pointed.intersection_point, vector.multiply(dir, 0.05))
+			local tx, ty = U.pos_to_tile(inside)
+			return tx, ty, vector.round(inside), vector.new(1.04, 1.04, 1.04)
 		end
 	end
 	return nil
 end
 
 function hotbar.look(player)
-	local tx, ty = look_target(player)
-	if tx and U.in_map(tx, ty) then
-		nh.act({{key = "#"}, {text = ("nhvlook %d %d"):format(tx, ty)}}, {kind = "look"})
+	local tx, ty, center, size = look_target(player)
+	local h = nhv.player.hero
+	if not tx or not U.in_map(tx, ty) or (h and tx == h.x and ty == h.y) then
+		return -- (nothing there, or your own square)
 	end
+	ping(center, size)
+	nh.act({{key = "#"}, {text = ("nhvlook %d %d"):format(tx, ty)}}, {kind = "look"})
 end
 
 -- ---------------------------------------------------------------- action keys

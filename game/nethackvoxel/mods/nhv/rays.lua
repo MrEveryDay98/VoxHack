@@ -56,6 +56,9 @@ local function launch(info)
 		end
 		from = vector.add(from, vector.multiply(dir, 0.6))
 	else
+		if info.caster > 0 then
+			nhv.mobs.flash(info.caster, "w", 0.12) -- (the caster attacks)
+		end
 		local body = info.caster > 0 and nhv.sim.body(info.caster)
 		if body then
 			from = vector.new(body.pos.x, U.STAND_Y + HEIGHT, body.pos.z)
