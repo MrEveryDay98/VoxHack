@@ -468,15 +468,16 @@ end)
 
 -- Messages about bumping into things make no sense with free movement:
 -- your body just collides. Lua patterns, matched against the message.
+-- (pushing a boulder only happens when you walk into it on purpose, so why
+-- it won't move - "in vain", a monster behind it - is always shown)
 local SILENCED = {
 	"^You stop%.", "in your way", "^You move right into", "^Pardon me",
-	"^You try to move the boulder", "^Perhaps that's why you cannot move",
 	"^There is a boulder in your way", "^You cannot pass",
 	"^You don't have enough room to maneuver", "^You can't move diagonally",
 	"^Your body is too large to fit", "^You try to squeeze",
 	"^There is an obstacle there", "^You harmlessly attack thin air",
 	"^You already found a monster", "^There's a .* in the way",
-	"^You hear a monster behind the boulder", "blocks your way", "blocks your path",
+	"blocks your way", "blocks your path",
 	"^You can.t move past", "in the way%.$", "^You swap places with",
 	-- (the game's NetHack options are applied quietly at every start)
 	"^Fruit is now ", "option toggled o[nf]f?%.$",
