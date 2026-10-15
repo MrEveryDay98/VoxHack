@@ -147,6 +147,52 @@ function sound.hook(id, opts)
 	core.sound_play(name, params)
 end
 
+-- ---------------------------------------------------------------- notes
+-- Note-based sounds play real notes through the MIDI player and SoundFont
+-- (sounds/notes/nhv_note_<program>_<semitone>.mid, tools/make_note_midis.py):
+-- squeaky boards squeak their own note, and instruments play the tune you
+-- play (or improvise) on their General MIDI instrument (NetHack's
+-- instrument ids are GM program numbers).
+local BOARD_PROGRAM = 80 -- (ocarina: see make_note_midis.py)
+local SEMITONE = {C = 0, D = 2, E = 4, F = 5, G = 7, A = 9, B = 11}
+local NOTE_GAP = 0.32 -- seconds between the notes of a tune
+
+function sound.note(program, semi, gain)
+	local p = player()
+	local name = ("nhv_note_%d_%d"):format(program, semi % 12)
+	if not known[name] then
+		name = ("nhv_note_74_%d"):format(semi % 12) -- (an instrument without notes: flute)
+	end
+	if not p or not known[name] then
+		return
+	end
+	core.sound_play(name, {to_player = p:get_player_name(),
+		gain = gain * ((sound.cfg.master.effects or 100) / 100)})
+end
+
+-- "squeak_D_flat" -> 1, "squeak_F_sharp" -> 6, "squeak_C" -> 0
+local function squeak_semitone(id)
+	local letter, acc = id:match("^squeak_(%u)_?(%a*)$")
+	local semi = letter and SEMITONE[letter]
+	if not semi then
+		return nil
+	end
+	return semi + (acc == "flat" and -1 or acc == "sharp" and 1 or 0)
+end
+
+-- a tune: "CDEFG" on instrument program, one note after another
+function sound.tune(program, notes, volume)
+	local gain = 0.35 + 0.65 * math.min(100, volume or 50) / 100
+	local k = 0
+	for c in (notes or ""):upper():gmatch("%u") do
+		local semi = SEMITONE[c]
+		if semi then
+			core.after(k * NOTE_GAP, sound.note, program, semi, gain)
+			k = k + 1
+		end
+	end
+end
+
 -- "/nhvplay <sound>" (e.g. in the command line): play any sound by name,
 -- to try one out; "/nhvplay" alone stops the last one
 local tried
@@ -286,7 +332,22 @@ nh.on_event(function(evs)
 			end
 			local kind = parts[1]
 			if kind == "effect" then
-				sound.hook(parts[2], {volume = tonumber(parts[3]) or 100})
+				local id, vol = parts[2], tonumber(parts[3]) or 100
+				local semi = squeak_semitone(id or "")
+				local entry = sound.cfg.hooks[id]
+				if semi and not (entry and entry.sounds and #entry.sounds > 0) then
+					-- a squeaky board's own note (unless the editor gives the
+					-- hook a sound of its own)
+					if nhv.effects then
+						nhv.effects.hook(id, {volume = vol})
+					end
+					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100)
+				else
+					sound.hook(id, {volume = vol})
+				end
+			elseif kind == "notes" then
+				-- an instrument played: its notes (improvised or a tune)
+				sound.tune(tonumber(parts[2]) or 74, parts[4] or "", tonumber(parts[3]) or 50)
 			elseif kind == "verbal" then
 				local text = table.concat(parts, "|", 7)
 				local id = voice_for_text(text)
