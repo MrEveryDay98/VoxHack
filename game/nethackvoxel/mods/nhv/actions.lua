@@ -251,10 +251,31 @@ end
 -- Answer for "In what direction?": the square you point at (an
 -- adjacent one gives its direction, your own gives '.'); looking steeply
 -- up or down gives '<' / '>' (zapping, digging, ...).
+-- spells you'd mostly cast on yourself: unless you aim at a monster (to
+-- heal your pet, say), they go to '.'
+local SELF_SPELLS = {"healing"} -- (also matches "extra healing")
+
+local function self_spell()
+	local m = nh.last_menu
+	if not (m and m.prompt:lower():find("spell")) then
+		return false
+	end
+	local chosen = m.chosen:lower()
+	for _, name in ipairs(SELF_SPELLS) do
+		if chosen:find(name, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+
 function actions.pointed_dir_key(player, prompt)
 	local pitch = player:get_look_vertical()
 	local h = hero()
 	local p = actions.pointed(player)
+	if p.kind ~= "mon" and self_spell() then
+		return "."
+	end
 	local dx, dy = p.tx - h.x, p.ty - h.y
 	-- a wall face on the edge of your own square: the wall's square
 	if dx == 0 and dy == 0 and p.wx and pitch <= 1.0

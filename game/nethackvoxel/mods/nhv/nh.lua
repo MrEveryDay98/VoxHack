@@ -170,6 +170,18 @@ function nh.answer_text(t)
 end
 
 function nh.answer_menu(sels)
+	-- (what was chosen, for questions that follow: e.g. which spell an
+	-- "In what direction?" is for)
+	local req = nh.req
+	if req and req.kind == "menu" then
+		local chosen = {}
+		for _, it in ipairs(req.items or {}) do
+			if it.sel and it.sel ~= "" and sels:find(it.sel, 1, true) then
+				chosen[#chosen + 1] = it.text or ""
+			end
+		end
+		nh.last_menu = {prompt = req.prompt or "", chosen = table.concat(chosen, "; ")}
+	end
 	core.nh_send_menu(sels)
 	nh.state, nh.req = "busy", nil
 	nh.pump(40)
