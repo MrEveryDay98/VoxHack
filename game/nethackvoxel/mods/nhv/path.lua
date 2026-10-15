@@ -11,7 +11,9 @@ local DIRS = {
 
 -- passable(x, y) -> bool, is_door(x, y) -> bool
 -- Returns a list of {x, y} squares from the one after start to goal, or nil.
-function path.find(sx, sy, gx, gy, passable, is_door, max_nodes)
+-- squeeze: diagonal steps between two blocked squares are allowed (the
+-- hero can squeeze past a corner, a boulder...; monsters can't)
+function path.find(sx, sy, gx, gy, passable, is_door, max_nodes, squeeze)
 	if sx == gx and sy == gy then
 		return {}
 	end
@@ -53,7 +55,7 @@ function path.find(sx, sy, gx, gy, passable, is_door, max_nodes)
 					and (passable(nx, ny) or (nx == gx and ny == gy))
 				if ok and d[1] ~= 0 and d[2] ~= 0 then
 					-- no squeezing past corners or diagonally through doorways
-					ok = passable(cur.x + d[1], cur.y) and passable(cur.x, cur.y + d[2])
+					ok = (squeeze or (passable(cur.x + d[1], cur.y) and passable(cur.x, cur.y + d[2])))
 						and not is_door(cur.x, cur.y) and not is_door(nx, ny)
 				end
 				if ok then

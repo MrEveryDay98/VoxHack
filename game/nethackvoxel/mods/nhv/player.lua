@@ -234,14 +234,25 @@ local function step(player)
 		teleport(player, U.tile_center(h.x, h.y))
 		return
 	end
-	-- catch up a square at a time along a path NetHack allows (no diagonal
-	-- steps into or out of a doorway with a door, e.g. a shop's)
+	-- the body only grazes a boulder's square (its solid part is narrower
+	-- than the square, to squeeze past it): that's no push (try_push does
+	-- those, walking into it head-on); wait for the body to come out
+	local function boulder_at(x, y)
+		local e = nhv.mobs.objs[U.idx(x, y)]
+		return e and e.boulder
+	end
+	if boulder_at(tx, ty) then
+		return
+	end
+	-- catch up a square at a time along a path NetHack allows: around
+	-- boulders (squeezing past them diagonally is fine), no diagonal steps
+	-- into or out of a doorway with a door (e.g. a shop's)
 	local map = nh.snap and nh.snap.map
 	local route = map and nhv.path.find(h.x, h.y, tx, ty,
-		function(x, y) return terrain.passable(map, x, y) end,
+		function(x, y) return terrain.passable(map, x, y) and not boulder_at(x, y) end,
 		function(x, y)
 			return terrain.is_door(map, x, y) and (map.door[U.idx(x, y)] or 0) >= 2
-		end, 300)
+		end, 300, true)
 	if route and route[1] then
 		tx, ty = route[1].x, route[1].y
 	elseif far then
