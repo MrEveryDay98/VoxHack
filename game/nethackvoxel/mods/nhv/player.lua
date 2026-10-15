@@ -140,8 +140,21 @@ local function intended_dir(player)
 	return vector.normalize(v)
 end
 
+-- why you can't squeeze past boulders (NetHack's cant_squeeze_thru)
+function player_mod.squeeze_reason(snap)
+	local carried = 0
+	for _, o in ipairs(snap and snap.inventory or {}) do
+		carried = carried + (o.weight or 0)
+	end
+	if carried > 600 then
+		return ("You're carrying too much to squeeze past boulders (%d of 600)."):format(carried)
+	end
+	return "You can't squeeze past boulders here."
+end
+
 -- Walking into a boulder (which is solid) tries to push it.
 local push_next = 0
+local squeeze_told = 0
 local function try_push(player)
 	local dir = intended_dir(player)
 	if not dir or core.get_us_time() < push_next then
@@ -170,6 +183,12 @@ local function try_push(player)
 			-- squeezed past, and walls keep you from reaching it: more reach
 			local diag = e.x ~= h.x and e.y ~= h.y
 			local reach = diag and 0.6 or 0.15
+			-- (pressing against it when you can't squeeze past: say why)
+			if player_mod.nosqueeze and gx < 0.15 and gz < 0.15
+					and core.get_us_time() > squeeze_told then
+				squeeze_told = core.get_us_time() + 6000000
+				nhv.hud.message(player_mod.squeeze_reason(nh.snap))
+			end
 			-- (rock, a wall or bars beyond it: it can't roll there, so you're
 			-- squeezing past it, not pushing; a boulder beyond is still tried:
 			-- NetHack shows it then)
@@ -324,15 +343,10 @@ nh.on_snapshot(function(snap, action)
 	-- squeezing past boulders and tight corners: say when it stops (and
 	-- starts) being possible; boulders get their full width meanwhile
 	local nosq = U.has(h.flags, U.HERO.NOSQUEEZE)
-	if prev and nosq ~= player_mod.nosqueeze then
+	-- (when it changes, and when the game starts unable to)
+	if nosq ~= (player_mod.nosqueeze or false) and (prev or nosq) then
 		if nosq then
-			local carried = 0
-			for _, o in ipairs(snap.inventory or {}) do
-				carried = carried + (o.weight or 0)
-			end
-			nhv.hud.message(carried > 600
-				and ("You're carrying too much to squeeze past boulders (%d of 600)."):format(carried)
-				or "You can't squeeze past boulders here.")
+			nhv.hud.message(player_mod.squeeze_reason(snap))
 		else
 			nhv.hud.message("You can squeeze past boulders again.")
 		end
