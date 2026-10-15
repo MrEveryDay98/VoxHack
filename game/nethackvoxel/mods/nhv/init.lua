@@ -25,6 +25,7 @@ if nhv.EDITOR then
 	dofile(path .. "doors.lua")
 	dofile(path .. "scale.lua")
 	dofile(path .. "editor.lua")
+	dofile(path .. "editor_tools.lua")
 	dofile(path .. "monsteredit.lua")
 	return
 end

@@ -666,6 +666,50 @@ local function changed(pos)
 	end
 end
 
+-- everything in the box minp..maxp changed (the editor tools): the cells
+-- and area squares it touches are saved
+function editor.mark_box(minp, maxp)
+	local function overlap(a1, a2, b1, b2)
+		return a1 <= b2 and b1 <= a2
+	end
+	for _, s in ipairs(prefabs.SLOTS) do
+		local o = slot_origin(s[1])
+		if overlap(minp.x, maxp.x, o.x, o.x + W - 1) and overlap(minp.y, maxp.y, o.y, o.y + H - 1)
+				and overlap(minp.z, maxp.z, o.z, o.z + W - 1) then
+			dirty[s[1]] = true
+		end
+	end
+	for _, t in ipairs(areas.list) do
+		local o = area_origin[t.id]
+		local x2, z2 = o.x + t.w * W - 1, o.z + t.h * W - 1
+		if overlap(minp.x, maxp.x, o.x, x2) and overlap(minp.y, maxp.y, o.y, o.y + H - 1)
+				and overlap(minp.z, maxp.z, o.z, z2) then
+			dirty_areas[t.id] = dirty_areas[t.id] or {}
+			local cx1 = math.floor((math.max(minp.x, o.x) - o.x) / W)
+			local cx2 = math.floor((math.min(maxp.x, x2) - o.x) / W)
+			local cz1 = math.floor((math.max(minp.z, o.z) - o.z) / W)
+			local cz2 = math.floor((math.min(maxp.z, z2) - o.z) / W)
+			for cx = cx1, cx2 do
+				for cz = cz1, cz2 do
+					dirty_areas[t.id][(t.h - 1 - cz) * t.w + cx + 1] = true
+				end
+			end
+		end
+	end
+	save_at = core.get_us_time() + 800000
+end
+
+-- the area plate at pos (any height): its template and the box it covers
+-- (cells are W x H x W nodes; a plate's squares sit side by side)
+function editor.area_box(pos)
+	local t = area_at(pos, true)
+	if not t then
+		return nil
+	end
+	local o = area_origin[t.id]
+	return t, o, vector.new(o.x + t.w * W - 1, o.y + H - 1, o.z + t.h * W - 1)
+end
+
 -- the area squares that were changed, as they're built now
 local function save_areas()
 	for id, ks in pairs(dirty_areas) do
@@ -704,9 +748,10 @@ core.register_on_shutdown(function()
 	save_areas()
 end)
 
--- placing never uses up blocks
-core.register_on_placenode(function(pos)
+-- placing never uses up blocks (the last one placed is /fill's default)
+core.register_on_placenode(function(pos, newnode)
 	changed(pos)
+	editor.last_placed = newnode and newnode.name
 	return true
 end)
 core.register_on_dignode(changed)
