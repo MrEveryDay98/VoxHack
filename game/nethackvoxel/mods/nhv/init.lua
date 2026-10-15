@@ -21,6 +21,7 @@ dofile(path .. "prefabs.lua")
 if nhv.EDITOR then
 	dofile(path .. "nh.lua") -- glyph helpers only; no game is started
 	dofile(path .. "terrain.lua")
+	dofile(path .. "areas.lua")
 	dofile(path .. "doors.lua")
 	dofile(path .. "scale.lua")
 	dofile(path .. "editor.lua")
@@ -30,6 +31,7 @@ end
 dofile(path .. "nh.lua")
 dofile(path .. "scale.lua")
 dofile(path .. "terrain.lua")
+dofile(path .. "areas.lua")
 dofile(path .. "doors.lua")
 dofile(path .. "path.lua")
 dofile(path .. "sim.lua")

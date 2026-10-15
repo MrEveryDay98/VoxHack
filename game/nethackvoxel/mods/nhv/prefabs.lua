@@ -344,30 +344,52 @@ end
 -- cid(name) -> content id. base=true replaces everything (missing = air);
 -- otherwise only listed nodes are written.
 function prefabs.write(data, area, tx, ty, slot, rot, base, cid)
-	local d = prefabs.get(slot)
 	local ox, oz = U.tile_origin(tx, ty)
+	prefabs.write_at(data, area, vector.new(ox, prefabs.Y0, oz), prefabs.get(slot).nodes,
+		rot, base, cid)
+end
+
+-- The same with a cell's nodes, at a cell origin (its bottom south-west
+-- node) anywhere: the prefab editor's area plates, area prefab cells.
+function prefabs.write_at(data, area, o, nodes, rot, base, cid)
 	local air = cid("air")
 	if base then
 		for ly = 0, H - 1 do
 			for lx = 0, W - 1 do
 				for lz = 0, W - 1 do
-					data.ids[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = air
-					data.p2[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = 0
+					data.ids[area:index(o.x + lx, o.y + ly, o.z + lz)] = air
+					data.p2[area:index(o.x + lx, o.y + ly, o.z + lz)] = 0
 				end
 			end
 		end
 	end
-	for i, nd in pairs(d.nodes) do
+	for i, nd in pairs(nodes) do
 		local lx, ly, lz = prefabs.unindex(i)
 		local rx, rz = rot_xz(lx, lz, rot or 0)
-		local vi = area:index(ox + rx, prefabs.Y0 + ly, oz + rz)
+		local vi = area:index(o.x + rx, o.y + ly, o.z + rz)
 		local name = nd.n
-		if name == "nhv:carve" then
+		if name == "nhv:carve" or not core.registered_nodes[name] then
 			name = "air"
 		end
 		data.ids[vi] = cid(name)
 		data.p2[vi] = rot_p2(name, nd.p2 or 0, rot or 0)
 	end
+end
+
+-- The nodes of a cell built at origin o (non-air ones).
+function prefabs.read_at(o)
+	local nodes = {}
+	for ly = 0, H - 1 do
+		for lx = 0, W - 1 do
+			for lz = 0, W - 1 do
+				local node = core.get_node(vector.new(o.x + lx, o.y + ly, o.z + lz))
+				if node.name ~= "air" and node.name ~= "ignore" then
+					nodes[prefabs.index(lx, ly, lz)] = {n = node.name, p2 = node.param2}
+				end
+			end
+		end
+	end
+	return nodes
 end
 
 -- Node positions of special markers of a slot placed at (tx, ty).

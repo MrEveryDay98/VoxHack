@@ -8,6 +8,9 @@
 --   /prefab reset <slot>    rebuild a cell from its default
 --   /prefab goto <slot>     jump to a cell
 --   /prefab list            list the slots
+--   /area                   list the special level areas
+--   /area <name>            go to an area's build plate (see areas.lua)
+--   /area reset <name>      start an area over from the usual prefabs
 -- I opens the block palette. Placing never uses up blocks; digging is
 -- instant.
 
@@ -17,6 +20,12 @@ local editor = {}
 nhv.editor = editor
 
 local W, H = prefabs.W, prefabs.H
+local T_STONE = U.TYP.STONE
+-- terrain names, for the area squares
+local TYP_NAMES = {}
+for name, v in pairs(U.TYP) do
+	TYP_NAMES[v] = name:lower():gsub("_", " ")
+end
 local SPACING = 8      -- distance between cell origins (x)
 local ROW_SPACING = 10 -- distance between rows (z)
 local PER_ROW = 8
@@ -45,6 +54,13 @@ core.register_node("nhv:editor_plate", {
 core.register_node("nhv:editor_plate_front", {
 	description = "Cell front (north)",
 	tiles = {"[fill:16x16:#E02020"},
+	paramtype = "light", light_source = 6,
+	groups = {not_in_creative_inventory = 1}, drop = "",
+	diggable = false, pointable = true,
+})
+core.register_node("nhv:editor_plate_own", {
+	description = "Area square built from its own prefab in the game (door, stairs...)",
+	tiles = {"[fill:16x16:#E08020"},
 	paramtype = "light", light_source = 6,
 	groups = {not_in_creative_inventory = 1}, drop = "",
 	diggable = false, pointable = true,
@@ -417,11 +433,184 @@ core.override_item("", {
 	},
 })
 
+-- ---------------------------------------------------------------- areas
+-- Special level areas (areas.lua): one build plate per fixed region of
+-- each variant, laid out south of the cells. A plate starts out built from
+-- the usual prefabs, as the game builds that region now; change it, and
+-- the squares you changed are what the game builds there. Orange plate
+-- squares (doors, stairs...) always use their own prefabs in the game.
+local areas = nhv.areas
+local AREA_Z0 = -200
+local AREA_GAP = 16
+local area_origin = {} -- id -> origin of its south-west square
+do
+	local z = AREA_Z0
+	for _, t in ipairs(areas.list) do
+		z = z - t.h * W - AREA_GAP
+		area_origin[t.id] = vector.new(0, BASE_Y, z)
+	end
+end
+
+local function square_origin(t, cx, cy)
+	local o = area_origin[t.id]
+	return vector.new(o.x + cx * W, o.y, o.z + (t.h - 1 - cy) * W)
+end
+
+-- the area and square (cx, cy) at pos
+local function area_at(pos, any_height)
+	for _, t in ipairs(areas.list) do
+		local o = area_origin[t.id]
+		if pos.x >= o.x and pos.x < o.x + t.w * W and pos.z >= o.z and pos.z < o.z + t.h * W
+				and (any_height or (pos.y >= o.y and pos.y < o.y + H)) then
+			return t, math.floor((pos.x - o.x) / W), t.h - 1 - math.floor((pos.z - o.z) / W)
+		end
+	end
+end
+
+-- the template as a map, for laying it out the way the game would
+local function template_map(t)
+	local map = {typ = {}, door = {}, flags = {}}
+	for tx = 0, U.COLNO - 1 do
+		for ty = 0, U.ROWNO - 1 do
+			map.typ[U.idx(tx, ty)] = T_STONE
+			map.door[U.idx(tx, ty)] = 0
+		end
+	end
+	for cy = 0, t.h - 1 do
+		for cx = 0, t.w - 1 do
+			map.typ[U.idx(t.x + cx, t.y + cy)] = areas.template_typ(t, cx, cy)
+		end
+	end
+	return map
+end
+
+-- lay out an area's plate (and, the first time or after a reset, build it)
+local function build_area(t, build, done)
+	local o = area_origin[t.id]
+	local minp = vector.new(o.x - 3, BASE_Y - 2, o.z - 6)
+	local maxp = vector.new(o.x + t.w * W + 2, BASE_Y + H + 1, o.z + t.h * W + 2)
+	core.emerge_area(minp, maxp, function(_, _, remaining)
+		if remaining > 0 then
+			return
+		end
+		local vm = core.get_voxel_manip()
+		local e1, e2 = vm:read_from_map(minp, maxp)
+		local va = VoxelArea(e1, e2)
+		local data = {ids = vm:get_data(), p2 = vm:get_param2_data()}
+		local cid = nhv.terrain.cid
+		for z = minp.z, maxp.z do
+			for x = minp.x, maxp.x do
+				data.ids[va:index(x, BASE_Y - 2, z)] = cid("nhv:editor_ground")
+			end
+		end
+		local map = template_map(t)
+		local d = areas.get(t.id)
+		for cy = 0, t.h - 1 do
+			for cx = 0, t.w - 1 do
+				local so = square_origin(t, cx, cy)
+				local typ = areas.template_typ(t, cx, cy)
+				local plate = areas.own_prefab(typ) and "nhv:editor_plate_own" or "nhv:editor_plate"
+				for x = 0, W - 1 do
+					for z = 0, W - 1 do
+						data.ids[va:index(so.x + x, BASE_Y - 1, so.z + z)] = cid(plate)
+					end
+				end
+				if build then
+					local k = cy * t.w + cx + 1
+					local tx, ty = t.x + cx, t.y + cy
+					if d.cells[k] then
+						prefabs.write_at(data, va, so, d.cells[k].nodes, 0, true, cid)
+					else
+						local slot, rot = nhv.terrain.base_slot(map, U.idx(tx, ty), tx, ty, nil)
+						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, cid)
+					end
+				end
+			end
+		end
+		-- north side: a red row along the plate's north edge
+		for x = o.x, o.x + t.w * W - 1 do
+			data.ids[va:index(x, BASE_Y - 1, o.z + t.h * W)] = cid("nhv:editor_plate_front")
+		end
+		vm:set_data(data.ids)
+		vm:set_param2_data(data.p2)
+		vm:write_to_map(true)
+		local label = core.add_entity(vector.new(o.x + 1, BASE_Y + H + 0.5, o.z + t.h * W - 1),
+			"nhv:editor_label")
+		if label then
+			label:set_properties({nametag = areas.name(t) .. "\n" .. t.id})
+		end
+		if done then
+			done()
+		end
+	end)
+end
+
+-- find areas by id, or by part of the name / level file
+local function find_areas(q)
+	q = q:lower()
+	for _, t in ipairs(areas.list) do
+		if t.id:lower() == q then
+			return {t}
+		end
+	end
+	local out = {}
+	for _, t in ipairs(areas.list) do
+		if t.id:lower():find(q, 1, true) or areas.name(t):lower():find(q, 1, true) then
+			out[#out + 1] = t
+		end
+	end
+	return out
+end
+
+local function area_list(ts)
+	local lines = {}
+	for _, t in ipairs(ts) do
+		lines[#lines + 1] = ("%-14s %s (%dx%d)%s"):format(t.id, areas.name(t), t.w, t.h,
+			areas.built(t.id) and "  [built]" or "")
+	end
+	return table.concat(lines, "\n")
+end
+
+core.register_chatcommand("area", {
+	params = "[reset] [<name>]",
+	description = "Special level areas: list them, go to one, or start one over",
+	func = function(pname, param)
+		local player = core.get_player_by_name(pname)
+		local reset = param:match("^%s*reset%s+(.-)%s*$")
+		local q = reset or param:match("^%s*(.-)%s*$")
+		if q == "" then
+			return true, "Areas (/area <name> to go to one):\n" .. area_list(areas.list)
+		end
+		local found = find_areas(q)
+		if #found == 0 then
+			return false, "No area matches \"" .. q .. "\". /area lists them."
+		elseif #found > 1 then
+			return true, "Which one?\n" .. area_list(found)
+		end
+		local t = found[1]
+		local first = storage:get_string("area_laid_" .. t.id) == ""
+		if reset then
+			areas.get(t.id).cells = {}
+			areas.save(t.id)
+		end
+		build_area(t, first or reset ~= nil, function()
+			storage:set_string("area_laid_" .. t.id, "1")
+			if player and player:is_player() then
+				local o = area_origin[t.id]
+				player:set_pos(vector.new(o.x + t.w * W / 2, BASE_Y - 1, o.z - 3))
+				player:set_look_horizontal(0)
+			end
+		end)
+		return true, (reset and "Starting over: " or "Going to: ") .. areas.name(t)
+	end,
+})
+
 -- ---------------------------------------------------------------- saving
 -- Cells save themselves: any block placed or dug in a cell is written to
 -- prefabs.dat a moment later (and everything is captured when the editor
 -- opens and when it closes), so the game always uses what you built.
 local dirty = {}
+local dirty_areas = {} -- id -> {[k] = true}
 local save_at = nil
 
 local function slot_at(pos)
@@ -458,7 +647,30 @@ local function changed(pos)
 	if slot then
 		dirty[slot] = true
 		save_at = core.get_us_time() + 800000
+		return
 	end
+	local t, cx, cy = area_at(pos)
+	if t then
+		dirty_areas[t.id] = dirty_areas[t.id] or {}
+		dirty_areas[t.id][cy * t.w + cx + 1] = true
+		save_at = core.get_us_time() + 800000
+	end
+end
+
+-- the area squares that were changed, as they're built now
+local function save_areas()
+	for id, ks in pairs(dirty_areas) do
+		local t = areas.templates[id]
+		local d = areas.get(id)
+		for k in pairs(ks) do
+			local cx, cy = (k - 1) % t.w, math.floor((k - 1) / t.w)
+			d.cells[k] = {nodes = prefabs.read_at(square_origin(t, cx, cy))}
+		end
+		if not areas.save(id) then
+			core.chat_send_all("Could not save area " .. id)
+		end
+	end
+	dirty_areas = {}
 end
 
 core.register_globalstep(function()
@@ -469,9 +681,10 @@ core.register_globalstep(function()
 			slots[#slots + 1] = slot
 		end
 		dirty = {}
-		if not editor.save(slots) then
+		if #slots > 0 and not editor.save(slots) then
 			core.chat_send_all("Could not save prefabs to " .. prefabs.DATA_PATH)
 		end
+		save_areas()
 	end
 end)
 
@@ -479,6 +692,7 @@ core.register_on_shutdown(function()
 	if next(dirty) then
 		editor.save(all_slots())
 	end
+	save_areas()
 end)
 
 -- placing never uses up blocks
@@ -511,10 +725,19 @@ core.register_globalstep(function(dtime)
 	label_t = 0
 	for _, player in ipairs(core.get_connected_players()) do
 		local name = player:get_player_name()
-		local slot = nearest_slot(player:get_pos())
-		local info = prefabs.SLOT_INFO[slot]
-		local text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
-			info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
+		local text
+		local t, cx, cy = area_at(player:get_pos(), true)
+		if t then
+			local typ = areas.template_typ(t, cx, cy)
+			text = ("Area: %s (%s)\nSquare %d,%d: %s%s\n(red row = north side)"):format(
+				areas.name(t), t.id, t.x + cx, t.y + cy, TYP_NAMES[typ] or "?",
+				areas.own_prefab(typ) and "  - built from its own prefab in the game" or "")
+		else
+			local slot = nearest_slot(player:get_pos())
+			local info = prefabs.SLOT_INFO[slot]
+			text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
+				info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
+		end
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},

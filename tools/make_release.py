@@ -131,6 +131,10 @@ def stage(out):
 		if os.path.exists(src):
 			os.makedirs(os.path.join(engine, "mod_data", "nhv"), exist_ok=True)
 			shutil.copy2(src, os.path.join(engine, "mod_data", "nhv", f))
+	# the special level areas built in the editor (/area)
+	areas_dir = os.path.join(LUANTI, "mod_data", "nhv", "areas")
+	if os.path.isdir(areas_dir):
+		copytree(areas_dir, os.path.join(engine, "mod_data", "nhv", "areas"))
 	# an empty world for the game, and fresh settings
 	write(os.path.join(engine, "worlds", "nethack", "world.mt"), WORLD_MT, crlf=False)
 	write(os.path.join(engine, "minetest.conf"), CONF, crlf=False)

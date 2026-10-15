@@ -341,8 +341,14 @@ local function carve_corners(data, area, sq)
 end
 
 local function write_square(data, area, sq)
-	prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
-	carve_corners(data, area, sq)
+	if sq.area_cell then
+		-- part of a hand-built area (a special level's fixed part; areas.lua)
+		local ox, oz = U.tile_origin(sq.tx, sq.ty)
+		prefabs.write_at(data, area, vector.new(ox, prefabs.Y0, oz), sq.area_cell.nodes, 0, true, cid)
+	else
+		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
+		carve_corners(data, area, sq)
+	end
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
 	end
@@ -415,9 +421,14 @@ local function describe(map, tx, ty)
 	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
 		sq.overlay = fs
 	end
+	-- a special level's hand-built area covers it? (areas.lua)
+	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ)
+	if cell then
+		sq.area_cell = cell
+	end
 	-- (seeing a square for the first time doesn't change what's built)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or ""}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or ""}, ":")
 	return i, sq
 end
 
@@ -604,5 +615,8 @@ function terrain.place_hero_light(pos)
 	end
 	terrain.hero_light_pos = placed and p or nil
 end
+
+-- (the prefab editor's area plates are laid out the way the game would)
+terrain.base_slot = base_slot
 
 return terrain
