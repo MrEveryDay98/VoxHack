@@ -256,9 +256,66 @@ local function rot_xz(lx, lz, r)
 	return lx, lz
 end
 
+-- Turning a cell turns the blocks in it too: their param2 facing.
+-- facedir (all 24 ways: on its side and upside down as well) is worked out
+-- from how the engine itself orients a facedir node (transformNodeBox in
+-- mapnode.cpp): a turn about the node's own axis, then the axis tipped over.
+local function rot90(v, plane, deg) -- irrlicht's rotateXZBy / XYBy / YZBy
+	local c, sn = math.floor(math.cos(math.rad(deg)) + 0.5), math.floor(math.sin(math.rad(deg)) + 0.5)
+	local x, y, z = v[1], v[2], v[3]
+	if plane == "xz" then
+		return {x * c - z * sn, y, x * sn + z * c}
+	elseif plane == "xy" then
+		return {x * c - y * sn, x * sn + y * c, z}
+	end
+	return {x, y * c - z * sn, y * sn + z * c} -- yz
+end
+
+local AXIS_TURN = {{"xz", 0}, {"yz", 90}, {"yz", -90}, {"xy", -90}, {"xy", 90}, {"xy", -180}}
+local DIR_TURN = {0, -90, 180, 90}
+local function facedir_apply(f, v)
+	local axis, dir = math.floor(f / 4), f % 4
+	v = rot90(v, "xz", DIR_TURN[dir + 1])
+	return rot90(v, AXIS_TURN[axis + 1][1], AXIS_TURN[axis + 1][2])
+end
+
+-- where facedir f puts the node's x, y and z axes, as a string
+local function facedir_key(f, turns)
+	local out = {}
+	for _, e in ipairs({{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}) do
+		local v = facedir_apply(f, e)
+		for _ = 1, turns do
+			v = rot90(v, "xz", -90) -- (a cell's quarter turn: +z goes to +x; see rot_xz)
+		end
+		-- (+ 0: a -0 would print as "-0" and not match "0")
+		out[#out + 1] = (v[1] + 0) .. "," .. (v[2] + 0) .. "," .. (v[3] + 0)
+	end
+	return table.concat(out, ";")
+end
+
+-- FACEDIR_TURN[r][f]: facedir f after r quarter turns
+local FACEDIR_TURN = {}
+do
+	local by_key = {}
+	for f = 0, 23 do
+		by_key[facedir_key(f, 0)] = f
+	end
+	for r = 1, 3 do
+		FACEDIR_TURN[r] = {}
+		for f = 0, 23 do
+			FACEDIR_TURN[r][f] = by_key[facedir_key(f, r)] or f
+		end
+	end
+end
+
+-- wallmounted: 2 x+, 3 x-, 4 z+, 5 z- (one quarter turn: z+ -> x+ -> z-
+-- -> x-); 0/1 (ceiling/floor) and 6/7 (the same, turned) swap on odd turns
+local WALLMOUNTED_TURN = {[0] = 6, 7, 5, 4, 2, 3, 0, 1}
+
 local rotatable = {}
 local function rot_p2(name, p2, r)
-	if r % 4 == 0 then
+	r = r % 4
+	if r == 0 then
 		return p2
 	end
 	local pt = rotatable[name]
@@ -267,9 +324,17 @@ local function rot_p2(name, p2, r)
 		pt = def and def.paramtype2 or ""
 		rotatable[name] = pt
 	end
-	if (pt == "facedir" or pt == "4dir" or pt == "colorfacedir" or pt == "color4dir")
-			and p2 % 32 < 4 then
+	if pt == "facedir" or pt == "colorfacedir" then
+		local f = p2 % 32
+		return p2 - f + (f < 24 and FACEDIR_TURN[r][f] or f)
+	elseif pt == "4dir" or pt == "color4dir" then
 		return p2 - p2 % 4 + (p2 % 4 + r) % 4
+	elseif pt == "wallmounted" or pt == "colorwallmounted" then
+		local w = p2 % 8
+		for _ = 1, r do
+			w = WALLMOUNTED_TURN[w]
+		end
+		return p2 - p2 % 8 + w
 	end
 	return p2
 end
