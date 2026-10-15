@@ -261,11 +261,16 @@ end)
 local LOOK_RANGE = 25
 local PING_S = 0.5
 
+local function ping_textures(a)
+	local tex = "[fill:16x16:#40FF60^[opacity:" .. a
+	return {tex, tex, tex, tex, tex, tex}
+end
+
 core.register_entity("nhv:ping", {
 	initial_properties = {
 		visual = "cube", physical = false, pointable = false, static_save = false,
 		collisionbox = {0, 0, 0, 0, 0, 0}, use_texture_alpha = true, glow = 14,
-		shaded = false, backface_culling = false,
+		shaded = false, backface_culling = false, textures = ping_textures(120),
 	},
 	on_step = function(self, dtime)
 		self.age = (self.age or 0) + dtime
@@ -277,8 +282,7 @@ core.register_entity("nhv:ping", {
 		local a = math.floor((1 - self.age / PING_S) * 6 + 0.5) * 20
 		if a ~= self.alpha then
 			self.alpha = a
-			local tex = "[fill:16x16:#40FF60^[opacity:" .. a
-			self.object:set_properties({textures = {tex, tex, tex, tex, tex, tex}})
+			self.object:set_properties({textures = ping_textures(a)})
 		end
 	end,
 })
@@ -286,7 +290,8 @@ core.register_entity("nhv:ping", {
 local function ping(center, size)
 	local obj = core.add_entity(center, "nhv:ping")
 	if obj then
-		obj:set_properties({visual_size = size})
+		obj:set_properties({visual_size = size, textures = ping_textures(120)})
+		obj:get_luaentity().alpha = 120
 	end
 end
 
@@ -319,11 +324,17 @@ end
 
 function hotbar.look(player)
 	local tx, ty, center, size = look_target(player)
-	local h = nhv.player.hero
-	if not tx or not U.in_map(tx, ty) or (h and tx == h.x and ty == h.y) then
-		return -- (nothing there, or your own square)
+	if not tx or not U.in_map(tx, ty) then
+		return
 	end
 	ping(center, size)
+	local h = nhv.player.hero
+	if h and tx == h.x and ty == h.y then
+		-- your own square: what's here (objects, a trap, the floor...), not
+		-- you yourself (NetHack's :, which takes no time either)
+		nh.act(":", {kind = "look"})
+		return
+	end
 	nh.act({{key = "#"}, {text = ("nhvlook %d %d"):format(tx, ty)}}, {kind = "look"})
 end
 
