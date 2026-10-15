@@ -525,6 +525,14 @@ local function build_area(t, build, done)
 						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, cid)
 					end
 				end
+				-- a light under the ceiling of open squares, as the game puts
+				-- in lit rooms (not saved with the area: the game adds its own)
+				if typ >= U.TYP.POOL and typ ~= U.TYP.IRONBARS and typ ~= U.TYP.LAVAWALL then
+					local vi = va:index(so.x + 1, so.y + prefabs.CEIL - 1, so.z + 1)
+					if data.ids[vi] == cid("air") then
+						data.ids[vi] = cid("nhv:room_light")
+					end
+				end
 			end
 		end
 		-- north side: a red row along the plate's north edge

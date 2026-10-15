@@ -376,14 +376,15 @@ function prefabs.write_at(data, area, o, nodes, rot, base, cid)
 	end
 end
 
--- The nodes of a cell built at origin o (non-air ones).
+-- The nodes of a cell built at origin o (non-air ones; the editor's room
+-- lights aren't part of it: the game lights rooms itself).
 function prefabs.read_at(o)
 	local nodes = {}
 	for ly = 0, H - 1 do
 		for lx = 0, W - 1 do
 			for lz = 0, W - 1 do
 				local node = core.get_node(vector.new(o.x + lx, o.y + ly, o.z + lz))
-				if node.name ~= "air" and node.name ~= "ignore" then
+				if node.name ~= "air" and node.name ~= "ignore" and node.name ~= "nhv:room_light" then
 					nodes[prefabs.index(lx, ly, lz)] = {n = node.name, p2 = node.param2}
 				end
 			end
