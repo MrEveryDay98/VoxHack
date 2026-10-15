@@ -8,11 +8,7 @@
 --     HUD and menus stay full resolution)
 --   * sharp or smoothed distant textures (Luanti's "mip_map": mipmaps blur
 --     far-away textures to stop them shimmering)
--- Retro look (second column): a colour palette with dithering (VGA 256 or
--- EGA 16 colours), light in bands, PS1-style warped textures, blocky
--- lighting (Luanti's smooth_lighting; from the next start), darkness
--- closing in (black fog), and a 4:3 screen.
--- All apply immediately (but blocky lighting) and are remembered.
+-- All apply immediately and are remembered in the settings.
 
 local graphics = {}
 nhv.graphics = graphics
@@ -35,12 +31,6 @@ local function text_list()
 	return theme.retro() and TEXT_RETRO or TEXT_MODERN
 end
 local MAP = {{0, "Hidden"}, {2, "Small"}, {3, "Normal"}, {4, "Large"}, {5, "Larger"}, {6, "Huge"}}
-local PALETTE = {{0, "Off"}, {1, "VGA (256 colours)"}, {2, "EGA (16 colours)"}}
-local BANDS = {{0, "Smooth"}, {5, "Banded"}, {3, "Few bands"}}
-local WARP = {"Off", "On (PS1 style)"}
-local LIGHTING = {"Smooth", "Blocky (from next start)"}
-local DARK = {{0, "Off"}, {1, "Far"}, {2, "Near"}}
-local SCREEN = {"Full", "4:3"}
 
 -- index of the choice nearest the setting's value
 local function pick(list, setting, default)
@@ -63,15 +53,14 @@ local function labels(list)
 end
 
 -- one labelled dropdown row
-local function row(y, label, name, items, sel, x)
-	x = x or 0
-	return ("label[%s,%s;%s]dropdown[%s,%s;5.3,0.8;%s;%s;%d;true]"):format(
-		x + 0.5, y + 0.4, E(label), x + 4.2, y, name, items, sel)
+local function row(y, label, name, items, sel)
+	return ("label[0.5,%s;%s]dropdown[4.2,%s;5.3,0.8;%s;%s;%d;true]"):format(
+		y + 0.4, E(label), y, name, items, sel)
 end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(19.6, 11.2),
+		theme.head(10, 11.2),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -84,18 +73,8 @@ function graphics.formspec()
 		row(7.8, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
 		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		"label[10.1,2.1;", theme.dim("Retro look"), "]",
-		row(2.4, "Palette", "palette", labels(PALETTE), pick(PALETTE, "nhv_palette", 0), 9.6),
-		row(3.3, "Light", "bands", labels(BANDS), pick(BANDS, "nhv_light_bands", 0), 9.6),
-		row(4.2, "Texture warping", "warp", table.concat(WARP, ","),
-			core.settings:get_bool("nhv_affine", false) and 2 or 1, 9.6),
-		row(5.1, "Lighting", "lighting", table.concat(LIGHTING, ","),
-			core.settings:get_bool("smooth_lighting", true) and 1 or 2, 9.6),
-		row(6.0, "Darkness", "dark", labels(DARK), pick(DARK, "nhv_darkness", 0), 9.6),
-		row(6.9, "Screen shape", "screen", table.concat(SCREEN, ","),
-			core.settings:get("nhv_screen") == "4:3" and 2 or 1, 9.6),
 		"button[0.5,10.2;4.4,0.8;nhoptions;NetHack options...]",
-		"button_exit[14.7,10.2;4.4,0.8;close;Done]",
+		"button_exit[5.1,10.2;4.4,0.8;close;Done]",
 	})
 end
 
@@ -169,33 +148,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if set_num(RES, fields.res, "undersampling", 1) then
 		changed = true
 	end
-	-- retro look
-	if set_num(PALETTE, fields.palette, "nhv_palette", 0) then
-		changed = true
-	end
-	if set_num(BANDS, fields.bands, "nhv_light_bands", 0) then
-		changed = true
-	end
-	local w = tonumber(fields.warp)
-	if w and (w == 2) ~= core.settings:get_bool("nhv_affine", false) then
-		core.settings:set_bool("nhv_affine", w == 2)
-		changed = true
-	end
-	local li = tonumber(fields.lighting)
-	if li and (li == 1) ~= core.settings:get_bool("smooth_lighting", true) then
-		core.settings:set_bool("smooth_lighting", li == 1)
-		changed = true
-	end
-	if set_num(DARK, fields.dark, "nhv_darkness", 0) then
-		nhv.hud.apply_fog(player)
-		changed = true
-	end
-	local sc = tonumber(fields.screen)
-	if sc and (sc == 2) ~= (core.settings:get("nhv_screen") == "4:3") then
-		core.settings:set("nhv_screen", sc == 2 and "4:3" or "full")
-		nhv.hud.update_frame(player)
-		changed = true
-	end
+
 	if changed then
 		core.settings:write()
 	end
