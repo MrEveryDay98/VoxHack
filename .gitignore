@@ -7,3 +7,5 @@ __pycache__/
 # editor backups
 *.bak
 *.before-*
+# made by Create Play Shortcut.bat
+*.lnk
