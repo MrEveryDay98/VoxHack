@@ -131,16 +131,31 @@ local function status_text(h)
 	return line1 .. "\n" .. line2
 end
 
+local msg_shown
 local function update_messages(player)
 	local now = core.get_us_time() / 1e6
+	-- (while a prompt is up the messages stay: they're often what it's
+	-- about, e.g. the hint of what a scroll did when you're asked to name it)
+	if nhv.ui.open or nhv.ui.menu_open then
+		for _, m in ipairs(hud.messages) do
+			m.t = math.max(m.t, now - MSG_TTL + 2)
+		end
+	end
 	while #hud.messages > 0 and now - hud.messages[1].t > MSG_TTL do
 		table.remove(hud.messages, 1)
 	end
 	local lines = {}
-	for _, m in ipairs(hud.messages) do
-		lines[#lines + 1] = m.text
+	-- (the chat console shows the whole log meanwhile)
+	if not nhv.ui.chat_open then
+		for _, m in ipairs(hud.messages) do
+			lines[#lines + 1] = m.text
+		end
 	end
-	player:hud_change(hud.ids.msg, "text", table.concat(lines, "\n"))
+	local text = table.concat(lines, "\n")
+	if text ~= msg_shown then
+		msg_shown = text
+		player:hud_change(hud.ids.msg, "text", text)
+	end
 end
 
 function hud.message(text)
@@ -154,6 +169,11 @@ function hud.message(text)
 	local player = nhv.player.get()
 	if player and hud.ids.msg then
 		update_messages(player)
+	end
+	-- every message also goes to the chat log: the chat console (T) shows
+	-- them all (the chat itself isn't drawn on screen)
+	if player then
+		core.chat_send_player(player:get_player_name(), text)
 	end
 end
 
@@ -220,10 +240,13 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
 		style = 4, -- monospace
 	})
+	-- (z_index 1000 and up: the NetHack Voxel build of Luanti draws it
+	-- above menus and prompts, so it can be read while answering them)
 	hud.ids.msg = player:hud_add({
 		type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
-		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "",
+		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "", z_index = 1000,
 	})
+	msg_shown = nil
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
@@ -346,7 +369,7 @@ core.register_globalstep(function(dtime)
 			player:hud_change(hud.ids.flash, "text", tex)
 		end
 	end
-	if tick > 1 then
+	if tick > 0.2 then
 		tick = 0
 		update_messages(player)
 	end
