@@ -333,8 +333,19 @@ nh.on_snapshot(function(snap, action)
 			player_mod.ahead = {from_x = action.from_x, from_y = action.from_y,
 				t_end = core.get_us_time() + 1500000}
 		else
-			core.log("action", ("[nhv] push refused: boulder %d,%d, hero %d,%d"):format(
-				action.tx, action.ty, h.x, h.y))
+			-- (what's really beyond it: terrain and objects, seen or not)
+			local bx, by = 2 * action.tx - h.x, 2 * action.ty - h.y
+			local beyond = "off the map"
+			if U.in_map(bx, by) then
+				local names = {}
+				for _, o in ipairs(core.nh_get_floor_objects(bx, by) or {}) do
+					names[#names + 1] = o.name
+				end
+				beyond = ("terrain %s, objects: %s"):format(tostring(snap.map.typ[U.idx(bx, by)]),
+					#names > 0 and table.concat(names, "; ") or "none")
+			end
+			core.log("action", ("[nhv] push refused: boulder %d,%d, hero %d,%d; beyond (%d,%d): %s"):format(
+				action.tx, action.ty, h.x, h.y, bx, by, beyond))
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
