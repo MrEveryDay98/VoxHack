@@ -747,7 +747,7 @@ core.register_globalstep(function(dtime)
 			text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
 				info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
 		end
-		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 2x speed"
+		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 2x speed - /fullbright"
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
