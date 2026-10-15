@@ -188,4 +188,106 @@ nh.on_snapshot(function(snap)
 	end
 end)
 
+-- ---------------------------------------------------------------- bolts
+-- Beams that NetHack only works out square by square (force bolt,
+-- striking, slow / speed monster, healing someone, knock, dig, polymorph,
+-- teleport away...) fly as a quick glowing bolt from your hand to where
+-- the beam ended, with a burst there. (Rays like magic missile and sleep
+-- have their own; see rays.lua.)
+local BOLT_SPEED = 25 -- nodes per second
+
+-- colour by what was zapped (the spell's or wand's name contains...)
+local BOLT_COLORS = {
+	{"heal", "#60FF80"}, {"slow", "#B070FF"}, {"speed", "#FFE040"},
+	{"haste", "#FFE040"}, {"knock", "#FFC040"}, {"opening", "#FFC040"},
+	{"lock", "#FFC040"}, {"dig", "#C08040"}, {"polymorph", "#FF60E0"},
+	{"teleport", "#40E0FF"}, {"cancel", "#E0E0E0"}, {"undead", "#FFF0A0"},
+	{"invisib", "#A0A0C0"}, {"probing", "#6090FF"}, {"stone", "#D0B080"},
+	{"striking", "#C0D8FF"}, {"force", "#C0D8FF"},
+}
+local function bolt_color(otyp)
+	local name = (core.nh_obj_name and core.nh_obj_name(otyp) or ""):lower()
+	for _, c in ipairs(BOLT_COLORS) do
+		if name:find(c[1], 1, true) then
+			return c[2]
+		end
+	end
+	return "#90C8FF"
+end
+
+local function burst(pos, color, amount)
+	core.add_particlespawner({
+		amount = amount, time = 0.05, pos = pos,
+		minvel = vector.new(-2.5, -1.5, -2.5), maxvel = vector.new(2.5, 2.5, 2.5),
+		minexptime = 0.2, maxexptime = 0.45, minsize = 0.6, maxsize = 1.4,
+		texture = "[fill:2x2:" .. color, glow = 14,
+	})
+end
+
+core.register_entity("nhv:bolt", {
+	initial_properties = {
+		visual = "sprite", visual_size = {x = 0.45, y = 0.45},
+		textures = {"[fill:4x4:#FFFFFF"}, glow = 14, physical = false,
+		pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+	on_step = function(self, dtime)
+		self.left = (self.left or 0) - dtime
+		if self.left <= 0 then
+			if self.target then
+				self.object:set_pos(self.target)
+				burst(self.target, self.color or "#90C8FF", 18)
+			end
+			self.object:remove()
+		end
+	end,
+})
+
+local function fly_bolt(otyp, x0, y0, x1, y1)
+	local player = nhv.player.get()
+	local color = bolt_color(otyp)
+	local from
+	if player then
+		-- (from your hand: a little ahead, right and below your eyes)
+		local p = player:get_pos()
+		local yaw = player:get_look_horizontal()
+		local fwd = vector.new(-math.sin(yaw), 0, math.cos(yaw))
+		local right = vector.new(math.cos(yaw), 0, math.sin(yaw))
+		from = vector.add(vector.add(p, vector.new(0, 1.25, 0)),
+			vector.add(vector.multiply(fwd, 0.6), vector.multiply(right, 0.3)))
+	else
+		from = U.tile_center(x0, y0, U.STAND_Y + 1.25)
+	end
+	local to = U.tile_center(x1, y1, U.STAND_Y + 1.1)
+	local dist = vector.distance(from, to)
+	local obj = core.add_entity(from, "nhv:bolt")
+	if not obj or dist < 0.1 then
+		return
+	end
+	local t = dist / BOLT_SPEED
+	obj:set_properties({textures = {"[fill:4x4:" .. color}})
+	obj:set_velocity(vector.multiply(vector.direction(from, to), BOLT_SPEED))
+	local ent = obj:get_luaentity()
+	ent.left, ent.target, ent.color = t, to, color
+	-- a trail behind it
+	core.add_particlespawner({
+		amount = math.max(8, math.floor(dist * 6)), time = t, attached = obj,
+		minpos = vector.new(-0.08, -0.08, -0.08), maxpos = vector.new(0.08, 0.08, 0.08),
+		minvel = vector.new(-0.3, -0.3, -0.3), maxvel = vector.new(0.3, 0.3, 0.3),
+		minexptime = 0.15, maxexptime = 0.3, minsize = 0.5, maxsize = 0.9,
+		texture = "[fill:2x2:" .. color, glow = 14,
+	})
+	burst(from, color, 6)
+end
+
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local otyp, x0, y0, x1, y1 = ev.text:match("^beam (%d+) (%d+) (%d+) (%d+) (%d+)")
+			if otyp then
+				fly_bolt(tonumber(otyp), tonumber(x0), tonumber(y0), tonumber(x1), tonumber(y1))
+			end
+		end
+	end
+end)
+
 return spells

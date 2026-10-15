@@ -579,6 +579,20 @@ nhv_container_event(const char *kind, unsigned id)
     nhv_push_event(NHV_EV_CONTAINER, 0, buf);
 }
 
+coordxy nhv_beam_x, nhv_beam_y;
+
+/* "beam <otyp> <x0> <y0> <x1> <y1>" (sent as a combat event) */
+void
+nhv_beam_event(int otyp, int x0, int y0, int x1, int y1)
+{
+    char buf[64];
+
+    if (x0 == x1 && y0 == y1)
+        return;
+    Sprintf(buf, "beam %d %d %d %d %d", otyp, x0, y0, x1, y1);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 void
 nhv_combat_event(const char *kind, unsigned a, unsigned b, int melee)
 {
