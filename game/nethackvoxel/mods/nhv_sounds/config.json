@@ -568,23 +568,9 @@
    "volume": 100,
    "pitch_var": 0.05
   },
-  "music_shop": {
-   "sounds": [
-    "yh_music_cantina"
-   ],
-   "volume": 100,
-   "loop": true
-  },
   "music_death": {
    "sounds": [
     "yh_music_dead"
-   ],
-   "volume": 100,
-   "loop": true
-  },
-  "music_endgame": {
-   "sounds": [
-    "yh_music_endgame"
    ],
    "volume": 100,
    "loop": true
@@ -594,21 +580,6 @@
     "yh_music_endingyiruma"
    ],
    "volume": 100,
-   "loop": true
-  },
-  "music_gehennom": {
-   "sounds": [
-    "yh_music_df"
-   ],
-   "volume": 100,
-   "loop": true
-  },
-  "music_dungeon": {
-   "sounds": [
-    "yh_music_df"
-   ],
-   "volume": 100,
-   "pitch_var": 0,
    "loop": true
   },
   "door_opens": {
