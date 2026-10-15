@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 6
+#define NHV_API_VERSION 7
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -377,4 +377,13 @@ NHV_API void nhv_clear_rays(void);
 #ifdef __cplusplus
 }
 #endif
+/* Spells the hero knows (for the host's spell menu): name, the tile of
+   its spellbook and whether it's cast in a direction. */
+typedef struct nhv_spell {
+    char name[64];
+    int tile;
+    int directional; /* 1: cast at something (a direction or yourself) */
+} nhv_spell;
+NHV_API int nhv_get_spells(nhv_spell *buf, int max);
+
 #endif /* NHV_API_H */

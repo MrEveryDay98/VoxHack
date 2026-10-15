@@ -133,6 +133,10 @@ local function attack_target(player, prefer_id)
 end
 
 function actions.attack(player, prefer_id)
+	-- a readied spell: the click casts it
+	if nhv.spells.release(player) then
+		return
+	end
 	if busy() or nhv.clock.busy() then
 		return
 	end
@@ -257,23 +261,25 @@ local SELF_SPELLS = {"healing"} -- (also matches "extra healing")
 
 local function self_spell()
 	local m = nh.last_menu
-	if not (m and m.prompt:lower():find("spell")) then
+	if not (m and m.prompt:find(nhv.spells.PROMPT)) then
 		return false
 	end
-	local chosen = m.chosen:lower()
-	for _, name in ipairs(SELF_SPELLS) do
-		if chosen:find(name, 1, true) then
+	-- (the spell's name only: "cure sickness" is in the healing school)
+	local name = nhv.spells.row_name(m.chosen):lower()
+	for _, s in ipairs(SELF_SPELLS) do
+		if name:find(s, 1, true) then
 			return true
 		end
 	end
 	return false
 end
 
-function actions.pointed_dir_key(player, prompt)
+-- (no_self: the direction is where you aim, whatever spell it's for)
+function actions.pointed_dir_key(player, prompt, no_self)
 	local pitch = player:get_look_vertical()
 	local h = hero()
 	local p = actions.pointed(player)
-	if p.kind ~= "mon" and self_spell() then
+	if p.kind ~= "mon" and not no_self and self_spell() then
 		return "."
 	end
 	local dx, dy = p.tx - h.x, p.ty - h.y

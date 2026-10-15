@@ -404,6 +404,30 @@ nhv_get_monsters(nhv_mon *buf, int max)
     return n;
 }
 
+NHV_API int
+nhv_get_spells(nhv_spell *buf, int max)
+{
+    int i, n = 0;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop)
+        return 0;
+    for (i = 0; i < MAXSPELL && svs.spl_book[i].sp_id != NO_SPELL; i++) {
+        int otyp = svs.spl_book[i].sp_id;
+
+        if (n < max) {
+            nhv_spell *s = &buf[n];
+
+            memset(s, 0, sizeof *s);
+            Strcpy(s->name, OBJ_NAME(objects[otyp]));
+            s->tile = tile_of(objnum_to_glyph(otyp));
+            s->directional = objects[otyp].oc_dir != NODIR;
+        }
+        n++;
+    }
+    return n;
+}
+
 NHV_API void
 nhv_get_hero(nhv_hero *out)
 {

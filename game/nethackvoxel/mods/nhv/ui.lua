@@ -175,6 +175,9 @@ end
 
 -- ---------------------------------------------------------------- menus
 local function menu_dialog(req)
+	if nhv.spells and nhv.spells.is_menu(req) then
+		return nhv.spells.dialog(req, head) -- (spells: Self / Target / Cast)
+	end
 	local items = req.items or {}
 	local multi = req.menu_how == 2
 	local rows = #items
@@ -281,11 +284,25 @@ nh.on_request(function(req)
 		nh.answer_text("")
 		return true
 	end
-	-- queued answers (e.g. which hand a ring goes on)
-	for k, aa in ipairs(ui.auto_answers) do
-		if req.prompt:find(aa.pattern) then
+	-- queued answers (e.g. which hand a ring goes on; a readied spell's
+	-- menu choice and direction)
+	-- (ones that timed out are dropped: e.g. the direction for a spell that
+	-- failed before asking for one mustn't answer a later question)
+	local now = core.get_us_time()
+	for k = #ui.auto_answers, 1, -1 do
+		local t = ui.auto_answers[k].t
+		if t and now - t > 5e6 then
 			table.remove(ui.auto_answers, k)
-			nh.answer_key(aa.key)
+		end
+	end
+	for k, aa in ipairs(ui.auto_answers) do
+		if req.prompt:find(aa.pattern) and (aa.menu ~= nil) == (req.kind == "menu") then
+			table.remove(ui.auto_answers, k)
+			if aa.menu then
+				nh.answer_menu(aa.menu)
+			else
+				nh.answer_key(aa.key)
+			end
 			return true
 		end
 	end
@@ -326,6 +343,15 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname == "nhv:req" then
 		local req = ui.req
 		if not req or nh.state ~= "waiting" then
+			return true
+		end
+		if nhv.spells.is_menu(req) and nhv.spells.fields(fields, req, function(sels)
+			answered()
+			close("nhv:req")
+			nh.answer_menu(sels)
+		end, function(pattern, key)
+			table.insert(ui.auto_answers, {pattern = pattern, key = key, t = core.get_us_time()})
+		end) then
 			return true
 		end
 		for k in pairs(fields) do
