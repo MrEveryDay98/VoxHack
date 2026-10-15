@@ -384,7 +384,8 @@ function prefabs.read_at(o)
 		for lx = 0, W - 1 do
 			for lz = 0, W - 1 do
 				local node = core.get_node(vector.new(o.x + lx, o.y + ly, o.z + lz))
-				if node.name ~= "air" and node.name ~= "ignore" and node.name ~= "nhv:room_light" then
+				if node.name ~= "air" and node.name ~= "ignore" and node.name ~= "nhv:room_light"
+						and node.name ~= "nhv:hero_light" then
 					nodes[prefabs.index(lx, ly, lz)] = {n = node.name, p2 = node.param2}
 				end
 			end
@@ -416,7 +417,7 @@ function prefabs.capture(slot, origin)
 		for lx = 0, W - 1 do
 			for lz = 0, W - 1 do
 				local node = core.get_node(vector.new(origin.x + lx, origin.y + ly, origin.z + lz))
-				if node.name ~= "air" and node.name ~= "ignore" then
+				if node.name ~= "air" and node.name ~= "ignore" and node.name ~= "nhv:hero_light" then
 					nodes[prefabs.index(lx, ly, lz)] = {n = node.name, p2 = node.param2}
 				end
 			end

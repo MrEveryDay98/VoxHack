@@ -760,12 +760,20 @@ end)
 
 core.register_on_leaveplayer(function(player)
 	hud_ids[player:get_player_name()] = nil
+	-- (put out the light you carried)
+	local p = nhv.terrain.hero_light_pos
+	if p and core.get_node(p).name == "nhv:hero_light" then
+		core.set_node(p, {name = "air"})
+	end
+	nhv.terrain.hero_light_pos = nil
 end)
 
--- holding Ctrl moves you (flying or walking) at twice the speed
+-- holding Ctrl moves you (flying or walking) at twice the speed; a light
+-- goes with you, as in the game (never saved into a cell or area)
 local ctrl_held = {}
 core.register_globalstep(function()
 	for _, player in ipairs(core.get_connected_players()) do
+		nhv.terrain.place_hero_light(player:get_pos())
 		local name = player:get_player_name()
 		local ctrl = player:get_player_control().nhv_ctrl or false
 		if ctrl ~= (ctrl_held[name] or false) then
