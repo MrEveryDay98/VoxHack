@@ -312,7 +312,8 @@ local function match_moves(map)
 				fade_out(displaced)
 			end
 			mobs.objs[k] = m.e
-			m.e.obj:move_to(U.tile_center(m.x, m.y, m.e.obj:get_pos().y), true)
+			local from = m.e.obj:get_pos()
+			m.e.glide = {from = from, to = U.tile_center(m.x, m.y, from.y), t0 = core.get_us_time()}
 			m.e.x, m.e.y = m.x, m.y
 		end
 	end
@@ -376,7 +377,9 @@ local function update_objects(snap)
 						props.collisionbox = {0, 0, 0, 0, 0, 0}
 					end
 					e.obj:set_properties(props)
-					e.obj:set_pos(pos)
+					if not e.glide then
+						e.obj:set_pos(pos)
+					end
 					e.tile, e.h = map.mem_tile[i], h
 					-- small items spin; chests and boxes face you; corpses lie flat
 					e.flat = flat
@@ -695,10 +698,32 @@ nhv.nh.on_event(function(evs)
 end)
 
 -- ---------------------------------------------------------------- per step
+-- objects that moved a square (a pushed boulder) slide there, slowing at
+-- the end
+local GLIDE_S = 0.35
+local function update_glides(now)
+	for _, e in pairs(mobs.objs) do
+		local g = e.glide
+		if g then
+			local t = (now - g.t0) / (GLIDE_S * 1e6)
+			if not e.obj:get_pos() then
+				e.glide = nil
+			elseif t >= 1 then
+				e.glide = nil
+				e.obj:set_pos(g.to)
+			else
+				local k = t * (2 - t)
+				e.obj:move_to(vector.add(g.from, vector.multiply(vector.subtract(g.to, g.from), k)), true)
+			end
+		end
+	end
+end
+
 local clock_t = 0
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	update_fades()
+	update_glides(core.get_us_time())
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
 	local now = core.get_us_time()

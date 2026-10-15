@@ -309,7 +309,7 @@ nh.on_snapshot(function(snap, action)
 		teleport(player, U.tile_center(h.x, h.y))
 	elseif action and action.kind == "push" then
 		if h.x == action.tx and h.y == action.ty then
-			nhv.sound.hook("boulder_push")
+			-- (its sound: NetHack's boulder_push hook)
 			player_mod.ahead = {from_x = action.from_x, from_y = action.from_y,
 				t_end = core.get_us_time() + 1500000}
 		end
