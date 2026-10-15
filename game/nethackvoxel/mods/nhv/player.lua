@@ -174,6 +174,7 @@ local function try_push(player)
 			if gx < reach and gz < reach and vector.dot(push_dir, dir) > 0.86
 					and vector.dot(to, dir) > 0 then
 				push_next = core.get_us_time() + 400000
+				core.log("action", ("[nhv] push: boulder %d,%d from %d,%d"):format(e.x, e.y, h.x, h.y))
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
 					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
 				return true
@@ -331,6 +332,9 @@ nh.on_snapshot(function(snap, action)
 			-- (its sound: NetHack's boulder_push hook)
 			player_mod.ahead = {from_x = action.from_x, from_y = action.from_y,
 				t_end = core.get_us_time() + 1500000}
+		else
+			core.log("action", ("[nhv] push refused: boulder %d,%d, hero %d,%d"):format(
+				action.tx, action.ty, h.x, h.y))
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
