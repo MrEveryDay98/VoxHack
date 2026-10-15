@@ -321,10 +321,14 @@ end
 
 -- A boulder's solid box is narrower than its picture: in NetHack you can
 -- squeeze diagonally between a boulder and a wall (or another boulder), and
--- the box leaves room at the corners for that. Not beside a doorway with a
--- door in it (no diagonal moves through those).
+-- the box leaves room at the corners for that. Not when NetHack wouldn't
+-- let you (carrying over 600, too big, in Sokoban), nor beside a doorway
+-- with a door in it (no diagonal moves through those): full width then.
 local BOULDER_SQUEEZE_W = 0.7
-local function boulder_w(map, tx, ty, h)
+local function boulder_w(map, tx, ty, h, hero)
+	if hero and U.has(hero.flags, U.HERO.NOSQUEEZE) then
+		return h * 0.45
+	end
 	for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
 		local x, y = tx + d[1], ty + d[2]
 		if U.in_map(x, y) and map.typ[U.idx(x, y)] == U.TYP.DOOR
@@ -361,7 +365,7 @@ local function update_objects(snap)
 						fresh = true
 					end
 				end
-				local bw = name == "boulder" and boulder_w(map, tx, ty, h) or nil
+				local bw = name == "boulder" and boulder_w(map, tx, ty, h, snap.hero) or nil
 				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or e.bw ~= bw) then
 					local props = sprite_props(map.mem_tile[i], h)
 					e.bw = bw

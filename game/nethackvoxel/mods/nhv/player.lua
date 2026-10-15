@@ -252,7 +252,7 @@ local function step(player)
 		function(x, y) return terrain.passable(map, x, y) and not boulder_at(x, y) end,
 		function(x, y)
 			return terrain.is_door(map, x, y) and (map.door[U.idx(x, y)] or 0) >= 2
-		end, 300, true)
+		end, 300, not U.has(h.flags, U.HERO.NOSQUEEZE))
 	if route and route[1] then
 		tx, ty = route[1].x, route[1].y
 	elseif far then

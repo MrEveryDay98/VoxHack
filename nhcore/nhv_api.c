@@ -490,6 +490,8 @@ nhv_get_hero(nhv_hero *out)
             && (ESHK(shkp)->billct || ESHK(shkp)->debit))
             f |= NHV_HERO_OWES;
     }
+    if (cant_squeeze_thru(&gy.youmonst))
+        f |= NHV_HERO_NOSQUEEZE;
     if (temple_occupied(u.urooms)) f |= NHV_HERO_INTEMPLE;
     out->flags = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);
