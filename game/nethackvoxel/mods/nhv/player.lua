@@ -159,16 +159,20 @@ local function try_push(player)
 			local gz = math.max(0, math.abs(bp.z - pos.z) - w - 0.35)
 			local to = vector.normalize(vector.new(bp.x - pos.x, 0, bp.z - pos.z))
 			if core.settings:get_bool("nhv_debug") then
-				core.log("action", ("[nhv] push? gap %.2f,%.2f dot %.2f boulder %d,%d hero %d,%d"):format(
+				core.log("action", ("[nhv] push? gap %.2f,%.2f dot(to body) %.2f boulder %d,%d hero %d,%d"):format(
 					gx, gz, vector.dot(to, dir), e.x, e.y, h.x, h.y))
 			end
-			-- walking into it nearly head-on: squeezing past it at an angle
-			-- doesn't push it. A boulder diagonally ahead (a corridor bending
-			-- diagonally) can't be squeezed past, and walls keep you from
-			-- lining up with it: a looser angle and reach then
+			-- walking the way NetHack would push it (from your square to its
+			-- square: the line through the squares, not to the boulder's
+			-- middle, so where along its side you touch it doesn't matter);
+			-- squeezing past it at an angle doesn't push it. A boulder
+			-- diagonally ahead (a corridor bending diagonally) can't be
+			-- squeezed past, and walls keep you from reaching it: more reach
 			local diag = e.x ~= h.x and e.y ~= h.y
-			local reach, cone = diag and 0.6 or 0.15, diag and 0.6 or 0.86
-			if gx < reach and gz < reach and vector.dot(to, dir) > cone then
+			local reach = diag and 0.6 or 0.15
+			local push_dir = vector.normalize(vector.new(e.x - h.x, 0, -(e.y - h.y)))
+			if gx < reach and gz < reach and vector.dot(push_dir, dir) > 0.86
+					and vector.dot(to, dir) > 0 then
 				push_next = core.get_us_time() + 400000
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
 					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
