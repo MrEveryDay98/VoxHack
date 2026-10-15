@@ -136,7 +136,24 @@ function clock.tick_due()
 end
 
 -- Do an action that takes game time (charged when its result arrives).
+-- (aimed first: whatever it throws or zaps goes where the crosshair points;
+-- see actions.aim)
+local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true}
 function clock.act(keys, info)
+	local player = nhv.player.get()
+	local aim = player and not (info and NO_AIM[info.kind]) and nhv.actions.aim_keys(player)
+	if aim then
+		if type(keys) == "string" then
+			for c in keys:gmatch(".") do
+				aim[#aim + 1] = {key = c}
+			end
+		else
+			for _, k in ipairs(keys) do
+				aim[#aim + 1] = k
+			end
+		end
+		keys = aim
+	end
 	nh.act(keys, info)
 end
 

@@ -242,9 +242,10 @@ core.register_entity("nhv:bolt", {
 	end,
 })
 
-local function fly_bolt(otyp, x0, y0, x1, y1)
+-- (texture: an object's picture instead of a glowing bolt)
+local function fly_bolt(otyp, x0, y0, x1, y1, texture)
 	local player = nhv.player.get()
-	local color = bolt_color(otyp)
+	local color = texture and "#C0C0C0" or bolt_color(otyp)
 	local from
 	if player then
 		-- (from your hand: a little ahead, right and below your eyes)
@@ -264,7 +265,11 @@ local function fly_bolt(otyp, x0, y0, x1, y1)
 		return
 	end
 	local t = dist / BOLT_SPEED
-	obj:set_properties({textures = {"[fill:4x4:" .. color}})
+	if texture then
+		obj:set_properties({textures = {texture}, visual_size = {x = 0.7, y = 0.7}, glow = 0})
+	else
+		obj:set_properties({textures = {"[fill:4x4:" .. color}})
+	end
 	obj:set_velocity(vector.multiply(vector.direction(from, to), BOLT_SPEED))
 	local ent = obj:get_luaentity()
 	ent.left, ent.target, ent.color = t, to, color
@@ -285,6 +290,11 @@ nh.on_event(function(evs)
 			local otyp, x0, y0, x1, y1 = ev.text:match("^beam (%d+) (%d+) (%d+) (%d+) (%d+)")
 			if otyp then
 				fly_bolt(tonumber(otyp), tonumber(x0), tonumber(y0), tonumber(x1), tonumber(y1))
+			end
+			local tile, tx0, ty0, tx1, ty1 = ev.text:match("^thrown (%d+) (%d+) (%d+) (%d+) (%d+)")
+			if tile then
+				fly_bolt(0, tonumber(tx0), tonumber(ty0), tonumber(tx1), tonumber(ty1),
+					nhv_tiles.texture(tonumber(tile)))
 			end
 		end
 	end

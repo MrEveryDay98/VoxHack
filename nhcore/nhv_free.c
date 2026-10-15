@@ -581,6 +581,75 @@ nhv_container_event(const char *kind, unsigned id)
 
 coordxy nhv_beam_x, nhv_beam_y;
 
+/* ---------------------------------------------------------------- aim */
+static struct {
+    int dx, dy; /* thousandths of a square; 0,0 = none */
+    int ttl;    /* commands left (rhack calls) */
+} aim;
+
+/* #nhvaim dx dy: the next command aims along this line */
+int
+donhvaim(void)
+{
+    aim.dx = nhv_cmd_args[0], aim.dy = nhv_cmd_args[1];
+    aim.ttl = 2; /* (this command, then the one it's for) */
+    return ECMD_OK;
+}
+
+void
+nhv_aim_tick(void)
+{
+    if (aim.ttl > 0 && --aim.ttl == 0)
+        aim.dx = aim.dy = 0;
+}
+
+/* The squares along the aimed line from <x0,y0> (not included), up to max
+   of them; 0 if there's no aim, or it doesn't go the way ddx,ddy does (a
+   slipped throw, ...). */
+int
+nhv_aim_path(coordxy x0, coordxy y0, int ddx, int ddy, coordxy *px,
+             coordxy *py, int maxn)
+{
+    long m = max(abs(aim.dx), abs(aim.dy));
+    long x1, y1, ax, ay, sx, sy, err;
+    coordxy x = x0, y = y0;
+    int n = 0;
+
+    if (!m || (long) ddx * aim.dx + (long) ddy * aim.dy <= 0)
+        return 0;
+    /* far along the line: maxn squares in its main direction */
+    x1 = x0 + (aim.dx * maxn + (aim.dx >= 0 ? m / 2 : -m / 2)) / m;
+    y1 = y0 + (aim.dy * maxn + (aim.dy >= 0 ? m / 2 : -m / 2)) / m;
+    ax = labs(x1 - x0), ay = labs(y1 - y0);
+    sx = x1 > x0 ? 1 : -1, sy = y1 > y0 ? 1 : -1;
+    err = ax - ay;
+    while (n < maxn && (x != x1 || y != y1)) { /* Bresenham */
+        long e2 = 2 * err;
+
+        if (e2 > -ay)
+            err -= ay, x += (coordxy) sx;
+        if (e2 < ax)
+            err += ax, y += (coordxy) sy;
+        px[n] = x, py[n] = y;
+        n++;
+    }
+    return n;
+}
+
+/* "thrown <tile> <x0> <y0> <x1> <y1>": something the hero threw or fired
+   flew from <x0,y0> to <x1,y1> (sent as a combat event) */
+void
+nhv_throw_event(int glyph, int x0, int y0, int x1, int y1)
+{
+    char buf[80];
+
+    if (x0 == x1 && y0 == y1)
+        return;
+    Sprintf(buf, "thrown %d %d %d %d %d", (int) glyphmap[glyph].tileidx, x0,
+            y0, x1, y1);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 /* "beam <otyp> <x0> <y0> <x1> <y1>" (sent as a combat event) */
 void
 nhv_beam_event(int otyp, int x0, int y0, int x1, int y1)

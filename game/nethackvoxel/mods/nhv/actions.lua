@@ -255,6 +255,56 @@ end
 -- Answer for "In what direction?": the square you point at (an
 -- adjacent one gives its direction, your own gives '.'); looking steeply
 -- up or down gives '<' / '>' (zapping, digging, ...).
+-- ---------------------------------------------------------------- aiming
+-- Throwing, firing and zapping go where the crosshair points, at any angle
+-- (not just NetHack's 8 directions): "#nhvaim dx dy" before the action
+-- gives NetHack the line, from your square to the square you point at (or
+-- along your look when that's your own square).
+function actions.aim(player)
+	local h = hero()
+	if not (h and nh.snap) then
+		return nil
+	end
+	local p = actions.pointed(player)
+	local dx, dy = p.tx - h.x, p.ty - h.y
+	if dx == 0 and dy == 0 then
+		local look = player:get_look_dir()
+		dx, dy = look.x, -look.z
+	end
+	local m = math.max(math.abs(dx), math.abs(dy))
+	if m < 1e-3 then
+		return nil
+	end
+	return dx / m, dy / m, p
+end
+
+-- the keys that set the aim (nil: no aim)
+function actions.aim_keys(player)
+	local dx, dy = actions.aim(player)
+	if not dx then
+		return nil
+	end
+	return {{key = "#"}, {text = ("nhvaim %d %d"):format(math.floor(dx * 1000 + 0.5),
+		math.floor(dy * 1000 + 0.5))}}
+end
+
+-- the same aim as a level world direction from `from` (for rays)
+function actions.aim_world_dir(player, from)
+	local dx, dy, p = actions.aim(player)
+	if not dx then
+		return nil
+	end
+	local h = hero()
+	if p and (p.tx ~= h.x or p.ty ~= h.y) then
+		local t = U.tile_center(p.tx, p.ty, from.y)
+		local d = vector.new(t.x - from.x, 0, t.z - from.z)
+		if vector.length(d) > 0.1 then
+			return vector.normalize(d)
+		end
+	end
+	return vector.normalize(vector.new(dx, 0, -dy))
+end
+
 -- spells you'd mostly cast on yourself: unless you aim at a monster (to
 -- heal your pet, say), they go to '.'
 local SELF_SPELLS = {"healing"} -- (also matches "extra healing")

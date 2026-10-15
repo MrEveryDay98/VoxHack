@@ -49,8 +49,8 @@ local function launch(info)
 	local from, dir
 	if info.from_hero then
 		from = vector.add(player:get_pos(), vector.new(0, HEIGHT, 0))
-		local look = player:get_look_dir()
-		dir = vector.normalize(vector.new(look.x, 0, look.z))
+		-- (where the crosshair points; see actions.aim)
+		dir = nhv.actions.aim_world_dir(player, from) or vector.new(0, 0, 0)
 		if vector.length(dir) < 0.5 then -- looking straight up/down
 			dir = vector.normalize(vector.new(info.dx, 0, -info.dy))
 		end
