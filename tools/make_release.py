@@ -79,8 +79,10 @@ closed), so the next game starts a new one. High scores are kept.
 
 Licenses
 --------
-See the licenses folder: NetHack (NetHack General Public License), Luanti
-(LGPL 2.1+), the GeneralUser GS SoundFont, and Luanti's bundled libraries.
+CREDITS.txt lists what the game is made of and under which licence. The
+licenses folder has the licence texts: NetHack (NetHack General Public
+License), Luanti (LGPL 2.1+), the GeneralUser GS SoundFont, TinySoundFont,
+and every bundled library (THIRD-PARTY.txt lists them).
 """
 
 
@@ -155,6 +157,96 @@ def stage(out):
 	sf = os.path.join(GAME, "mods", "nhv_sounds", "soundfonts", "GeneralUser-GS-LICENSE.txt")
 	if os.path.exists(sf):
 		shutil.copy2(sf, os.path.join(lic, "GeneralUser-GS-LICENSE.txt"))
+	shutil.copy2(os.path.join(LUANTI, "src", "client", "sound", "tinysoundfont", "LICENSE.txt"),
+			os.path.join(lic, "TinySoundFont-LICENSE.txt"))
+	shutil.copy2(os.path.join(ROOT, "CREDITS.md"), os.path.join(out, "CREDITS.txt"))
+	libraries(engine, lic)
+
+
+# The libraries shipped as DLLs (built by MSYS2 CLANG64): DLL -> package (its
+# licence files are in clang64/share/licenses/<package>), licence, project.
+# Extra licence texts the packages don't install are in tools/licenses.
+MSYS_LICENSES = r"C:\msys64\clang64\share\licenses"
+DLLS = {
+	"SDL2.dll": ("SDL2", "Zlib", "https://www.libsdl.org/"),
+	"libbrotlicommon.dll": ("brotli", "MIT", "https://github.com/google/brotli"),
+	"libbrotlidec.dll": ("brotli", "MIT", "https://github.com/google/brotli"),
+	"libbz2-1.dll": ("bzip2", "bzip2 (BSD-style)", "https://sourceware.org/bzip2/"),
+	"libc++.dll": ("libc++", "Apache-2.0 WITH LLVM-exception", "https://libcxx.llvm.org/"),
+	"libcrypto-3-x64.dll": ("openssl", "Apache-2.0", "https://www.openssl.org/"),
+	"libcurl-4.dll": ("curl", "curl (MIT-style)", "https://curl.se/"),
+	"libfreetype-6.dll": ("freetype", "FreeType License (FTL), chosen of FTL / GPL-2.0",
+		"https://freetype.org/"),
+	"libglib-2.0-0.dll": ("glib2", "LGPL-2.1-or-later", "https://gitlab.gnome.org/GNOME/glib"),
+	"libgmp-10.dll": ("gmp", "LGPL-3.0-or-later (chosen of LGPL-3.0 / GPL-2.0)", "https://gmplib.org/"),
+	"libgraphite2.dll": ("graphite2", "LGPL-2.1-or-later", "https://github.com/silnrsi/graphite"),
+	"libharfbuzz-0.dll": ("harfbuzz", "MIT", "https://harfbuzz.github.io/"),
+	"libiconv-2.dll": ("libiconv", "LGPL-2.1-or-later", "https://www.gnu.org/software/libiconv/"),
+	"libidn2-0.dll": ("libidn2", "LGPL-3.0-or-later (chosen of LGPL-3.0 / GPL-2.0)",
+		"https://www.gnu.org/software/libidn/#libidn2"),
+	"libintl-8.dll": ("gettext-runtime", "LGPL-2.1-or-later", "https://www.gnu.org/software/gettext/"),
+	"libjpeg-8.dll": ("libjpeg-turbo", "IJG / BSD-3-Clause / Zlib", "https://libjpeg-turbo.org/"),
+	"libjsoncpp-27.dll": ("jsoncpp", "MIT", "https://github.com/open-source-parsers/jsoncpp"),
+	"liblzma-5.dll": ("xz", "0BSD", "https://tukaani.org/xz/"),
+	"libogg-0.dll": ("libogg", "BSD-3-Clause", "https://xiph.org/ogg/"),
+	"libopenal-1.dll": ("openal", "LGPL-2.0-or-later (GNU Library GPL v2)",
+		"https://github.com/kcat/openal-soft"),
+	"libpcre2-8-0.dll": ("pcre2", "BSD-3-Clause", "https://pcre2project.github.io/pcre2/"),
+	"libpng16-16.dll": ("libpng", "libpng (PNG Reference Library License)", "http://www.libpng.org/"),
+	"libpsl-5.dll": ("libpsl", "MIT", "https://github.com/rockdaboot/libpsl"),
+	"libsqlite3-0.dll": ("sqlite3", "Public domain", "https://www.sqlite.org/"),
+	"libssh2-1.dll": ("libssh2", "BSD-3-Clause", "https://libssh2.org/"),
+	"libunistring-5.dll": ("libunistring", "LGPL-3.0-or-later (chosen of LGPL-3.0 / GPL-2.0)",
+		"https://www.gnu.org/software/libunistring/"),
+	"libvorbis-0.dll": ("libvorbis", "BSD-3-Clause", "https://xiph.org/vorbis/"),
+	"libvorbisfile-3.dll": ("libvorbis", "BSD-3-Clause", "https://xiph.org/vorbis/"),
+	"libzip.dll": ("libzip", "BSD-3-Clause", "https://libzip.org/"),
+	"libzstd.dll": ("zstd", "BSD-3-Clause (chosen of BSD-3-Clause / GPL-2.0)",
+		"https://facebook.github.io/zstd/"),
+	"lua51.dll": ("luajit", "MIT", "https://luajit.org/"),
+	"zlib1.dll": ("zlib", "Zlib", "https://zlib.net/"),
+}
+# licence texts the packages above don't install (from the projects themselves)
+EXTRA = {
+	"openal": ["openal-soft-COPYING.txt"],
+	"luajit": ["luajit-COPYRIGHT.txt"],
+	"libvorbis": ["libvorbis-COPYING.txt"],
+	"gmp": ["lgpl-3.0.txt", "gpl-3.0.txt"],
+	"libidn2": ["lgpl-3.0.txt", "gpl-3.0.txt"],
+}
+
+
+def libraries(engine, lic):
+	libdir = os.path.join(lic, "libraries")
+	os.makedirs(libdir, exist_ok=True)
+	lines = ["Libraries shipped in engine\\bin (built with MSYS2 CLANG64)",
+		"Their licence texts are in licenses\\libraries\\<package>.",
+		"The source code of each is available from its project (below) and from",
+		"MSYS2 (https://packages.msys2.org/, package mingw-w64-clang-x86_64-<package>).",
+		""]
+	shipped = set(f for f in os.listdir(os.path.join(engine, "bin")) if f.lower().endswith(".dll"))
+	unknown = sorted(shipped - set(DLLS) - {"nethack.dll"})
+	if unknown:
+		sys.exit("no licence information for: " + ", ".join(unknown) + " (add them to DLLS)")
+	for dll in sorted(shipped - {"nethack.dll"}):
+		pkg, licence, url = DLLS[dll]
+		lines.append("%-22s %-16s %s  %s" % (dll, pkg, licence, url))
+		dst = os.path.join(libdir, pkg)
+		if not os.path.isdir(dst):
+			src = os.path.join(MSYS_LICENSES, pkg)
+			if os.path.isdir(src):
+				copytree(src, dst)
+			for f in EXTRA.get(pkg, []):
+				os.makedirs(dst, exist_ok=True)
+				shutil.copy2(os.path.join(ROOT, "tools", "licenses", f), os.path.join(dst, f))
+			if not (os.path.isdir(dst) and os.listdir(dst)):
+				sys.exit("no licence text found for " + pkg)
+	lines += ["", "Built into luanti.exe: Luanti (LGPL-2.1-or-later) with IrrlichtMt and the",
+		"libraries listed in Luanti-LICENSE.txt; TinySoundFont (MIT, TinySoundFont-LICENSE.txt).",
+		"nethack.dll: NetHack 3.7 (NetHack General Public License, NetHack-license.txt).",
+		"Fonts in engine\\fonts: Arimo, Cousine (Apache-2.0), Droid Sans Fallback",
+		"(Apache-2.0); their licence files are next to them."]
+	write(os.path.join(lic, "THIRD-PARTY.txt"), "\n".join(lines) + "\n")
 
 
 def main():
