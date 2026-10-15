@@ -382,6 +382,13 @@ local function write_squares(sqs)
 	vm:set_data(data.ids)
 	vm:set_param2_data(data.p2)
 	vm:write_to_map(true)
+	-- (the light you carry was in what got rebuilt: it's put back at once,
+	-- instead of only when you next move)
+	local hl = terrain.hero_light_pos
+	if hl and hl.x >= minx and hl.x <= maxx and hl.z >= minz and hl.z <= maxz
+			and hl.y >= y0 and hl.y <= y1 then
+		terrain.hero_light_pos = nil
+	end
 	-- objects (props) placed by the prefabs get their sprites
 	nhv.props.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
 	-- doors: one picture across each group of connected door blocks
@@ -492,7 +499,7 @@ local function debris(prev)
 		return
 	end
 	local ox, oz = U.tile_origin(prev.tx, prev.ty)
-	core.add_particlespawner({
+	local spawner = {
 		amount = 90, time = 0.12,
 		minpos = vector.new(ox - 0.4, U.FLOOR_Y + 0.6, oz - 0.4),
 		maxpos = vector.new(ox + U.TILE - 0.6, U.CEIL_Y - 0.6, oz + U.TILE - 0.6),
@@ -500,7 +507,19 @@ local function debris(prev)
 		minacc = vector.new(0, -14, 0), maxacc = vector.new(0, -14, 0),
 		minexptime = 0.8, maxexptime = 1.8, minsize = 1.2, maxsize = 3,
 		collisiondetection = true, node = {name = node},
-	})
+	}
+	if nhv.doors and table.indexof(nhv.doors.NODES, node) > 0 then
+		-- door blocks are invisible (doors.lua draws the door over them):
+		-- splinters of the door's picture instead
+		spawner.node = nil
+		spawner.amount = 22
+		for k = 0, 3 do
+			spawner.texture = ("%s^[sheet:4x4:%d,%d"):format(nhv.doors.TEXTURE, k, (k * 3) % 4)
+			core.add_particlespawner(table.copy(spawner))
+		end
+	else
+		core.add_particlespawner(spawner)
+	end
 	if nhv.sound then
 		nhv.sound.hook("block_destroyed", {pos = vector.new(ox + 1, U.FLOOR_Y + 2, oz + 1)})
 	end

@@ -162,9 +162,13 @@ local function try_push(player)
 				core.log("action", ("[nhv] push? gap %.2f,%.2f dot %.2f boulder %d,%d hero %d,%d"):format(
 					gx, gz, vector.dot(to, dir), e.x, e.y, h.x, h.y))
 			end
-			-- (walking into it nearly head-on: squeezing past it at an angle
-			-- doesn't push it)
-			if gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.86 then
+			-- walking into it nearly head-on: squeezing past it at an angle
+			-- doesn't push it. A boulder diagonally ahead (a corridor bending
+			-- diagonally) can't be squeezed past, and walls keep you from
+			-- lining up with it: a looser angle and reach then
+			local diag = e.x ~= h.x and e.y ~= h.y
+			local reach, cone = diag and 0.6 or 0.15, diag and 0.6 or 0.86
+			if gx < reach and gz < reach and vector.dot(to, dir) > cone then
 				push_next = core.get_us_time() + 400000
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
 					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
