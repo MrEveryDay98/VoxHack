@@ -404,6 +404,12 @@ nhv_get_monsters(nhv_mon *buf, int max)
     return n;
 }
 
+NHV_API long
+nhv_game_id(void)
+{
+    return (long) ubirthday;
+}
+
 NHV_API int
 nhv_get_spells(nhv_spell *buf, int max)
 {

@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 7
+#define NHV_API_VERSION 8
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -120,7 +120,9 @@ enum nhv_event_kind {
     NHV_EV_COMBAT,      /* "attack <attacker m_id> <target m_id, 0 = hero> <melee>" */
     NHV_EV_SOUND,       /* sound/voice hook, see nhv_sound.c */
     NHV_EV_RAY,         /* ray outcome: "hit|miss|reflect|stop <rid>" */
-    NHV_EV_CONTAINER    /* "open|fail|changed|gone <container id>" */
+    NHV_EV_CONTAINER,   /* "open|fail|changed|gone <container id>" */
+    NHV_EV_SPLEV        /* "<game id> <ledger> <proto> <n> <x> <y> <w> <h>":
+                           a special level's fixed region n */
 };
 
 typedef struct nhv_event {
@@ -385,5 +387,8 @@ typedef struct nhv_spell {
     int directional; /* 1: cast at something (a direction or yourself) */
 } nhv_spell;
 NHV_API int nhv_get_spells(nhv_spell *buf, int max);
+
+/* tells this game apart from others (when it was started) */
+NHV_API long nhv_game_id(void);
 
 #endif /* NHV_API_H */

@@ -581,6 +581,135 @@ nhv_container_event(const char *kind, unsigned id)
 
 coordxy nhv_beam_x, nhv_beam_y;
 
+/* ---------------------------------------------------------------- special levels
+ * While a special level's file builds it, its fixed regions (drawn maps,
+ * rooms with a fixed place and size) are noted; when it's done they're
+ * reported to the host (NHV_EV_SPLEV), or with #nhvsplevdump written out
+ * with their terrain as templates for the area prefab editor. */
+#define MAXSPREG 16
+static struct {
+    boolean active;
+    char proto[32];
+    int n;
+    struct {
+        int x, y, w, h;
+    } r[MAXSPREG];
+} splev;
+static FILE *splev_out; /* #nhvsplevdump: templates go here */
+
+void
+nhv_splev_begin(const char *protofile)
+{
+    char *dot;
+
+    splev.active = TRUE;
+    splev.n = 0;
+    Snprintf(splev.proto, sizeof splev.proto, "%s", protofile);
+    if ((dot = strrchr(splev.proto, '.')) != 0)
+        *dot = '\0'; /* ("minetn-3.lua" -> "minetn-3") */
+}
+
+void
+nhv_splev_region(int x, int y, int w, int h)
+{
+    int i;
+
+    if (!splev.active || splev.n >= MAXSPREG)
+        return;
+    if (x < 1)
+        w -= 1 - x, x = 1;
+    if (y < 0)
+        h += y, y = 0;
+    if (x + w > COLNO)
+        w = COLNO - x;
+    if (y + h > ROWNO)
+        h = ROWNO - y;
+    if (w <= 0 || h <= 0)
+        return;
+    for (i = 0; i < splev.n; i++) /* (the same one twice: once) */
+        if (splev.r[i].x == x && splev.r[i].y == y && splev.r[i].w == w
+            && splev.r[i].h == h)
+            return;
+    splev.r[splev.n].x = x, splev.r[splev.n].y = y;
+    splev.r[splev.n].w = w, splev.r[splev.n].h = h;
+    splev.n++;
+}
+
+void
+nhv_splev_end(void)
+{
+    char buf[128];
+    int i, x, y;
+
+    if (!splev.active)
+        return;
+    splev.active = FALSE;
+    for (i = 0; i < splev.n; i++) {
+        if (splev_out) {
+            /* "<proto> <n> <x> <y> <w> <h> <terrain>", the terrain types
+               row by row as characters ('0' + type) */
+            fprintf(splev_out, "%s %d %d %d %d %d ", splev.proto, i + 1,
+                    splev.r[i].x, splev.r[i].y, splev.r[i].w, splev.r[i].h);
+            for (y = splev.r[i].y; y < splev.r[i].y + splev.r[i].h; y++)
+                for (x = splev.r[i].x; x < splev.r[i].x + splev.r[i].w; x++)
+                    fputc('0' + levl[x][y].typ, splev_out);
+            fputc('\n', splev_out);
+        } else {
+            Snprintf(buf, sizeof buf, "%ld %d %s %d %d %d %d %d",
+                     (long) ubirthday, (int) ledger_no(&u.uz), splev.proto,
+                     i + 1, splev.r[i].x, splev.r[i].y, splev.r[i].w,
+                     splev.r[i].h);
+            nhv_push_event(NHV_EV_SPLEV, 0, buf);
+        }
+    }
+}
+
+/* #nhvsplevdump (wizard mode; a throwaway game): build every variant of
+   every special level in turn and write their fixed regions to
+   splev_templates.txt (tools/make_splev_templates.py runs this) */
+int
+donhvsplevdump(void)
+{
+    static char envbuf[64];
+    s_level *sp;
+    d_level here = u.uz;
+    int v, nv, count = 0;
+
+    if (!wizard)
+        return ECMD_OK;
+    if (!(splev_out = fopen("splev_templates.txt", "w"))) {
+        pline("Can't write splev_templates.txt.");
+        return ECMD_OK;
+    }
+    for (sp = svs.sp_levchn; sp; sp = sp->next) {
+        /* (the Planes of Air and Water move around: nothing fixed) */
+        if (!strcmp(sp->proto, "air") || !strcmp(sp->proto, "water")
+            || !strcmp(sp->proto, "dummy")) /* (a placeholder, no file) */
+            continue;
+        nv = sp->rndlevs ? sp->rndlevs : 1;
+        for (v = 1; v <= nv; v++) {
+            Snprintf(envbuf, sizeof envbuf, "SPLEVTYPE=%s-%d", sp->proto, v);
+            putenv(envbuf);
+            makemap_prepost(TRUE, FALSE);
+            u.uz = sp->dlevel;
+            mklev();
+            makemap_prepost(FALSE, FALSE);
+            count++;
+        }
+    }
+    Strcpy(envbuf, "SPLEVTYPE=");
+    putenv(envbuf);
+    fclose(splev_out);
+    splev_out = 0;
+    /* back to a fresh copy of where we started */
+    makemap_prepost(TRUE, FALSE);
+    u.uz = here;
+    mklev();
+    makemap_prepost(FALSE, FALSE);
+    pline("Wrote %d special levels to splev_templates.txt.", count);
+    return ECMD_OK;
+}
+
 /* ---------------------------------------------------------------- aim */
 static struct {
     int dx, dy; /* thousandths of a square; 0,0 = none */
