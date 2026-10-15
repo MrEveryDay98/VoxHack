@@ -90,14 +90,15 @@ donhvmove(void)
         return ECMD_OK;
     mtmp = m_at(x, y);
     u.dx = dx, u.dy = dy, u.dz = 0;
-    /* walking never fights; it may swap places with a pet. (The
-       no-fighting flag also means "don't push boulders", so walking into
-       a boulder with nobody there goes without it: it pushes) */
-    svc.context.nopick = !(mtmp && mtmp->mtame && canspotmon(mtmp)
-                           /* (confused or stunned, NetHack would attack
-                              the pet instead of swapping: just bump) */
-                           && !Stunned && !Confusion)
-                         && !(sobj_at(BOULDER, x, y) && !mtmp);
+    /* walking never fights (the no-fighting flag, as NetHack's 'm' prefix,
+       when someone is there); it may swap places with a pet. With nobody
+       there it's an ordinary step: autopickup picks things up, a boulder
+       is pushed */
+    svc.context.nopick = mtmp
+                         && !(mtmp->mtame && canspotmon(mtmp)
+                              /* (confused or stunned, NetHack would attack
+                                 the pet instead of swapping: just bump) */
+                              && !Stunned && !Confusion);
     svc.context.forcefight = 0;
     domove();
     svc.context.nopick = 0;

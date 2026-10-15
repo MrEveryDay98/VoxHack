@@ -321,6 +321,23 @@ nh.on_snapshot(function(snap, action)
 		return
 	end
 	set_speed(player)
+	-- squeezing past boulders and tight corners: say when it stops (and
+	-- starts) being possible; boulders get their full width meanwhile
+	local nosq = U.has(h.flags, U.HERO.NOSQUEEZE)
+	if prev and nosq ~= player_mod.nosqueeze then
+		if nosq then
+			local carried = 0
+			for _, o in ipairs(snap.inventory or {}) do
+				carried = carried + (o.weight or 0)
+			end
+			nhv.hud.message(carried > 600
+				and ("You're carrying too much to squeeze past boulders (%d of 600)."):format(carried)
+				or "You can't squeeze past boulders here.")
+		else
+			nhv.hud.message("You can squeeze past boulders again.")
+		end
+	end
+	player_mod.nosqueeze = nosq
 	-- confused / stunned: the NetHack Voxel build of Luanti scrambles the
 	-- controls (rotated / reversed walking, inverted looking up and down)
 	-- (and the screen waves; hallucinating, it waves and its colours drift)
