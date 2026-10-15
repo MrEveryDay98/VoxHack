@@ -44,7 +44,8 @@ local function measure(player)
 	local info = player and core.get_player_window_information(player:get_player_name())
 	if info and info.size and info.real_hud_scaling then
 		-- (7 slots, 6 gaps and the half-slot gap, in HUD pixels)
-		local room = 0.96 * info.size.x / info.real_hud_scaling
+		-- (inside the 4:3 frame when there is one)
+		local room = 0.96 * info.size.x * (1 - 2 * (nhv.hud.frame or 0)) / info.real_hud_scaling
 		SLOT = math.max(48, math.min(SLOT, math.floor((room - 6 * GAP) / 7.5)))
 	end
 	Y = -SLOT / 2 - 8

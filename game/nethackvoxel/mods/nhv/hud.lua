@@ -204,7 +204,7 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
 	else
 		local s = corner_scale()
-		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
+		player:hud_change(hud.ids.map, "position", {x = 1 - hud.frame, y = 0})
 		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
 		-- (a hidden map is scaled to nothing)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
@@ -257,7 +257,94 @@ core.register_on_joinplayer(function(player)
 	})
 	place_map(player)
 	hud.build_meters(player)
+	hud.frame_ids = nil
+	hud.update_frame(player)
+	hud.apply_fog(player)
 end)
+
+-- ---------------------------------------------------------------- 4:3 frame
+-- Options > Screen shape 4:3: the view is framed to 4:3 with black bars at
+-- the sides (a thin line edging them), and the HUD's corner pieces (map,
+-- meters) move inside the frame. Rechecked as the window changes size.
+hud.frame = 0 -- the part of the width each side bar covers (0..0.5)
+
+local function frame_frac(player)
+	if core.settings:get("nhv_screen") ~= "4:3" then
+		return 0
+	end
+	local info = core.get_player_window_information(player:get_player_name())
+	if not (info and info.size and info.size.x > 0 and info.size.y > 0) then
+		return 0
+	end
+	local inner = info.size.y * 4 / 3
+	if inner >= info.size.x then
+		return 0
+	end
+	return (1 - inner / info.size.x) / 2
+end
+
+function hud.update_frame(player)
+	local f = frame_frac(player)
+	if hud.frame_ids and math.abs(f - hud.frame) < 0.0005 then
+		return
+	end
+	hud.frame = f
+	if not hud.frame_ids then
+		hud.frame_ids = {}
+		for _, side in ipairs({"left", "right", "left_line", "right_line"}) do
+			hud.frame_ids[side] = player:hud_add({type = "image", text = "blank.png",
+				position = {x = 0, y = 0.5}, scale = {x = 0, y = 0}, z_index = -50})
+		end
+	end
+	local on = f > 0
+	local bar, line = on and "[fill:1x1:#000000" or "blank.png", on and "[fill:1x1:#3C3C50" or "blank.png"
+	local ids = hud.frame_ids
+	for side, def in pairs({
+		left = {pos = 0, align = 1, scale = -f * 100, tex = bar},
+		right = {pos = 1, align = -1, scale = -f * 100, tex = bar},
+		left_line = {pos = f, align = -1, scale = 3, tex = line},
+		right_line = {pos = 1 - f, align = 1, scale = 3, tex = line},
+	}) do
+		player:hud_change(ids[side], "position", {x = def.pos, y = 0.5})
+		player:hud_change(ids[side], "alignment", {x = def.align, y = 0})
+		player:hud_change(ids[side], "scale", {x = on and def.scale or 0, y = on and -100 or 0})
+		player:hud_change(ids[side], "text", def.tex)
+	end
+	place_map(player)
+	hud.build_meters(player)
+	if nhv.hotbar then
+		nhv.hotbar.rebuild(player) -- (fits inside the frame)
+	end
+end
+
+local frame_t = 0
+core.register_globalstep(function(dtime)
+	frame_t = frame_t + dtime
+	if frame_t < 2 then
+		return
+	end
+	frame_t = 0
+	local player = nhv.player.get()
+	if player and hud.frame_ids then
+		hud.update_frame(player)
+	end
+end)
+
+-- ---------------------------------------------------------------- darkness
+-- Options > Darkness: black fog closes in (blindness closes it in further)
+local DARKNESS = {
+	[0] = {fog_distance = 90, fog_start = 0.3},
+	[1] = {fog_distance = 48, fog_start = 0.15},
+	[2] = {fog_distance = 24, fog_start = 0.1},
+}
+function hud.normal_fog()
+	return DARKNESS[tonumber(core.settings:get("nhv_darkness")) or 0] or DARKNESS[0]
+end
+
+function hud.apply_fog(player)
+	player:set_sky({type = "plain", base_color = "#000000", clouds = false,
+		fog = hud.blind and {fog_distance = 5, fog_start = 0.1} or hud.normal_fog()})
+end
 
 -- ---------------------------------------------------------------- meters
 -- HP and Pw bars in the top-left corner, sized for Graphics > Text size
@@ -287,7 +374,7 @@ function hud.build_meters(player)
 	local frame = nhv.theme and nhv.theme.retro() and "#AAAAAA" or "#000000"
 	for row, m in ipairs(METERS) do
 		local y = meter_y(row)
-		local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
+		local base = {position = {x = hud.frame, y = 0}, alignment = {x = 1, y = 1}}
 		meter_ids[m.key .. "_bg"] = player:hud_add({
 			type = "image", position = base.position, alignment = base.alignment,
 			offset = {x = 12, y = y}, scale = {x = 1, y = 1}, z_index = 40,
@@ -302,6 +389,10 @@ function hud.build_meters(player)
 			type = "text", position = base.position, alignment = {x = 0, y = 0},
 			offset = {x = 12 + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
 		})
+	end
+	-- (the message lines start below the meters: long ones don't run over them)
+	if hud.ids.msg then
+		player:hud_change(hud.ids.msg, "offset", {x = 0, y = meter_y(#METERS) + h + 8})
 	end
 end
 
@@ -428,9 +519,7 @@ nh.on_snapshot(function(snap)
 	local blind = U.has(h.flags, U.HERO.BLIND)
 	if blind ~= hud.blind then
 		hud.blind = blind
-		player:set_sky({type = "plain", base_color = "#000000", clouds = false,
-			fog = blind and {fog_distance = 5, fog_start = 0.1}
-				or {fog_distance = 90, fog_start = 0.3}})
+		hud.apply_fog(player)
 	end
 end)
 
