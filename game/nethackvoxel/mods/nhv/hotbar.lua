@@ -253,6 +253,39 @@ nh.on_snapshot(function(snap)
 	end
 end)
 
+-- ---------------------------------------------------------------- looking
+-- The middle mouse button looks at what's under the crosshair (NetHack's
+-- farlook, ;): the monster, object or feature it's on, or the block's square
+-- (a wall, the floor, a trap...). Up to LOOK_RANGE squares away.
+local LOOK_RANGE = 25
+
+local function look_target(player)
+	local pos = player:get_pos()
+	local eye = vector.new(pos.x, pos.y + (player:get_properties().eye_height or 1.625), pos.z)
+	local dir = player:get_look_dir()
+	local ray = core.raycast(eye, vector.add(eye, vector.multiply(dir, LOOK_RANGE * U.TILE)), true, false)
+	for pointed in ray do
+		if pointed.type == "object" then
+			local ent = pointed.ref:get_luaentity()
+			if ent and ent.name:sub(1, 4) == "nhv:" and pointed.ref:get_pos() then
+				return U.pos_to_tile(pointed.ref:get_pos())
+			end
+		elseif pointed.type == "node" then
+			-- (just inside the block that was hit, not on its face)
+			local p = pointed.intersection_point
+			return U.pos_to_tile(vector.add(p, vector.multiply(dir, 0.05)))
+		end
+	end
+	return nil
+end
+
+function hotbar.look(player)
+	local tx, ty = look_target(player)
+	if tx and U.in_map(tx, ty) then
+		nh.act({{key = "#"}, {text = ("nhvlook %d %d"):format(tx, ty)}}, {kind = "look"})
+	end
+end
+
 -- ---------------------------------------------------------------- action keys
 local function flash_slot(k)
 	local player = nhv.player.get()
@@ -269,6 +302,13 @@ end
 core.register_chatcommand("nhvkey", {
 	description = "(NetHack Voxel) action key",
 	func = function(pname, param)
+		if param == "look" then
+			local player = core.get_player_by_name(pname)
+			if player and not nhv.ui.open and nh.ready() then
+				hotbar.look(player)
+			end
+			return true
+		end
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
 			or (param == "pay" and hotbar.PAY)
