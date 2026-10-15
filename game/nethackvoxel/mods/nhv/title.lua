@@ -71,7 +71,9 @@ end
 local function start(player, name)
 	core.settings:set("nhv_last_character", name)
 	core.settings:write()
-	core.close_formspec(player:get_player_name(), FORM)
+	-- (whichever screen it was started from: the title, the new character
+	-- form or the replace question; only one with the right name closes)
+	core.close_formspec(player:get_player_name(), "")
 	title.open = false
 	nhv.new_game(player, name)
 end
