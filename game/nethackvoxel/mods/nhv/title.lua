@@ -140,6 +140,74 @@ end
 -- (Options > NetHack options shows the same)
 local CREATE = {"role", "race", "gender", "align", "pettype"}
 
+-- NetHack's allowed combinations (role.c): each role's races, genders and
+-- alignments; each race's alignments. A choice is offered only if it fits
+-- the ones above it (the role; for alignment, the race too). "Ask" and
+-- "Random" always are: NetHack then picks something that fits.
+local function set(...)
+	local t = {}
+	for _, v in ipairs({...}) do
+		t[v] = true
+	end
+	return t
+end
+local BOTH = set("male", "female")
+local ROLES = {
+	archeologist = {race = set("human", "dwarf", "gnome"), gender = BOTH, align = set("lawful", "neutral")},
+	barbarian = {race = set("human", "orc"), gender = BOTH, align = set("neutral", "chaotic")},
+	caveman = {race = set("human", "dwarf", "gnome"), gender = BOTH, align = set("lawful", "neutral")},
+	healer = {race = set("human", "gnome"), gender = BOTH, align = set("neutral")},
+	knight = {race = set("human"), gender = BOTH, align = set("lawful")},
+	monk = {race = set("human"), gender = BOTH, align = set("lawful", "neutral", "chaotic")},
+	priest = {race = set("human", "elf"), gender = BOTH, align = set("lawful", "neutral", "chaotic")},
+	rogue = {race = set("human", "orc"), gender = BOTH, align = set("chaotic")},
+	ranger = {race = set("human", "elf", "gnome", "orc"), gender = BOTH, align = set("neutral", "chaotic")},
+	samurai = {race = set("human"), gender = BOTH, align = set("lawful")},
+	tourist = {race = set("human"), gender = BOTH, align = set("neutral")},
+	valkyrie = {race = set("human", "dwarf"), gender = set("female"), align = set("lawful", "neutral")},
+	wizard = {race = set("human", "elf", "gnome", "orc"), gender = BOTH, align = set("neutral", "chaotic")},
+}
+local RACE_ALIGN = {
+	human = set("lawful", "neutral", "chaotic"), elf = set("chaotic"), dwarf = set("lawful"),
+	gnome = set("neutral"), orc = set("chaotic"),
+}
+
+-- may key k be v, given what's chosen above it?
+local function allowed(k, v, get)
+	if v == "" or v == "random" then
+		return true
+	end
+	local role = ROLES[get("role")]
+	if k == "race" or k == "gender" then
+		return not role or role[k][v] == true
+	elseif k == "align" then
+		local race = RACE_ALIGN[get("race")]
+		return (not role or role.align[v] == true) and (not race or race[v] == true)
+	end
+	return true
+end
+
+-- the choices still allowed for key k (in order)
+local function allowed_choices(k, get)
+	local out = {}
+	for _, c in ipairs(nhv.nhopts.BY_KEY[k].choices) do
+		if allowed(k, c[1], get) then
+			out[#out + 1] = c
+		end
+	end
+	return out
+end
+
+-- after the role or race changed: anything below that no longer fits
+-- becomes Random
+local function fix_choices(o)
+	for _, k in ipairs({"race", "gender", "align"}) do
+		if not allowed(k, o.get(k), o.get) then
+			o.set(k, "random")
+		end
+	end
+end
+
 local function newchar_formspec(player)
 	local o = nhv.nhopts
 	local name = o.get("name")
@@ -155,10 +223,11 @@ local function newchar_formspec(player)
 		fs[#fs + 1] = ("label[4,%s;Name]field[8,%s;4,0.8;name;;%s]field_close_on_enter[name;false]"):format(y + 0.4, y, E(name))
 	end
 	y = y + 1
+	fix_choices(o)
 	for _, k in ipairs(CREATE) do
 		local opt = o.BY_KEY[k]
 		local labels, sel = {}, 1
-		for i, c in ipairs(opt.choices) do
+		for i, c in ipairs(allowed_choices(k, o.get)) do
 			labels[i] = E(c[2])
 			if c[1] == o.get(k) then
 				sel = i
@@ -202,12 +271,22 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		return true
 	elseif formname == NEW then
 		local o = nhv.nhopts
+		-- (each dropdown's number counts the choices it showed: the allowed
+		-- ones, worked out top-down as they were shown)
+		local before = {}
 		for _, k in ipairs(CREATE) do
-			local c = o.BY_KEY[k].choices[tonumber(fields[k] or "") or 0]
+			before[k] = o.get(k)
+		end
+		local function shown(k)
+			return before[k]
+		end
+		for _, k in ipairs(CREATE) do
+			local c = allowed_choices(k, shown)[tonumber(fields[k] or "") or 0]
 			if c then
 				o.set(k, c[1])
 			end
 		end
+		fix_choices(o)
 		if fields.petname then
 			local pet = o.clean_name(fields.petname)
 			o.set("dogname", pet)
@@ -231,6 +310,9 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			end
 		elseif fields.back or fields.quit then
 			title.show(player)
+		elseif o.get("role") ~= before.role or o.get("race") ~= before.race then
+			-- (a new role or race: the choices below it change)
+			core.show_formspec(pname, NEW, newchar_formspec(player))
 		end
 		return true
 	elseif formname == CONFIRM then
