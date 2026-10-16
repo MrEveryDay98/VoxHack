@@ -286,34 +286,66 @@ local function meter_size()
 	return math.floor(200 * k), 14 * k + 6 -- width, height (HUD pixels)
 end
 
+-- (row 0 is your name and title; the bars are rows 1 and 2)
 local function meter_y(row)
 	local _, h = meter_size()
-	return 12 + (row - 1) * (h + 6)
+	return 12 + row * (h + 6)
 end
+
+-- your portrait (your NetHack sprite) to the left of the name and bars
+local TILE_PX = 16 -- (NetHack's tiles)
+local function portrait_size()
+	local _, h = meter_size()
+	return 3 * h + 2 * 6
+end
+local function meters_x()
+	return 12 + portrait_size() + 8
+end
+local portrait_shown, name_shown
 
 function hud.build_meters(player)
 	for _, id in pairs(meter_ids) do
 		player:hud_remove(id)
 	end
 	meter_ids, meter_last = {}, {}
+	portrait_shown, name_shown = nil, nil
 	local w, h = meter_size()
 	local frame = nhv.theme and nhv.theme.retro() and "#AAAAAA" or "#000000"
+	local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
+	local mx = meters_x()
+	-- your portrait in a framed box, as tall as the name and both bars
+	local ps = portrait_size()
+	meter_ids.portrait_bg = player:hud_add({
+		type = "image", position = base.position, alignment = base.alignment,
+		offset = {x = 12, y = 12}, scale = {x = 1, y = 1}, z_index = 40,
+		text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(ps, ps, frame, ps - 4, ps - 4),
+	})
+	local inner = ps - 8
+	meter_ids.portrait = player:hud_add({
+		type = "image", position = base.position, alignment = base.alignment,
+		offset = {x = 16, y = 16}, scale = {x = inner / TILE_PX, y = inner / TILE_PX}, z_index = 41,
+		text = "blank.png",
+	})
+	-- your name and title
+	meter_ids.name = player:hud_add({
+		type = "text", position = base.position, alignment = {x = 1, y = 0},
+		offset = {x = mx + 2, y = 12 + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+	})
 	for row, m in ipairs(METERS) do
 		local y = meter_y(row)
-		local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
 		meter_ids[m.key .. "_bg"] = player:hud_add({
 			type = "image", position = base.position, alignment = base.alignment,
-			offset = {x = 12, y = y}, scale = {x = 1, y = 1}, z_index = 40,
+			offset = {x = mx, y = y}, scale = {x = 1, y = 1}, z_index = 40,
 			text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(w, h, frame, w - 4, h - 4),
 		})
 		meter_ids[m.key .. "_fill"] = player:hud_add({
 			type = "image", position = base.position, alignment = base.alignment,
-			offset = {x = 14, y = y + 2}, scale = {x = 0, y = 0}, z_index = 41,
+			offset = {x = mx + 2, y = y + 2}, scale = {x = 0, y = 0}, z_index = 41,
 			text = "[fill:1x1:" .. m.color,
 		})
 		meter_ids[m.key .. "_text"] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 0, y = 0},
-			offset = {x = 12 + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+			offset = {x = mx + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
 		})
 	end
 	-- (the message lines start below the meters: long ones don't run over them)
@@ -325,6 +357,17 @@ end
 local function update_meters(player, h)
 	if not next(meter_ids) then
 		return
+	end
+	-- your sprite (polymorphed: what you've become) and "name the title"
+	local tex = h.tile and h.tile >= 0 and nhv_tiles.texture(h.tile) or "blank.png"
+	if tex ~= portrait_shown then
+		portrait_shown = tex
+		player:hud_change(meter_ids.portrait, "text", tex)
+	end
+	local name = ((h.name or "") .. (h.rank and h.rank ~= "" and (" the " .. h.rank) or ""))
+	if name ~= name_shown then
+		name_shown = name
+		player:hud_change(meter_ids.name, "text", name)
 	end
 	local w, ht = meter_size()
 	for _, m in ipairs(METERS) do
