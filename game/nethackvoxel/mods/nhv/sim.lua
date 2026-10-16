@@ -31,7 +31,7 @@ local REPATH = 1.5       -- turns between path recomputations
 local MF = {
 	TAME = 0x001, PEACEFUL = 0x002, FLEE = 0x004, CANMOVE = 0x008,
 	SEES_U = 0x010, GRID = 0x020, VISIBLE = 0x040, CONFUSED = 0x080,
-	HIDER = 0x100, HIDDEN = 0x200, KEEPAWAY = 0x400,
+	HIDER = 0x100, HIDDEN = 0x200, KEEPAWAY = 0x400, ASLEEP = 0x800,
 }
 sim.MF = MF
 

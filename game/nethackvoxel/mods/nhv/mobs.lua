@@ -713,6 +713,49 @@ nhv.nh.on_event(function(evs)
 	end
 end)
 
+-- ---------------------------------------------------------------- asleep
+-- A sleeping monster you can see breathes out Z's: one every so often,
+-- drifting up and away from its head, growing and fading.
+local Z_EVERY = 1.1 -- seconds between Z's (per monster, give or take)
+local z_next = {}   -- monster id -> time of its next Z
+local function sleep_zs()
+	local now = core.get_us_time() / 1e6
+	local MF = nhv.sim and nhv.sim.MF
+	if not MF then
+		return
+	end
+	for id, b in pairs(nhv.sim.mons) do
+		local e = mobs.mons["id" .. id]
+		local pos = e and e.obj:get_pos()
+		if pos and U.has(b.flags or 0, MF.ASLEEP) and U.has(b.flags or 0, MF.VISIBLE) then
+			if not z_next[id] then
+				z_next[id] = now + math.random() * Z_EVERY -- (not all in step)
+			elseif now >= z_next[id] then
+				z_next[id] = now + Z_EVERY * (0.8 + math.random() * 0.4)
+				local h = e.h or 1.5
+				local side = (math.random() - 0.5) * 0.6
+				core.add_particle({
+					pos = vector.offset(pos, side * 0.5, h * 0.45 + 0.15, side * 0.5),
+					velocity = vector.new(side, 0.55, (math.random() - 0.5) * 0.6),
+					expirationtime = 2.2,
+					size = 1.6,
+					texture = {name = "nhv_z.png^[multiply:#E8F0FF", alpha_tween = {1, 0},
+						scale_tween = {0.6, 1.5}},
+					glow = 10,
+				})
+			end
+		else
+			z_next[id] = nil
+		end
+	end
+	for id in pairs(z_next) do
+		if not nhv.sim.mons[id] then
+			z_next[id] = nil -- (gone: died, left the level)
+		end
+	end
+end
+core.register_globalstep(sleep_zs)
+
 -- ---------------------------------------------------------------- per step
 -- objects that moved a square (a pushed boulder) slide there, slowing at
 -- the end

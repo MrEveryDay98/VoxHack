@@ -331,6 +331,7 @@ NHV_API void nhv_set_monstates(const nhv_monstate *states, int n);
 #define NHV_MF_HIDER    0x100
 #define NHV_MF_HIDDEN   0x200
 #define NHV_MF_KEEPAWAY 0x400  /* prefers to fight from a distance */
+#define NHV_MF_ASLEEP   0x800  /* sleeping (not just unable to move) */
 
 typedef struct nhv_monfull {
     unsigned id;

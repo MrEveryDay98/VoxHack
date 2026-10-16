@@ -248,6 +248,8 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
             f.flags |= NHV_MF_HIDDEN;
         if (!m->mpeaceful && nhv_mon_keeps_distance(m))
             f.flags |= NHV_MF_KEEPAWAY;
+        if (m->msleeping)
+            f.flags |= NHV_MF_ASLEEP;
         if (n < max)
             buf[n] = f;
         n++;
