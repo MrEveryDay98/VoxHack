@@ -81,6 +81,9 @@ end
 
 local function teleport(player, pos)
 	player:set_pos(player_mod.free_spot(pos))
+	if nhv.effects then
+		nhv.effects.arrived() -- (teleport effects play where you arrive)
+	end
 	-- on a new level the blocks are built just after this: check again then
 	core.after(0.1, function()
 		if player:is_player() then

@@ -144,9 +144,50 @@ function effects.play(id, pos)
 end
 
 -- a hook happened (called from sound.hook): play what's attached to it
+-- Hooks that move you somewhere else: their effects play where you arrive,
+-- when your body gets there (the hook fires before you're moved - with
+-- teleport control, before you've even chosen where; on another level,
+-- once it's built); after a few seconds anyway. The same effect from two
+-- of them at once plays once.
+local ARRIVAL = {teleport = true, trap_teleportation_trap = true,
+	trap_level_teleporter = true, trap_magic_portal = true}
+local ARRIVAL_WAIT = 5
+local arriving = {} -- effect id -> time it was asked for
+
+local function arrive(eid)
+	if arriving[eid] then
+		arriving[eid] = nil
+		local p = nhv.player.get()
+		if p then
+			effects.play(eid, p:get_pos())
+		end
+	end
+end
+
+-- your body was moved (player.lua): the effects waiting for that play now
+function effects.arrived()
+	for eid in pairs(arriving) do
+		core.after(0.1, arrive, eid) -- (once the body is there)
+	end
+end
+
 function effects.hook(id, opts)
 	local ids = effects.by_hook[id]
 	if not ids then
+		return
+	end
+	if ARRIVAL[id] then
+		for _, eid in ipairs(ids) do
+			if not arriving[eid] then
+				local asked = core.get_us_time()
+				arriving[eid] = asked
+				core.after(ARRIVAL_WAIT, function()
+					if arriving[eid] == asked then
+						arrive(eid)
+					end
+				end)
+			end
+		end
 		return
 	end
 	local pos = opts and opts.pos

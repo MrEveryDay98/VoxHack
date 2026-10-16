@@ -165,6 +165,7 @@
     }
    ],
    "triggers": [
+    "teleport",
     "trap_level_teleporter",
     "trap_magic_portal",
     "trap_teleportation_trap"
