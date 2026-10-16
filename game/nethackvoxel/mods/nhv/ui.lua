@@ -838,6 +838,17 @@ nh.on_snapshot(function(snap, info)
 		ui.open = nil
 	end
 	nhv.player.freeze(true)
+	if ui.to_title then
+		-- (saved from the pause menu: straight to the title screen)
+		ui.to_title = false
+		ui.saving = false
+		nhv.hud.messages = {} -- (a fresh start on the title screen)
+		local player = nhv.player.get()
+		if player then
+			core.after(0.2, nhv.title.show, player)
+		end
+		return
+	end
 	ui.dead = true
 	ui.end_title = ui.saving and "Game saved. Continue it from the title screen."
 		or "Your game is over."

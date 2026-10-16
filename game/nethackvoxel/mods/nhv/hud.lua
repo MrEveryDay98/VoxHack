@@ -145,9 +145,12 @@ local function update_messages(player)
 		table.remove(hud.messages, 1)
 	end
 	local lines = {}
-	-- (the chat console shows the whole log meanwhile; the guide covers
-	-- the screen)
-	if not nhv.ui.chat_open and not (nhv.guide and nhv.guide.open) then
+	-- (above NetHack's questions only: not over other menus - the pause
+	-- menu, the inventory, Options -, the title screen or the guide; the
+	-- chat console shows the whole log meanwhile)
+	local covered = nhv.ui.chat_open or (nhv.guide and nhv.guide.open)
+		or (nhv.title and nhv.title.open) or (nhv.ui.menu_open and not nhv.ui.open)
+	if not covered then
 		for _, m in ipairs(hud.messages) do
 			lines[#lines + 1] = m.text
 		end

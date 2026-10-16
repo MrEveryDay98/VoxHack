@@ -244,8 +244,9 @@ core.register_globalstep(function()
 	nh.pump(0)
 end)
 
-core.register_on_shutdown(function()
-	-- Save the game when the world closes.
+-- Save the game (when the world closes, or Quit in the pause menu). True
+-- if a game was running to save.
+function nh.save_game()
 	if nh.state == "waiting" or nh.state == "busy" then
 		core.nh_clear_input()
 		if nh.state == "busy" then
@@ -267,7 +268,13 @@ core.register_on_shutdown(function()
 			core.nh_send_key("y")
 		end
 		core.nh_wait(5000)
+		return true
 	end
+	return false
+end
+
+core.register_on_shutdown(function()
+	nh.save_game()
 end)
 
 return nh

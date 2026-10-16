@@ -79,6 +79,29 @@ local function start(player, name)
 	nhv.new_game(player, name)
 end
 
+-- Quit in the pause menu (the NetHack Voxel build of Luanti sends
+-- "/nhvtitle"): save the game and go back to the title screen
+core.register_chatcommand("nhvtitle", {
+	description = "(NetHack Voxel) save and go back to the title screen",
+	func = function(pname)
+		local player = core.get_player_by_name(pname)
+		if not player then
+			return true
+		end
+		if nhv.ui.open then
+			core.close_formspec(pname, "")
+			nhv.ui.open = nil
+		end
+		nhv.ui.to_title = true
+		if not nhv.nh.save_game() then
+			-- (no game running: just the title)
+			nhv.ui.to_title = false
+			title.show(player)
+		end
+		return true
+	end,
+})
+
 -- ---------------------------------------------------------------- screens
 local function screen(w, h)
 	-- (full screen: the background covers the waiting world)
