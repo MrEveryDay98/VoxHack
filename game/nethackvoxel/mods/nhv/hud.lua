@@ -191,6 +191,63 @@ local function big_map_scale(player)
 	return math.max(2, math.floor(fit / info.real_hud_scaling))
 end
 
+-- The big map is drawn with the NetHack tiles: one HUD picture per known
+-- square, changed only when that square changes. (Not one generated
+-- picture of the whole map: the engine keeps every generated texture for
+-- good, and a new one on every step would pile up.) The pixel map's
+-- element is its dark backdrop meanwhile.
+local TILE_PX = 16
+local BACKDROP = "[fill:16x16:#000000^[opacity:200"
+local tiles = {ids = {}, shown = {}, scale = nil}
+
+local function clear_tiles(player)
+	for i, id in pairs(tiles.ids) do
+		player:hud_remove(id)
+		tiles.ids[i] = nil
+	end
+	tiles.shown, tiles.scale = {}, nil
+end
+
+local function update_tiles(player, snap)
+	if not (hud.big_map and snap and snap.map) then
+		clear_tiles(player)
+		return
+	end
+	local s = big_map_scale(player)
+	if s ~= tiles.scale then
+		clear_tiles(player) -- (the window changed size: place them all again)
+		tiles.scale = s
+	end
+	local map, h = snap.map, snap.hero
+	for y = 0, U.ROWNO - 1 do
+		for x = 1, U.COLNO - 1 do
+			local i = U.idx(x, y)
+			local tex
+			if x == h.x and y == h.y then
+				tex = nhv_tiles.texture(h.tile)
+			elseif color_for(map, i) ~= COL.unknown and (map.mem_tile[i] or -1) >= 0 then
+				tex = nhv_tiles.texture(map.mem_tile[i])
+			end
+			if tex ~= tiles.shown[i] then
+				tiles.shown[i] = tex
+				local id = tiles.ids[i]
+				if not tex then
+					player:hud_remove(id)
+					tiles.ids[i] = nil
+				elseif id then
+					player:hud_change(id, "text", tex)
+				else
+					tiles.ids[i] = player:hud_add({
+						type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
+						offset = {x = (x + 0.5 - U.COLNO / 2) * s, y = (y + 0.5 - U.ROWNO / 2) * s},
+						scale = {x = s / TILE_PX, y = s / TILE_PX}, text = tex, z_index = 1,
+					})
+				end
+			end
+		end
+	end
+end
+
 -- the corner map's pixels per square (Graphics > Map size; 0 hides it)
 local function corner_scale()
 	return tonumber(core.settings:get("nhv_map_scale")) or 3
@@ -204,8 +261,11 @@ local function place_map(player)
 		local s = big_map_scale(player)
 		player:hud_change(hud.ids.map, "position", {x = 0.5, y = 0.45})
 		player:hud_change(hud.ids.map, "alignment", {x = 0, y = 0})
-		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
+		-- (the backdrop: a 16x16 fill the size of the map)
+		player:hud_change(hud.ids.map, "scale", {x = s * U.COLNO / 16, y = s * U.ROWNO / 16})
 		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
+		player:hud_change(hud.ids.map, "text", BACKDROP)
+		update_tiles(player, nh.snap)
 	else
 		local s = corner_scale()
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
@@ -213,6 +273,10 @@ local function place_map(player)
 		-- (a hidden map is scaled to nothing)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = -10, y = 10})
+		clear_tiles(player)
+		if nh.snap and nh.snap.map then
+			player:hud_change(hud.ids.map, "text", map_png(nh.snap))
+		end
 	end
 end
 hud.place_map = place_map
@@ -233,6 +297,7 @@ function hud.toggle_map()
 end
 
 core.register_on_joinplayer(function(player)
+	tiles.ids, tiles.shown, tiles.scale = {}, {}, nil -- (a new player object: none drawn yet)
 	-- right-click doesn't swing the arm by itself (actions.run swings it)
 	-- (clicking doesn't swing the arm by itself: actions.swing does, when an
 	-- attack really happens)
@@ -483,7 +548,11 @@ nh.on_snapshot(function(snap)
 	local h = snap.hero
 	player:hud_change(hud.ids.status, "text", status_text(h))
 	update_meters(player, h)
-	player:hud_change(hud.ids.map, "text", map_png(snap))
+	if hud.big_map then
+		update_tiles(player, snap)
+	else
+		player:hud_change(hud.ids.map, "text", map_png(snap))
+	end
 	if last_hp and h.hp < last_hp then
 		hud.flash("#FF2020", 0.5 + (last_hp - h.hp) / math.max(1, h.hpmax) * 2.5)
 	elseif last_hp and h.hp >= last_hp + math.max(3, h.hpmax / 5) then
