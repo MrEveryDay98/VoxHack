@@ -100,12 +100,48 @@ local function set_vignette(player, on)
 	end
 end
 
+-- Swallowed: inside some engulfers the whole view is their insides
+-- (overlay_<name>.png in nhv_tiles, drawn as it is, covering the screen;
+-- the HUD stays on top)
+local ENGULF_OVERLAYS = {["purple worm"] = "overlay_purpleworm.png"}
+local overlay = nil -- {player=, id=, tex=}
+
+local function engulfer_name()
+	local snap = nh.snap
+	if not snap or not snap.hero or not U.has(snap.hero.flags, U.HERO.SWALLOWED) then
+		return
+	end
+	for _, m in ipairs(snap.monsters or {}) do
+		if U.has(m.flags, U.MON_ENGULFING) and m.mndx and m.mndx >= 0 then
+			return core.nh_mon_name(m.mndx)
+		end
+	end
+end
+
+local function set_overlay(player, tex)
+	if overlay and overlay.player ~= player then
+		overlay = nil
+	end
+	if overlay and overlay.tex ~= tex then
+		player:hud_remove(overlay.id)
+		overlay = nil
+	end
+	if tex and not overlay then
+		overlay = {player = player, tex = tex, id = player:hud_add({
+			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+			scale = {x = -100, y = -100}, text = tex, z_index = -20,
+		})}
+	end
+end
+
 local test_until = 0 -- (/nhvtendril: one from in front of you, to look at)
 local ALWAYS = core.settings:get_bool("nhv_test_tendril", false) -- (for tests)
 
 local function update(player)
 	local from = holder_pos()
 	set_vignette(player, from ~= nil)
+	local inside = engulfer_name()
+	set_overlay(player, inside and ENGULF_OVERLAYS[inside:lower()])
 	-- (where you're pinned, not your body's position this step: that
 	-- wobbles a little and the tendril would jitter with it)
 	local ppos = nhv.player.held_at or player:get_pos()

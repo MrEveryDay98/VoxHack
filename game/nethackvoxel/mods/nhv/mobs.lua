@@ -196,6 +196,9 @@ local function update_monsters(snap)
 	local seen = {}
 	local hallu = U.has(snap.hero.flags, U.HERO.HALLU)
 	for _, m in ipairs(snap.monsters) do
+		if U.has(m.flags, U.MON_ENGULFING) then
+			goto continue -- (you're inside it: see holds.lua)
+		end
 		local key = m.id > 0 and ("id" .. m.id) or ("at" .. m.x .. "," .. m.y)
 		seen[key] = true
 		local e = mobs.mons[key]
@@ -221,6 +224,7 @@ local function update_monsters(snap)
 				fade_in(e)
 			end
 		end
+		::continue::
 	end
 	for key, e in pairs(mobs.mons) do
 		if not seen[key] then

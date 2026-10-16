@@ -417,6 +417,23 @@ nhv_get_monsters(nhv_mon *buf, int max)
                 buf[n] = m;
             n++;
         }
+    /* what has swallowed the hero (it isn't on the map then: you only
+       see its insides), so the host knows what you're in */
+    if (u.uswallow && u.ustuck) {
+        nhv_mon m;
+
+        memset(&m, 0, sizeof m);
+        m.x = u.ux, m.y = u.uy;
+        m.mndx = monsndx(u.ustuck->data);
+        m.glyph = mon_to_glyph(u.ustuck, rn2_on_display_rng);
+        m.tile = tile_of(m.glyph);
+        m.size = u.ustuck->data->msize;
+        m.id = u.ustuck->m_id;
+        m.flags = NHV_MON_ENGULFING;
+        if (n < max)
+            buf[n] = m;
+        n++;
+    }
     return n;
 }
 

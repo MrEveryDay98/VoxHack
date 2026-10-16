@@ -49,6 +49,7 @@ U.MON_WARNING = 0x10
 U.MON_SHOPKEEPER = 0x20 -- (in its own shop)
 U.MON_IN_PIT = 0x40 -- (trapped down in a pit)
 U.MON_HOLDING = 0x80 -- (holding on to you: U.HERO.HELD)
+U.MON_ENGULFING = 0x100 -- (has swallowed you: listed at your square, not drawn)
 
 -- nhv_hero.flags
 U.HERO = {
