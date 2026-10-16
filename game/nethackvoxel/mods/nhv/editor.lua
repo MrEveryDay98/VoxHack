@@ -199,9 +199,14 @@ local function setup_world()
 	for _, s in ipairs(prefabs.SLOTS) do
 		sprite_cell(s[1])
 		decorate_cell(s[1])
-		if storage:get_string("built_" .. s[1]) == "" then
+		-- (built the first time, and again when its default changed and it
+		-- isn't hand-built)
+		local version = tostring(prefabs.DEFAULT_VERSION[s[1]] or 1)
+		local built = storage:get_string("built_" .. s[1])
+		local custom = prefabs.data[s[1]] and prefabs.data[s[1]].custom
+		if built == "" or (built ~= version and not custom) then
 			write_cell(s[1])
-			storage:set_string("built_" .. s[1], "1")
+			storage:set_string("built_" .. s[1], version)
 		end
 	end
 end

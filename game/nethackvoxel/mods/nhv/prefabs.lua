@@ -164,9 +164,37 @@ local function pit(spikes)
 	return nodes
 end
 
+-- a hole: the floor gone, a deep shaft into the dark (with a bottom, for
+-- when NetHack lets you escape it: climb out as from a pit)
+local function hole()
+	local nodes = {}
+	for ly = 2, FL do
+		for lx = 0, W - 1 do
+			for lz = 0, W - 1 do
+				nodes[prefabs.index(lx, ly, lz)] = {n = "nhv:carve"}
+			end
+		end
+	end
+	return nodes
+end
+
+-- a trap door: a wooden hatch set into the floor (closed: it opens under you)
+local function trap_door()
+	local nodes = {}
+	for lx = 0, W - 1 do
+		for lz = 0, W - 1 do
+			nodes[prefabs.index(lx, FL, lz)] = {n = "nhv:b_drawbridge"}
+		end
+	end
+	nodes[prefabs.index(1, FL, 1)] = {n = "nhv:b_metal"} -- (its iron plate)
+	return nodes
+end
+
 local DEFAULTS = {
 	trap_pit = function() return pit(false) end,
 	trap_spiked_pit = function() return pit(true) end,
+	trap_hole = hole,
+	trap_trap_door = trap_door,
 	stone = function() return column(function() return "nhv:rock" end) end,
 	wall_straight = function() return solid("nhv:wall") end,
 	wall_corner = function() return solid("nhv:wall") end,
@@ -199,6 +227,10 @@ local DEFAULTS = {
 	air = function() return room("nhv:air_floor") end,
 	cloud = function() return room("nhv:air_floor") end,
 }
+
+-- (a default that changed gets a higher number: the prefab editor rebuilds
+-- that cell, unless it was hand-built)
+prefabs.DEFAULT_VERSION = {trap_hole = 2, trap_trap_door = 2}
 
 function prefabs.default(slot)
 	local f = DEFAULTS[slot]
