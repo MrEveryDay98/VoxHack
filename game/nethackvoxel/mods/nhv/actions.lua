@@ -745,7 +745,14 @@ core.register_globalstep(function()
 	if pressed("zoom") then
 		nhv.hud.toggle_map()
 	end
-	prev = {jump = ctl.jump, zoom = ctl.zoom}
+	-- holding the attack button keeps attacking, as fast as your actions
+	-- play out (the press itself is the item's on_use; Shift is firing)
+	if ctl.dig and prev.dig and not ctl.sneak and not nhv.ui.open
+			and not (nhv.wheel and nhv.wheel.is_open())
+			and nh.ready() and not nhv.clock.busy() then
+		actions.attack(player)
+	end
+	prev = {jump = ctl.jump, zoom = ctl.zoom, dig = ctl.dig}
 end)
 
 return actions
