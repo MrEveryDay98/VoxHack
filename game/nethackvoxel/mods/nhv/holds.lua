@@ -70,10 +70,10 @@ local function holder_pos()
 	end
 end
 
--- a soft white glow at the screen's edges while you're held, slowly
--- pulsing
+-- the screen's edges: a soft white glow while you're held, slowly
+-- pulsing; dark while you're swallowed (over any insides overlay)
 local vignette = nil -- {player=, id=, shown=}
-local function set_vignette(player, on)
+local function set_vignette(player, on, dark)
 	if vignette and vignette.player ~= player then
 		vignette = nil
 	end
@@ -94,6 +94,9 @@ local function set_vignette(player, on)
 	local t = core.get_us_time() / 1e6
 	local a = math.floor((110 + 50 * math.sin(t * 3)) / 16) * 16
 	local tex = ("nhv_vignette.png^[multiply:#ffffff^[opacity:%d"):format(a)
+	if dark then
+		tex = "nhv_vignette.png^[multiply:#000000^[opacity:230"
+	end
 	if tex ~= vignette.shown then
 		vignette.shown = tex
 		player:hud_change(vignette.id, "text", tex)
@@ -139,8 +142,10 @@ local ALWAYS = core.settings:get_bool("nhv_test_tendril", false) -- (for tests)
 
 local function update(player)
 	local from = holder_pos()
-	set_vignette(player, from ~= nil)
 	local inside = engulfer_name()
+	local h = nh.snap and nh.snap.hero
+	local swallowed = h and U.has(h.flags, U.HERO.SWALLOWED)
+	set_vignette(player, from ~= nil or swallowed, swallowed)
 	set_overlay(player, inside and ENGULF_OVERLAYS[inside:lower()])
 	-- (where you're pinned, not your body's position this step: that
 	-- wobbles a little and the tendril would jitter with it)
