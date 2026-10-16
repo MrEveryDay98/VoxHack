@@ -117,6 +117,10 @@ local function build(player)
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "X  Search", z_index = 52})
 	hud.pay = add(player, {type = "text", offset = {x = hx, y = Y + SLOT * 0.2},
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
+	-- on the other side, "G  Enhance Skills" while a skill can be advanced
+	-- (see update_enhance)
+	hud.enhance = add(player, {type = "text", offset = {x = slot_x(1) - SLOT / 2 - 14, y = Y},
+		alignment = {x = -1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
 	-- the cooldown bar: just above the hotbar while an action plays out
 	-- (until it's gone you can't act again); see update_cooldown
 	hud.cooldown = add(player, {type = "image", offset = {x = 0, y = Y - SLOT / 2 - 10},
@@ -168,6 +172,33 @@ local function channel(c, shift)
 	return math.floor(c / 2 ^ shift) % 256
 end
 
+-- grey -> yellow -> grey, about once a second (in steps, so it isn't sent
+-- to the screen every frame)
+local function pulse_color(t)
+	local k = math.floor((0.5 - 0.5 * math.cos(t * 2 * math.pi)) * 8 + 0.5) / 8
+	local c = 0
+	for _, shift in ipairs({24, 16, 8, 0}) do
+		local a, b = channel(SEARCH_DIM, shift), channel(0xFFFFD040, shift)
+		c = c + math.floor(a + (b - a) * k + 0.5) * 2 ^ shift
+	end
+	return c
+end
+
+-- "G  Enhance Skills": left of the hotbar while NetHack would let you
+-- advance a skill; pulsing
+local enhance = {shown = false, color = nil}
+
+local function update_enhance(player, hero)
+	if not hud.enhance then
+		return
+	end
+	local shown = hero and U.has(hero.flags, U.HERO.ENHANCE) or false
+	if shown ~= enhance.shown then
+		enhance.shown = shown
+		player:hud_change(hud.enhance, "text", shown and "G  Enhance Skills" or "")
+	end
+end
+
 -- the cooldown bar shrinks as the action plays out
 local function update_cooldown(player)
 	if not hud.cooldown then
@@ -189,7 +220,9 @@ end)
 
 local pulse_t = 0
 core.register_globalstep(function(dtime)
-	if not (pay.owes and hud.pay) then
+	local owes = pay.owes and hud.pay
+	local can = enhance.shown and hud.enhance
+	if not (owes or can) then
 		return
 	end
 	pulse_t = pulse_t + dtime
@@ -197,15 +230,14 @@ core.register_globalstep(function(dtime)
 	if not player then
 		return
 	end
-	-- grey -> yellow -> grey, about once a second (in steps, so it isn't
-	-- sent to the screen every frame)
-	local k = math.floor((0.5 - 0.5 * math.cos(pulse_t * 2 * math.pi)) * 8 + 0.5) / 8
-	local c = 0
-	for _, shift in ipairs({24, 16, 8, 0}) do
-		local a, b = channel(SEARCH_DIM, shift), channel(0xFFFFD040, shift)
-		c = c + math.floor(a + (b - a) * k + 0.5) * 2 ^ shift
+	local c = pulse_color(pulse_t)
+	if owes then
+		set_pay_color(player, c)
 	end
-	set_pay_color(player, c)
+	if can and enhance.color ~= c then
+		enhance.color = c
+		player:hud_change(hud.enhance, "number", c)
+	end
 end)
 
 local function refresh(player, inv)
@@ -247,6 +279,8 @@ function hotbar.rebuild(player)
 	end
 	pay.shown, pay.color = false, nil
 	update_pay(player, nh.snap and nh.snap.hero)
+	enhance.shown, enhance.color = false, nil
+	update_enhance(player, nh.snap and nh.snap.hero)
 end
 
 core.register_on_joinplayer(function(player)
@@ -275,6 +309,7 @@ nh.on_snapshot(function(snap)
 	if snap and player then
 		refresh(player, snap.inventory)
 		update_pay(player, snap.hero)
+		update_enhance(player, snap.hero)
 	end
 end)
 
@@ -383,6 +418,15 @@ core.register_chatcommand("nhvkey", {
 			local player = core.get_player_by_name(pname)
 			if player and not nhv.ui.open and nh.ready() then
 				hotbar.look(player)
+			end
+			return true
+		end
+		if param == "enhance" then
+			-- (NetHack's #enhance: the skills you could advance are
+			-- selectable in its list; takes no time)
+			if not nhv.ui.open and nh.ready() and not nhv.clock.busy() then
+				nhv.actions.run({label = "Enhance", free = true, keys = {{key = "#"}, {text = "enhance"}}},
+					{kind = "info"})
 			end
 			return true
 		end

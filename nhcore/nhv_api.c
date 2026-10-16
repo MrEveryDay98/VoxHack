@@ -529,6 +529,15 @@ nhv_get_hero(nhv_hero *out)
     /* (not when it's the hero, polymorphed, holding on to a monster) */
     if (u.ustuck && !u.uswallow && !sticks(gy.youmonst.data))
         f |= NHV_HERO_HELD;
+    {
+        int sk;
+
+        for (sk = P_FIRST_WEAPON; sk < P_NUM_SKILLS; sk++)
+            if (can_advance(sk, FALSE)) {
+                f |= NHV_HERO_ENHANCE;
+                break;
+            }
+    }
     out->flags = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);
     Snprintf(out->rank, sizeof out->rank, "%s",

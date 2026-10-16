@@ -208,6 +208,7 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_NOSQUEEZE 0x40000 /* can't squeeze diagonally past boulders and
                                       corners (too much carried, too big, Sokoban) */
 #define NHV_HERO_HELD      0x80000 /* held by a monster (a mimic, an owlbear...) */
+#define NHV_HERO_ENHANCE   0x100000 /* a skill can be advanced (#enhance) */
 
 typedef struct nhv_hero {
     int x, y;
