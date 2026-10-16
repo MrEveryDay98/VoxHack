@@ -24,8 +24,25 @@ local CHOICE_LABELS = {
 	y = "Yes", n = "No", q = "Cancel", a = "All", ["#"] = "Count",
 }
 
+-- Questions about what to aim with (zap, throw, fire, a spell) sit at the
+-- left of the screen, out of the way of the crosshair, so you can see
+-- what you're aiming at while you choose.
+local ASIDE = {"want to zap", "want to throw", "want to fire", "which spell to cast"}
+local function aside(req)
+	local prompt = req and (req.prompt or ""):lower() or ""
+	for _, p in ipairs(ASIDE) do
+		if prompt:find(p, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+
 local function show(name, fs)
 	local player = nhv.player.get()
+	if name == "nhv:req" and aside(ui.req) then
+		fs = fs:gsub("(size%[[^%]]*%])", "%1position[0.03,0.5]anchor[0,0.5]", 1)
+	end
 	if player then
 		if core.settings:get_bool("nhv_debug") then
 			core.log("action", "[nhv] formspec " .. name .. ": " .. fs)
