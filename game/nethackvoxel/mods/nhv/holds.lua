@@ -65,8 +65,38 @@ local function holder_pos()
 	end
 	for _, e in pairs(nhv.mobs.mons) do
 		if e.mon and U.has(e.mon.flags or 0, U.MON_HOLDING) then
-			return e.obj:get_pos(), e.h
+			return U.tile_center(e.x, e.y), e.h
 		end
+	end
+end
+
+-- a soft white glow at the screen's edges while you're held, slowly
+-- pulsing
+local vignette = nil -- {player=, id=, shown=}
+local function set_vignette(player, on)
+	if vignette and vignette.player ~= player then
+		vignette = nil
+	end
+	if not on then
+		if vignette then
+			player:hud_remove(vignette.id)
+			vignette = nil
+		end
+		return
+	end
+	if not vignette then
+		vignette = {player = player, id = player:hud_add({
+			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+			scale = {x = -100, y = -100}, text = "blank.png", z_index = -10,
+		})}
+	end
+	-- (steps of 16: few different textures)
+	local t = core.get_us_time() / 1e6
+	local a = math.floor((110 + 50 * math.sin(t * 3)) / 16) * 16
+	local tex = ("nhv_vignette.png^[multiply:#ffffff^[opacity:%d"):format(a)
+	if tex ~= vignette.shown then
+		vignette.shown = tex
+		player:hud_change(vignette.id, "text", tex)
 	end
 end
 
@@ -75,7 +105,10 @@ local ALWAYS = core.settings:get_bool("nhv_test_tendril", false) -- (for tests)
 
 local function update(player)
 	local from = holder_pos()
-	local ppos = player:get_pos()
+	set_vignette(player, from ~= nil)
+	-- (where you're pinned, not your body's position this step: that
+	-- wobbles a little and the tendril would jitter with it)
+	local ppos = nhv.player.held_at or player:get_pos()
 	if not from and (core.get_us_time() < test_until or ALWAYS) then
 		if ALWAYS then -- (a fixed view to look at it from)
 			player:set_look_vertical(tonumber(core.settings:get("nhv_test_tendril_pitch")) or 0.5)

@@ -347,11 +347,14 @@ local function try_escape(player)
 		return
 	end
 	escape_next = core.get_us_time() + 300000
-	local dir = player:get_look_dir()
-	if c.down then
-		dir = vector.multiply(dir, -1)
+	-- (the way the movement keys point: walking backwards or sideways
+	-- away from a mimic tries to pull free; toward it attacks it, as in
+	-- NetHack)
+	local dir = intended_dir(player)
+	local dx, dy = 0, 0
+	if dir then
+		dx, dy = U.vec_to_dir(dir)
 	end
-	local dx, dy = U.vec_to_dir(dir)
 	if dx ~= 0 or dy ~= 0 then
 		nhv.clock.act(U.dir_key(dx, dy), {kind = "escape"})
 	end
@@ -497,6 +500,7 @@ local function hold_still(player)
 	local h = player_mod.hero
 	if not h or not U.has(h.flags, U.HERO.HELD) then
 		held_at = nil
+		player_mod.held_at = nil
 		return false
 	end
 	local pos = player:get_pos()
@@ -508,6 +512,7 @@ local function hold_still(player)
 		end
 		held_at = vector.new(c.x + clamp(pos.x - c.x), pos.y, c.z + clamp(pos.z - c.z))
 	end
+	player_mod.held_at = held_at
 	if math.abs(pos.x - held_at.x) + math.abs(pos.z - held_at.z) > 0.03 then
 		player:set_pos(vector.new(held_at.x, pos.y, held_at.z))
 	end
