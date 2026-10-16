@@ -428,6 +428,15 @@ local function describe(map, tx, ty)
 	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
 		sq.overlay = fs
 	end
+	-- a trap you know of under objects (NetHack shows the top object there,
+	-- not the trap): still built, a pit still a hole
+	local trap = map.trap and map.trap[i]
+	if not sq.overlay and trap and trap ~= 255 then
+		local ts = terrain.feature_slot(nhv.cmap_name(trap))
+		if ts and prefabs.SLOT_INFO[ts].kind == "overlay" then
+			sq.overlay = ts
+		end
+	end
 	-- a special level's hand-built area covers it? (areas.lua)
 	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ)
 	if cell then

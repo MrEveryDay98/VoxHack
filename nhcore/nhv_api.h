@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 8
+#define NHV_API_VERSION 9
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -154,6 +154,9 @@ typedef struct nhv_loc {
                                what's really there, seen or not (stairs
                                up/down, fountain, ...; never traps or
                                objects), 255 if none */
+    unsigned char trap;     /* the trap you know is there (cmap symbol index,
+                               S_arrow_trap..), even with objects over it;
+                               255 if none */
 } nhv_loc;
 
 /* Fills buf[x * NHV_ROWNO + y] for every map location. */

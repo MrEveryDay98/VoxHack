@@ -351,6 +351,13 @@ nhv_get_map(nhv_loc *buf)
                 l->back = glyph_is_cmap(bg) ? (unsigned char) glyph_to_cmap(bg)
                                             : 255;
             }
+            {
+                struct trap *t = t_at(x, y);
+
+                l->trap = (t && t->tseen)
+                              ? (unsigned char) trap_to_defsym(t->ttyp)
+                              : 255;
+            }
         }
 }
 
