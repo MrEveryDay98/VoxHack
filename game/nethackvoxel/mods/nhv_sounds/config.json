@@ -758,6 +758,14 @@
    ],
    "volume": 100,
    "pitch_var": 0.05
+  },
+  "music_dungeon": {
+   "sounds": [
+    "yh_music_df"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {
