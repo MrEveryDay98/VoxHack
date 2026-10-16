@@ -41,6 +41,7 @@ dump_map(void)
 
     nhv_get_map(map);
     nhv_get_hero(&h);
+    printf("HERO at %d,%d flags=%x\n", h.x, h.y, h.flags);
     for (y = 0; y < NHV_ROWNO; y++) {
         char line[NHV_COLNO + 1];
 

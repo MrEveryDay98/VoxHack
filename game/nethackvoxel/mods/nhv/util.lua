@@ -57,6 +57,7 @@ U.HERO = {
 	RIDING = 0x1000, FAST = 0x2000, VFAST = 0x4000, INSHOP = 0x8000,
 	INTEMPLE = 0x10000, OWES = 0x20000, -- (owes the shop it's in)
 	NOSQUEEZE = 0x40000, -- (can't squeeze past boulders and corners: too much carried, ...)
+	HELD = 0x80000, -- (held by a monster: a mimic, an owlbear's hug...)
 }
 
 -- nhv_obj.flags

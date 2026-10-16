@@ -204,6 +204,7 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_OWES      0x20000 /* owes the shop it's in (unpaid items, fees) */
 #define NHV_HERO_NOSQUEEZE 0x40000 /* can't squeeze diagonally past boulders and
                                       corners (too much carried, too big, Sokoban) */
+#define NHV_HERO_HELD      0x80000 /* held by a monster (a mimic, an owlbear...) */
 
 typedef struct nhv_hero {
     int x, y;

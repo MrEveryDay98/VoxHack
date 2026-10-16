@@ -506,6 +506,9 @@ nhv_get_hero(nhv_hero *out)
     if (cant_squeeze_thru(&gy.youmonst))
         f |= NHV_HERO_NOSQUEEZE;
     if (temple_occupied(u.urooms)) f |= NHV_HERO_INTEMPLE;
+    /* (not when it's the hero, polymorphed, holding on to a monster) */
+    if (u.ustuck && !u.uswallow && !sticks(gy.youmonst.data))
+        f |= NHV_HERO_HELD;
     out->flags = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);
     Snprintf(out->rank, sizeof out->rank, "%s",

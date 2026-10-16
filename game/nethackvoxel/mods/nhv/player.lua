@@ -100,6 +100,7 @@ player_mod.teleport = teleport
 
 local function stuck(h)
 	return U.has(h.flags, U.HERO.TRAPPED) or U.has(h.flags, U.HERO.SWALLOWED)
+		or U.has(h.flags, U.HERO.HELD)
 end
 
 local function set_speed(player)
@@ -329,11 +330,13 @@ local function step(player)
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
 end
 
--- escape attempts while stuck in a trap: walking costs a real move
+-- escape attempts while stuck in a trap or held by a monster: walking
+-- costs a real move (NetHack decides whether you get free)
 local escape_next = 0
 local function try_escape(player)
 	local h = player_mod.hero
-	if not h or not U.has(h.flags, U.HERO.TRAPPED) or not nh.ready() then
+	if not h or not nh.ready()
+			or not (U.has(h.flags, U.HERO.TRAPPED) or U.has(h.flags, U.HERO.HELD)) then
 		return
 	end
 	local c = player:get_player_control()
