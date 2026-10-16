@@ -40,7 +40,7 @@ local parts = nil -- {stem=, loop=}
 
 local function remove()
 	if parts then
-		for _, o in pairs(parts) do
+		for _, o in ipairs({parts.stem, parts.loop}) do
 			if o:get_pos() then
 				o:remove()
 			end
@@ -110,11 +110,15 @@ local function update(player)
 	local loop_r = LOOP_W / 2
 	local stem_len = math.max(0.05, len - loop_r)
 	local mid = vector.add(from, vector.multiply(d, stem_len / 2 / len))
-	-- (a little wriggle)
-	local t = core.get_us_time() / 1e6
-	local wob = math.sin(t * 7) * 0.04
+	-- (only when something moved: moving entities every step makes them
+	-- jitter)
+	local key = ("%.2f %.2f %.2f %.2f %.2f %.2f"):format(from.x, from.y, from.z, waist.x, waist.y, waist.z)
+	if key == parts.key then
+		return
+	end
+	parts.key = key
 	parts.stem:set_pos(mid)
-	parts.stem:set_rotation(vector.new(math.pi / 2, yaw, wob))
+	parts.stem:set_rotation(vector.new(math.pi / 2, yaw, 0))
 	parts.stem:set_properties({visual_size = {x = STEM_W / ITEM_NODES,
 		y = stem_len / ITEM_NODES, z = THICK / ITEM_NODES}})
 	parts.loop:set_pos(waist)

@@ -489,11 +489,38 @@ nh.on_snapshot(function(snap)
 	end
 end)
 
+-- Held by a monster: the body is pinned in the hero's square (where it
+-- is, if it's in it; else the nearest spot inside it - the body may have
+-- walked into the mimic's square before NetHack said it was one).
+local held_at = nil
+local function hold_still(player)
+	local h = player_mod.hero
+	if not h or not U.has(h.flags, U.HERO.HELD) then
+		held_at = nil
+		return false
+	end
+	local pos = player:get_pos()
+	if not held_at then
+		local c = U.tile_center(h.x, h.y, pos.y)
+		local m = U.TILE / 2 - 0.35 -- (the body stays inside the square)
+		local function clamp(v)
+			return math.max(-m, math.min(m, v))
+		end
+		held_at = vector.new(c.x + clamp(pos.x - c.x), pos.y, c.z + clamp(pos.z - c.z))
+	end
+	if math.abs(pos.x - held_at.x) + math.abs(pos.z - held_at.z) > 0.03 then
+		player:set_pos(vector.new(held_at.x, pos.y, held_at.z))
+	end
+	return true
+end
+
 core.register_globalstep(function()
 	local player = player_mod.get()
 	if player and nh.snap then
 		try_escape(player)
-		step(player)
+		if not hold_still(player) then
+			step(player)
+		end
 		check_trigger(player)
 		terrain.place_hero_light(player:get_pos())
 		tell_pit(player)
