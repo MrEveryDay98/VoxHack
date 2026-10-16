@@ -434,6 +434,37 @@ nhv_get_monsters(nhv_mon *buf, int max)
             buf[n] = m;
         n++;
     }
+    /* the hero, and what it's riding (for the host's third-person view;
+       neither is drawn on the map like the others) */
+    {
+        nhv_mon m;
+
+        memset(&m, 0, sizeof m);
+        m.x = u.ux, m.y = u.uy;
+        m.mndx = monsndx(gy.youmonst.data);
+        m.glyph = hero_glyph;
+        m.tile = tile_of(m.glyph);
+        m.size = gy.youmonst.data->msize;
+        m.flags = NHV_MON_SELF;
+        if (n < max)
+            buf[n] = m;
+        n++;
+    }
+    if (u.usteed) {
+        nhv_mon m;
+
+        memset(&m, 0, sizeof m);
+        m.x = u.ux, m.y = u.uy;
+        m.mndx = monsndx(u.usteed->data);
+        m.glyph = mon_to_glyph(u.usteed, rn2_on_display_rng);
+        m.tile = tile_of(m.glyph);
+        m.size = u.usteed->data->msize;
+        m.id = u.usteed->m_id;
+        m.flags = NHV_MON_STEED;
+        if (n < max)
+            buf[n] = m;
+        n++;
+    }
     return n;
 }
 

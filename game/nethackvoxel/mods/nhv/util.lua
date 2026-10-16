@@ -50,6 +50,8 @@ U.MON_SHOPKEEPER = 0x20 -- (in its own shop)
 U.MON_IN_PIT = 0x40 -- (trapped down in a pit)
 U.MON_HOLDING = 0x80 -- (holding on to you: U.HERO.HELD)
 U.MON_ENGULFING = 0x100 -- (has swallowed you: listed at your square, not drawn)
+U.MON_SELF = 0x200 -- (you: your form's tile and size; avatar.lua)
+U.MON_STEED = 0x400 -- (what you ride; avatar.lua)
 
 -- nhv_hero.flags
 U.HERO = {

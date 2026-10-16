@@ -172,6 +172,8 @@ NHV_API void nhv_get_map(nhv_loc *buf);
 #define NHV_MON_HOLDING  0x80 /* holding on to the hero (NHV_HERO_HELD) */
 #define NHV_MON_ENGULFING 0x100 /* has swallowed the hero (NHV_HERO_SWALLOWED):
                                    listed at the hero's square, not drawn */
+#define NHV_MON_SELF     0x200 /* the hero (its form's size and tile) */
+#define NHV_MON_STEED    0x400 /* what the hero is riding */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */

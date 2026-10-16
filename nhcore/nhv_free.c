@@ -215,7 +215,7 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
     for (m = fmon; m; m = m->nmon) {
         nhv_monfull f;
 
-        if (DEADMONSTER(m) || m->mx <= 0)
+        if (DEADMONSTER(m) || m->mx <= 0 || m == u.usteed)
             continue;
         memset(&f, 0, sizeof f);
         f.id = m->m_id;
