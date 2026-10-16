@@ -24,25 +24,8 @@ local CHOICE_LABELS = {
 	y = "Yes", n = "No", q = "Cancel", a = "All", ["#"] = "Count",
 }
 
--- Questions about what to aim with (zap, throw, fire, a spell) sit at the
--- left of the screen, out of the way of the crosshair, so you can see
--- what you're aiming at while you choose.
-local ASIDE = {"want to zap", "want to throw", "want to fire", "which spell to cast"}
-local function aside(req)
-	local prompt = req and (req.prompt or ""):lower() or ""
-	for _, p in ipairs(ASIDE) do
-		if prompt:find(p, 1, true) then
-			return true
-		end
-	end
-	return false
-end
-
 local function show(name, fs)
 	local player = nhv.player.get()
-	if name == "nhv:req" and aside(ui.req) then
-		fs = fs:gsub("(size%[[^%]]*%])", "%1position[0.03,0.5]anchor[0,0.5]", 1)
-	end
 	if player then
 		if core.settings:get_bool("nhv_debug") then
 			core.log("action", "[nhv] formspec " .. name .. ": " .. fs)
@@ -253,7 +236,10 @@ local function show_request(req)
 			req.choices = inside
 		end
 	end
-	if req.kind == "yn" and req.choices ~= "" then
+	if nhv.spells.is_zap(req) then
+		ui.open = "nhv:req"
+		show("nhv:req", nhv.spells.wand_dialog(req, head)) -- (wands: Self / Target)
+	elseif req.kind == "yn" and req.choices ~= "" then
 		ui.open = "nhv:req"
 		if #ui.pending_text > 0 then
 			-- (the information waiting to be read goes above the question)
@@ -294,6 +280,11 @@ nh.on_request(function(req)
 			ui.open = nil
 		end
 		nhv.player.freeze(false)
+		for k = #ui.auto_answers, 1, -1 do
+			if ui.auto_answers[k].this_command then
+				table.remove(ui.auto_answers, k)
+			end
+		end
 		ui.show_pending_text()
 		return true
 	end
@@ -360,6 +351,18 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname == "nhv:req" then
 		local req = ui.req
 		if not req or nh.state ~= "waiting" then
+			return true
+		end
+		if nhv.spells.is_zap(req) and nhv.spells.wand_fields(fields, function(key)
+			answered()
+			close("nhv:req")
+			nh.answer_key(key)
+		end, function(pattern, key)
+			-- (dropped at the next command: a wand that needs no direction
+			-- never asks, and it mustn't answer a later question)
+			table.insert(ui.auto_answers, {pattern = pattern, key = key,
+				t = core.get_us_time(), this_command = true})
+		end) then
 			return true
 		end
 		if nhv.spells.is_menu(req) and nhv.spells.fields(fields, req, function(sels)

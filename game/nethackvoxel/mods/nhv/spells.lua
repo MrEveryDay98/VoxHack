@@ -8,6 +8,10 @@
 --           hand (it glows) for READY_S seconds; move and aim freely, then
 --           left-click to release it where you aim. Readying costs nothing:
 --           NetHack only casts it when it's released.
+-- Wands work the same way: NetHack's "What do you want to zap?" becomes a
+-- list of your wands, each with Self (zap it at yourself, now) and Target
+-- (ready it; left-click zaps it where you aim). A wand that needs no
+-- direction (light, create monster...) just zaps with either.
 
 local U = nhv.util
 local nh = nhv.nh
@@ -84,6 +88,87 @@ function spells.dialog(req, head)
 	return table.concat(fs)
 end
 
+-- ---------------------------------------------------------------- wands
+spells.ZAP_PROMPT = "want to zap"
+
+function spells.is_zap(req)
+	-- (it comes as a key or a y/n style question: "[f or ?*]")
+	return req and (req.kind == "key" or req.kind == "yn")
+		and (req.prompt or ""):find(spells.ZAP_PROMPT, 1, true) ~= nil
+end
+
+local function wands()
+	local list = {}
+	for _, o in ipairs(nh.snap and nh.snap.inventory or {}) do
+		if o.oclass == U.OCLASS.WAND then
+			list[#list + 1] = o
+		end
+	end
+	return list
+end
+
+function spells.wand_dialog(req, head)
+	local rows = wands()
+	local view = math.max(1, math.min(#rows, 8))
+	local RH = 1.1
+	local h = 2.9 + view * RH
+	local fs = {head(15, h), ("label[0.5,0.6;%s]"):format(E(req.prompt))}
+	fs[#fs + 1] = ("scroll_container[0.4,1.1;14.2,%f;spellscroll;vertical]"):format(view * RH)
+	for k, o in ipairs(rows) do
+		local y = (k - 1) * RH
+		fs[#fs + 1] = ("box[0,%f;14.1,%f;#00000040]"):format(y, RH - 0.1)
+		fs[#fs + 1] = ("item_image[0.1,%f;0.9,0.9;%s]"):format(y + 0.05, nhv_tiles.item(o.tile))
+		local name = o.name
+		if #name > 34 then
+			name = name:sub(1, 32) .. ".."
+		end
+		fs[#fs + 1] = ("label[1.2,%f;%s]"):format(y + 0.5, E(o.invlet .. " - " .. name))
+		fs[#fs + 1] = ("tooltip[1.2,%f;7,0.9;%s]"):format(y, E(o.name))
+		local b = o.invlet:byte()
+		fs[#fs + 1] = ("button[8.4,%f;2.6,0.8;wdself_%d;Self]"):format(y + 0.1, b)
+		fs[#fs + 1] = ("button[11.2,%f;2.8,0.8;wdaim_%d;Target]"):format(y + 0.1, b)
+	end
+	if #rows == 0 then
+		fs[#fs + 1] = "label[0.2,0.4;You have no wands.]"
+	end
+	fs[#fs + 1] = "scroll_container_end[]"
+	if #rows > 8 then
+		fs[#fs + 1] = ("scrollbaroptions[max=%d]"):format(math.ceil((#rows - 8) * RH * 10))
+		fs[#fs + 1] = ("scrollbar[14.6,1.1;0.3,%f;vertical;spellscroll;0]"):format(view * RH)
+	else
+		fs[#fs + 1] = "scrollbar[-10,-10;0.1,0.1;vertical;spellscroll;0]"
+	end
+	fs[#fs + 1] = ("button[11.6,%f;3,0.9;menu_cancel;Cancel]"):format(h - 1.3)
+	return table.concat(fs)
+end
+
+-- A button in the wand list. Returns true when it was one of ours.
+-- (answer_key(key) answers NetHack's question; queue(pattern, key) queues
+-- an answer for the direction question that may follow)
+function spells.wand_fields(fields, answer_key, queue)
+	for k in pairs(fields) do
+		local how, b = k:match("^wd(%a+)_(%d+)$")
+		if how then
+			local invlet = string.char(tonumber(b))
+			if how == "self" then
+				queue("direction", ".")
+				answer_key(invlet)
+			else
+				local name = ""
+				for _, o in ipairs(wands()) do
+					if o.invlet == invlet then
+						name = o.name
+					end
+				end
+				answer_key(27) -- (nothing is zapped yet: no time passes)
+				spells.make_ready(nil, name, invlet)
+			end
+			return true
+		end
+	end
+	return false
+end
+
 -- A button in the menu. Returns true when it was one of ours.
 -- (answer_menu(sels) answers NetHack's menu; queue(pattern, key) queues an
 -- answer for the question that follows)
@@ -122,10 +207,12 @@ local function stop_glow()
 	end
 end
 
-function spells.make_ready(sel, name)
+-- (wand = its inventory letter, when it's a wand being readied)
+function spells.make_ready(sel, name, wand)
 	stop_glow()
 	local player = nhv.player.get()
-	spells.ready = {sel = sel, name = name, until_us = core.get_us_time() + spells.READY_S * 1e6}
+	spells.ready = {sel = sel, name = name, wand = wand,
+		until_us = core.get_us_time() + spells.READY_S * 1e6}
 	if player then
 		-- a glow around your hand (relative to you, turning with you)
 		spells.ready.spawner = core.add_particlespawner({
@@ -138,16 +225,22 @@ function spells.make_ready(sel, name)
 			playername = player:get_player_name(),
 		})
 	end
-	nhv.hud.message(("You ready %s. (Left-click to cast it where you aim.)"):format(
-		name ~= "" and name or "the spell"))
+	if wand then
+		nhv.hud.message(("You ready %s. (Left-click to zap it where you aim.)"):format(
+			name ~= "" and name or "the wand"))
+	else
+		nhv.hud.message(("You ready %s. (Left-click to cast it where you aim.)"):format(
+			name ~= "" and name or "the spell"))
+	end
 end
 
 function spells.cancel(quiet)
 	if spells.ready then
+		local wand = spells.ready.wand ~= nil
 		stop_glow()
 		spells.ready = nil
 		if not quiet then
-			nhv.hud.message("The spell fades from your hand.")
+			nhv.hud.message(wand and "You lower the wand." or "The spell fades from your hand.")
 		end
 	end
 end
@@ -164,9 +257,17 @@ function spells.release(player)
 	end
 	stop_glow()
 	spells.ready = nil
+	local now = core.get_us_time()
+	if r.wand then
+		-- (looking straight down zaps down, never at yourself: that's Self)
+		local dir = nhv.actions.pointed_dir_key(player, "zap", true)
+		table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
+		nhv.actions.swing()
+		nhv.clock.act({{key = "z"}, {key = r.wand}}, {kind = "zap"})
+		return true
+	end
 	-- (looking down means down for dig, but yourself for anything else)
 	local dir = nhv.actions.pointed_dir_key(player, r.name == "dig" and "dig" or r.name, true)
-	local now = core.get_us_time()
 	table.insert(nhv.ui.auto_answers, {pattern = spells.PROMPT, menu = r.sel, t = now})
 	table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
 	nhv.actions.swing()
