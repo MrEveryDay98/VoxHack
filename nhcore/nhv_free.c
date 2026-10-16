@@ -135,6 +135,18 @@ donhvpass(void)
     return ECMD_OK;
 }
 
+/* #nhvpit 1|0: the hero's body is down in the pit on its square, or came
+   back up. Down there the bottom can be reached (picking things up...)
+   without being trapped; climbing out is the host's. No time passes. */
+boolean nhv_in_pit = FALSE;
+
+int
+donhvpit(void)
+{
+    nhv_in_pit = nhv_cmd_args[0] != 0;
+    return ECMD_OK;
+}
+
 /* #nhvtick: one hero action's worth of time passes. */
 int
 donhvtick(void)

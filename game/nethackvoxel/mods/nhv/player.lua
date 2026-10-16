@@ -466,6 +466,23 @@ local function check_trigger(player)
 	end
 end
 
+-- Down in a pit (the body below the floor): NetHack is told, so the bottom
+-- can be reached (picking things up there) - it doesn't trap you, climbing
+-- out is ours (Space at the edge: actions.climb_out)
+local pit_told = nil
+local function tell_pit(player)
+	local down = player:get_pos().y < U.STAND_Y - 1
+	if down ~= pit_told and nh.ready() then
+		pit_told = down
+		nh.act({{key = "#"}, {text = "nhvpit " .. (down and 1 or 0)}}, {kind = "info"})
+	end
+end
+nh.on_snapshot(function(snap)
+	if not snap then
+		pit_told = nil -- (a new game: tell it again)
+	end
+end)
+
 core.register_globalstep(function()
 	local player = player_mod.get()
 	if player and nh.snap then
@@ -473,6 +490,7 @@ core.register_globalstep(function()
 		step(player)
 		check_trigger(player)
 		terrain.place_hero_light(player:get_pos())
+		tell_pit(player)
 	end
 end)
 
