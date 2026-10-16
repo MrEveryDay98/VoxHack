@@ -191,13 +191,20 @@ local function move_toward(e, map, target, dist, stop, hp)
 	end
 end
 
+-- a boulder sits there (monsters don't push them: a path goes round)
+local function boulder_at(x, y)
+	local o = nhv.mobs and nhv.mobs.objs[U.idx(x, y)]
+	return o and o.boulder
+end
+
 -- follow a square path toward goal square gx, gy
 local function follow_path(e, map, gx, gy, dist, hp)
 	local now = nhv.clock.game
 	if not e.path or e.path_goal ~= gx * 32 + gy or now > e.repath then
 		e.path = nhv.path.find(e.x, e.y, gx, gy,
 			function(x, y) return square_passable(map, x, y)
-				and not (e.blocked[x * 32 + y] and e.blocked[x * 32 + y] > now) end,
+				and not (e.blocked[x * 32 + y] and e.blocked[x * 32 + y] > now)
+				and not boulder_at(x, y) end,
 			function(x, y) return is_door(map, x, y) end)
 		e.path_goal = gx * 32 + gy
 		e.repath = now + REPATH
@@ -322,7 +329,28 @@ local function think(e, map, dturns, hp, hero)
 		return
 	end
 	if has(e.flags, MF.SEES_U) and hp then
-		move_toward(e, map, hp, dist, touch + sim.REACH * 0.6, hp)
+		local stop = touch + sim.REACH * 0.6
+		if (e.stuck or 0) < 1 then
+			-- straight at you...
+			local before = e.pos
+			move_toward(e, map, hp, dist, stop, hp)
+			if e.pos == before and flat_dist(e.pos, hp) > stop + 0.1 then
+				e.stuck = (e.stuck or 0) + dturns
+			else
+				e.stuck = 0
+			end
+			return
+		end
+		-- ...unless that got nowhere (a boulder, a pillar in between):
+		-- round by the squares for a while, or, with no way round, wander
+		-- (as NetHack's monsters do) instead of pressing against it
+		e.detour = (e.detour or 0) + dturns
+		if e.detour > 6 then
+			e.stuck, e.detour = 0, 0 -- (try straight at you again)
+		end
+		if not follow_path(e, map, hero.x, hero.y, dist, hp) then
+			wander(e, map, dist, hp)
+		end
 		return
 	end
 	if e.mux and e.mux > 0 and not (e.x == e.mux and e.y == e.muy) then
