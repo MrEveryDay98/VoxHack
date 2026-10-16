@@ -345,7 +345,21 @@ local function boulder_w(map, tx, ty, h, hero)
 			return h * 0.45
 		end
 	end
-	return BOULDER_SQUEEZE_W
+	-- narrow only beside a corner passage: two open squares next to it
+	-- that meet at a corner, with something solid in the other corner -
+	-- the diagonal step between them squeezes past the boulder. Anywhere
+	-- else (a straight corridor...) it fills the way: push it or go round.
+	local function open(x, y)
+		return U.in_map(x, y) and nhv.terrain.passable(map, x, y)
+	end
+	for _, dx in ipairs({-1, 1}) do
+		for _, dy in ipairs({-1, 1}) do
+			if open(tx + dx, ty) and open(tx, ty + dy) and not open(tx + dx, ty + dy) then
+				return BOULDER_SQUEEZE_W
+			end
+		end
+	end
+	return h * 0.45
 end
 
 local function update_objects(snap)
