@@ -155,9 +155,9 @@ function player_mod.squeeze_reason(snap)
 		carried = carried + (o.weight or 0)
 	end
 	if carried > 600 then
-		return "You're carrying too much to squeeze past boulders."
+		return "You're carrying too much to squeeze past boulders or through tight corners."
 	end
-	return "You can't squeeze past boulders here."
+	return "You can't squeeze past boulders or through tight corners here."
 end
 
 -- Walking into a boulder (which is solid) tries to push it.
@@ -385,10 +385,19 @@ nh.on_snapshot(function(snap, action)
 		if nosq then
 			nhv.hud.message(player_mod.squeeze_reason(snap))
 		else
-			nhv.hud.message("You can squeeze past boulders again.")
+			nhv.hud.message("You can squeeze past boulders and through tight corners again.")
 		end
 	end
 	player_mod.nosqueeze = nosq
+	terrain.set_nosqueeze(nosq)
+	if nosq then
+		-- (standing in a corner gap as it filled: step out of it)
+		local p = player:get_pos()
+		local f = player_mod.free_spot(p)
+		if not vector.equals(f, p) then
+			player:set_pos(f)
+		end
+	end
 	-- confused / stunned: the NetHack Voxel build of Luanti scrambles the
 	-- controls (rotated / reversed walking, inverted looking up and down)
 	-- (and the screen waves; hallucinating, it waves and its colours drift)

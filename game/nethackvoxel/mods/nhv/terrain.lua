@@ -34,6 +34,11 @@ local function reg(name, def)
 	core.register_node("nhv:" .. name, def)
 end
 
+-- a corner gap (see carve_corners) while you can't squeeze through one:
+-- invisible, but solid
+reg("squeeze_block", {description = "Tight gap", drawtype = "airlike", walkable = true,
+	pointable = false, sunlight_propagates = true, buildable_to = false})
+
 -- solid, opaque
 reg("void", {description = "Unexplored", tiles = {BLACK}, paramtype = "none"})
 reg("rock", {description = "Stone", tiles = {tile_tex(1272)}, paramtype = "none"})
@@ -296,7 +301,11 @@ end
 -- but in 3D they'd meet along a single edge you can't fit through. Such
 -- corners get their corner column carved out of both solid squares, which
 -- leaves a one-block gap to slip through. Not next to a doorway with a door
--- in it (no diagonal moves through those in NetHack either).
+-- in it (no diagonal moves through those in NetHack either). While NetHack
+-- won't let you squeeze through (carrying over 600, too big, Sokoban) the
+-- gap is filled with an invisible solid block instead (set_nosqueeze).
+terrain.nosqueeze = false
+
 local function diag_open(map, x, y)
 	if not U.in_map(x, y) then
 		return false
@@ -319,12 +328,13 @@ local function solid_at(map, x, y)
 end
 
 local function carve_corners(data, area, sq)
+	sq.corner = nil
 	local map = terrain.map
 	if not map or open_typ(sq.typ) then
 		return
 	end
 	local ox, oz = U.tile_origin(sq.tx, sq.ty)
-	local air = cid("air")
+	local air = cid(terrain.nosqueeze and "nhv:squeeze_block" or "air")
 	for _, sx in ipairs({-1, 1}) do
 		for _, sy in ipairs({-1, 1}) do
 			if diag_open(map, sq.tx + sx, sq.ty) and diag_open(map, sq.tx, sq.ty + sy)
@@ -335,6 +345,7 @@ local function carve_corners(data, area, sq)
 				for ly = prefabs.FLOOR + 1, prefabs.CEIL - 1 do
 					data.ids[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = air
 				end
+				sq.corner = true
 			end
 		end
 	end
@@ -397,6 +408,23 @@ end
 
 -- ---------------------------------------------------------------- updating
 terrain.built = {}
+
+-- you can (or can no longer) squeeze through tight corners: open or fill
+-- every corner gap on the level
+function terrain.set_nosqueeze(on)
+	on = on and true or false
+	if on == terrain.nosqueeze then
+		return
+	end
+	terrain.nosqueeze = on
+	local sqs = {}
+	for _, sq in pairs(terrain.built) do
+		if sq.corner then
+			sqs[#sqs + 1] = sq
+		end
+	end
+	write_squares(sqs)
+end
 
 local function memcmap_of(map, i)
 	local gi = nhv.glyph_info(map.mem[i])
