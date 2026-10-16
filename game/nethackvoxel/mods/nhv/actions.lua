@@ -350,8 +350,10 @@ function actions.pointed_dir_key(player, prompt, no_self)
 	elseif pitch < -1.0 then
 		return "<"
 	end
-	-- something further away: the direction it lies in
-	local ddx, ddy = U.sign(dx), U.sign(dy)
+	-- something further away: the nearest of the 8 directions to where it
+	-- lies (not just the signs: 6 east and 1 north is east, not north-east)
+	-- (world +z is NetHack -y)
+	local ddx, ddy = U.vec_to_dir(vector.new(dx, 0, -dy))
 	if ddx == 0 and ddy == 0 then
 		ddx, ddy = U.vec_to_dir(player:get_look_dir())
 	end
