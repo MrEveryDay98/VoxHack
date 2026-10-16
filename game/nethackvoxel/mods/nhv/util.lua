@@ -63,6 +63,7 @@ U.HERO = {
 	NOSQUEEZE = 0x40000, -- (can't squeeze past boulders and corners: too much carried, ...)
 	HELD = 0x80000, -- (held by a monster: a mimic, an owlbear's hug...)
 	ENHANCE = 0x100000, -- (a skill can be advanced: #enhance)
+	POLE = 0x200000, -- (wielding a polearm or lance: hits 2 squares away)
 }
 
 -- nhv_obj.flags

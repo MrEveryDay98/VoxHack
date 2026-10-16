@@ -154,6 +154,22 @@ donhvtick(void)
     return ECMD_TIME;
 }
 
+/* #nhvpole id: hit a monster further away with the wielded polearm or
+   lance, as applying it does (NetHack checks the range for your skill,
+   that you can see the spot, ...). */
+coordxy nhv_pole_x, nhv_pole_y;
+
+int
+donhvpole(void)
+{
+    struct monst *mtmp = mon_by_id((unsigned) nhv_cmd_args[0]);
+
+    if (!mtmp || !uwep || !is_pole(uwep))
+        return ECMD_OK;
+    nhv_pole_x = mtmp->mx, nhv_pole_y = mtmp->my;
+    return use_pole(uwep, TRUE);
+}
+
 /* #nhvattack id: melee a monster the host says is within reach. */
 int
 donhvattack(void)

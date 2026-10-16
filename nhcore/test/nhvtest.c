@@ -115,6 +115,38 @@ send_arg(const char *a)
                 nhv_send_key('#'), nhv_send_text(buf);
             }
         }
+    } else if (!strcmp(a, "poleset") || !strcmp(a, "pole")) {
+        /* poleset: step to a square 2 away from the first hostile monster
+           (squared distance 4); pole: #nhvpole at it */
+        nhv_hero h;
+        nhv_monfull m[16];
+        int n = nhv_get_all_monsters(m, 16), k, dx, dy;
+        char buf[64];
+
+        nhv_get_hero(&h);
+        for (k = 0; k < n && k < 16; k++)
+            if (!(m[k].flags & NHV_MF_TAME))
+                break;
+        if (k < n && k < 16) {
+            printf("  target id=%u at %d,%d (hero %d,%d)\n", m[k].id, m[k].x,
+                   m[k].y, h.x, h.y);
+            if (!strcmp(a, "pole")) {
+                snprintf(buf, sizeof buf, "nhvpole %u", m[k].id);
+                nhv_send_key('#'), nhv_send_text(buf);
+                return;
+            }
+            for (dx = -1; dx <= 1; dx++)
+                for (dy = -1; dy <= 1; dy++) {
+                    int x = h.x + dx, y = h.y + dy;
+
+                    if ((x - m[k].x) * (x - m[k].x) + (y - m[k].y) * (y - m[k].y) == 4) {
+                        snprintf(buf, sizeof buf, "nhvmove %d %d", x, y);
+                        nhv_send_key('#'), nhv_send_text(buf);
+                        return;
+                    }
+                }
+        }
+        nhv_send_key('#'), nhv_send_text("nhvtick");
     } else if (!strcmp(a, "pass")) {
         /* hop over the first monster next to the hero (#nhvpass) */
         nhv_hero h;
@@ -204,8 +236,10 @@ main(int argc, char **argv)
         return 2;
     }
     /* NHVTEST_WIZARD=1: debug mode (for #wizgenesis etc.) */
+    /* NHVTEST_OPTIONS: the whole OPTIONS line instead (another role...) */
     if (nhv_start(argv[1], argv[2],
-                  getenv("NHVTEST_WIZARD")
+                  getenv("NHVTEST_OPTIONS") ? getenv("NHVTEST_OPTIONS")
+                  : getenv("NHVTEST_WIZARD")
                   ? "OPTIONS=role:barbarian,race:human,gender:male,"
                     "align:neutral,!autopickup,pettype:none,!tutorial,!legacy,"
                     "!splash_screen,suppress_alert:3.4.3,playmode:debug"

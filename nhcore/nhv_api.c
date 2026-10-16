@@ -560,6 +560,8 @@ nhv_get_hero(nhv_hero *out)
     /* (not when it's the hero, polymorphed, holding on to a monster) */
     if (u.ustuck && !u.uswallow && !sticks(gy.youmonst.data))
         f |= NHV_HERO_HELD;
+    if (uwep && is_pole(uwep))
+        f |= NHV_HERO_POLE;
     {
         int sk;
 

@@ -132,6 +132,33 @@ local function attack_target(player, prefer_id)
 	return best
 end
 
+-- With a polearm or lance: a monster 2 squares away (NetHack's applying
+-- range: squared distance 4, 5 with skill, 8 at expert; NetHack itself
+-- says "Too far!" when your skill doesn't reach), in the direction you aim
+local function pole_target(player, prefer_id)
+	local h = hero()
+	if not U.has(h.flags, U.HERO.POLE) then
+		return nil
+	end
+	local pos = player:get_pos()
+	local look = player:get_look_dir()
+	local best, best_a
+	for _, e in pairs(nhv.mobs.mons) do
+		local d2 = e.id and e.id > 0 and e.x and (e.x - h.x) ^ 2 + (e.y - h.y) ^ 2
+		local p = d2 and d2 >= 4 and d2 <= 8 and e.obj:get_pos()
+		if p then
+			local a = angle_between(look, vector.subtract(p, pos))
+			if e.id == prefer_id then
+				a = a - 0.3
+			end
+			if a < ATTACK_CONE and (not best_a or a < best_a) then
+				best, best_a = e, a
+			end
+		end
+	end
+	return best
+end
+
 function actions.attack(player, prefer_id)
 	-- a readied spell: the click casts it
 	if nhv.spells.release(player) then
@@ -146,10 +173,16 @@ function actions.attack(player, prefer_id)
 		return
 	end
 	local t = attack_target(player, prefer_id)
+	local far = not t and pole_target(player, prefer_id)
 	if t then
 		actions.swing()
 		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
+	elseif far then
+		-- (out of arm's reach, in a polearm's or lance's)
+		actions.swing()
+		nhv.sound.hook("hero_swing")
+		nhv.clock.act(ext("nhvpole " .. far.id), {kind = "attack"})
 	elseif actions.try_dig(player) then -- luacheck: ignore 542
 		-- (digging with the wielded pick-axe; it swings)
 	else
