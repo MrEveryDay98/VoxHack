@@ -1,4 +1,4 @@
--- The guide: how to play NetHack Voxel, a few short pages.
+-- The guide: what NetHack is, and the controls.
 --
 -- Shown once, the first time a game starts (setting nhv_guide_seen), and
 -- any time from Options > Controls & guide. The game is paused while it's
@@ -12,71 +12,52 @@ local theme = nhv.theme
 local FORM = "nhv:guide"
 
 guide.PAGES = {
-	{"Welcome", [[
-NetHack Voxel is NetHack, seen from the inside.
+	{"NetHack", [[
+NetHack is a single-player dungeon exploration game.
 
-Everything that happens is decided by NetHack itself: every monster, item, trap, roll of the dice and death. You move freely in the world, and NetHack keeps track of the square you're on.
+You play an adventurer of a role, race and alignment of your choosing, sent by your god to recover the fabled Amulet of Yendor from deep within the dungeon, and to offer it to your god on the Astral Plane.
 
-Time moves when you move. Stand still and the world almost stops, so take your time to think. (Options > Time > Real time makes it always run.)
+On the way down you will meet monsters, find weapons, armour, magic and gold, visit shops, temples and other special places, and learn what the many unidentified items do by trying them.
 
-Menus and questions pause the game.
-
-These pages are always under Options > Controls & guide.]]},
+Every game is different: the dungeon, its monsters and its treasures are made anew each time. Death is permanent: when your character dies, the game is over.]]},
 	{"Moving", [[
 W A S D: walk
 Mouse: look around
-Space: wait a turn (or climb out of a pit, facing its edge)
+Space: wait a turn; in a pit, climb out (facing its edge)
 Z: the big map (Z again to close it)
-
-Doors: right click one to open or close it. Locked? Kick it (2) or unlock it.
-Stairs and ladders: walk into them, or right click them.
-Boulders: walk straight into one to push it. You can squeeze past one at a corner, unless you carry too much.
-Monsters: you can walk past them, even in a narrow corridor.]]},
+Right click a door: open or close it
+Walk into stairs or a ladder (or right click it): take it
+Walk straight into a boulder: push it]]},
 	{"Fighting", [[
-Left click: attack the monster nearest your crosshair, if it's in reach.
-Shift + left click: fire your quivered ammo (arrows, daggers...) at the crosshair.
+Left click: attack the monster nearest your crosshair, if it's in reach
+Shift + left click: fire your quivered ammo where the crosshair points
+1: Fire
+2: Kick
 
-The white bar above the hotbar is your last action playing out. When it's gone, you can act again.
-
-Throwing, firing, zapping wands and casting spells all go where the crosshair points.
-
-A monster flashes white when it attacks, and red when it's hurt.]]},
+Throwing, firing, zapping and casting go where the crosshair points.
+The white bar above the hotbar shows your last action playing out; you can act again when it's gone.]]},
 	{"Right click and the wheel", [[
-Right click (tap): the obvious thing for what you point at: open a door, take the stairs, pick up, talk...
-Right click (hold): a wheel of actions for it. Move the mouse toward one and let go (or let go in the middle to cancel). Time slows while it's open.
+Right click (tap): the obvious action for what you point at (open a door, take the stairs, pick up, talk...)
+Right click (hold): a wheel of actions for it; move the mouse toward one and let go, or let go in the middle to cancel
 
-Shift + right click: things you do yourself (search, pray, rest...)
+Shift + right click: actions on yourself (search, pray, rest...)
 Alt + right click: use an item (eat, quaff, read, zap, wear...)
 Ctrl + right click: magic and abilities
 E: actions with your wielded weapon]]},
 	{"Keys", [[
 1 to 5: the hotbar (Fire, Kick, Zap, Spell, Eat)
-X: search for hidden doors, passages and traps
-P: pay, in a shop (it glows yellow while you owe something)
+X: search
+P: pay, in a shop
 I: inventory and equipment (click an item for what you can do with it)
 Middle click: look at what's under the crosshair
-T: the command line, for any NetHack command (#pray, #loot, #offer, s...). It also lists every message so far: Page Up scrolls back.
+T: the command line, for any NetHack command (#pray, #loot, #offer, s...); it also lists every message so far (Page Up scrolls back)
 Esc: the game menu]]},
-	{"Spells and aiming", [[
-4 opens your spells. Each spell has buttons:
+	{"Spells", [[
+4 opens your spells. Each has buttons:
 
-Cast: for spells without a direction (light, detect monsters...)
-Self: cast it on yourself (healing...)
-Target: ready it in your hand. It glows for a few seconds while you aim; left click to cast it where you point.
-
-Readying costs nothing; the spell is only cast when you click.
-
-Healing goes to yourself unless you aim it at someone, like your pet.]]},
-	{"Tips", [[
-Messages appear at the top, and stay there while a question is up.
-
-Options has the sizes of the HUD, menus, text and map, the interface style, and NetHack options (your name, your pet's name, autopickup...).
-
-Shopkeepers stand in their door while you owe them. Pay with P.
-
-Too much to carry? You'll walk slower, and can't squeeze past boulders.
-
-Good luck, and mind the floating eyes.]]},
+Cast: a spell without a direction
+Self: cast it on yourself
+Target: ready it in your hand, then left click to cast it where the crosshair points (it fades after a few seconds)]]},
 }
 
 function guide.formspec(page)
