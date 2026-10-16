@@ -399,12 +399,13 @@ end
 
 -- A coloured vignette (the screen's edges) that flashes and fades: red
 -- when hurt (stronger for bigger hits), green when healed a good amount.
+-- full = the whole screen (a flash of light), not just the edges.
 local FLASH_S = 0.6
-local flash = nil -- {color=, t0=, strength=}
+local flash = nil -- {color=, t0=, strength=, full=}
 local flash_shown = nil
-function hud.flash(color, strength)
+function hud.flash(color, strength, full)
 	flash = {color = color or "#FF2020", t0 = core.get_us_time(),
-		strength = math.max(0.3, math.min(1, strength or 1))}
+		strength = math.max(0.2, math.min(1, strength or 1)), full = full}
 end
 
 local tick = 0
@@ -420,7 +421,11 @@ core.register_globalstep(function(dtime)
 		if t < 1 then
 			-- (steps of 16 keep the number of different textures small)
 			local a = math.floor((1 - t) * 230 * flash.strength / 16) * 16
-			tex = ("nhv_vignette.png^[multiply:%s^[opacity:%d"):format(flash.color, a)
+			if flash.full then
+				tex = ("[fill:16x16:%s^[opacity:%d"):format(flash.color, a)
+			else
+				tex = ("nhv_vignette.png^[multiply:%s^[opacity:%d"):format(flash.color, a)
+			end
 		else
 			flash = nil
 		end

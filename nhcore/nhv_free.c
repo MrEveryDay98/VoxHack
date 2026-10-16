@@ -822,6 +822,16 @@ nhv_throw_event(int glyph, int x0, int y0, int x1, int y1)
     nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
+/* "explode <x> <y> <expltype>" (sent as a combat event) */
+void
+nhv_explode_event(int x, int y, int expltype)
+{
+    char buf[64];
+
+    Sprintf(buf, "explode %d %d %d", x, y, expltype);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 /* "beam <otyp> <x0> <y0> <x1> <y1>" (sent as a combat event) */
 void
 nhv_beam_event(int otyp, int x0, int y0, int x1, int y1)
