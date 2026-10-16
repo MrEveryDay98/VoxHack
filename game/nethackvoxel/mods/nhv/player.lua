@@ -98,6 +98,9 @@ local function teleport(player, pos)
 end
 player_mod.teleport = teleport
 
+-- pet id -> time until which it counts as in the way (it wouldn't swap)
+player_mod.unswappable = {}
+
 local function stuck(h)
 	return U.has(h.flags, U.HERO.TRAPPED) or U.has(h.flags, U.HERO.SWALLOWED)
 		or U.has(h.flags, U.HERO.HELD)
@@ -322,10 +325,17 @@ local function step(player)
 		local e = nhv.mobs.objs[U.idx(x, y)]
 		return e and e.boulder
 	end
-	-- someone NetHack won't let you step onto (a pet you swap places with)
+	-- someone NetHack won't let you step onto: not a pet you swap places
+	-- with - unless it just wouldn't swap (eating, trapped, ...)
 	local function blocker_at(x, y)
 		local e = nhv.mobs.monster_at(x, y)
-		return e and e.id and e.id > 0 and not U.has(e.mon and e.mon.flags or 0, U.MON_PET)
+		if not (e and e.id and e.id > 0) then
+			return false
+		end
+		if U.has(e.mon and e.mon.flags or 0, U.MON_PET) then
+			return (player_mod.unswappable[e.id] or 0) > core.get_us_time()
+		end
+		return true
 	end
 	-- (the body is beside a boulder or walking past someone, in their
 	-- square: wait for it to come out the other side)
@@ -464,10 +474,21 @@ nh.on_snapshot(function(snap, action)
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then
+			-- (a pet there that wouldn't swap places - eating, trapped...: for
+			-- a while it's in the way like anyone else, and walking past it
+			-- moves you over it)
+			local pet = nhv.mobs.monster_at(action.tx, action.ty)
+			local by_pet = pet and pet.id and pet.id > 0 and U.has(pet.mon and pet.mon.flags or 0, U.MON_PET)
+			if by_pet then
+				player_mod.unswappable[pet.id] = core.get_us_time() + 4000000
+			end
 			-- refused: no teleporting the body back; retry later (step()
-			-- puts it back if it keeps being refused while it walks off)
+			-- puts it back if it keeps being refused while it walks off -
+			-- not for the pet: you're moved over it instead)
 			player_mod.retry_at = core.get_us_time() + 500000
-			player_mod.refusals = (player_mod.refusals or 0) + 1
+			if not by_pet then
+				player_mod.refusals = (player_mod.refusals or 0) + 1
+			end
 		else
 			player_mod.refusals = 0
 			if h.x ~= action.tx or h.y ~= action.ty then
