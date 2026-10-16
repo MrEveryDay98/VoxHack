@@ -635,6 +635,25 @@ function terrain.place_hero_light(pos)
 	terrain.hero_light_pos = placed and p or nil
 end
 
+-- Where something standing on square (tx, ty) rests: the floor, or the
+-- bottom of a pit (or any hole) where there's no floor under its middle.
+function terrain.stand_y(tx, ty)
+	local c = U.tile_center(tx, ty)
+	local function solid(y)
+		local def = core.registered_nodes[core.get_node(vector.new(c.x, y, c.z)).name]
+		return def and def.walkable
+	end
+	if solid(U.FLOOR_Y) then
+		return U.STAND_Y
+	end
+	for y = U.FLOOR_Y - 1, prefabs.Y0, -1 do
+		if solid(y) then
+			return y + 0.5
+		end
+	end
+	return U.STAND_Y
+end
+
 -- (the prefab editor's area plates are laid out the way the game would)
 terrain.base_slot = base_slot
 

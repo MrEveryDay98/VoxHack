@@ -166,6 +166,10 @@ local function mon_draw_pos(e)
 		base = U.tile_center(e.x, e.y)
 	end
 	local y = scale.mon_center_y(e.mon and e.mon.mndx, e.h, U.STAND_Y, U.CEIL_Y - 0.5)
+	-- trapped down in a pit: at its bottom
+	if e.mon and U.has(e.mon.flags, U.MON_IN_PIT) then
+		y = y - (U.STAND_Y - nhv.terrain.stand_y(e.x, e.y))
+	end
 	return vector.new(base.x, y, base.z)
 end
 
@@ -355,7 +359,9 @@ local function update_objects(snap)
 					e = nil
 				end
 				local h, flat, name = obj_shape(gi)
-				local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03) or (U.STAND_Y + h / 2))
+				-- (in a pit: at its bottom)
+				local ground = nhv.terrain.stand_y(tx, ty)
+				local pos = U.tile_center(tx, ty, flat and (ground + 0.03) or (ground + h / 2))
 				local fresh = false
 				if not e then
 					local obj = core.add_entity(pos, "nhv:obj")
@@ -366,7 +372,7 @@ local function update_objects(snap)
 					end
 				end
 				local bw = name == "boulder" and boulder_w(map, tx, ty, h, snap.hero) or nil
-				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or e.bw ~= bw) then
+				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
 					local props = sprite_props(map.mem_tile[i], h)
 					e.bw = bw
 					if name == "boulder" then
@@ -384,7 +390,7 @@ local function update_objects(snap)
 					if not e.glide then
 						e.obj:set_pos(pos)
 					end
-					e.tile, e.h = map.mem_tile[i], h
+					e.tile, e.h, e.ground = map.mem_tile[i], h, ground
 					-- small items spin; chests and boxes face you; corpses lie flat
 					e.flat = flat
 					e.spin = (h == OBJ_H) and not BILLBOARD[name]
@@ -423,7 +429,8 @@ local function set_extra(e, item, tx, ty, k)
 	local gi = nhv.glyph_info(item.glyph)
 	local h, flat = obj_shape(gi)
 	local ox, oz = PILE_OFS[k][1], PILE_OFS[k][2]
-	local c = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.03 + k * 0.01) or (U.STAND_Y + h / 2))
+	local ground = nhv.terrain.stand_y(tx, ty) -- (in a pit: its bottom)
+	local c = U.tile_center(tx, ty, flat and (ground + 0.03 + k * 0.01) or (ground + h / 2))
 	local pos = vector.new(c.x + ox, c.y, c.z + oz)
 	if e.tile ~= item.tile or e.h ~= h or not vector.equals(e.pos or pos, pos) then
 		local props = sprite_props(item.tile, h)
@@ -569,7 +576,8 @@ local function update_features(snap)
 						e = nil
 					end
 					local h = flat and 2.4 or (nhv.scale.feature_height(name) or 1.8)
-					local pos = U.tile_center(tx, ty, flat and (U.STAND_Y + 0.02)
+					-- (a pit's trap sprite lies at its bottom)
+					local pos = U.tile_center(tx, ty, flat and (nhv.terrain.stand_y(tx, ty) + 0.02)
 						or scale.center_y("feat", name, h, U.STAND_Y, U.CEIL_Y - 0.5))
 					local fresh = false
 					if not e then
