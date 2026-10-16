@@ -113,9 +113,13 @@ local function set_speed(player)
 	if player_mod.frozen then
 		speed = 0
 	end
+	-- Only the walking speeds change: the engine's "speed" also scales how
+	-- fast you speed up AND slow down, so at 0 you'd keep sliding at
+	-- whatever speed you had (caught in a web mid-step...) forever.
 	-- (no sneaking: Shift is for the action wheel and firing, and must not
 	-- stop you walking off ledges into pits)
-	player:set_physics_override({speed = speed, jump = 0, sneak = false, sneak_glitch = false,
+	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
+		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
 		new_move = true, gravity = h and 1 or 0})
 end
 
@@ -492,25 +496,34 @@ nh.on_snapshot(function(snap)
 	end
 end)
 
--- Held by a monster: the body is pinned in the hero's square (where it
--- is, if it's in it; else the nearest spot inside it - the body may have
--- walked into the mimic's square before NetHack said it was one).
+-- Stuck (a trap, held by a monster, swallowed): the body is pinned in the
+-- hero's square - where it is, if it's in it; else the nearest spot
+-- inside it (the body may be a step ahead: walking into a mimic's square
+-- before NetHack said it was one, onto a web it caught you in...).
 local held_at = nil
 local function hold_still(player)
 	local h = player_mod.hero
-	if not h or not U.has(h.flags, U.HERO.HELD) then
+	if not h or not stuck(h) then
 		held_at = nil
 		player_mod.held_at = nil
 		return false
 	end
 	local pos = player:get_pos()
+	-- (NetHack moved you while stuck - an engulfer carrying you along: the
+	-- spot moves into your new square)
+	if held_at and (held_at.tx ~= h.x or held_at.ty ~= h.y) then
+		held_at = nil
+	end
 	if not held_at then
 		local c = U.tile_center(h.x, h.y, pos.y)
-		local m = U.TILE / 2 - 0.35 -- (the body stays inside the square)
+		-- (the body stays inside the square; caught in a trap, near the
+		-- middle of it, where the trap is)
+		local m = U.has(h.flags, U.HERO.TRAPPED) and 0.5 or (U.TILE / 2 - 0.35)
 		local function clamp(v)
 			return math.max(-m, math.min(m, v))
 		end
 		held_at = vector.new(c.x + clamp(pos.x - c.x), pos.y, c.z + clamp(pos.z - c.z))
+		held_at.tx, held_at.ty = h.x, h.y
 	end
 	player_mod.held_at = held_at
 	if math.abs(pos.x - held_at.x) + math.abs(pos.z - held_at.z) > 0.03 then
