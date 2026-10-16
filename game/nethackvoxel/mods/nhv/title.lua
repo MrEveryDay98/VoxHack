@@ -167,6 +167,11 @@ local ROLES = {
 	valkyrie = {race = set("human", "dwarf"), gender = set("female"), align = set("lawful", "neutral")},
 	wizard = {race = set("human", "elf", "gnome", "orc"), gender = BOTH, align = set("neutral", "chaotic")},
 }
+-- roles that always start with the same pet (NetHack ignores the choice
+-- of kitten or dog for them; no pet still works)
+local ROLE_PET = {knight = "pony", samurai = "little dog", caveman = "little dog",
+	ranger = "little dog", wizard = "kitten"}
+
 local RACE_ALIGN = {
 	human = set("lawful", "neutral", "chaotic"), elf = set("chaotic"), dwarf = set("lawful"),
 	gnome = set("neutral"), orc = set("chaotic"),
@@ -183,6 +188,8 @@ local function allowed(k, v, get)
 	elseif k == "align" then
 		local race = RACE_ALIGN[get("race")]
 		return (not role or role.align[v] == true) and (not race or race[v] == true)
+	elseif k == "pettype" then
+		return not ROLE_PET[get("role")] or v == "none"
 	end
 	return true
 end
@@ -205,6 +212,9 @@ local function fix_choices(o)
 		if not allowed(k, o.get(k), o.get) then
 			o.set(k, "random")
 		end
+	end
+	if not allowed("pettype", o.get("pettype"), o.get) or o.get("pettype") == "horse" then
+		o.set("pettype", "")
 	end
 end
 
@@ -229,6 +239,9 @@ local function newchar_formspec(player)
 		local labels, sel = {}, 1
 		for i, c in ipairs(allowed_choices(k, o.get)) do
 			labels[i] = E(c[2])
+			if k == "pettype" and c[1] == "" and ROLE_PET[o.get("role")] then
+				labels[i] = E("Usual: " .. ROLE_PET[o.get("role")])
+			end
 			if c[1] == o.get(k) then
 				sel = i
 			end

@@ -51,8 +51,10 @@ nhopts.OPTIONS = {
 	{key = "align", kind = "choice", label = "Alignment", opt = "align", new = true, default = "",
 		choices = choices(list("Lawful", "Neutral", "Chaotic"))},
 	{key = "pettype", kind = "choice", label = "Pet", opt = "pettype", new = true, default = "",
+		-- (NetHack only takes a kitten, a little dog or none; the knight's
+		-- pony and the other roles' set pets come with the role)
 		choices = {{"", "Usual for the role"}, {"cat", "Kitten"}, {"dog", "Little dog"},
-			{"horse", "Pony"}, {"none", "No pet"}}},
+			{"none", "No pet"}}},
 	{key = "dogname", kind = "text", label = "Dog's name", opt = "dogname", new = true, default = ""},
 	{key = "catname", kind = "text", label = "Cat's name", opt = "catname", new = true, default = ""},
 	{key = "horsename", kind = "text", label = "Horse's name", opt = "horsename", new = true, default = ""},
