@@ -408,6 +408,9 @@ nhv_get_monsters(nhv_mon *buf, int max)
                         if (t && is_pit(t->ttyp))
                             m.flags |= NHV_MON_IN_PIT;
                     }
+                    if (mtmp == u.ustuck && !u.uswallow
+                        && !sticks(gy.youmonst.data))
+                        m.flags |= NHV_MON_HOLDING;
                 }
             }
             if (n < max)
