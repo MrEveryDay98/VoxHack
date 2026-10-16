@@ -148,21 +148,59 @@ local function intended_dir(player)
 	return vector.normalize(v)
 end
 
--- why you can't squeeze past boulders (NetHack's cant_squeeze_thru)
-function player_mod.squeeze_reason(snap)
+-- Why you can't squeeze through, in NetHack's order (cant_squeeze_thru):
+-- too big a form, carrying too much, Sokoban. what = "corner" (a gap
+-- between two walls: NetHack's own words) or "boulder".
+local SQUEEZE_MSG = {
+	corner = {big = "Your body is too large to fit through.",
+		heavy = "You are carrying too much to get through.",
+		soko = "You cannot pass that way."},
+	boulder = {big = "Your body is too large to squeeze past the boulder.",
+		heavy = "You are carrying too much to squeeze past the boulder.",
+		soko = "You cannot squeeze past the boulder here."},
+}
+function player_mod.squeeze_reason(snap, what)
 	local carried = 0
 	for _, o in ipairs(snap and snap.inventory or {}) do
 		carried = carried + (o.weight or 0)
 	end
+	local h = snap and snap.hero
+	local soko = h and (h.dungeon_name or ""):find("Sokoban") ~= nil
+	local why = "big"
 	if carried > 600 then
-		return "You're carrying too much to squeeze past boulders or through tight corners."
+		why = "heavy"
+	elseif soko then
+		why = "soko"
 	end
-	return "You can't squeeze past boulders or through tight corners here."
+	return SQUEEZE_MSG[what or "corner"][why]
+end
+
+-- (said when you press against it, now and then; not while you keep on)
+local squeeze_told = 0
+local function tell_squeeze(what)
+	if core.get_us_time() > squeeze_told then
+		nhv.hud.message(player_mod.squeeze_reason(nh.snap, what))
+	end
+	squeeze_told = core.get_us_time() + 3000000
+end
+
+-- walking into a corner gap that's closed (you can't squeeze through)
+local function check_gap(player)
+	if not player_mod.nosqueeze then
+		return
+	end
+	local dir = intended_dir(player)
+	if not dir then
+		return
+	end
+	local p = vector.add(player:get_pos(), vector.new(dir.x * 0.5, 1, dir.z * 0.5))
+	if core.get_node(vector.round(p)).name == "nhv:squeeze_block" then
+		tell_squeeze("corner")
+	end
 end
 
 -- Walking into a boulder (which is solid) tries to push it.
 local push_next = 0
-local squeeze_told = 0
 local function try_push(player)
 	local dir = intended_dir(player)
 	if not dir or core.get_us_time() < push_next then
@@ -191,12 +229,6 @@ local function try_push(player)
 			-- squeezed past, and walls keep you from reaching it: more reach
 			local diag = e.x ~= h.x and e.y ~= h.y
 			local reach = diag and 0.6 or 0.15
-			-- (pressing against it when you can't squeeze past: say why)
-			if player_mod.nosqueeze and gx < 0.15 and gz < 0.15
-					and core.get_us_time() > squeeze_told then
-				squeeze_told = core.get_us_time() + 6000000
-				nhv.hud.message(player_mod.squeeze_reason(nh.snap))
-			end
 			-- (rock, a wall or bars beyond it: it can't roll there, so you're
 			-- squeezing past it, not pushing; a boulder beyond is still tried:
 			-- NetHack shows it then)
@@ -213,6 +245,11 @@ local function try_push(player)
 				nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(e.x, e.y)}},
 					{kind = "push", tx = e.x, ty = e.y, from_x = h.x, from_y = h.y})
 				return true
+			end
+			-- (pressing against its side, trying to get past it, when you
+			-- can't squeeze past: say why)
+			if player_mod.nosqueeze and gx < 0.15 and gz < 0.15 and vector.dot(to, dir) > 0.3 then
+				tell_squeeze("boulder")
 			end
 		end
 	end
@@ -377,17 +414,10 @@ nh.on_snapshot(function(snap, action)
 		return
 	end
 	set_speed(player)
-	-- squeezing past boulders and tight corners: say when it stops (and
-	-- starts) being possible; boulders get their full width meanwhile
+	-- squeezing past boulders and through tight corners: while it isn't
+	-- possible boulders get their full width and corner gaps close (what
+	-- stops you is said when you try)
 	local nosq = U.has(h.flags, U.HERO.NOSQUEEZE)
-	-- (when it changes, and when the game starts unable to)
-	if nosq ~= (player_mod.nosqueeze or false) and (prev or nosq) then
-		if nosq then
-			nhv.hud.message(player_mod.squeeze_reason(snap))
-		else
-			nhv.hud.message("You can squeeze past boulders and through tight corners again.")
-		end
-	end
 	player_mod.nosqueeze = nosq
 	terrain.set_nosqueeze(nosq)
 	if nosq then
@@ -548,6 +578,7 @@ core.register_globalstep(function()
 		if not hold_still(player) then
 			step(player)
 		end
+		check_gap(player)
 		check_trigger(player)
 		terrain.place_hero_light(player:get_pos())
 		tell_pit(player)
