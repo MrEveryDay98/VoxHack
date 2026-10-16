@@ -391,7 +391,14 @@ end)
 local last = nil
 nh.on_snapshot(function(snap)
 	if not snap then
-		sound.set_music("music_death")
+		-- the game ended: death music only if you died (not saving, quitting
+		-- to the title screen...); otherwise the music just stops
+		if last and U.has(last.flags or 0, U.HERO.DEAD) then
+			sound.set_music("music_death")
+		else
+			sound.stop_music()
+		end
+		last = nil
 		return
 	end
 	local h = snap.hero
