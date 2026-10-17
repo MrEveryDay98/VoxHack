@@ -192,6 +192,23 @@ local function regions()
 	return active.regions
 end
 
+-- The special level variants the level you're on was built from (as NetHack
+-- reported them: "bigrm-6", "medusa-2", ...), as a set; empty for an
+-- ordinary level.
+function areas.level_variants()
+	local snap = nhv.nh.snap
+	local ledger = snap and snap.hero and snap.hero.ledger
+	local gid = ledger and core.nh_game_id and core.nh_game_id()
+	local out = {}
+	if not gid then
+		return out
+	end
+	for _, r in pairs(core.deserialize(storage:get_string(key(gid, ledger))) or {}) do
+		out[r.proto] = true
+	end
+	return out
+end
+
 -- The hand-built cell for square (tx, ty) with terrain typ, and an id for
 -- it; nil if the usual prefab is used there.
 function areas.cell(tx, ty, typ)

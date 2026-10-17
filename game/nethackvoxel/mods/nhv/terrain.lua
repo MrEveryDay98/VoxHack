@@ -351,6 +351,42 @@ local function carve_corners(data, area, sq)
 	end
 end
 
+-- Levels open to the sky (no ceiling, nothing above it): the Big Rooms
+-- that can have trees (bigrm-6 has them in its map; the others can place
+-- them at random), Juiblex's swamp and Medusa's island.
+local OPEN_SKY = {
+	["bigrm-1"] = true, ["bigrm-3"] = true, ["bigrm-4"] = true, ["bigrm-6"] = true,
+	["bigrm-7"] = true, ["bigrm-8"] = true, ["bigrm-10"] = true,
+	["juiblex"] = true,
+	["medusa-1"] = true, ["medusa-2"] = true, ["medusa-3"] = true, ["medusa-4"] = true,
+}
+terrain.open_sky = false
+
+local function level_open_sky()
+	if nhv.EDITOR or not nhv.areas or not nhv.areas.level_variants then
+		return false
+	end
+	for v in pairs(nhv.areas.level_variants()) do
+		if OPEN_SKY[v] then
+			return true
+		end
+	end
+	return false
+end
+
+-- (open sky: the ceiling layer and everything above it is air)
+local function clear_above(data, area, sq)
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	local air = cid("air")
+	for lx = 0, U.TILE - 1 do
+		for lz = 0, U.TILE - 1 do
+			for ly = prefabs.CEIL, prefabs.H - 1 do
+				data.ids[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = air
+			end
+		end
+	end
+end
+
 local function write_square(data, area, sq)
 	if sq.area_cell then
 		-- part of a hand-built area (a special level's fixed part; areas.lua)
@@ -362,6 +398,9 @@ local function write_square(data, area, sq)
 	end
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
+	end
+	if terrain.open_sky then
+		clear_above(data, area, sq)
 	end
 	if sq.lit and open_typ(sq.typ) then
 		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
@@ -567,6 +606,13 @@ function terrain.update(map, force)
 	if style and style ~= terrain.wall_style then
 		terrain.wall_style = style
 		force = true -- redraw what's already built with this level's walls
+	end
+	-- (open to the sky or not: known once NetHack has said which level
+	-- this is; it changing redraws everything)
+	local open = level_open_sky()
+	if open ~= terrain.open_sky then
+		terrain.open_sky = open
+		force = true
 	end
 	terrain.map = map
 	local sqs, queued = {}, {}
