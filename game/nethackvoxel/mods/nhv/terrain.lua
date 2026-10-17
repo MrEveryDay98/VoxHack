@@ -353,7 +353,9 @@ local function carve_corners(data, area, sq)
 	end
 end
 
--- Levels open to the sky (no ceiling, nothing above it): the Big Rooms
+-- Levels open to the sky (their ceilings are taken off by hand, in the
+-- prefab editor; this list gives them the sky, its fog colour and the ways
+-- up built for the open sky): the Big Rooms
 -- that can have trees (bigrm-6 has them in its map; the others can place
 -- them at random), Juiblex's swamp and Medusa's island.
 local OPEN_SKY = {
@@ -376,40 +378,6 @@ local function level_open_sky()
 	return false
 end
 
--- (open sky: the ceiling layer and everything above it is air - but not
--- in a way up: up stairs and ladders climb into that space, and the trigger
--- that takes you up is up there)
-local function goes_up(sq)
-	if sq.slot == "stairs_up" or sq.slot == "ladder_up"
-			or sq.slot == "stairs_up_sky" or sq.slot == "ladder_up_sky" then
-		return true
-	end
-	if sq.area_cell then
-		for i, nd in pairs(sq.area_cell.nodes) do
-			local _, ly = prefabs.unindex(i)
-			if nd.n == "nhv:trigger" and ly >= prefabs.CEIL then
-				return true
-			end
-		end
-	end
-	return false
-end
-
-local function clear_above(data, area, sq)
-	if goes_up(sq) then
-		return
-	end
-	local ox, oz = U.tile_origin(sq.tx, sq.ty)
-	local air = cid("air")
-	for lx = 0, U.TILE - 1 do
-		for lz = 0, U.TILE - 1 do
-			for ly = prefabs.CEIL, prefabs.H - 1 do
-				data.ids[area:index(ox + lx, prefabs.Y0 + ly, oz + lz)] = air
-			end
-		end
-	end
-end
-
 local function write_square(data, area, sq)
 	if sq.area_cell then
 		-- part of a hand-built area (a special level's fixed part; areas.lua)
@@ -422,9 +390,8 @@ local function write_square(data, area, sq)
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
 	end
-	if terrain.open_sky then
-		clear_above(data, area, sq)
-	end
+	-- (the open-sky levels' ceilings aren't taken off here any more: they're
+	-- built open in the prefab editor's areas)
 	if sq.lit and open_typ(sq.typ) then
 		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
 		local vi = area:index(c.x, c.y, c.z)
