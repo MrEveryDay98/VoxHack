@@ -15,6 +15,8 @@ SKY = os.path.join(ROOT, "game", "nethackvoxel", "mods", "nhv_sky")
 DATA = os.path.join(SKY, "skies.json")
 TEXTURES = os.path.join(SKY, "textures")
 TEMPLATES = os.path.join(ROOT, "game", "nethackvoxel", "mods", "nhv", "splev_templates.txt")
+# NetHack's special levels (one .lua each)
+DAT = os.path.join(ROOT, "external", "nethack", "dat")
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
@@ -39,20 +41,119 @@ def textures():
     return sorted(f for f in os.listdir(TEXTURES) if f.lower().endswith(".png"))
 
 
+# what the special levels are called (as areas.lua's names)
+LEVEL_NAMES = {
+    "minetn-1": "Frontier Town (or Orcish Town)", "minetn-2": "Town Square",
+    "minetn-3": "Alley Town", "minetn-4": "College Town", "minetn-5": "Grotto",
+    "minetn-6": "Bustling Town", "minetn-7": "Bazaar Town", "minefill": "Mines filler levels",
+    "oracle": "The Oracle", "castle": "The Castle", "valley": "Valley of the Dead",
+    "sanctum": "Moloch's Sanctum", "astral": "Astral Plane", "earth": "Plane of Earth",
+    "air": "Plane of Air", "fire": "Plane of Fire", "water": "Plane of Water",
+    "knox": "Fort Ludios", "wizard1": "Wizard's Tower (bottom)",
+    "wizard2": "Wizard's Tower (middle)", "wizard3": "Wizard's Tower (top)",
+    "fakewiz1": "Fake Wizard's Tower 1", "fakewiz2": "Fake Wizard's Tower 2",
+    "tower1": "Vlad's Tower (bottom)", "tower2": "Vlad's Tower (middle)",
+    "tower3": "Vlad's Tower (top)", "asmodeus": "Asmodeus's lair",
+    "baalz": "Baalzebub's lair", "juiblex": "Juiblex's swamp", "orcus": "Orcus Town",
+    "hellfill": "Gehennom filler mazes",
+}
+FAMILY_NAMES = {"medusa": "Medusa's Island", "bigrm": "Big Room", "minetn": "Minetown",
+                "minend": "Mines' End", "tut": "Tutorial"}
+ROLES = {"arc": "Archeologist", "bar": "Barbarian", "cav": "Caveman", "hea": "Healer",
+         "kni": "Knight", "mon": "Monk", "pri": "Priest", "ran": "Ranger", "rog": "Rogue",
+         "sam": "Samurai", "tou": "Tourist", "val": "Valkyrie", "wiz": "Wizard"}
+QUEST_PARTS = {"strt": "home", "loca": "locate", "fila": "filler A", "filb": "filler B",
+               "goal": "goal"}
+GROUPS = [
+    ("The Dungeons of Doom", ("oracle", "bigrm", "medusa", "castle")),
+    ("The Gnomish Mines", ("minefill", "minetn", "minend")),
+    ("Sokoban", ("soko",)),
+    ("The Quest", tuple(ROLES)),
+    ("Fort Ludios", ("knox",)),
+    ("Gehennom", ("valley", "hellfill", "juiblex", "orcus", "asmodeus", "baalz",
+                  "wizard", "fakewiz", "sanctum")),
+    ("Vlad's Tower", ("tower",)),
+    ("The Elemental Planes", ("earth", "air", "fire", "water", "astral")),
+    ("The Tutorial", ("tut",)),
+]
+NOT_LEVELS = {"dungeon", "nhcore", "nhlib", "quest", "themerms"}
+
+
+def _level_name(p):
+    fam, _, part = p.partition("-")
+    if p in LEVEL_NAMES:
+        return LEVEL_NAMES[p]
+    if fam in ROLES and part in QUEST_PARTS:
+        return "%s quest: %s" % (ROLES[fam], QUEST_PARTS[part])
+    m = re.match(r"^soko(\d)-(\d)$", p)
+    if m:
+        return "Sokoban level %s, version %s" % m.groups()
+    if fam in FAMILY_NAMES and part:
+        return "%s %s" % (FAMILY_NAMES[fam], part)
+    return p
+
+
+def _family_name(fam):
+    if fam in ROLES:
+        return "%s quest (all its levels)" % ROLES[fam]
+    m = re.match(r"^soko(\d)$", fam)
+    if m:
+        return "Sokoban level %s (both versions)" % m.group(1)
+    return "%s (any of them)" % FAMILY_NAMES.get(fam, fam)
+
+
 def level_names():
-    """Special level variants NetHack reports ("medusa-2"), and their
-    families ("medusa"), for picking which level gets a sky."""
-    names = set()
+    """The levels a sky can be picked for, grouped by where they are:
+    [{"group": ..., "levels": [{"id", "name", "family" (a set of
+    variants: "medusa"), "of" (a variant's family)}]}]. Ids are what the game
+    looks up: the variant ("medusa-2", "arc-strt") or its family ("medusa",
+    "arc"); every other level gets the default sky."""
+    protos = set()
     try:
-        with open(TEMPLATES, encoding="utf-8") as f:
-            for line in f:
-                v = line.split(" ", 1)[0].strip()
-                if LEVEL_RE.match(v):
-                    names.add(v)
-                    names.add(v.split("-", 1)[0])
+        for f in os.listdir(DAT):
+            if f.endswith(".lua") and f[:-4] not in NOT_LEVELS:
+                protos.add(f[:-4].lower())
     except OSError:
         pass
-    return sorted(names)
+    try:  # (the hand-built areas' list, if NetHack's own isn't here)
+        with open(TEMPLATES, encoding="utf-8") as f:
+            for line in f:
+                v = line.split(" ", 1)[0].strip().lower()
+                if LEVEL_RE.match(v):
+                    protos.add(v)
+    except OSError:
+        pass
+
+    def natural(p):
+        part = p.partition("-")[2]
+        if part in QUEST_PARTS:  # (a quest's levels in the order you meet them)
+            return [p.partition("-")[0], list(QUEST_PARTS).index(part)]
+        return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", p)]
+
+    fams = {}
+    for p in protos:
+        fam = p.split("-", 1)[0]
+        if "-" in p:
+            fams.setdefault(fam, []).append(p)
+    out, used = [], set()
+    for title, starts in GROUPS:
+        levels = []
+        for st in starts:
+            for p in sorted((p for p in protos if p not in used and (p == st or p.split("-", 1)[0] == st
+                             or (st in ("soko", "wizard", "fakewiz", "tower") and p.startswith(st)))),
+                            key=natural):
+                fam = p.split("-", 1)[0]
+                if "-" in p and fam not in used:
+                    used.add(fam)
+                    levels.append({"id": fam, "name": _family_name(fam), "family": True})
+                used.add(p)
+                levels.append({"id": p, "name": _level_name(p), "of": fam if "-" in p else None})
+        if levels:
+            out.append({"group": title, "levels": levels})
+    rest = sorted(p for p in protos if p not in used)
+    if rest:
+        out.append({"group": "Others", "levels": [{"id": p, "name": _level_name(p)} for p in rest]})
+    return out
 
 
 def _num(v, lo, hi, default):

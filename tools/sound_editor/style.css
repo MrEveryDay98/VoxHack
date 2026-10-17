@@ -264,6 +264,12 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .sky-layer h4 { margin: 14px 0 0; font-size: 13px; color: var(--accent); }
 .sky-level { margin: 4px 0; }
 .sky-level-name { display: inline-block; min-width: 11em; }
+.sky-level.sub { padding-left: 1.5em; }
+.sky-level.set .sky-level-name { color: var(--accent, inherit); }
+.sky-levels details { margin: 6px 0; }
+.sky-levels summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.sky-levels .sky-level-name { min-width: 22em; }
+.sky-levels .sky-level.sub .sky-level-name { min-width: 20.5em; }
 @media (max-width: 860px) { .sky-top, .sky-layers { grid-template-columns: 1fr; } }
 
 .tg { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: start; }

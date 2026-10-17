@@ -748,6 +748,13 @@ nhv_splev_end(void)
             nhv_push_event(NHV_EV_SPLEV, 0, buf);
         }
     }
+    /* a special level with no fixed regions (a filler, the Planes of Air
+       and Water...): still says which level it is, as region 0 */
+    if (!splev.n && !splev_out) {
+        Snprintf(buf, sizeof buf, "%ld %d %s 0 0 0 0 0", (long) ubirthday,
+                 (int) ledger_no(&u.uz), splev.proto);
+        nhv_push_event(NHV_EV_SPLEV, 0, buf);
+    }
 }
 
 /* #nhvsplevdump (wizard mode; a throwaway game): build every variant of

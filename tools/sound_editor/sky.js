@@ -348,27 +348,54 @@ void main() {
       el("div", { class: "sky-layers" }, ...s.layers.map(layerEditor)));
   }
 
+  // Which sky where: the default (every level without its own), then every
+  // special level, grouped by where it is - a family row ("Medusa's Island
+  // (any of them)") sets all its variants, a variant row only that one.
+  const openGroups = new Set();
   function levelsEditor() {
     const ids = data.skies.map((s) => s.id);
-    if (!data.levels.default && ids.length) data.levels.default = ids[0];
-    const list = el("datalist", { id: "skyLevelNames" }, ...levelNames.map((n) => el("option", { value: n })));
-    const rows = Object.keys(data.levels).sort((a, b) => (a === "default" ? -1 : b === "default" ? 1 : a.localeCompare(b))).map((k) =>
-      el("div", { class: "inline sky-level" },
-        el("span", { class: "sky-level-name" }, k === "default" ? "Every other level" : k),
-        el("select", { onchange: (e) => { data.levels[k] = e.target.value; touch(); } },
-          ...ids.map((id) => el("option", { value: id, selected: data.levels[k] === id || null }, (data.skies.find((s) => s.id === id) || {}).name || id))),
-        k === "default" ? null : el("button", { class: "small", onclick: () => { delete data.levels[k]; touch(); render(); } }, "Remove")));
-    const name = el("input", { type: "text", list: "skyLevelNames", placeholder: "medusa, bigrm-6, juiblex...", style: "width:16em" });
-    const add = el("button", { class: "small", onclick: () => {
-      const k = name.value.trim().toLowerCase();
-      if (!/^[a-z0-9_-]{1,40}$/.test(k)) return toast("A level name: like medusa or bigrm-6");
-      if (!ids.length) return toast("Make a sky first.");
-      data.levels[k] = data.levels.default || ids[0]; touch(); render();
-    } }, "Add level");
-    return el("div", { class: "blk-editor" },
+    if (!ids.length) return null;
+    if (!ids.includes(data.levels.default)) data.levels.default = ids[0];
+    const skyName = (id) => (data.skies.find((s) => s.id === id) || {}).name || id;
+    const known = new Set(["default"]);
+    const names = {};
+    levelNames.forEach((g) => g.levels.forEach((l) => { known.add(l.id); names[l.id] = l.name; }));
+    const pick = (k, blank) => el("select", { onchange: (e) => {
+      if (e.target.value) data.levels[k] = e.target.value; else delete data.levels[k];
+      touch(); render();
+    } },
+    blank ? el("option", { value: "", selected: !data.levels[k] || null }, blank) : null,
+    ...ids.map((id) => el("option", { value: id, selected: data.levels[k] === id || null }, skyName(id))));
+    const row = (l) => {
+      const blank = l.of && data.levels[l.of] ? `Same as the rest (${skyName(data.levels[l.of])})`
+        : `Default (${skyName(data.levels.default)})`;
+      return el("div", { class: "inline sky-level" + (l.of ? " sub" : "") + (data.levels[l.id] ? " set" : "") },
+        el("span", { class: "sky-level-name" }, l.family ? el("b", {}, l.name) : l.name, " ", el("small", { class: "muted" }, l.id)),
+        pick(l.id, blank));
+    };
+    const groups = levelNames.map((g) => {
+      const n = g.levels.filter((l) => data.levels[l.id]).length;
+      const d = el("details", { open: openGroups.has(g.group) || null,
+        ontoggle: (e) => { if (e.target.open) openGroups.add(g.group); else openGroups.delete(g.group); } },
+      el("summary", {}, g.group, n ? el("small", { class: "muted" }, ` - ${n} with their own sky`) : null),
+      ...g.levels.map(row));
+      return d;
+    });
+    // (names set before this list existed, that aren't in it)
+    const others = Object.keys(data.levels).filter((k) => !known.has(k)).sort().map((k) =>
+      el("div", { class: "inline sky-level set" },
+        el("span", { class: "sky-level-name" }, k),
+        pick(k, null),
+        el("button", { class: "small", onclick: () => { delete data.levels[k]; touch(); render(); } }, "Remove")));
+    return el("div", { class: "blk-editor sky-levels" },
       el("h4", {}, "Which sky where"),
-      el("p", { class: "muted" }, "Only levels with the sky over them show one: Medusa's island, Juiblex's swamp, the Big Rooms that can have trees, and any level with a cell whose ceiling is open. A level can be a special level's variant (bigrm-6) or its family (bigrm, medusa)."),
-      list, ...rows, el("div", { class: "inline" }, name, add));
+      el("div", { class: "inline sky-level" },
+        el("span", { class: "sky-level-name" }, el("b", {}, "Default sky")),
+        pick("default", null),
+        el("small", { class: "muted" }, "Every level that isn't given its own below.")),
+      el("p", { class: "muted" }, "A sky only shows where the level is open to it: Medusa's island, Juiblex's swamp, the Big Rooms that can have trees, and any cell whose ceiling you've opened. Ordinary dungeon levels (not special ones) use the default."),
+      ...groups,
+      others.length ? el("div", {}, el("h4", {}, "Other names"), ...others) : null);
   }
 
   function render() {
@@ -401,8 +428,9 @@ void main() {
       } }, "Delete")) : null;
     if (view.raf) { cancelAnimationFrame(view.raf); view.raf = 0; }
     root.replaceChildren(el("div", { class: "blk-layout" }, list,
-      s ? el("div", {}, actions, skyEditor(s), levelsEditor())
-        : el("p", { class: "muted" }, "No skies yet: make one with “+ New sky”.")));
+      s ? el("div", {}, actions, skyEditor(s))
+        : el("p", { class: "muted" }, "No skies yet: make one with “+ New sky”.")),
+    levelsEditor());
   }
 
   return { load, save, render, isDirty: () => dirty };

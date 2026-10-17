@@ -66,7 +66,10 @@ end
 function sky.for_level()
 	local levels = sky.data.levels
 	local variants = nhv.areas and nhv.areas.level_variants and nhv.areas.level_variants() or {}
+	-- (the variant's own sky, else its family's: "medusa-2", "medusa"; the
+	-- editor writes names in lower case - the quest's are "Arc-strt")
 	for v in pairs(variants) do
+		v = v:lower()
 		local s = by_id(levels[v]) or by_id(levels[v:match("^([^-]+)") or v])
 		if s then
 			return s
