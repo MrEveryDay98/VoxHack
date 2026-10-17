@@ -177,25 +177,10 @@ function sky.update()
 	local hero = snap and snap.hero
 	local s = hero and not U.has(hero.flags, U.HERO.BLIND) and nhv.terrain.has_sky() and sky.for_level()
 	set(s or nil)
-	-- sunlight: on a level with the sky over it, what the sun reaches is lit
-	-- as the real time of day says (the engine's day and night: full day,
-	-- dusk, and moonlit night); elsewhere it's always night - there's no sun
-	-- underground, only lamps, lit rooms and the light you carry
-	local sunny = hero and nhv.terrain.has_sky() or false
-	if sunny then
+	if s and s.daynight then
 		core.set_timeofday(real_time_of_day())
 	end
-	local player = nhv.player.get()
-	if player and sunny ~= sky.sunny then
-		sky.sunny = sunny
-		player:override_day_night_ratio(not sunny and 0 or nil)
-	end
 end
-
--- (a new join starts at night - player.lua - so the sun is set again)
-core.register_on_joinplayer(function()
-	sky.sunny = nil
-end)
 
 -- (checked now and then: a level change, a cell coming into view, an edit
 -- saved in the editor)
