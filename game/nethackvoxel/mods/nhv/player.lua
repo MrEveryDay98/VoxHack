@@ -23,6 +23,8 @@ local GRACE_US = 400000 -- after we move the body, ignore stale positions
 -- its middle 1 x 1 of the 3 x 3
 local TRAP_EDGE = 1.0
 local PIT_NAMES = {pit = true, spiked_pit = true, hole = true, trap_door = true}
+-- how far (nodes) past a square's edge the body goes before you're in it
+local ENTER_DEPTH = 0.6
 
 function player_mod.get()
 	return core.get_connected_players()[1]
@@ -310,6 +312,20 @@ local function step(player)
 	end
 	local pos = player:get_pos()
 	local tx, ty = U.pos_to_tile(pos)
+	-- a square next to yours is entered only once the body is ENTER_DEPTH
+	-- past its edge, each way: walking diagonally the body crosses one edge
+	-- a little before the other, and would otherwise make two straight
+	-- steps (over whatever is beside the corner - a trap...) instead of
+	-- NetHack's one diagonal one
+	if math.max(math.abs(tx - h.x), math.abs(ty - h.y)) == 1 then
+		local c = U.tile_center(h.x, h.y)
+		local edge = U.TILE / 2 + ENTER_DEPTH
+		local function past(o)
+			return o > edge and 1 or o < -edge and -1 or 0
+		end
+		-- (+x is east; +z is north, NetHack's y going the other way)
+		tx, ty = h.x + past(pos.x - c.x), h.y - past(pos.z - c.z)
+	end
 	if tx == h.x and ty == h.y then
 		player_mod.ahead = nil
 		return
