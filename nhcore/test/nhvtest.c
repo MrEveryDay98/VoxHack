@@ -115,6 +115,60 @@ send_arg(const char *a)
                 nhv_send_key('#'), nhv_send_text(buf);
             }
         }
+    } else if (!strcmp(a, "passchain")) {
+        /* #nhvpass in its route form: over the first monster next to the
+           hero to a free floor square beyond it */
+        static nhv_mon mons[64];
+        static nhv_loc map[NHV_COLNO * NHV_ROWNO];
+        nhv_hero h;
+        int n = nhv_get_monsters(mons, 64), k, dx, dy;
+        char buf[64];
+
+        nhv_get_hero(&h);
+        nhv_get_map(map);
+        for (k = 0; k < n && k < 64; k++) {
+            int mx = mons[k].x, my = mons[k].y;
+
+            if (abs(mx - h.x) > 1 || abs(my - h.y) > 1 || (mx == h.x && my == h.y))
+                continue;
+            for (dx = -1; dx <= 1; dx++)
+                for (dy = -1; dy <= 1; dy++) {
+                    int x = mx + dx, y = my + dy, j, taken = 0;
+
+                    if ((abs(x - h.x) > abs(y - h.y) ? abs(x - h.x) : abs(y - h.y)) != 2 || x < 1 || y < 0
+                        || x >= NHV_COLNO || y >= NHV_ROWNO)
+                        continue;
+                    for (j = 0; j < n; j++)
+                        if (mons[j].x == x && mons[j].y == y)
+                            taken = 1;
+                    if (taken || map[x * NHV_ROWNO + y].typ < 25) /* (ROOM and up) */
+                        continue;
+                    printf("  passchain over %d,%d to %d,%d (hero %d,%d)\n", mx, my, x, y, h.x, h.y);
+                    snprintf(buf, sizeof buf, "nhvpass %d %d %d %d", mx, my, x, y);
+                    nhv_send_key('#'), nhv_send_text(buf);
+                    return;
+                }
+        }
+        nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strncmp(a, "fight:", 6)) {
+        /* fight:name - attack (F + direction) the adjacent monster named */
+        static nhv_mon mons[64];
+        nhv_hero h;
+        int n = nhv_get_monsters(mons, 64), k;
+        static const char keys[3][3] = {{'y', 'h', 'b'}, {'k', '.', 'j'}, {'u', 'l', 'n'}};
+
+        nhv_get_hero(&h);
+        for (k = 0; k < n && k < 64; k++) {
+            int dx = mons[k].x - h.x, dy = mons[k].y - h.y;
+            nhv_glyph_info gi;
+
+            if (abs(dx) > 1 || abs(dy) > 1 || (!dx && !dy) || mons[k].mndx < 0)
+                continue;
+            (void) gi;
+            nhv_send_key('F'), nhv_send_key(keys[dx + 1][dy + 1]);
+            return;
+        }
+        nhv_send_key('#'), nhv_send_text("nhvtick");
     } else if (!strcmp(a, "poleset") || !strcmp(a, "pole")) {
         /* poleset: step to a square 2 away from the first hostile monster
            (squared distance 4); pole: #nhvpole at it */

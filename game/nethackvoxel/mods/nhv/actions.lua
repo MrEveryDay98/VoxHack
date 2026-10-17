@@ -117,7 +117,7 @@ local function attack_target(player, prefer_id)
 		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 		if body then
 			local d = vector.distance(vector.new(pos.x, 0, pos.z), body.pos)
-			local reach = body.r + nhv.sim.HERO_R + nhv.sim.REACH + 0.6
+			local reach = body.r + nhv.sim.HERO_R + 1.6 -- (your own reach: as it was)
 			if d <= reach then
 				local a = angle_between(look, vector.subtract(body.pos, pos))
 				if e.id == prefer_id then

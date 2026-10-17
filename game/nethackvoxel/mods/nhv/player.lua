@@ -361,9 +361,17 @@ local function step(player)
 		-- someone in the way (a 1-wide corridor): you walked past them in
 		-- 3D, so NetHack moves you two squares at once, over them
 		local past = find(false)
-		if past and past[2] and blocker_at(past[1].x, past[1].y) then
-			local to = past[2]
-			nh.act({{key = "#"}, {text = ("nhvpass %d %d"):format(to.x, to.y)}},
+		-- (past a whole line of them: every square to the first free one)
+		local k = 1
+		while past and past[k] and blocker_at(past[k].x, past[k].y) and k < 7 do
+			k = k + 1
+		end
+		if past and k > 1 and past[k] and not blocker_at(past[k].x, past[k].y) then
+			local to, sq = past[k], {}
+			for j = 1, k do
+				sq[#sq + 1] = ("%d %d"):format(past[j].x, past[j].y)
+			end
+			nh.act({{key = "#"}, {text = "nhvpass " .. table.concat(sq, " ")}},
 				{kind = "hmove", tx = to.x, ty = to.y, from_x = h.x, from_y = h.y})
 			return
 		end

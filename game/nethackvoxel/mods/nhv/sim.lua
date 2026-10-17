@@ -26,7 +26,7 @@ nhv.sim = sim
 
 local TILE = U.TILE
 sim.HERO_R = 0.35        -- hero body radius (nodes)
-sim.REACH = 1.0          -- melee reach beyond touching (nodes)
+sim.REACH = 0.6          -- melee reach beyond touching (nodes)
 local REPATH = 1.5       -- turns between path recomputations
 local MF = {
 	TAME = 0x001, PEACEFUL = 0x002, FLEE = 0x004, CANMOVE = 0x008,
@@ -374,12 +374,30 @@ function sim.update(dturns)
 	end
 end
 
--- Tell NetHack who can reach the hero / what pets are fighting.
+-- is the way from a to b clear of walls (no reaching round a corner)?
+local function clear_line(map, a, b)
+	local d = flat_dist(a, b)
+	local n = math.max(1, math.ceil(d / 0.5))
+	for k = 1, n - 1 do
+		local p = vector.new(a.x + (b.x - a.x) * k / n, 0, a.z + (b.z - a.z) * k / n)
+		local tx, ty = U.pos_to_tile(p)
+		if not square_passable(map, tx, ty) then
+			return false
+		end
+	end
+	return true
+end
+
+-- Tell NetHack who can reach the hero / what pets are fighting: a body
+-- close enough to touch you plus an arm's reach (REACH), with nothing
+-- solid in between - not merely in the next square.
 function sim.push_states()
 	local hp = hero_pos()
+	local map = nh.snap and nh.snap.map
 	local states = {}
 	for id, e in pairs(sim.mons) do
-		local reach = hp and flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH + 0.6
+		local reach = hp and flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH
+			and (not map or clear_line(map, e.pos, hp))
 		states[#states + 1] = {id = id, in_reach = reach and true or false, target = e.target or 0}
 	end
 	core.nh_set_monstates(states)

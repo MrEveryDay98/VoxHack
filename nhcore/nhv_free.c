@@ -118,6 +118,31 @@ donhvpass(void)
     int dx = x - u.ux, dy = y - u.uy;
     coordxy mx, my;
 
+    /* #nhvpass x1 y1 x2 y2 ... xn yn: the whole way, one square at a time,
+       past a line of monsters (a crowded corridor): every square but the
+       last has someone in it, the last is free, and each step is a move
+       NetHack would allow but for who's there */
+    if (nhv_cmd_args[2] && !u.ustuck && !u.utrap && !u.uswallow) {
+        int k, n = 0;
+        coordxy px = u.ux, py = u.uy;
+
+        while (n < NHV_MAXARGS / 2 && nhv_cmd_args[2 * n])
+            n++;
+        for (k = 0; k < n; k++) {
+            coordxy sx = nhv_cmd_args[2 * k], sy = nhv_cmd_args[2 * k + 1];
+            boolean last = (k == n - 1);
+
+            if (!isok(sx, sy) || abs(sx - px) > 1 || abs(sy - py) > 1
+                || (sx == px && sy == py)
+                || (last ? m_at(sx, sy) != 0 : m_at(sx, sy) == 0)
+                || !test_move(px, py, sx - px, sy - py, TEST_MOVE))
+                return ECMD_OK;
+            px = sx, py = sy;
+        }
+        if (n >= 2)
+            teleds(px, py, TELEDS_ALLOW_DRAG);
+        return ECMD_OK;
+    }
     if (!isok(x, y) || max(abs(dx), abs(dy)) != 2 || m_at(x, y) || u.ustuck
         || u.utrap || u.uswallow)
         return ECMD_OK;
