@@ -310,6 +310,9 @@ const Blocks = (() => {
                 ["south", "Turns: its south side faces you"], ["north", "Turns: its north side faces you"]]
                 .map(([v, l]) => el("option", { value: v, selected: (b.turns || "") === v || null }, l))),
             "Like stairs: it turns to the way you're facing as you place it.") : null,
+          (b.shape || "cube") === "cube" ? el("div", {}, check("stretch", "Stretch over touching blocks like it"),
+            el("small", { class: "muted", style: "display:block" },
+              "Like doors: a box of these blocks is drawn as one big block, each side's picture stretched across it.")) : null,
           field("Light", num("light", 0, 14, 1), "0 = none, 14 = brightest"),
           el("h4", {}, "Damage"),
           el("div", { class: "inline" },

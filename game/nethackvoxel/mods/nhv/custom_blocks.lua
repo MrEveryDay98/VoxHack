@@ -14,6 +14,9 @@
 --   turns      "" (cubes: always the same way), "south" or "north": turns as
 --              you place it, that side facing you (slabs and panes always
 --              turn; "north" flips them round too)
+--   stretch    (cube) like doors: each box of these blocks touching each
+--              other is drawn as one big block, each side's picture
+--              stretched over it (drawn by doors.lua)
 --   light      0-14
 --   damage     dice ("1d4", "2") taken when you step into it ("" = none)
 --   repeat     seconds between hits while you stay in it (0 = only on entry)
@@ -26,7 +29,7 @@
 --   hidden     the same, for sides that aren't drawn at all
 -- New or changed blocks need the game (or editor) restarted.
 
-local cblocks = {defs = {}}
+local cblocks = {defs = {}, stretch = {}}
 nhv.custom_blocks = cblocks
 
 local MODPATH = core.get_modpath("nhv_blocks")
@@ -94,7 +97,8 @@ local function register(b)
 	-- back face is asked for
 	local back = type(b.backfaces) == "table" and b.backfaces or {}
 	local hide = type(b.hidden) == "table" and b.hidden or {}
-	local tiles, any_hidden = {}, false
+	local tiles, any_hidden, any_back = {}, false, false
+	local faces = {} -- per side: {tex=, frames=, length=} (stretched blocks)
 	-- (its own top and bottom, if it has them: a tree trunk's rings; a bottom
 	-- alone is the top's too)
 	local top = b.texture_top or b.texture
@@ -104,9 +108,13 @@ local function register(b)
 		if hide[side] then
 			tiles[i] = {name = "blank.png"} -- not drawn (fully see-through)
 			any_hidden = true
+			faces[i] = {tex = "blank.png", frames = 1}
 		else
 			local t = of_side[side] or b.texture
 			tiles[i] = {name = texture_of(t), backface_culling = not back[side], animation = animation_of(t)}
+			local a = tiles[i].animation
+			faces[i] = {tex = tiles[i].name, frames = a and tonumber(t.frames) or 1, length = a and a.length}
+			any_back = any_back or back[side] == true
 		end
 	end
 	local def = {
@@ -158,6 +166,18 @@ local function register(b)
 				core.swap_node(pos, n)
 			end
 		end
+	end
+	-- stretched: the blocks aren't drawn themselves; doors.lua draws one
+	-- box over each group of them touching
+	if shape == "cube" and b.stretch == true then
+		local still = faces[5].frames > 1 and ("%s^[verticalframe:%d:0"):format(faces[5].tex, faces[5].frames) or faces[5].tex
+		def.drawtype = "airlike"
+		def.sunlight_propagates = true
+		def.pointable = true
+		def.inventory_image = still
+		def.wield_image = still
+		groups.nhv_stretch = 1
+		cblocks.stretch[name] = {faces = faces, backfaces = any_back}
 	end
 	core.register_node(":" .. name, def)
 	cblocks.defs[name] = info

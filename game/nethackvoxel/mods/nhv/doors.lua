@@ -6,6 +6,11 @@
 -- (nhv_tiles/textures/nhv_wall_door.png) stretched over its faces. A 3x3
 -- wall of door blocks is one big door, a single block is a small one.
 -- Groups that aren't a solid box are drawn block by block.
+--
+-- Custom blocks with "stretch" (custom_blocks.lua) are drawn the same way:
+-- each group of one kind of them gets a box with that block's six side
+-- pictures stretched over it (turned as the group's first block is, for
+-- blocks that turn as placed; animated ones play).
 
 local doors = {ents = {}} -- key "x,y,z|sx,sy,sz" -> {obj=, minp=, maxp=}
 nhv.doors = doors
@@ -16,10 +21,17 @@ doors.EDGE = "[fill:1x1:#914700"
 doors.NODES = {"nhv:door_closed", "nhv:b_door"}
 local MAX_GROUP = 256
 
-local is_door = {}
+-- which group a block joins: all the doors together; each stretched block
+-- only with its own kind
+local kind_of = {}
 for _, n in ipairs(doors.NODES) do
-	is_door[n] = true
+	kind_of[n] = "door"
 end
+local STRETCH = nhv.custom_blocks and nhv.custom_blocks.stretch or {}
+for n in pairs(STRETCH) do
+	kind_of[n] = n
+end
+local GROUPS = {"group:nhv_door", "group:nhv_stretch"}
 
 core.register_entity("nhv:door_panel", {
 	initial_properties = {
@@ -70,19 +82,72 @@ local function facing(minp, size)
 	return "x"
 end
 
-local function add_panel(minp, maxp)
+-- a stretched block's sides as the box's faces (+y, -y, +x, -x, +z, -z),
+-- turned as the block at pos is: the four around go round by its yaw
+local RING = {5, 3, 6, 4} -- +z, +x, -z, -x: the order facedir turns them
+local function stretch_faces(st, pos)
+	local def = core.registered_nodes[core.get_node(pos).name]
+	local rot = def and def.paramtype2 == "facedir" and core.get_node(pos).param2 % 4 or 0
+	local out = {st.faces[1], st.faces[2]}
+	for w = 1, 4 do
+		out[RING[w]] = st.faces[RING[(w - 1 - rot) % 4 + 1]]
+	end
+	return out
+end
+
+-- an animated face's picture at time t
+local function frame_tex(f, t)
+	if f.frames <= 1 then
+		return f.tex
+	end
+	local k = math.floor(t / (f.length or 1) * f.frames) % f.frames
+	return ("%s^[verticalframe:%d:%d"):format(f.tex, f.frames, k)
+end
+
+local clock = 0
+local function add_panel(minp, maxp, kind)
 	local size = vector.add(vector.subtract(maxp, minp), 1)
 	local center = vector.multiply(vector.add(minp, maxp), 0.5)
 	local obj = core.add_entity(center, "nhv:door_panel")
 	if obj then
-		-- cube faces: +y, -y, +x, -x, +z, -z; the picture goes on the two
-		-- big faces, the edges are plain dark brown
-		local P, D = doors.TEXTURE, doors.EDGE
-		local tex = facing(minp, size) == "x" and {D, D, P, P, D, D} or {D, D, D, D, P, P}
-		obj:set_properties({visual_size = size, textures = tex})
-		doors.ents[hash(minp) .. "|" .. hash(size)] = {obj = obj, minp = minp, maxp = maxp}
+		local e = {obj = obj, minp = minp, maxp = maxp}
+		local st = kind ~= "door" and STRETCH[kind]
+		if st then
+			e.faces = stretch_faces(st, minp)
+			local tex = {}
+			for i, f in ipairs(e.faces) do
+				tex[i] = frame_tex(f, clock)
+				e.animated = e.animated or f.frames > 1
+			end
+			obj:set_properties({visual_size = size, textures = tex, backface_culling = not st.backfaces})
+		else
+			-- cube faces: +y, -y, +x, -x, +z, -z; the picture goes on the two
+			-- big faces, the edges are plain dark brown
+			local P, D = doors.TEXTURE, doors.EDGE
+			local tex = facing(minp, size) == "x" and {D, D, P, P, D, D} or {D, D, D, D, P, P}
+			obj:set_properties({visual_size = size, textures = tex})
+		end
+		doors.ents[hash(minp) .. "|" .. hash(size)] = e
 	end
 end
+
+-- animated stretched blocks: their next frames
+core.register_globalstep(function(dtime)
+	clock = clock + dtime
+	for _, e in pairs(doors.ents) do
+		if e.animated and e.obj:get_pos() then
+			local tex, changed = {}, false
+			for i, f in ipairs(e.faces) do
+				tex[i] = frame_tex(f, clock)
+				changed = changed or tex[i] ~= (e.shown and e.shown[i])
+			end
+			if changed then
+				e.shown = tex
+				e.obj:set_properties({textures = tex})
+			end
+		end
+	end
+end)
 
 -- the group of door blocks touching start (6 directions)
 local DIRS = {
@@ -90,6 +155,7 @@ local DIRS = {
 	vector.new(0, -1, 0), vector.new(0, 0, 1), vector.new(0, 0, -1),
 }
 local function flood(start, seen)
+	local kind = kind_of[core.get_node(start).name]
 	local list, stack = {}, {start}
 	seen[hash(start)] = true
 	while #stack > 0 and #list < MAX_GROUP do
@@ -98,16 +164,16 @@ local function flood(start, seen)
 		for _, d in ipairs(DIRS) do
 			local q = vector.add(p, d)
 			local k = hash(q)
-			if not seen[k] and is_door[core.get_node(q).name] then
+			if not seen[k] and kind ~= nil and kind_of[core.get_node(q).name] == kind then
 				seen[k] = true
 				stack[#stack + 1] = q
 			end
 		end
 	end
-	return list
+	return list, kind
 end
 
-local function draw_group(list)
+local function draw_group(list, kind)
 	local minp, maxp = vector.copy(list[1]), vector.copy(list[1])
 	for _, p in ipairs(list) do
 		minp = vector.new(math.min(minp.x, p.x), math.min(minp.y, p.y), math.min(minp.z, p.z))
@@ -115,17 +181,17 @@ local function draw_group(list)
 	end
 	local vol = (maxp.x - minp.x + 1) * (maxp.y - minp.y + 1) * (maxp.z - minp.z + 1)
 	if vol == #list then
-		add_panel(minp, maxp)
+		add_panel(minp, maxp, kind)
 	else
 		for _, p in ipairs(list) do -- not a solid box: one picture per block
-			add_panel(p, p)
+			add_panel(p, p, kind)
 		end
 	end
 end
 
 -- redraw the doors in (and touching) a box of nodes
 function doors.refresh(minp, maxp)
-	local seeds = core.find_nodes_in_area(minp, maxp, "group:nhv_door")
+	local seeds = core.find_nodes_in_area(minp, maxp, GROUPS)
 	-- panels drawn over this box go; their blocks get redrawn below
 	for k, e in pairs(doors.ents) do
 		if overlaps(e.minp, e.maxp, minp, maxp) then
@@ -133,7 +199,7 @@ function doors.refresh(minp, maxp)
 				e.obj:remove()
 			end
 			doors.ents[k] = nil
-			for _, p in ipairs(core.find_nodes_in_area(e.minp, e.maxp, "group:nhv_door")) do
+			for _, p in ipairs(core.find_nodes_in_area(e.minp, e.maxp, GROUPS)) do
 				seeds[#seeds + 1] = p
 			end
 		end
@@ -141,7 +207,7 @@ function doors.refresh(minp, maxp)
 	local seen = {}
 	for _, p in ipairs(seeds) do
 		if not seen[hash(p)] then
-			local list = flood(p, seen)
+			local list, kind = flood(p, seen)
 			-- a group reaching past the box may have a panel outside it too
 			for k, e in pairs(doors.ents) do
 				for _, q in ipairs(list) do
@@ -154,7 +220,7 @@ function doors.refresh(minp, maxp)
 					end
 				end
 			end
-			draw_group(list)
+			draw_group(list, kind)
 		end
 	end
 end
@@ -186,7 +252,7 @@ end)
 local pending = {}
 core.register_lbm({
 	name = "nhv:show_doors",
-	nodenames = {"group:nhv_door"},
+	nodenames = GROUPS,
 	run_at_every_load = true,
 	action = function(pos)
 		pending[#pending + 1] = pos

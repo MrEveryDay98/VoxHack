@@ -150,6 +150,8 @@ def clean_block(b):
         "id": bid, "name": str(b.get("name") or bid)[:60], "shape": shape, "texture": tex,
         "scale": max(0.1, min(4.0, float(b.get("scale") or 1))),
         "solid": bool(b.get("solid")), "climbable": bool(b.get("climbable")),
+        # (cube) touching blocks of it are drawn as one, the pictures stretched
+        "stretch": bool(b.get("stretch")),
         # turns as it's placed, that side facing you ("": always the same way)
         "turns": b.get("turns") if b.get("turns") in ("south", "north") else "",
         "light": max(0, min(14, int(b.get("light") or 0))),
