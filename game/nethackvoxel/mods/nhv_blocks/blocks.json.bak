@@ -15,9 +15,65 @@
    "damage": "1d4",
    "repeat": 0.0,
    "cause": "sharp spikes",
+   "spikes": true,
    "backfaces": {},
-   "hidden": {},
-   "spikes": true
+   "hidden": {}
+  },
+  {
+   "id": "block1",
+   "name": "PortalBottom",
+   "shape": "cube",
+   "texture": {
+    "file": "nhvb_portal1.png",
+    "frames": 16,
+    "length": 1.0
+   },
+   "scale": 1.0,
+   "solid": true,
+   "climbable": false,
+   "light": 0,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {
+    "bottom": true
+   },
+   "hidden": {
+    "top": true,
+    "east": true,
+    "west": true,
+    "north": true,
+    "south": true
+   }
+  },
+  {
+   "id": "block2",
+   "name": "PortalFront",
+   "shape": "cube",
+   "texture": {
+    "file": "nhvb_portal1.png",
+    "frames": 16,
+    "length": 1.0
+   },
+   "scale": 1.0,
+   "solid": true,
+   "climbable": false,
+   "light": 0,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {
+    "north": true
+   },
+   "hidden": {
+    "top": true,
+    "bottom": true,
+    "east": true,
+    "west": true,
+    "south": true
+   }
   }
  ]
 }
