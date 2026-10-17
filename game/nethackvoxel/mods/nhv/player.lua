@@ -22,6 +22,7 @@ local GRACE_US = 400000 -- after we move the body, ignore stale positions
 -- a trap's square is stepped on only this far (nodes) in from its edges:
 -- its middle 1 x 1 of the 3 x 3
 local TRAP_EDGE = 1.0
+local PIT_NAMES = {pit = true, spiked_pit = true, hole = true, trap_door = true}
 
 function player_mod.get()
 	return core.get_connected_players()[1]
@@ -368,8 +369,11 @@ local function step(player)
 	-- it out of a doorway, as NetHack lets you) doesn't set it off
 	local snap_map = nh.snap and nh.snap.map
 	local trap = snap_map and U.has(snap_map.flags[U.idx(tx, ty)] or 0, U.LOC_TRAP)
-	-- (dropped into its hole, a pit's: you're in it, edge or not)
-	if trap and pos.y > U.STAND_Y - 0.3 then
+	-- (dropped into an open pit's or hole's hole: you're in it, edge or not)
+	local known = trap and snap_map.trap and snap_map.trap[U.idx(tx, ty)]
+	local in_hole = known and known ~= 255 and PIT_NAMES[nhv.cmap_name(known % 128)]
+		and pos.y < U.STAND_Y - 0.3
+	if trap and not in_hole then
 		local c = U.tile_center(tx, ty)
 		local inner = U.TILE / 2 - TRAP_EDGE
 		if math.abs(pos.x - c.x) > inner or math.abs(pos.z - c.z) > inner then
@@ -418,6 +422,11 @@ local function step(player)
 	else
 		tx = h.x + U.sign(tx - h.x)
 		ty = h.y + U.sign(ty - h.y)
+	end
+	if map and U.has(map.flags[U.idx(tx, ty)] or 0, U.LOC_TRAP) then
+		local bx, by = U.pos_to_tile(pos)
+		core.log("action", ("[nhv] onto trap square %d,%d from %d,%d; body in %d,%d at %.2f,%.2f,%.2f"):format(
+			tx, ty, h.x, h.y, bx, by, pos.x, pos.y, pos.z))
 	end
 	nh.act({{key = "#"}, {text = ("nhvmove %d %d%s"):format(tx, ty, stubborn_pet_at(tx, ty) and " 1" or "")}},
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
