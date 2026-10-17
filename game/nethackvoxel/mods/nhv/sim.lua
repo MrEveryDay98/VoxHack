@@ -147,9 +147,17 @@ local function try_move(e, map, dx, dz, hp)
 		end
 	end
 	local tx, ty = U.pos_to_tile(np)
+	local h = nh.snap and nh.snap.hero
 	if tx ~= e.x or ty ~= e.y then
 		if math.abs(tx - e.x) > 1 or math.abs(ty - e.y) > 1 then
 			return false
+		end
+		-- your square: its body may come in to reach you (as yours may go
+		-- into a monster's), while in NetHack it stays on its own square,
+		-- next to yours. Other monsters' squares it keeps out of.
+		if h and tx == h.x and ty == h.y then
+			e.pos = np
+			return true
 		end
 		local r = core.nh_move_monster(e.id, tx, ty)
 		if r == 1 then
