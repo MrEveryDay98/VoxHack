@@ -453,14 +453,22 @@ nh.on_snapshot(function(snap, action)
 	-- possible boulders get their full width and corner gaps close (what
 	-- stops you is said when you try)
 	local nosq = U.has(h.flags, U.HERO.NOSQUEEZE)
+	local was = player_mod.nosqueeze
 	player_mod.nosqueeze = nosq
 	terrain.set_nosqueeze(nosq)
-	if nosq then
-		-- (standing in a corner gap as it filled: step out of it)
+	if nosq and not was then
+		-- (standing in a corner gap just as it filled: step out of it - only
+		-- then, and only out of the gap's own block, not off stairs or a
+		-- step you stand on)
 		local p = player:get_pos()
-		local f = player_mod.free_spot(p)
-		if not vector.equals(f, p) then
-			player:set_pos(f)
+		local in_gap = false
+		for _, dy in ipairs({0.1, 1.0}) do
+			if core.get_node(vector.round(vector.offset(p, 0, dy, 0))).name == "nhv:squeeze_block" then
+				in_gap = true
+			end
+		end
+		if in_gap then
+			player:set_pos(player_mod.free_spot(p))
 		end
 	end
 	-- confused / stunned: the NetHack Voxel build of Luanti scrambles the
