@@ -34,28 +34,6 @@ clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0.12
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
-clock.FAST = 6              -- holding Search: time runs this x the full rate
-
--- Fast forward: while Search is held (its key repeats; each press keeps
--- this going a moment), time runs FAST x the full rate, so searching
--- one turn after another passes time quickly - and the world (monsters
--- walking...) keeps up. Getting hurt stops it until the key is let go.
-clock.fast_until = 0
-clock.fast_blocked = false
-function clock.fast_forward()
-	local now = core.get_us_time()
-	-- (the key was let go - its repeats stopped - since it was blocked)
-	if clock.fast_blocked and now - (clock.last_press or 0) > 700000 then
-		clock.fast_blocked = false
-	end
-	clock.last_press = now
-	if not clock.fast_blocked then
-		clock.fast_until = now + 600000
-	end
-end
-function clock.fast()
-	return core.get_us_time() < clock.fast_until
-end
 
 function clock.realtime()
 	return core.settings:get("nhv_time_mode") == "realtime"
@@ -132,9 +110,6 @@ function clock.update(dtime, player)
 	if nhv.wheel and nhv.wheel.is_open() then
 		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen
 	end
-	if clock.fast() then
-		target = clock.FAST
-	end
 	clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
 	local dtg = dtime * clock.scale * clock.RATE
 	if clock.debt > 0 then
@@ -190,12 +165,6 @@ nh.on_snapshot(function(snap, action)
 	end
 	local prev = clock.last_moves
 	clock.last_moves = snap.hero.moves
-	-- (hurt while fast-forwarding: it stops, until Search is let go)
-	if clock.last_hp and snap.hero.hp < clock.last_hp and clock.fast() then
-		clock.fast_until = 0
-		clock.fast_blocked = true
-	end
-	clock.last_hp = snap.hero.hp
 	if prev and action and action.kind ~= "tick" and action.kind ~= "hmove" then
 		local passed = snap.hero.moves - prev
 		if passed > 0 and passed < 1000 then -- (not a level change's jump)

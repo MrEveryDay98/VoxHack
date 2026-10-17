@@ -430,9 +430,6 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
-		if param == "search" then
-			nhv.clock.fast_forward() -- (held: time runs fast; see clock.lua)
-		end
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
 			or (param == "pay" and hotbar.PAY)
