@@ -304,6 +304,12 @@ const Blocks = (() => {
           field("Shape", shapeSel),
           (b.shape === "x" || b.shape === "object") ? field("Size", num("scale", 0.1, 4, 0.1), "1 = one block") : null,
           el("div", { class: "inline" }, check("solid", "Solid (can't walk through)"), check("climbable", "Climbable")),
+          ["cube", "slab", "pane"].includes(b.shape || "cube") ? field("When you place it",
+            el("select", { onchange: (e) => set("turns", e.target.value) },
+              ...[["", (b.shape || "cube") === "cube" ? "Always the same way" : "Turns (its usual way)"],
+                ["south", "Turns: its south side faces you"], ["north", "Turns: its north side faces you"]]
+                .map(([v, l]) => el("option", { value: v, selected: (b.turns || "") === v || null }, l))),
+            "Like stairs: it turns to the way you're facing as you place it.") : null,
           field("Light", num("light", 0, 14, 1), "0 = none, 14 = brightest"),
           el("h4", {}, "Damage"),
           el("div", { class: "inline" },

@@ -11,6 +11,9 @@
 --   scale      size of x / object sprites (1 = one block)
 --   solid      you can't walk through it
 --   climbable  like a ladder
+--   turns      "" (cubes: always the same way), "south" or "north": turns as
+--              you place it, that side facing you (slabs and panes always
+--              turn; "north" flips them round too)
 --   light      0-14
 --   damage     dice ("1d4", "2") taken when you step into it ("" = none)
 --   repeat     seconds between hits while you stay in it (0 = only on entry)
@@ -142,6 +145,19 @@ local function register(b)
 		def.drawtype = "normal"
 		-- (a cube with an undrawn side has to let you see through it)
 		def.use_texture_alpha = any_hidden and "clip" or "opaque"
+	end
+	-- turning to face the way it's placed (as stairs do): the engine puts a
+	-- facedir block's south side toward you; "north" turns it round after
+	if (shape == "cube" or shape == "slab" or shape == "pane") and (b.turns == "south" or b.turns == "north") then
+		def.paramtype2 = "facedir"
+		if b.turns == "north" then
+			def.after_place_node = function(pos)
+				local n = core.get_node(pos)
+				local axis, rot = math.floor(n.param2 / 4), n.param2 % 4
+				n.param2 = axis * 4 + (rot + 2) % 4
+				core.swap_node(pos, n)
+			end
+		end
 	end
 	core.register_node(":" .. name, def)
 	cblocks.defs[name] = info
