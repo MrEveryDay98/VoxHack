@@ -514,6 +514,76 @@ local function square_open(sq)
 	return nodes_open(prefabs.get(slot).nodes)
 end
 
+-- ---------------------------------------------------------------- climbing
+-- The way up a built cell (stairs...): its nhv:mpath blocks, placed where a
+-- body's feet go on each step, each touching the next, up to the trigger.
+-- As world feet positions, lowest first, one chain; nil if it has none.
+-- (Monsters climb it to reach you up there: sim.lua.)
+local path_cache = setmetatable({}, {__mode = "k"}) -- nodes -> {rot -> path}
+
+function terrain.climb_path(tx, ty)
+	local sq = U.in_map(tx, ty) and terrain.built[U.idx(tx, ty)]
+	if not sq then
+		return nil
+	end
+	local nodes, rot = nil, 0
+	if sq.area_cell then
+		nodes = sq.area_cell.nodes
+	elseif sq.slot then
+		nodes, rot = prefabs.get(sq.slot).nodes, sq.rot or 0
+	end
+	if not nodes then
+		return nil
+	end
+	local byrot = path_cache[nodes]
+	if not byrot then
+		byrot = {}
+		path_cache[nodes] = byrot
+	end
+	if byrot[rot] == nil then
+		local blocks = {}
+		for i, nd in pairs(nodes) do
+			if nd.n == "nhv:mpath" then
+				local lx, ly, lz = prefabs.unindex(i)
+				local rx, rz = prefabs.rot_xz(lx, lz, rot)
+				blocks[#blocks + 1] = {x = rx, y = ly, z = rz}
+			end
+		end
+		-- (a chain: from the lowest, on to a touching block - the nearest
+		-- sideways first, so it doesn't cut a corner past a landing, then
+		-- the higher)
+		table.sort(blocks, function(a, b) return a.y < b.y end)
+		local chain, used = {}, {}
+		local cur = blocks[1]
+		while cur do
+			chain[#chain + 1] = cur
+			used[cur] = true
+			local nxt, best
+			for _, b in ipairs(blocks) do
+				if not used[b] and math.abs(b.x - cur.x) <= 1 and math.abs(b.y - cur.y) <= 1
+						and math.abs(b.z - cur.z) <= 1 then
+					local score = (math.abs(b.x - cur.x) + math.abs(b.z - cur.z)) * 10 - b.y
+					if not best or score < best then
+						nxt, best = b, score
+					end
+				end
+			end
+			cur = nxt
+		end
+		byrot[rot] = #chain > 0 and chain or false
+	end
+	local chain = byrot[rot]
+	if not chain then
+		return nil
+	end
+	local ox, oz = U.tile_origin(tx, ty)
+	local out = {}
+	for k, b in ipairs(chain) do
+		out[k] = vector.new(ox + b.x, prefabs.Y0 + b.y - 0.5, oz + b.z)
+	end
+	return out
+end
+
 -- is the sky over this level (anywhere)?
 function terrain.has_sky()
 	if terrain.open_sky then

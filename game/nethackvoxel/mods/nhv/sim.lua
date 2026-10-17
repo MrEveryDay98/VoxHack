@@ -127,13 +127,24 @@ function sim.sync()
 end
 
 -- ---------------------------------------------------------------- moving
+-- (a monster's feet: how high its body stands - mobs.lua follows the
+-- ground under it, up built steps)
+local function feet_y(id)
+	local m = nhv.mobs and nhv.mobs.mons["id" .. id]
+	return m and m.ground_y or U.STAND_Y
+end
+
 -- try to move body e by (dx, dz) nodes; returns true if it moved
 local function try_move(e, map, dx, dz, hp)
 	local np = vector.new(e.pos.x + dx, 0, e.pos.z + dz)
 	if hits_terrain(e, map, np, e.r) then
 		return false
 	end
-	-- other bodies (and the hero) are solid
+	-- other bodies (and the hero) are solid (but you, up a staircase, are
+	-- above it: it can go under you)
+	if hp and math.abs(hp.y - feet_y(e.id)) > 1.5 then
+		hp = nil
+	end
 	if hp and flat_dist(np, hp) < e.r + sim.HERO_R
 			and flat_dist(np, hp) < flat_dist(e.pos, hp) then
 		return false
@@ -266,6 +277,41 @@ local function nearest_hostile(e, within)
 	return best, bd
 end
 
+-- You're up a built staircase (or anything with a climbing path) in your
+-- square: a monster beside it, after you, climbs the path - block by
+-- block - to the one nearest you, instead of waiting below for you to come
+-- down. Returns true when it's doing that.
+local function climb(e, map, dist, hp, hero)
+	if not hp or hp.y < U.STAND_Y + 0.6 or math.abs(e.x - hero.x) > 1 or math.abs(e.y - hero.y) > 1 then
+		e.climb = nil
+		return false
+	end
+	local path = nhv.terrain.climb_path(hero.x, hero.y)
+	if not path then
+		e.climb = nil
+		return false
+	end
+	local goal, gd = 1, nil
+	for i, p in ipairs(path) do
+		local d = vector.distance(p, hp)
+		if not gd or d < gd then
+			goal, gd = i, d
+		end
+	end
+	e.climb = math.min(e.climb or 1, goal)
+	local wp = path[e.climb]
+	if flat_dist(e.pos, wp) < 0.3 then
+		if e.climb == goal then
+			return true -- (as close as it gets: up there with you)
+		end
+		e.climb = e.climb + 1
+		wp = path[e.climb]
+	end
+	-- (you're above it: no bumping into you on the way)
+	move_toward(e, map, vector.new(wp.x, 0, wp.z), dist, 0.05, nil)
+	return true
+end
+
 -- one monster's movement for this step
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
@@ -336,6 +382,9 @@ local function think(e, map, dturns, hp, hero)
 		end
 		return
 	end
+	if (has(e.flags, MF.SEES_U) or e.climb) and climb(e, map, dist, hp, hero) then
+		return
+	end
 	if has(e.flags, MF.SEES_U) and hp then
 		local stop = touch + sim.REACH * 0.6
 		if (e.stuck or 0) < 1 then
@@ -404,7 +453,12 @@ function sim.push_states()
 	local map = nh.snap and nh.snap.map
 	local states = {}
 	for id, e in pairs(sim.mons) do
+		-- (and level with you, more or less: not you up a staircase over it;
+		-- a tall one reaches higher)
+		local m = nhv.mobs and nhv.mobs.mons["id" .. id]
+		local up = hp and math.max(1.6, (m and m.h or 1.5) * 0.9)
 		local reach = hp and flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH
+			and math.abs(hp.y - feet_y(id)) <= up
 			and (not map or clear_line(map, e.pos, hp))
 		states[#states + 1] = {id = id, in_reach = reach and true or false, target = e.target or 0}
 	end

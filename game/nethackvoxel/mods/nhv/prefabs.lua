@@ -287,6 +287,7 @@ local function rot_xz(lx, lz, r)
 	end
 	return lx, lz
 end
+prefabs.rot_xz = rot_xz
 
 -- Turning a cell turns the blocks in it too: their param2 facing.
 -- facedir (all 24 ways: on its side and upside down as well) is worked out
