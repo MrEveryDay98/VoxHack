@@ -773,6 +773,96 @@ nhv.nh.on_event(function(evs)
 	end
 end)
 
+-- ---------------------------------------------------------------- rolling boulders
+-- A rolling boulder trap's boulder (NetHack's "roll" event: tile, from,
+-- to, gone) rolls along the ground from where it started to where it
+-- stopped, tumbling, at ROLL_SPEED; the boulder NetHack already put there
+-- stays hidden until it arrives. One that fell into a pit or a hole ends
+-- in a puff of dust.
+local ROLL_SPEED = 12 -- nodes per second
+local rolls = {}
+
+core.register_entity("nhv:roller", {
+	initial_properties = {
+		visual = "wielditem", wield_item = nhv_tiles.item(0),
+		visual_size = {x = 0.5, y = 0.5, z = 0.5},
+		physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0}, shaded = true,
+	},
+})
+
+local function dust(pos)
+	core.add_particlespawner({
+		amount = 30, time = 0.15, pos = pos, radius = vector.new(0.8, 0.2, 0.8),
+		vel = {min = vector.new(-1.5, 0.3, -1.5), max = vector.new(1.5, 2, 1.5)},
+		acc = vector.new(0, -3, 0), exptime = {min = 0.5, max = 1.1}, size = {min = 2, max = 4},
+		texture = {name = "[fill:2x2:#8a8070", alpha_tween = {0.9, 0}, blend = "alpha"},
+	})
+end
+
+local function start_roll(tile, x0, y0, x1, y1, gone)
+	local y = U.STAND_Y + BOULDER_H / 2
+	local from, to = U.tile_center(x0, y0, y), U.tile_center(x1, y1, y)
+	local obj = core.add_entity(from, "nhv:roller")
+	if not obj then
+		return
+	end
+	obj:set_properties(nhv_tiles.look(tile, BOULDER_H))
+	local d = vector.distance(from, to)
+	rolls[#rolls + 1] = {obj = obj, from = from, to = to, t0 = core.get_us_time(),
+		dur = math.max(0.1, d / ROLL_SPEED), gone = gone, dest = U.idx(x1, y1),
+		yaw = core.dir_to_yaw(vector.direction(from, to))}
+end
+
+local function update_rolls(now)
+	for k = #rolls, 1, -1 do
+		local r = rolls[k]
+		local t = (now - r.t0) / 1e6 / r.dur
+		-- (the real one at the end: out of sight until this gets there)
+		local there = mobs.objs[r.dest]
+		if t < 1 and there and there.obj:get_pos() and not there.rolled_in then
+			there.rolled_in = true
+			there.obj:set_properties({is_visible = false})
+		end
+		if t >= 1 or not r.obj:get_pos() then
+			if r.obj:get_pos() then
+				r.obj:remove()
+			end
+			if there and there.rolled_in and there.obj:get_pos() then
+				there.rolled_in = nil
+				there.obj:set_properties({is_visible = true})
+			end
+			if r.gone then
+				dust(r.to)
+			end
+			table.remove(rolls, k)
+		else
+			local pos = vector.add(r.from, vector.multiply(vector.subtract(r.to, r.from), t))
+			r.obj:move_to(pos, true)
+			-- (tumbling forward as it rolls: a turn per circumference)
+			local turned = t * r.dur * ROLL_SPEED / (BOULDER_H / 2)
+			r.obj:set_rotation(vector.new(-turned, r.yaw, 0))
+		end
+	end
+end
+
+nhv.nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local tile, x0, y0, x1, y1, gone = ev.text:match("^roll (%d+) (%d+) (%d+) (%d+) (%d+) (%d)")
+			if tile then
+				start_roll(tonumber(tile), tonumber(x0), tonumber(y0), tonumber(x1), tonumber(y1), gone == "1")
+			end
+		end
+	end
+end)
+
+core.register_globalstep(function()
+	if #rolls > 0 then
+		update_rolls(core.get_us_time())
+	end
+end)
+
 -- ---------------------------------------------------------------- asleep
 -- A sleeping monster you can see breathes out Z's: one every so often,
 -- drifting up and away from its head, growing and fading.

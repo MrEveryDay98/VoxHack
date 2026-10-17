@@ -98,6 +98,23 @@ local function teleport(player, pos)
 end
 player_mod.teleport = teleport
 
+-- NetHack saying you're falling to the level below (through a hole or a
+-- trap door, a hole dug in the floor): the level change that follows
+-- drops you in from above
+local FALLING = {"opens up under you", "gaping hole under you", "down a .*shaft",
+	"deliberately drop down", "swoop down through"}
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "message" then
+			for _, pat in ipairs(FALLING) do
+				if ev.text:find(pat) then
+					player_mod.falling_until = core.get_us_time() + 3000000
+				end
+			end
+		end
+	end
+end)
+
 -- pet id -> time until which it counts as in the way (it wouldn't swap)
 player_mod.unswappable = {}
 
@@ -458,7 +475,13 @@ nh.on_snapshot(function(snap, action)
 	local level_changed = player_mod.ledger ~= h.ledger
 	player_mod.ledger = h.ledger
 
-	if level_changed or not prev then
+	if level_changed and prev and core.get_us_time() < (player_mod.falling_until or 0) then
+		-- fell through a hole or a trap door: a blink, and you drop in from
+		-- above (just under the ceiling) onto the new level
+		player_mod.falling_until = nil
+		nhv.hud.flash("#000000", 1, true)
+		teleport(player, U.tile_center(h.x, h.y, U.CEIL_Y - 2.4))
+	elseif level_changed or not prev then
 		teleport(player, U.tile_center(h.x, h.y))
 	elseif action and action.kind == "push" then
 		if h.x == action.tx and h.y == action.ty then

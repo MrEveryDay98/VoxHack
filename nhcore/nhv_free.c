@@ -865,6 +865,18 @@ nhv_throw_event(int glyph, int x0, int y0, int x1, int y1)
     nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
+/* "roll <tile> <x0> <y0> <x1> <y1> <gone>" (sent as a combat event): a
+   boulder rolled from x0,y0 to x1,y1 (gone: it fell in somewhere there) */
+void
+nhv_roll_event(int glyph, int x0, int y0, int x1, int y1, int gone)
+{
+    char buf[80];
+
+    Sprintf(buf, "roll %d %d %d %d %d %d", (int) glyphmap[glyph].tileidx,
+            x0, y0, x1, y1, gone ? 1 : 0);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 /* "explode <x> <y> <expltype>" (sent as a combat event) */
 void
 nhv_explode_event(int x, int y, int expltype)
