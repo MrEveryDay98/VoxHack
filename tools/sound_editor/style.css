@@ -272,3 +272,4 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .tg-view { width: 256px; height: 256px; image-rendering: pixelated; background: #0b0b10; border-radius: 6px; }
 .tg-controls { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 6px 14px; }
 @media (max-width: 860px) { .tg, .tg-controls { grid-template-columns: 1fr; } }
+@keyframes nhvframes { from { background-position-y: 0%; } to { background-position-y: 100%; } }

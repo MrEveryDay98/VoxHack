@@ -65,9 +65,10 @@ const Blocks = (() => {
     const d = el("div", { class: "tex", style: `width:${size}px;height:${size}px` });
     if (t && (t.file || t.gamefile)) {
       d.style.backgroundImage = t.file ? `url(/blocktex/${t.file})` : `url(/gametex/${t.gamefile})`;
-      // (an animation: its first frame)
+      // (an animation: its frames in turn)
       d.style.backgroundSize = `100% ${(t.frames || 1) * 100}%`;
       d.style.backgroundPosition = "0 0";
+      if (t.frames > 1) d.style.animation = frameAnim(t);
     } else if (t && t.color) {
       d.style.background = t.color;
     } else if (t && t.sheet != null) {
@@ -81,9 +82,16 @@ const Blocks = (() => {
     return d;
   }
 
+  // an animated texture (frames stacked top to bottom): steps through them,
+  // one loop every t.length seconds (as the game plays it)
+  function frameAnim(t) {
+    return `nhvframes ${t.length || 1}s steps(${t.frames}, jump-none) infinite`;
+  }
+
   function texCss(t) {
     // CSS for a face of the preview (background stretched over the face)
-    if (t && t.file) return `background-image:url(/blocktex/${t.file});background-size:100% ${(t.frames || 1) * 100}%;background-position:0 0;`;
+    if (t && t.file) return `background-image:url(/blocktex/${t.file});background-size:100% ${(t.frames || 1) * 100}%;background-position:0 0;`
+      + (t.frames > 1 ? `animation:${frameAnim(t)};` : "");
     if (t && t.gamefile) return `background-image:url(/gametex/${t.gamefile});background-size:100% 100%;`;
     if (t && t.color) return `background:${t.color};`;
     if (t && t.sheet != null) {
