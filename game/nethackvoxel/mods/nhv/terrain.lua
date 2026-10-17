@@ -10,8 +10,10 @@
 -- the light you carry, so a dark corridor comes out of the dark as you
 -- walk instead of popping in square by square. Secret doors and
 -- corridors are built as the wall / rock they look like until found;
--- traps and objects still only show once NetHack lets you see them, and
--- the overhead map still shows only what you've explored.
+-- traps and objects still only show once NetHack lets you see them (but a
+-- pit or a hole is a hole in the ground all the same: it's built whether
+-- seen or not - e.g. Sokoban's, behind boulders), and the overhead map
+-- still shows only what you've explored.
 
 local U = nhv.util
 local T = U.TYP
@@ -578,6 +580,11 @@ local function describe(map, tx, ty)
 	-- a trap you know of under objects (NetHack shows the top object there,
 	-- not the trap): still built, a pit still a hole
 	local trap = map.trap and map.trap[i]
+	-- (128 + a symbol: a pit or hole not seen yet - its hole in the ground
+	-- is there all the same)
+	if trap and trap ~= 255 and trap >= 128 then
+		trap = trap - 128
+	end
 	if not sq.overlay and trap and trap ~= 255 then
 		local ts = terrain.feature_slot(nhv.cmap_name(trap))
 		if ts and prefabs.SLOT_INFO[ts].kind == "overlay" then

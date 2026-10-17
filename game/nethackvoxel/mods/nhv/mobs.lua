@@ -204,7 +204,7 @@ local function mon_draw_pos(e)
 	-- step at a time, eased); a trap square's hole only when it's in it
 	local floor = U.STAND_Y
 	local map = nhv.nh.snap and nhv.nh.snap.map
-	local trap = map and map.trap and e.x and U.in_map(e.x, e.y) and (map.trap[U.idx(e.x, e.y)] or 0) > 0
+	local trap = map and map.trap and e.x and U.in_map(e.x, e.y) and (map.trap[U.idx(e.x, e.y)] or 255) ~= 255
 	if e.mon and U.has(e.mon.flags, U.MON_IN_PIT) then
 		floor = nhv.terrain.stand_y(e.x, e.y)
 	else
