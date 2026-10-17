@@ -134,6 +134,15 @@ send_arg(const char *a)
             }
         printf("INTO: nobody next to the hero\n");
         nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strcmp(a, "touchtrap")) {
+        /* the body touches the trap on the hero's square (#nhvtrap) */
+        nhv_hero h;
+        char buf[64];
+
+        nhv_get_hero(&h);
+        sprintf(buf, "nhvtrap %d %d", h.x, h.y);
+        printf("TOUCHTRAP %d,%d\n", h.x, h.y);
+        nhv_send_key('#'), nhv_send_text(buf);
     } else if (!strcmp(a, "traps")) {
         /* every square with a trap (NHV_LOC_TRAP), and whether it's known */
         static nhv_loc map[NHV_COLNO * NHV_ROWNO];

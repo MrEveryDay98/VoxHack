@@ -11,6 +11,7 @@
 extern glyph_map glyphmap[MAX_GLYPH];
 
 boolean nhv_freemove = FALSE;
+boolean nhv_walking = FALSE; /* (see nhvhooks.h) */
 
 #define MAXSTATES 512
 static nhv_monstate states[MAXSTATES];
@@ -102,7 +103,9 @@ donhvmove(void)
         && !mtmp->isshk && !mtmp->ispriest && !mtmp->isgd
         && !u.ustuck && !u.utrap && !u.uswallow && !u.usteed
         && test_move(u.ux, u.uy, dx, dy, TEST_MOVE)) {
+        nhv_walking = TRUE;
         teleds(x, y, TELEDS_ALLOW_DRAG);
+        nhv_walking = FALSE;
         return ECMD_OK;
     }
     u.dx = dx, u.dy = dy, u.dz = 0;
@@ -116,8 +119,26 @@ donhvmove(void)
                                  the pet instead of swapping: just bump) */
                               && !Stunned && !Confusion);
     svc.context.forcefight = 0;
+    nhv_walking = TRUE;
     domove();
+    nhv_walking = FALSE;
     svc.context.nopick = 0;
+    return ECMD_OK;
+}
+
+/* #nhvtrap x y: the hero's body touched the trap on its square <x,y> (its
+   hitbox, in the middle of the square): it goes off as stepping on it
+   does. No time passes (the walk's time is the clock's). */
+int
+donhvtrap(void)
+{
+    int x = nhv_cmd_args[0], y = nhv_cmd_args[1];
+    struct trap *trap;
+
+    if (!isok(x, y) || !u_at(x, y) || u.uswallow
+        || !(trap = t_at(x, y)))
+        return ECMD_OK;
+    dotrap(trap, 0);
     return ECMD_OK;
 }
 
@@ -155,8 +176,11 @@ donhvpass(void)
                 return ECMD_OK;
             px = sx, py = sy;
         }
-        if (n >= 2)
+        if (n >= 2) {
+            nhv_walking = TRUE;
             teleds(px, py, TELEDS_ALLOW_DRAG);
+            nhv_walking = FALSE;
+        }
         return ECMD_OK;
     }
     if (!isok(x, y) || max(abs(dx), abs(dy)) != 2 || m_at(x, y) || u.ustuck
@@ -169,7 +193,9 @@ donhvpass(void)
                 continue; /* (only to get past someone) */
             if (test_move(u.ux, u.uy, mx - u.ux, my - u.uy, TEST_MOVE)
                 && test_move(mx, my, x - mx, y - my, TEST_MOVE)) {
+                nhv_walking = TRUE;
                 teleds(x, y, TELEDS_ALLOW_DRAG);
+                nhv_walking = FALSE;
                 return ECMD_OK;
             }
         }

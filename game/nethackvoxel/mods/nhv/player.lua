@@ -19,12 +19,6 @@ local player_mod = {
 nhv.player = player_mod
 
 local GRACE_US = 400000 -- after we move the body, ignore stale positions
--- a trap's square is stepped on only this far (nodes) in from its edges:
--- its middle 1 x 1 of the 3 x 3
-local TRAP_EDGE = 1.0
-local PIT_NAMES = {pit = true, spiked_pit = true, hole = true, trap_door = true}
--- how far (nodes) past a square's edge the body goes before you're in it
-local ENTER_DEPTH = 0.6
 
 function player_mod.get()
 	return core.get_connected_players()[1]
@@ -86,6 +80,10 @@ function player_mod.free_spot(pos)
 end
 
 local function teleport(player, pos)
+	-- (NetHack put you there - arriving, a teleport: any trap there has
+	-- gone off already; the body landing on its pad isn't stepping on it)
+	local tx, ty = U.pos_to_tile(pos)
+	player_mod.trap_done = tx .. "," .. ty
 	player:set_pos(player_mod.free_spot(pos))
 	if nhv.effects then
 		nhv.effects.arrived() -- (teleport effects play where you arrive)
@@ -312,20 +310,6 @@ local function step(player)
 	end
 	local pos = player:get_pos()
 	local tx, ty = U.pos_to_tile(pos)
-	-- a square next to yours is entered only once the body is ENTER_DEPTH
-	-- past its edge, each way: walking diagonally the body crosses one edge
-	-- a little before the other, and would otherwise make two straight
-	-- steps (over whatever is beside the corner - a trap...) instead of
-	-- NetHack's one diagonal one
-	if math.max(math.abs(tx - h.x), math.abs(ty - h.y)) == 1 then
-		local c = U.tile_center(h.x, h.y)
-		local edge = U.TILE / 2 + ENTER_DEPTH
-		local function past(o)
-			return o > edge and 1 or o < -edge and -1 or 0
-		end
-		-- (+x is east; +z is north, NetHack's y going the other way)
-		tx, ty = h.x + past(pos.x - c.x), h.y - past(pos.z - c.z)
-	end
 	if tx == h.x and ty == h.y then
 		player_mod.ahead = nil
 		return
@@ -380,22 +364,6 @@ local function step(player)
 	if boulder_at(tx, ty) or blocker_at(tx, ty) then
 		return
 	end
-	-- a trap's square (found or not) is only stepped on well inside it:
-	-- cutting across its corner or along its edge (stepping diagonally past
-	-- it out of a doorway, as NetHack lets you) doesn't set it off
-	local snap_map = nh.snap and nh.snap.map
-	local trap = snap_map and U.has(snap_map.flags[U.idx(tx, ty)] or 0, U.LOC_TRAP)
-	-- (dropped into an open pit's or hole's hole: you're in it, edge or not)
-	local known = trap and snap_map.trap and snap_map.trap[U.idx(tx, ty)]
-	local in_hole = known and known ~= 255 and PIT_NAMES[nhv.cmap_name(known % 128)]
-		and pos.y < U.STAND_Y - 0.3
-	if trap and not in_hole then
-		local c = U.tile_center(tx, ty)
-		local inner = U.TILE / 2 - TRAP_EDGE
-		if math.abs(pos.x - c.x) > inner or math.abs(pos.z - c.z) > inner then
-			return
-		end
-	end
 	-- catch up a square at a time along a path NetHack allows: around
 	-- boulders (squeezing past them diagonally is fine) and monsters, no
 	-- diagonal steps into or out of a doorway with a door (e.g. a shop's)
@@ -438,11 +406,6 @@ local function step(player)
 	else
 		tx = h.x + U.sign(tx - h.x)
 		ty = h.y + U.sign(ty - h.y)
-	end
-	if map and U.has(map.flags[U.idx(tx, ty)] or 0, U.LOC_TRAP) then
-		local bx, by = U.pos_to_tile(pos)
-		core.log("action", ("[nhv] onto trap square %d,%d from %d,%d; body in %d,%d at %.2f,%.2f,%.2f"):format(
-			tx, ty, h.x, h.y, bx, by, pos.x, pos.y, pos.z))
 	end
 	nh.act({{key = "#"}, {text = ("nhvmove %d %d%s"):format(tx, ty, stubborn_pet_at(tx, ty) and " 1" or "")}},
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
@@ -638,6 +601,48 @@ nh.on_snapshot(function(snap)
 	end
 end)
 
+-- Traps go off when the body touches them, not when it crosses into their
+-- square (walking there doesn't set them off: nhv_walking in NetHack): a
+-- trap is a pad TRAP_PAD x TRAP_PAD in the middle of its square, found or
+-- not, and the middle of your body coming onto it sets it off - once, until
+-- you've been off it again. So cutting the corner of a trap's square,
+-- stepping diagonally past it, doesn't. (A pit is a real hole: going into
+-- its square is falling in, as before.)
+local TRAP_PAD = 1.0
+local PIT_NAMES = {pit = true, spiked_pit = true}
+local on_trap = nil -- "x,y" of the trap pad the body is on
+local function check_traps(player)
+	local h = player_mod.hero
+	local map = nh.snap and nh.snap.map
+	if not (h and map) then
+		return
+	end
+	local i = U.idx(h.x, h.y)
+	local known = map.trap and map.trap[i]
+	if not U.has(map.flags[i] or 0, U.LOC_TRAP)
+			or (known and known ~= 255 and PIT_NAMES[nhv.cmap_name(known % 128)]) then
+		on_trap = nil
+		return
+	end
+	local pos, c = player:get_pos(), U.tile_center(h.x, h.y)
+	local here = h.x .. "," .. h.y
+	if player_mod.trap_done then
+		on_trap = player_mod.trap_done == here and here or on_trap
+		player_mod.trap_done = nil
+	end
+	if math.abs(pos.x - c.x) > TRAP_PAD / 2 or math.abs(pos.z - c.z) > TRAP_PAD / 2 then
+		if on_trap == here then
+			on_trap = nil -- (off it again: it can go off again)
+		end
+		return
+	end
+	if on_trap == here or not nh.ready() then
+		return
+	end
+	on_trap = here
+	nh.act({{key = "#"}, {text = ("nhvtrap %d %d"):format(h.x, h.y)}}, {kind = "info"})
+end
+
 -- Stuck (a trap, held by a monster, swallowed): the body is pinned in the
 -- hero's square - where it is, if it's in it; else the nearest spot
 -- inside it (the body may be a step ahead: walking into a mimic's square
@@ -690,6 +695,7 @@ core.register_globalstep(function()
 		end
 		check_gap(player)
 		check_trigger(player)
+		check_traps(player)
 		terrain.place_hero_light(player:get_pos())
 		tell_pit(player)
 	end
