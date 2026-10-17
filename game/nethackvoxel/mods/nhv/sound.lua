@@ -119,7 +119,7 @@ local function pick(entry)
 	return known[name] and name or nil
 end
 
-sound.FEMALE_PITCH = 1.18
+sound.FEMALE_PITCH = 1.35
 
 -- Play whatever is attached to a hook. opts: volume (0-100), pos.
 function sound.hook(id, opts)
