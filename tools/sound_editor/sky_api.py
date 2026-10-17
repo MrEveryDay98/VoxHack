@@ -209,6 +209,10 @@ def clean_sky(s):
         "sun": bool(s.get("sun", True)),
         "moon": bool(s.get("moon", True)),
         "stars": bool(s.get("stars", True)),
+        # stars by day too (and in a plain-colour sky)
+        "stars_always": bool(s.get("stars_always", False)),
+        # the clouds' brightness: 1 as drawn
+        "cloud_brightness": round(_num(s.get("cloud_brightness"), 0.2, 3, 1), 2),
     }
 
 

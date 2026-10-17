@@ -14,7 +14,8 @@
 -- skies.json:
 --   skies:  {id, name, layers = {back, front}, horizon = {color, fade},
 --            pixels (pixels per repeat: sharp; 0 smooth), fog_color,
---            daynight, sun, moon, stars}
+--            daynight, sun, moon, stars, stars_always (by day too, or in
+--            a plain sky), cloud_brightness (1: as drawn)}
 --     layer: kind ("generated" or "texture"), speed = {x, y} (repeats per
 --            second), scale, opacity (0..1), tint ("#RRGGBB");
 --            generated: coverage, softness (0..1), detail (1..6), shade
@@ -124,7 +125,7 @@ local function config(s)
 	local h = s.horizon or {}
 	local r, g, b = rgb(h.color or "#000000")
 	parts[3] = pairs_list({{"hr", r}, {"hg", g}, {"hb", b}, {"fade", num(h.fade, 0)},
-		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}})
+		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}, {"bright", num(s.cloud_brightness, 1)}})
 	return table.concat(parts, ";")
 end
 
@@ -147,7 +148,9 @@ function sky.apply(player, fog)
 	local dn = s and s.daynight
 	player:set_sun({visible = dn and s.sun ~= false or false, sunrise_visible = dn and s.sun ~= false or false})
 	player:set_moon({visible = dn and s.moon ~= false or false})
-	player:set_stars({visible = dn and s.stars ~= false or false})
+	-- (stars all the time: by day too - full strength - and in a plain sky)
+	local always = s and s.stars_always == true
+	player:set_stars({visible = always or (dn and s.stars ~= false) or false, day_opacity = always and 1 or 0})
 end
 
 local function set(s)

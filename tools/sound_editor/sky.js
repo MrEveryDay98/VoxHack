@@ -16,7 +16,7 @@ const Sky = (() => {
     layers: [Object.assign({}, LAYER_DEFAULT),
       Object.assign({}, LAYER_DEFAULT, { speed: [0.02, 0.01], scale: 2, opacity: 0.8, coverage: 0.3, softness: 0.1 })],
     horizon: { color: "#000000", fade: 0.6 }, pixels: 64, fog_color: "#000000",
-    daynight: false, sun: true, moon: true, stars: true,
+    daynight: false, sun: true, moon: true, stars: true, stars_always: false, cloud_brightness: 1,
   };
   const LAYER_NAMES = ["Back layer", "Front layer"];
 
@@ -217,6 +217,8 @@ void main() {
       const dn = dayNight(view.tod);
       bg = dn.bg; top = dn.top; light = dn.light; stars = s.stars ? dn.stars : 0;
     }
+    if (s.stars_always) stars = 1;
+    light *= s.cloud_brightness || 1;
     gl.uniform3f(u("bg"), bg[0], bg[1], bg[2]);
     gl.uniform3f(u("bgTop"), top[0], top[1], top[2]);
     gl.uniform1f(u("stars"), stars);
@@ -342,6 +344,9 @@ void main() {
           field("Horizon fade", slider(s.horizon, "fade", 0, 1, 0.01, (v) => Math.round(v * 100) + "%"), "How strongly the clouds fade into that colour low down."),
           check(s, "daynight", "Day and night (follows the real clock)", render),
           s.daynight ? el("div", { class: "inline" }, check(s, "sun", "Sun"), check(s, "moon", "Moon"), check(s, "stars", "Stars")) : null,
+          check(s, "stars_always", "Stars all the time (by day too)", render),
+          field("Cloud brightness", slider(s, "cloud_brightness", 0.2, 3, 0.05, (v) => Math.round(v * 100) + "%"),
+            "100% is as the clouds are drawn; more makes them glow brighter."),
           s.daynight ? null : field("Sky colour", color(s, "fog_color"),
             "Behind the clouds; distant walls also fade into it on levels open to the sky all over.")),
         el("div", { class: "blk-preview" }, preview(s), el("small", { class: "muted" }, "Drag to look around."))),
