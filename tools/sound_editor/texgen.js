@@ -191,7 +191,8 @@ const TexGen = (() => {
       redraw();
       const blob = await new Promise((res) => src.toBlob(res, "image/png"));
       try {
-        const res = await api("/api/blocks/texture?name=" + encodeURIComponent((opts.name || "generated") + ".png"),
+        const res = await api("/api/blocks/texture?name=" + encodeURIComponent((opts.name || "generated") + ".png")
+          + (opts.frames > 1 ? `&frames=${opts.frames}&length=${opts.length}` : ""),
           { method: "POST", body: blob });
         const t = { file: res.file };
         if (opts.frames > 1) { t.frames = opts.frames; t.length = opts.length; }

@@ -13,6 +13,7 @@ const Blocks = (() => {
   let sel = 0;
   let dirty = false;
   let texTab = "sheet";
+  let anims = {}; // picture -> {frames, length}: the animated ones
   let sheetQuery = "";
   // the game's own blocks ("Game blocks" tab)
   let mode = "custom";      // "custom" | "game"
@@ -28,12 +29,27 @@ const Blocks = (() => {
     const res = await api("/api/blocks");
     data = res.data;
     textures = res.textures;
+    anims = res.anims || {};
     sheet = res.sheet;
     game = res.game;
     overrides = res.overrides || {};
+    // (a block given an animated picture without its frames - picked
+    // before pictures brought them along: it gets them, to be saved)
+    let fixed = false;
+    for (const blk of data.blocks) {
+      const a = blk.texture && blk.texture.file && anims[blk.texture.file];
+      if (a && blk.texture.frames !== a.frames) {
+        Object.assign(blk.texture, a);
+        fixed = true;
+      }
+    }
     const b = data.blocks[sel];
     texTab = b && b.texture && b.texture.file ? "file" : "sheet";
     render();
+    if (fixed) {
+      touch();
+      toast("Some blocks' animated pictures were missing their frames: fixed. Save blocks to keep it.");
+    }
   }
 
   async function save() {
@@ -163,6 +179,8 @@ const Blocks = (() => {
       // (saved as one of your pictures, and used for this block)
       box.append(TexGen.panel((t) => {
         if (!textures.includes(t.file)) textures.push(t.file);
+        if (t.frames > 1) anims[t.file] = { frames: t.frames, length: t.length };
+        else delete anims[t.file];
         b.texture = t; touch(); render();
       }));
       return box;
@@ -196,9 +214,11 @@ const Blocks = (() => {
     } else {
       const grid = el("div", { class: "blk-grid big" });
       for (const f of textures) {
+        // (an animated picture brings its frames along)
+        const t = Object.assign({ file: f }, anims[f] || {});
         const cell = el("div", { class: "blk-file" + (b.texture && b.texture.file === f ? " on" : ""), role: "button", tabindex: 0,
-          onclick: () => { b.texture = { file: f }; touch(); render(); } },
-        texView({ file: f }, 48), el("small", {}, f));
+          onclick: () => { b.texture = Object.assign({}, t); touch(); render(); } },
+        texView(t, 48), el("small", {}, f));
         grid.append(cell);
       }
       const up = el("input", { type: "file", accept: "image/png", hidden: true, onchange: async (e) => {

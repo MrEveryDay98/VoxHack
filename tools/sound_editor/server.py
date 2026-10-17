@@ -320,7 +320,8 @@ class Handler(BaseHTTPRequestHandler):
             fresh_blocks_api()
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
                                    "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
-                                   "overrides": blocks_api.load_overrides()})
+                                   "overrides": blocks_api.load_overrides(),
+                                   "anims": blocks_api.anim_info()})
         if path == "/api/sky":
             return self.send(200, {"data": sky_api.load(), "textures": sky_api.textures(),
                                    "levels": sky_api.level_names()})
@@ -448,7 +449,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"file": effects_api.upload_texture(name, self.read_body())})
             if url.path == "/api/blocks/texture":
                 name = (q.get("name") or ["texture"])[0]
-                return self.send(200, {"file": blocks_api.upload_texture(name, self.read_body())})
+                frames = int(float((q.get("frames") or ["1"])[0]))
+                length = float((q.get("length") or ["1"])[0])
+                return self.send(200, {"file": blocks_api.upload_texture(name, self.read_body(), frames, length)})
             data = self.body_json() or {}
             return self.api_post(url.path, data)
         except voicegen.ApiError as e:

@@ -59,6 +59,57 @@ def textures():
     return sorted(f for f in os.listdir(TEXTURES) if f.lower().endswith(".png"))
 
 
+# Animated pictures: frames stacked top to bottom. Generated ones record
+# their frames and loop length here when saved; any other picture taller
+# than wide by a whole number of squares counts as that many frames.
+ANIMS = os.path.join(TEXTURES, "animations.json")
+
+
+def _png_size(path):
+    try:
+        with open(path, "rb") as f:
+            head = f.read(24)
+    except OSError:
+        return None
+    if not head.startswith(PNG_MAGIC) or len(head) < 24:
+        return None
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
+def anim_info():
+    """{file: {"frames": n, "length": seconds}} for every animated picture."""
+    try:
+        with open(ANIMS, encoding="utf-8") as f:
+            saved = json.load(f)
+    except (OSError, ValueError):
+        saved = {}
+    out = {}
+    for name in textures():
+        size = _png_size(os.path.join(TEXTURES, name))
+        if not size or not size[0]:
+            continue
+        w, h = size
+        frames = h // w if h > w and h % w == 0 else 1
+        if frames > 1:
+            length = (saved.get(name) or {}).get("length", 1)
+            out[name] = {"frames": frames, "length": length}
+    return out
+
+
+def _remember_anim(fname, frames, length):
+    try:
+        with open(ANIMS, encoding="utf-8") as f:
+            saved = json.load(f)
+    except (OSError, ValueError):
+        saved = {}
+    if frames and frames > 1:
+        saved[fname] = {"frames": int(frames), "length": float(length or 1)}
+    else:
+        saved.pop(fname, None)
+    with open(ANIMS, "w", encoding="utf-8") as f:
+        json.dump(saved, f, indent=1)
+
+
 def clean_block(b):
     """Validate one block definition (raises ValueError)."""
     bid = re.sub(r"[^a-z0-9_]+", "_", str(b.get("id", "")).lower()).strip("_")
@@ -117,8 +168,9 @@ def save(data):
     return blocks
 
 
-def upload_texture(name, data):
-    """Save an uploaded PNG as textures/nhvb_<name>.png; returns the file name."""
+def upload_texture(name, data, frames=None, length=None):
+    """Save an uploaded PNG as textures/nhvb_<name>.png; returns the file name.
+    (frames/length: it's an animation, as the texture generator makes them)"""
     if not data.startswith(PNG_MAGIC):
         raise ValueError("that isn't a PNG image")
     if len(data) > 2 * 1024 * 1024:
@@ -130,6 +182,7 @@ def upload_texture(name, data):
     os.makedirs(TEXTURES, exist_ok=True)
     with open(os.path.join(TEXTURES, fname), "wb") as f:
         f.write(data)
+    _remember_anim(fname, frames, length)
     return fname
 
 
