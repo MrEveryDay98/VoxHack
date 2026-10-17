@@ -212,6 +212,7 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_HELD      0x80000 /* held by a monster (a mimic, an owlbear...) */
 #define NHV_HERO_ENHANCE   0x100000 /* a skill can be advanced (#enhance) */
 #define NHV_HERO_POLE      0x200000 /* wielding a polearm or lance (reaches 2 squares) */
+#define NHV_HERO_FEMALE    0x400000 /* the hero is female (as it is now) */
 
 typedef struct nhv_hero {
     int x, y;

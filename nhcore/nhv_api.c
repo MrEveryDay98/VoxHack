@@ -562,6 +562,8 @@ nhv_get_hero(nhv_hero *out)
         f |= NHV_HERO_HELD;
     if (uwep && is_pole(uwep))
         f |= NHV_HERO_POLE;
+    if (flags.female)
+        f |= NHV_HERO_FEMALE;
     {
         int sk;
 

@@ -206,6 +206,11 @@ function hookRow(h, isMusic) {
       const pv = el("span", {}, Math.round((entry.pitch_var ?? 0) * 100) + "%");
       controls.append("Pitch ±", el("input", { type: "range", min: 0, max: 30, value: Math.round((entry.pitch_var ?? 0) * 100),
         "aria-label": "Pitch variation", oninput: (e) => { entry.pitch_var = +e.target.value / 100; pv.textContent = e.target.value + "%"; markDirty(); } }), pv);
+      // the hero's own voice: pitched up in the game for a female hero
+      controls.append(el("label", { class: "check", title: "The hero's own voice: higher for a female hero" },
+        el("input", { type: "checkbox", checked: entry.player_voice || null,
+          onchange: (e) => { if (e.target.checked) entry.player_voice = true; else delete entry.player_voice; markDirty(); } }),
+        " Player voice"));
     }
   }
   row.append(

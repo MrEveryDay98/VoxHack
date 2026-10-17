@@ -405,7 +405,8 @@
     "yh_ouch"
    ],
    "volume": 100,
-   "pitch_var": 0.05
+   "pitch_var": 0.05,
+   "player_voice": true
   },
   "heart_beat": {
    "sounds": [
@@ -447,7 +448,8 @@
     "yh_scream1"
    ],
    "volume": 100,
-   "pitch_var": 0.05
+   "pitch_var": 0.05,
+   "player_voice": true
   },
   "secret_found": {
    "sounds": [
@@ -538,7 +540,8 @@
     "yh_vomit"
    ],
    "volume": 100,
-   "pitch_var": 0.05
+   "pitch_var": 0.05,
+   "player_voice": true
   },
   "rushing_wind_noise": {
    "sounds": [
@@ -559,7 +562,8 @@
     "yh_yawn"
    ],
    "volume": 100,
-   "pitch_var": 0.05
+   "pitch_var": 0.05,
+   "player_voice": true
   },
   "trap_sleeping_gas_trap": {
    "sounds": [
@@ -766,6 +770,35 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "footstep": {
+   "sounds": [
+    "268758__deleted_user_5093904__footsteps"
+   ],
+   "volume": 114,
+   "pitch_var": 0.09
+  },
+  "quaff_potion": {
+   "sounds": [
+    "yh_draught"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05,
+   "player_voice": true
+  },
+  "read_spellbook": {
+   "sounds": [
+    "yh_book"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "read_scroll": {
+   "sounds": [
+    "yh_book"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {

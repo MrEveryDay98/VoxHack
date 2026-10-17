@@ -64,6 +64,7 @@ U.HERO = {
 	HELD = 0x80000, -- (held by a monster: a mimic, an owlbear's hug...)
 	ENHANCE = 0x100000, -- (a skill can be advanced: #enhance)
 	POLE = 0x200000, -- (wielding a polearm or lance: hits 2 squares away)
+	FEMALE = 0x400000, -- (the hero is female, as it is now)
 }
 
 -- nhv_obj.flags

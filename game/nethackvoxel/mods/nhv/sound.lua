@@ -119,6 +119,8 @@ local function pick(entry)
 	return known[name] and name or nil
 end
 
+sound.FEMALE_PITCH = 1.18
+
 -- Play whatever is attached to a hook. opts: volume (0-100), pos.
 function sound.hook(id, opts)
 	-- (particle effects attach to the same hooks: effects.lua)
@@ -136,6 +138,12 @@ function sound.hook(id, opts)
 		* ((sound.cfg.master.effects or 100) / 100)
 	local pv = entry.pitch_var or 0
 	local params = {gain = gain, pitch = 1 + (math.random() * 2 - 1) * pv}
+	-- the hero's own voice (hooks ticked "Player voice" in the sound
+	-- editor: hurt, yawning...) is higher for a female hero
+	local hero = nh.snap and nh.snap.hero
+	if entry.player_voice and hero and U.has(hero.flags, U.HERO.FEMALE) then
+		params.pitch = params.pitch * sound.FEMALE_PITCH
+	end
 	if opts.pos then
 		params.pos = opts.pos
 		params.max_hear_distance = 48
