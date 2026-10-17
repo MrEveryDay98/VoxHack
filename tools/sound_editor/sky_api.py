@@ -74,12 +74,18 @@ def clean_layer(l):
         raise ValueError("bad texture file name")
     sp = l.get("speed") if isinstance(l.get("speed"), (list, tuple)) and len(l.get("speed")) == 2 else [0, 0]
     return {
+        "kind": "texture" if l.get("kind") == "texture" else "generated",
         "texture": tex,
         "speed": [_num(sp[0], -2, 2, 0), _num(sp[1], -2, 2, 0)],
-        "scale": _num(l.get("scale"), 0.1, 40, 3),
+        "scale": _num(l.get("scale"), 0.1, 40, 1),
         "opacity": _num(l.get("opacity"), 0, 1, 1),
         "tint": _color(l.get("tint"), "#FFFFFF"),
         "see_through_black": bool(l.get("see_through_black", False)),
+        # (generated clouds)
+        "coverage": _num(l.get("coverage"), 0, 1, 0.5),
+        "softness": _num(l.get("softness"), 0, 1, 0.15),
+        "detail": int(_num(l.get("detail"), 1, 6, 4)),
+        "shade": _color(l.get("shade"), "#666673"),
     }
 
 
@@ -96,8 +102,12 @@ def clean_sky(s):
         "name": str(s.get("name") or sid)[:60],
         "layers": [clean_layer(l) for l in layers],
         "horizon": {"color": _color(h.get("color"), "#000000"), "fade": _num(h.get("fade"), 0, 1, 0.6)},
-        "smooth": bool(s.get("smooth", False)),
+        "pixels": int(_num(s.get("pixels"), 0, 512, 64)),
         "fog_color": _color(s.get("fog_color"), "#000000"),
+        "daynight": bool(s.get("daynight", False)),
+        "sun": bool(s.get("sun", True)),
+        "moon": bool(s.get("moon", True)),
+        "stars": bool(s.get("stars", True)),
     }
 
 

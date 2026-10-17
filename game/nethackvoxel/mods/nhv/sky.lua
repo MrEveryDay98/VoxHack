@@ -1,8 +1,10 @@
--- The sky: Quake-style, two scrolling texture layers on a flattened dome
--- (drawn by the NetHack Voxel build of Luanti; its shader is
--- client/shaders/nhv_sky_shader). Skies are made in the editor's Sky tab
--- and saved to mods/nhv_sky/skies.json, which also says which sky each
--- level gets; the file is re-read when it changes.
+-- The sky: Quake-style clouds - two scrolling layers, generated (layered
+-- noise) or pictures, on one flat plane high overhead - over a plain colour
+-- or the day and night sky (the sun, the moon and the stars, following the
+-- real clock as NetHack's own night does). Drawn by the NetHack Voxel build
+-- of Luanti (client/shaders/nhv_sky_shader). Skies are made in the
+-- editor's Sky tab and saved to mods/nhv_sky/skies.json, which also says
+-- which sky each level gets; the file is re-read when it changes.
 --
 -- It's shown on levels that have the sky over them anywhere (terrain.lua's
 -- has_sky: Medusa's island, Juiblex's swamp, the Big Rooms that can have
@@ -11,10 +13,13 @@
 --
 -- skies.json:
 --   skies:  {id, name, layers = {back, front}, horizon = {color, fade},
---            smooth, fog_color}
---     layer: texture (in nhv_sky/textures), speed = {x, y} (repeats per
---            second), scale (repeats across the dome), opacity (0..1),
---            tint ("#RRGGBB"), see_through_black (black is see-through)
+--            pixels (pixels per repeat: sharp; 0 smooth), fog_color,
+--            daynight, sun, moon, stars}
+--     layer: kind ("generated" or "texture"), speed = {x, y} (repeats per
+--            second), scale, opacity (0..1), tint ("#RRGGBB");
+--            generated: coverage, softness (0..1), detail (1..6), shade
+--            (the shadowed parts' colour); texture: texture (in
+--            nhv_sky/textures), see_through_black
 --   levels: level -> sky id: a special level variant ("medusa-2"), or the
 --           name before its "-" ("medusa", "bigrm"), or "default"
 
@@ -82,34 +87,78 @@ local function rgb(c)
 	return tonumber(c:sub(1, 2), 16) / 255, tonumber(c:sub(3, 4), 16) / 255, tonumber(c:sub(5, 6), 16) / 255
 end
 
--- the engine's "nhv_sky" setting for sky s
+local function pairs_list(t)
+	local out = {}
+	for _, kv in ipairs(t) do
+		out[#out + 1] = kv[1] .. "=" .. tostring(kv[2])
+	end
+	return table.concat(out, ",")
+end
+
+-- the engine's "nhv_sky" setting for sky s (see sky.cpp)
 local function config(s)
 	local parts = {}
 	for i = 1, 2 do
 		local l = s.layers and s.layers[i] or {}
 		local sp = type(l.speed) == "table" and l.speed or {}
+		local gen = l.kind == "generated"
 		local r, g, b = rgb(l.tint)
-		parts[i] = table.concat({l.texture or "", num(sp[1], 0), num(sp[2], 0), num(l.scale, 1),
-			l.texture and num(l.opacity, 1) or 0, r, g, b, l.see_through_black and 1 or 0}, "|")
+		local sr, sg, sb = rgb(l.shade or "#666673")
+		local kv = {{"kind", gen and "gen" or "tex"}, {"sx", num(sp[1], 0)}, {"sy", num(sp[2], 0)},
+			{"scale", num(l.scale, 3)}, {"alpha", (gen or l.texture) and num(l.opacity, 1) or 0},
+			{"r", r}, {"g", g}, {"b", b}}
+		if gen then
+			for _, e in ipairs({{"cover", num(l.coverage, 0.5)}, {"soft", num(l.softness, 0.15)},
+					{"detail", num(l.detail, 4)}, {"shr", sr}, {"shg", sg}, {"shb", sb}}) do
+				kv[#kv + 1] = e
+			end
+		else
+			kv[#kv + 1] = {"tex", l.texture or ""}
+			kv[#kv + 1] = {"key", l.see_through_black and 1 or 0}
+		end
+		parts[i] = pairs_list(kv)
 	end
 	local h = s.horizon or {}
 	local r, g, b = rgb(h.color or "#000000")
-	parts[3] = table.concat({r, g, b, num(h.fade, 0), s.smooth and 1 or 0}, "|")
+	parts[3] = pairs_list({{"hr", r}, {"hg", g}, {"hb", b}, {"fade", num(h.fade, 0)},
+		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}})
 	return table.concat(parts, ";")
 end
 
--- fog colour while the sky is shown over the whole level (nil: black)
-function sky.fog_color()
-	return sky.fog
+-- the sky shown now (nil: none)
+function sky.current()
+	return sky.def
 end
 
-local function set(cfg, fog)
+-- Luanti's own sky for the player (hud.apply_fog: fog as given): plain
+-- black - or, while a sky is shown, its fog colour (over the whole level),
+-- or the day and night sky with its sun, moon and stars.
+function sky.apply(player, fog)
+	local s = sky.def
+	local base = s and nhv.terrain.open_sky and s.fog_color or "#000000"
+	if s and s.daynight then
+		player:set_sky({type = "regular", clouds = false, fog = fog})
+	else
+		player:set_sky({type = "plain", base_color = base, clouds = false, fog = fog})
+	end
+	local dn = s and s.daynight
+	player:set_sun({visible = dn and s.sun ~= false or false, sunrise_visible = dn and s.sun ~= false or false})
+	player:set_moon({visible = dn and s.moon ~= false or false})
+	player:set_stars({visible = dn and s.stars ~= false or false})
+end
+
+local function set(s)
+	local cfg = s and config(s) or ""
+	local changed = s ~= sky.def or (s and s.daynight) ~= sky.daynight_shown
+		or (s and nhv.terrain.open_sky) ~= sky.open_shown
 	if cfg ~= sky.shown then
 		sky.shown = cfg
 		core.settings:set("nhv_sky", cfg)
 	end
-	if fog ~= sky.fog then
-		sky.fog = fog
+	if changed then
+		sky.def = s
+		sky.daynight_shown = s and s.daynight
+		sky.open_shown = s and nhv.terrain.open_sky
 		local player = nhv.player.get()
 		if player and nhv.hud.apply_fog then
 			nhv.hud.apply_fog(player)
@@ -117,15 +166,20 @@ local function set(cfg, fog)
 	end
 end
 
+-- the day and night sky follows the real clock (as NetHack's night does)
+local function real_time_of_day()
+	local t = os.date("*t")
+	return (t.hour * 3600 + t.min * 60 + t.sec) / 86400
+end
+
 function sky.update()
 	local snap = nh.snap
 	local hero = snap and snap.hero
 	local s = hero and not U.has(hero.flags, U.HERO.BLIND) and nhv.terrain.has_sky() and sky.for_level()
-	if not s then
-		set("", nil)
-		return
+	set(s or nil)
+	if s and s.daynight then
+		core.set_timeofday(real_time_of_day())
 	end
-	set(config(s), nhv.terrain.open_sky and s.fog_color or nil)
 end
 
 -- (checked now and then: a level change, a cell coming into view, an edit

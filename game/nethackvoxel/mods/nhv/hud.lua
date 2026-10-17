@@ -332,11 +332,14 @@ end)
 -- ---------------------------------------------------------------- fog
 -- black fog in the distance (blindness brings it right in)
 function hud.apply_fog(player)
-	-- (black, or the sky's fog colour while a sky is over the whole level)
-	local fog = not hud.blind and nhv.sky and nhv.sky.fog_color() or "#000000"
-	player:set_sky({type = "plain", base_color = fog, clouds = false,
-		fog = hud.blind and {fog_distance = 5, fog_start = 0.1}
-			or {fog_distance = 90, fog_start = 0.3}})
+	local fog = hud.blind and {fog_distance = 5, fog_start = 0.1}
+		or {fog_distance = 90, fog_start = 0.3}
+	-- (the sky's: black, or a sky over the level - see sky.lua)
+	if nhv.sky and nhv.sky.apply then
+		nhv.sky.apply(player, fog)
+		return
+	end
+	player:set_sky({type = "plain", base_color = "#000000", clouds = false, fog = fog})
 end
 
 -- ---------------------------------------------------------------- meters

@@ -1,16 +1,22 @@
-// Sky builder (the Sky tab): Quake-style skies - two scrolling texture
-// layers on a flattened dome - and which level gets which. Saved to
-// mods/nhv_sky/skies.json; the game picks changes up while it runs. The
-// preview draws the sky with the same projection as the game's shader
+// Sky builder (the Sky tab): Quake-style clouds - two scrolling layers,
+// generated (layered noise) or pictures, on one flat plane overhead - over
+// a plain colour or the day and night sky; and which level gets which sky.
+// Saved to mods/nhv_sky/skies.json; the game picks changes up while it
+// runs. The preview draws the clouds as the game's shader does
 // (client/shaders/nhv_sky_shader); drag it to look around.
 "use strict";
 
 const Sky = (() => {
-  const LAYER_DEFAULT = { texture: "", speed: [0.01, 0.006], scale: 3, opacity: 1, tint: "#FFFFFF", see_through_black: false };
+  const LAYER_DEFAULT = {
+    kind: "generated", texture: "", speed: [0.01, 0.005], scale: 1, opacity: 1, tint: "#FFFFFF",
+    see_through_black: false, coverage: 0.5, softness: 0.15, detail: 4, shade: "#666673",
+  };
   const SKY_DEFAULT = {
     id: "sky", name: "New sky",
-    layers: [Object.assign({}, LAYER_DEFAULT), Object.assign({}, LAYER_DEFAULT, { speed: [0.025, 0.012], see_through_black: true })],
-    horizon: { color: "#000000", fade: 0.6 }, smooth: false, fog_color: "#000000",
+    layers: [Object.assign({}, LAYER_DEFAULT),
+      Object.assign({}, LAYER_DEFAULT, { speed: [0.02, 0.01], scale: 2, opacity: 0.8, coverage: 0.3, softness: 0.1 })],
+    horizon: { color: "#000000", fade: 0.6 }, pixels: 64, fog_color: "#000000",
+    daynight: false, sun: true, moon: true, stars: true,
   };
   const LAYER_NAMES = ["Back layer", "Front layer"];
 
@@ -23,9 +29,19 @@ const Sky = (() => {
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const touch = () => { dirty = true; $("#skySave").disabled = false; $("#skyDirty").hidden = false; };
 
+  // (older skies.json entries: fill in what's missing)
+  function fill(s) {
+    for (const [k, v] of Object.entries(SKY_DEFAULT)) if (s[k] === undefined) s[k] = clone(v);
+    s.layers = (s.layers || []).slice(0, 2);
+    while (s.layers.length < 2) s.layers.push(clone(LAYER_DEFAULT));
+    s.layers.forEach((l) => { for (const [k, v] of Object.entries(LAYER_DEFAULT)) if (l[k] === undefined) l[k] = clone(v); });
+    return s;
+  }
+
   async function load() {
     const res = await api("/api/sky");
     data = res.data;
+    data.skies.forEach(fill);
     textures = res.textures || [];
     levelNames = res.levels || [];
     render();
@@ -46,10 +62,41 @@ const Sky = (() => {
 
   // ------------------------------------------------------------ preview (WebGL)
   const VERT = `attribute vec2 pos; void main() { gl_Position = vec4(pos, 0.0, 1.0); }`;
+  // (the clouds as client/shaders/nhv_sky_shader draws them; behind them a
+  // plain colour, or a rough day/night sky for the preview)
   const FRAG = `precision highp float;
 uniform sampler2D t0; uniform sampler2D t1;
-uniform vec4 l0; uniform vec4 l1; uniform vec4 tint0; uniform vec4 tint1; uniform vec4 hz;
-uniform vec2 res; uniform float yaw; uniform float pitch;
+uniform vec4 l0; uniform vec4 l1; uniform vec4 tint0; uniform vec4 tint1;
+uniform vec4 gen0; uniform vec4 gen1; uniform vec4 shade0; uniform vec4 shade1;
+uniform vec4 hz; uniform vec4 misc; uniform vec3 bg; uniform vec3 bgTop;
+uniform vec2 res; uniform float yaw; uniform float pitch; uniform float stars;
+float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p, float oct) {
+  float v = 0.0, amp = 0.5, total = 0.0;
+  for (int k = 0; k < 6; k++) {
+    if (float(k) >= oct) break;
+    v += noise(p) * amp; total += amp; p = p * 2.03 + vec2(17.1, 9.7); amp *= 0.5;
+  }
+  return v / max(total, 0.001);
+}
+vec4 layer(sampler2D tex, vec2 p, vec4 L, vec4 tint, vec4 gen, vec4 shade) {
+  vec2 uv = p * L.z + L.xy;
+  if (misc.x > 0.0) uv = (floor(uv * misc.x) + 0.5) / misc.x;
+  if (gen.x > 0.5) {
+    float n = fbm(uv * 4.0, gen.w), edge = 1.0 - gen.y;
+    float a = smoothstep(edge, edge + max(gen.z, 0.01), n);
+    vec3 col = mix(shade.rgb, tint.rgb, smoothstep(edge, edge + max(gen.z, 0.01) * 2.0 + 0.15, n));
+    return vec4(col, a * L.w);
+  }
+  vec4 c = texture2D(tex, uv);
+  float a = c.a * L.w;
+  if (tint.a > 0.5) a *= step(0.02, max(c.r, max(c.g, c.b)));
+  return vec4(c.rgb * tint.rgb, a);
+}
 void main() {
   vec2 uv = (gl_FragCoord.xy / res) * 2.0 - 1.0;
   uv.x *= res.x / res.y;
@@ -58,27 +105,32 @@ void main() {
   d = vec3(d.x, d.y * cp + d.z * sp, -d.y * sp + d.z * cp);
   float cy = cos(yaw), sy = sin(yaw);
   d = vec3(d.x * cy + d.z * sy, d.y, -d.x * sy + d.z * cy);
-  vec3 f = vec3(d.x, abs(d.y) * 3.0, d.z);
-  vec2 p = d.xz / length(f);
-  vec4 back = texture2D(t0, p * l0.z + l0.xy);
-  vec4 front = texture2D(t1, p * l1.z + l1.xy);
-  vec3 col = back.rgb * tint0.rgb * (back.a * l0.w);
-  float a1 = front.a * l1.w;
-  if (tint1.a > 0.5) a1 *= step(0.02, max(front.r, max(front.g, front.b)));
-  col = mix(col, front.rgb * tint1.rgb, a1);
-  float h = 1.0 - smoothstep(0.0, 0.35, abs(d.y));
-  col = mix(col, hz.rgb, h * hz.a);
-  if (d.y < -0.02) col = mix(col, vec3(0.06), 0.85); // (the ground, for the preview)
-  gl_FragColor = vec4(col, 1.0);
+  vec3 sky = mix(bg, bgTop, smoothstep(0.0, 0.6, d.y));
+  if (stars > 0.0 && d.y > 0.0) {
+    vec2 sp2 = floor(d.xz / (d.y + 0.3) * 180.0);
+    if (hash(sp2) > 0.997) sky += vec3(stars);
+  }
+  if (d.y < -0.02) { gl_FragColor = vec4(mix(bg, vec3(0.06), 0.85), 1.0); return; } // (the ground)
+  if (d.y <= 0.0) { gl_FragColor = vec4(sky, 1.0); return; }
+  vec2 p = d.xz / d.y * 0.25;
+  vec4 back = layer(t0, p, l0, tint0, gen0, shade0);
+  vec4 front = layer(t1, p, l1, tint1, gen1, shade1);
+  float a = back.a + front.a * (1.0 - back.a);
+  vec3 col = (back.rgb * back.a * (1.0 - front.a) + front.rgb * front.a) / max(a, 0.001);
+  float low = 1.0 - smoothstep(0.05, 0.45, d.y);
+  col = mix(col, hz.rgb, low * hz.a);
+  a *= smoothstep(0.04, 0.28, d.y);
+  gl_FragColor = vec4(mix(sky, col * misc.y, a), 1.0);
 }`;
 
-  const view = { yaw: 0, pitch: 0.35, drag: null, canvas: null, gl: null, prog: null, tex: {}, raf: 0 };
+  const view = { yaw: 0, pitch: 0.45, drag: null, canvas: null, gl: null, prog: null, tex: {}, raf: 0, tod: 0.5 };
 
   function rgb(hex) {
     const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
     const v = m ? parseInt(m[1], 16) : 0xffffff;
     return [(v >> 16 & 255) / 255, (v >> 8 & 255) / 255, (v & 255) / 255];
   }
+  const mix3 = (a, b, k) => a.map((x, i) => x + (b[i] - x) * k);
 
   function glTexture(name, smooth) {
     const gl = view.gl;
@@ -129,6 +181,16 @@ void main() {
     return true;
   }
 
+  // (roughly Luanti's day and night sky, for the preview: 0 midnight .. 0.5 noon)
+  function dayNight(tod) {
+    const day = Math.max(0, Math.min(1, (Math.cos((tod - 0.5) * 2 * Math.PI) + 0.25) / 1.25));
+    return {
+      bg: mix3([0.02, 0.02, 0.06], [0.75, 0.86, 1.0], day),
+      top: mix3([0.0, 0.0, 0.03], [0.38, 0.62, 0.98], day),
+      light: Math.max(0.12, day), stars: Math.max(0, 1 - day * 2),
+    };
+  }
+
   function frame() {
     view.raf = 0;
     const s = data.skies[sel];
@@ -137,16 +199,28 @@ void main() {
     const u = (n) => gl.getUniformLocation(view.prog, n);
     const t = performance.now() / 1000;
     s.layers.forEach((l, i) => {
+      const gen = l.kind === "generated";
       gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, glTexture(l.texture, s.smooth));
+      gl.bindTexture(gl.TEXTURE_2D, glTexture(gen ? "" : l.texture, !s.pixels));
       gl.uniform1i(u("t" + i), i);
-      const fr = (v) => v - Math.floor(v);
-      gl.uniform4f(u("l" + i), fr(t * l.speed[0]), fr(t * l.speed[1]), l.scale, l.texture ? l.opacity : 0);
-      const c = rgb(l.tint);
+      const wrap = (v) => (gen ? v % 1000 : v - Math.floor(v));
+      gl.uniform4f(u("l" + i), wrap(t * l.speed[0]), wrap(t * l.speed[1]), l.scale, gen || l.texture ? l.opacity : 0);
+      const c = rgb(l.tint), sh = rgb(l.shade);
       gl.uniform4f(u("tint" + i), c[0], c[1], c[2], l.see_through_black ? 1 : 0);
+      gl.uniform4f(u("gen" + i), gen ? 1 : 0, l.coverage, l.softness, l.detail);
+      gl.uniform4f(u("shade" + i), sh[0], sh[1], sh[2], 1);
     });
     const hc = rgb(s.horizon.color);
     gl.uniform4f(u("hz"), hc[0], hc[1], hc[2], s.horizon.fade);
+    let bg = rgb(s.fog_color), top = bg, light = 1, stars = 0;
+    if (s.daynight) {
+      const dn = dayNight(view.tod);
+      bg = dn.bg; top = dn.top; light = dn.light; stars = s.stars ? dn.stars : 0;
+    }
+    gl.uniform3f(u("bg"), bg[0], bg[1], bg[2]);
+    gl.uniform3f(u("bgTop"), top[0], top[1], top[2]);
+    gl.uniform1f(u("stars"), stars);
+    gl.uniform4f(u("misc"), s.pixels || 0, light, 0, 0);
     gl.uniform2f(u("res"), view.canvas.width, view.canvas.height);
     if (!view.drag) view.yaw += 0.0015; // (turns slowly by itself)
     gl.uniform1f(u("yaw"), view.yaw);
@@ -156,7 +230,7 @@ void main() {
     view.raf = requestAnimationFrame(frame);
   }
 
-  function preview() {
+  function preview(s) {
     const canvas = el("canvas", { width: 640, height: 360, class: "sky-canvas",
       title: "Drag to look around", "aria-label": "Sky preview" });
     canvas.addEventListener("pointerdown", (e) => { view.drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
@@ -171,7 +245,12 @@ void main() {
     try { ok = setupGL(canvas); } catch (e) { toast("Sky preview: " + e.message); }
     if (!ok) return el("p", { class: "muted" }, "(No preview: this browser has no WebGL.)");
     if (!view.raf) view.raf = requestAnimationFrame(frame);
-    return canvas;
+    const hours = (v) => { const m = Math.round(v * 1440); return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+    const out = el("span", { class: "muted" }, hours(view.tod));
+    const tod = s.daynight ? el("label", { class: "inline" }, "Preview at",
+      el("input", { type: "range", min: 0, max: 1, step: 0.005, value: view.tod, "aria-label": "Preview time of day",
+        oninput: (e) => { view.tod = +e.target.value; out.textContent = hours(view.tod); } }), out) : null;
+    return el("div", {}, canvas, tod);
   }
 
   // ------------------------------------------------------------ editing
@@ -188,6 +267,15 @@ void main() {
       out.textContent = fmt(v); touch();
     } });
     return el("span", { class: "inline" }, input, out);
+  }
+
+  function color(obj, key) {
+    return el("input", { type: "color", value: obj[key], oninput: (e) => { obj[key] = e.target.value.toUpperCase(); touch(); } });
+  }
+
+  function check(obj, key, label, after) {
+    return el("label", { class: "check" }, el("input", { type: "checkbox", checked: obj[key] || null,
+      onchange: (e) => { obj[key] = e.target.checked; touch(); if (after) after(); } }), " " + label);
   }
 
   function texturePicker(l) {
@@ -212,19 +300,33 @@ void main() {
   function layerEditor(l, i) {
     const pct = (v) => Math.round(v * 100) + "%";
     const spd = (v) => (+v).toFixed(3) + "/s";
+    const gen = l.kind === "generated";
+    const kind = el("select", { onchange: (e) => { l.kind = e.target.value; touch(); render(); } },
+      el("option", { value: "generated", selected: gen || null }, "Generated clouds"),
+      el("option", { value: "texture", selected: !gen || null }, "A picture"));
+    const own = gen ? [
+      field("Coverage", slider(l, "coverage", 0, 1, 0.01, pct), "How much of the sky the clouds cover."),
+      field("Softness", slider(l, "softness", 0, 1, 0.01, pct), "Hard-edged puffs, or soft wisps."),
+      field("Detail", slider(l, "detail", 1, 6, 1, (v) => v + (v == 1 ? " level" : " levels")), "Layers of noise: more is finer (and costs a little more)."),
+      field("Colour", color(l, "tint")),
+      field("Shadow colour", color(l, "shade"), "The thin edges and undersides."),
+    ] : [
+      field("Picture", texturePicker(l), "Tiles seamlessly."),
+      field("Tint", color(l, "tint")),
+      check(l, "see_through_black", "Black is see-through (Quake's front clouds)"),
+    ];
     return el("div", { class: "sky-layer" },
       el("h4", {}, LAYER_NAMES[i]),
-      field("Picture", texturePicker(l), "Tiles seamlessly; " + (i === 0 ? "drawn first, over black." : "drawn over the back layer.")),
-      field("Scroll east–west", slider(l, "speed", -0.2, 0.2, 0.001, spd, 0)),
-      field("Scroll north–south", slider(l, "speed", -0.2, 0.2, 0.001, spd, 1)),
-      field("Size", slider(l, "scale", 0.5, 12, 0.1, (v) => (+v).toFixed(1) + "x"), "How many times the picture repeats across the sky (Quake's is about 3)."),
-      field("Opacity", slider(l, "opacity", 0, 1, 0.01, pct)),
-      field("Tint", el("input", { type: "color", value: l.tint, oninput: (e) => { l.tint = e.target.value.toUpperCase(); touch(); } })),
-      el("label", { class: "check" }, el("input", { type: "checkbox", checked: l.see_through_black || null,
-        onchange: (e) => { l.see_through_black = e.target.checked; touch(); } }), " Black is see-through (Quake's front clouds)"));
+      field("Kind", kind),
+      ...own,
+      field("Drift east–west", slider(l, "speed", -0.2, 0.2, 0.001, spd, 0)),
+      field("Drift north–south", slider(l, "speed", -0.2, 0.2, 0.001, spd, 1)),
+      field("Size", slider(l, "scale", 0.2, 8, 0.1, (v) => (+v).toFixed(1) + "x"), "Bigger: smaller, more repeated clouds."),
+      field("Opacity", slider(l, "opacity", 0, 1, 0.01, pct)));
   }
 
   function skyEditor(s) {
+    const px = (v) => (+v ? v + " px" : "smooth");
     return el("div", { class: "blk-editor" },
       el("div", { class: "sky-top" },
         el("div", { class: "blk-props" },
@@ -235,13 +337,14 @@ void main() {
             for (const k of Object.keys(data.levels)) if (data.levels[k] === old) data.levels[k] = s.id;
             touch(); render();
           } }), "Levels refer to the sky by this."),
-          field("Horizon colour", el("input", { type: "color", value: s.horizon.color, oninput: (e) => { s.horizon.color = e.target.value.toUpperCase(); touch(); } })),
-          field("Horizon fade", slider(s.horizon, "fade", 0, 1, 0.01, (v) => Math.round(v * 100) + "%"), "How strongly the sky fades into that colour low down."),
-          field("Fog colour", el("input", { type: "color", value: s.fog_color, oninput: (e) => { s.fog_color = e.target.value.toUpperCase(); touch(); } }),
-            "Distant walls fade into this on levels open to the sky all over (usually the horizon colour)."),
-          el("label", { class: "check" }, el("input", { type: "checkbox", checked: s.smooth || null,
-            onchange: (e) => { s.smooth = e.target.checked; view.tex = {}; touch(); } }), " Smooth (filtered) pictures instead of sharp pixels")),
-        el("div", { class: "blk-preview" }, preview(), el("small", { class: "muted" }, "Drag to look around."))),
+          field("Pixel size", slider(s, "pixels", 0, 256, 8, px), "Sharp pixels across one repeat of the clouds (0: smooth)."),
+          field("Horizon colour", color(s.horizon, "color")),
+          field("Horizon fade", slider(s.horizon, "fade", 0, 1, 0.01, (v) => Math.round(v * 100) + "%"), "How strongly the clouds fade into that colour low down."),
+          check(s, "daynight", "Day and night (follows the real clock)", render),
+          s.daynight ? el("div", { class: "inline" }, check(s, "sun", "Sun"), check(s, "moon", "Moon"), check(s, "stars", "Stars")) : null,
+          s.daynight ? null : field("Sky colour", color(s, "fog_color"),
+            "Behind the clouds; distant walls also fade into it on levels open to the sky all over.")),
+        el("div", { class: "blk-preview" }, preview(s), el("small", { class: "muted" }, "Drag to look around."))),
       el("div", { class: "sky-layers" }, ...s.layers.map(layerEditor)));
   }
 

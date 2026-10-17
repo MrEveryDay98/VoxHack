@@ -5,38 +5,14 @@
    "id": "dusk",
    "name": "Dusk",
    "layers": [
-    {
-     "texture": "nhv_sky_back.png",
-     "speed": [
-      0.01,
-      0.006
-     ],
-     "scale": 3.0,
-     "opacity": 1,
-     "tint": "#FFFFFF",
-     "see_through_black": false
-    },
-    {
-     "texture": "nhv_sky_front.png",
-     "speed": [
-      0.025,
-      0.012
-     ],
-     "scale": 3.0,
-     "opacity": 1,
-     "tint": "#FFFFFF",
-     "see_through_black": true
-    }
+    {"kind": "generated", "texture": "nhv_sky_back.png", "speed": [0.01, 0.005], "scale": 1, "opacity": 1, "tint": "#D9CCF2", "see_through_black": false, "coverage": 0.45, "softness": 0.15, "detail": 5, "shade": "#594D73"},
+    {"kind": "generated", "texture": "nhv_sky_front.png", "speed": [0.02, 0.01], "scale": 2, "opacity": 0.8, "tint": "#FFFFFF", "see_through_black": true, "coverage": 0.3, "softness": 0.1, "detail": 4, "shade": "#8C8CA6"}
    ],
-   "horizon": {
-    "color": "#1A1428",
-    "fade": 0.7
-   },
-   "smooth": false,
-   "fog_color": "#1A1428"
+   "horizon": {"color": "#1A1428", "fade": 0.7},
+   "pixels": 64,
+   "fog_color": "#1A1428",
+   "daynight": false, "sun": true, "moon": true, "stars": true
   }
  ],
- "levels": {
-  "default": "dusk"
- }
+ "levels": {"default": "dusk"}
 }
