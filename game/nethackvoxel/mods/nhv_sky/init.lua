@@ -1,0 +1,2 @@
+-- Quake-style skies: the pictures (textures/) and skies.json, made in the
+-- editor's Sky tab. The game reads them in mods/nhv/sky.lua.

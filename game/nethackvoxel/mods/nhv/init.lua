@@ -88,6 +88,7 @@ dofile(path .. "effects.lua")
 dofile(path .. "msgfx.lua")
 dofile(path .. "holds.lua")
 dofile(path .. "avatar.lua")
+dofile(path .. "sky.lua")
 dofile(path .. "sound.lua")
 dofile(path .. "loop.lua")
 

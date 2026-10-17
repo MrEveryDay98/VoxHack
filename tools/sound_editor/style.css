@@ -256,3 +256,12 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .fx-hooks { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 6px; background: #0b0b10; border-radius: 6px; }
 .fx-hooks .check { font-size: 12px; }
 .blk-group { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); margin: 8px 0 2px; }
+
+.sky-top { display: grid; grid-template-columns: 300px 1fr; gap: 18px; }
+.sky-canvas { width: 100%; max-width: 640px; aspect-ratio: 16 / 9; display: block; border-radius: 6px; cursor: grab; image-rendering: pixelated; }
+.sky-layers { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 6px 18px; }
+.sky-layer { display: flex; flex-direction: column; gap: 8px; }
+.sky-layer h4 { margin: 14px 0 0; font-size: 13px; color: var(--accent); }
+.sky-level { margin: 4px 0; }
+.sky-level-name { display: inline-block; min-width: 11em; }
+@media (max-width: 860px) { .sky-top, .sky-layers { grid-template-columns: 1fr; } }

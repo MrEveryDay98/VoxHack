@@ -560,6 +560,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   if (b.dataset.tab === "casting") VoiceGen.render();
   if (b.dataset.tab === "blocks") Blocks.render();
   if (b.dataset.tab === "effects") Effects.render();
+  if (b.dataset.tab === "sky") Sky.render();
   history.replaceState(null, "", "#" + b.dataset.tab);
 }));
 $("#saveBtn").addEventListener("click", save);
@@ -596,7 +597,7 @@ document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); }
 });
 window.addEventListener("beforeunload", (e) => {
-  if (dirty || Blocks.isDirty() || Effects.isDirty()) { e.preventDefault(); e.returnValue = ""; }
+  if (dirty || Blocks.isDirty() || Effects.isDirty() || Sky.isDirty()) { e.preventDefault(); e.returnValue = ""; }
 });
 
 load().catch((e) => toast("Could not load: " + e.message));
@@ -604,6 +605,8 @@ Blocks.load().catch((e) => toast("Could not load blocks: " + e.message));
 $("#blkSave").addEventListener("click", () => Blocks.save());
 Effects.load().catch((e) => toast("Could not load effects: " + e.message));
 $("#fxSave").addEventListener("click", () => Effects.save());
+Sky.load().catch((e) => toast("Could not load skies: " + e.message));
+$("#skySave").addEventListener("click", () => Sky.save());
 // open a tab from the address (e.g. .../#blocks)
 {
   const t = location.hash.slice(1);

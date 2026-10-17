@@ -36,6 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks_api  # noqa: E402
 import effects_api  # noqa: E402
+import sky_api  # noqa: E402
 import speakable  # noqa: E402
 import voicegen  # noqa: E402
 
@@ -61,7 +62,7 @@ CONFIG = os.path.join(MOD, "config.json")
 CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/voices.js": ("voices.js", "text/javascript"),
-          "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"),
+          "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"), "/sky.js": ("sky.js", "text/javascript"),
           "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
@@ -294,6 +295,9 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/gametex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             return self.send_file(blocks_api.game_texture_path(m.group(1)), "image/png")
+        m = re.match(r"^/skytex/([A-Za-z0-9_.-]+\.png)$", url.path)
+        if m:
+            return self.send_file(sky_api.texture_path(m.group(1)), "image/png")
         m = re.match(r"^/fxtex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             return self.send_file(effects_api.texture_path(m.group(1)), "image/png")
@@ -316,6 +320,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
                                    "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
                                    "overrides": blocks_api.load_overrides()})
+        if path == "/api/sky":
+            return self.send(200, {"data": sky_api.load(), "textures": sky_api.textures(),
+                                   "levels": sky_api.level_names()})
         if path == "/api/effects":
             return self.send(200, {"data": effects_api.load(), "textures": effects_api.textures(),
                                    "sheet": blocks_api.sheet_info(),
@@ -394,6 +401,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"overrides": blocks_api.save_overrides(data.get("blocks", {}))})
             except (ValueError, TypeError) as e:
                 return self.send(400, {"error": str(e)})
+        if path == "/api/sky":
+            try:
+                return self.send(200, sky_api.save(data))
+            except (ValueError, TypeError) as e:
+                return self.send(400, {"error": str(e)})
         if path == "/api/effects":
             try:
                 return self.send(200, {"effects": effects_api.save(data)})
@@ -427,6 +439,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == "/api/upload":
                 return self.upload(q)
+            if url.path == "/api/sky/texture":
+                name = (q.get("name") or ["layer"])[0]
+                return self.send(200, {"file": sky_api.upload_texture(name, self.read_body())})
             if url.path == "/api/effects/texture":
                 name = (q.get("name") or ["particle"])[0]
                 return self.send(200, {"file": effects_api.upload_texture(name, self.read_body())})

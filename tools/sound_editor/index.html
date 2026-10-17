@@ -30,6 +30,7 @@
   <button role="tab" data-tab="library">Sound library</button>
   <button role="tab" data-tab="blocks">Blocks</button>
   <button role="tab" data-tab="effects">Effects</button>
+  <button role="tab" data-tab="sky">Sky</button>
 </nav>
 
 <main>
@@ -96,6 +97,15 @@
     <div id="effectsBody"></div>
   </section>
 
+  <section id="tab-sky" class="tab" hidden>
+    <div class="toolbar">
+      <span class="hint" style="margin:0">Quake-style skies: two scrolling cloud layers. Shown on levels open to the sky. The game picks up saved changes while it runs.</span>
+      <span id="skyDirty" class="dirty" hidden>Unsaved skies</span>
+      <button id="skySave" class="primary" disabled>Save skies</button>
+    </div>
+    <div id="skyBody"></div>
+  </section>
+
   <section id="tab-library" class="tab" hidden>
     <div class="toolbar">
       <input id="libSearch" type="search" placeholder="Search sounds…">
@@ -135,6 +145,7 @@
 <script src="/voices.js"></script>
 <script src="/blocks.js"></script>
 <script src="/effects.js"></script>
+<script src="/sky.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

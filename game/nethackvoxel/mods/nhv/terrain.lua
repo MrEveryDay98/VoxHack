@@ -445,6 +445,66 @@ local function write_squares(sqs)
 	nhv.doors.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
 end
 
+-- ---------------------------------------------------------------- sky
+-- Does the level have the sky over any part of it? Open-sky levels (see
+-- OPEN_SKY) do; so does one with a cell whose ceiling is open - a column
+-- with nothing from the ceiling layer up. Not the cells that open it on
+-- purpose for something else: traps (holes, trap doors...) and the ways up.
+local NO_SKY_SLOT = {stairs_up = true, ladder_up = true}
+local open_cache = setmetatable({}, {__mode = "k"}) -- nodes -> open?
+
+local function nodes_open(nodes)
+	local known = open_cache[nodes]
+	if known ~= nil then
+		return known
+	end
+	local open = false
+	for lx = 0, U.TILE - 1 do
+		for lz = 0, U.TILE - 1 do
+			local clear = true
+			for ly = prefabs.CEIL, prefabs.H - 1 do
+				local nd = nodes[prefabs.index(lx, ly, lz)]
+				if nd and nd.n ~= "air" and nd.n ~= "nhv:carve" then
+					clear = false
+					break
+				end
+			end
+			if clear then
+				open = true
+			end
+		end
+	end
+	open_cache[nodes] = open
+	return open
+end
+
+local function square_open(sq)
+	if not sq.seen and not sq.area_cell then
+		return false
+	end
+	if sq.area_cell then
+		return nodes_open(sq.area_cell.nodes)
+	end
+	local slot = sq.slot
+	if not slot or NO_SKY_SLOT[slot] or slot:find("^trap_") then
+		return false
+	end
+	return nodes_open(prefabs.get(slot).nodes)
+end
+
+-- is the sky over this level (anywhere)?
+function terrain.has_sky()
+	if terrain.open_sky then
+		return true
+	end
+	for _, sq in pairs(terrain.built) do
+		if sq.tx ~= 0 and square_open(sq) then
+			return true
+		end
+	end
+	return false
+end
+
 -- ---------------------------------------------------------------- updating
 terrain.built = {}
 
