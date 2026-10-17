@@ -48,9 +48,155 @@
    "sun": true,
    "moon": true,
    "stars": true
+  },
+  {
+   "id": "sky1",
+   "name": "Plane of Fire",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.2,
+      0.2
+     ],
+     "scale": 1.0,
+     "opacity": 1,
+     "tint": "#FFA200",
+     "see_through_black": false,
+     "coverage": 0.71,
+     "softness": 0.15,
+     "detail": 4,
+     "shade": "#FF5900"
+    },
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.096,
+      -0.088
+     ],
+     "scale": 1.2,
+     "opacity": 0.8,
+     "tint": "#000000",
+     "see_through_black": false,
+     "coverage": 0.59,
+     "softness": 0,
+     "detail": 4,
+     "shade": "#666673"
+    }
+   ],
+   "horizon": {
+    "color": "#FF0000",
+    "fade": 0.34
+   },
+   "pixels": 40,
+   "fog_color": "#FF2E2E",
+   "daynight": false,
+   "sun": true,
+   "moon": true,
+   "stars": true
+  },
+  {
+   "id": "sky2",
+   "name": "Water",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      -0.046,
+      -0.046
+     ],
+     "scale": 1.4,
+     "opacity": 1,
+     "tint": "#6B97FF",
+     "see_through_black": false,
+     "coverage": 0.85,
+     "softness": 0.27,
+     "detail": 4,
+     "shade": "#00008A"
+    },
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.067,
+      0.071
+     ],
+     "scale": 2.0,
+     "opacity": 0.8,
+     "tint": "#52B4FF",
+     "see_through_black": false,
+     "coverage": 0.76,
+     "softness": 0.37,
+     "detail": 4,
+     "shade": "#8585FF"
+    }
+   ],
+   "horizon": {
+    "color": "#000B5C",
+    "fade": 0.6
+   },
+   "pixels": 40,
+   "fog_color": "#0033FF",
+   "daynight": false,
+   "sun": true,
+   "moon": true,
+   "stars": true
+  },
+  {
+   "id": "sky3",
+   "name": "Astral",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.2,
+      0.005
+     ],
+     "scale": 1.0,
+     "opacity": 1,
+     "tint": "#C457FF",
+     "see_through_black": false,
+     "coverage": 0.52,
+     "softness": 0.15,
+     "detail": 4,
+     "shade": "#FF00F7"
+    },
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.2,
+      0.01
+     ],
+     "scale": 2.0,
+     "opacity": 0.8,
+     "tint": "#FF0000",
+     "see_through_black": false,
+     "coverage": 0.41,
+     "softness": 0.1,
+     "detail": 4,
+     "shade": "#FF75E1"
+    }
+   ],
+   "horizon": {
+    "color": "#FF00F7",
+    "fade": 0.6
+   },
+   "pixels": 64,
+   "fog_color": "#000000",
+   "daynight": true,
+   "sun": false,
+   "moon": false,
+   "stars": true
   }
  ],
  "levels": {
-  "default": "dusk"
+  "default": "dusk",
+  "fire": "sky1",
+  "water": "sky2"
  }
 }
