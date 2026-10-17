@@ -41,6 +41,13 @@ end
 reg("squeeze_block", {description = "Tight gap", drawtype = "airlike", walkable = true,
 	pointable = false, sunlight_propagates = true, buildable_to = false})
 
+-- the level's safety wall: an invisible box all round the level (its four
+-- sides, over the top and under the bottom) that nothing can go through,
+-- so you can never leave the level however you get past its own walls
+reg("bounds", {description = "Edge of the level", drawtype = "airlike", walkable = true,
+	pointable = false, diggable = false, sunlight_propagates = true, buildable_to = false,
+	groups = {not_in_creative_inventory = 1}})
+
 -- solid, opaque
 reg("void", {description = "Unexplored", tiles = {BLACK}, paramtype = "none"})
 reg("rock", {description = "Stone", tiles = {tile_tex(1272)}, paramtype = "none"})
@@ -780,6 +787,30 @@ function terrain.update(map, force)
 	return #sqs
 end
 
+-- The safety wall round the whole level (columns 0..COLNO-1 and every
+-- row, every layer of the cells): one node outside it on every side.
+local function build_bounds()
+	local x0, x1 = -1, U.COLNO * U.TILE
+	local z0, z1 = -1, U.ROWNO * U.TILE
+	local y0, y1 = prefabs.Y0 - 1, prefabs.Y0 + prefabs.H
+	local vm = core.get_voxel_manip()
+	local emin, emax = vm:read_from_map(vector.new(x0, y0, z0), vector.new(x1, y1, z1))
+	local area = VoxelArea(emin, emax)
+	local ids = vm:get_data()
+	local b = cid("nhv:bounds")
+	for z = z0, z1 do
+		for y = y0, y1 do
+			for x = x0, x1 do
+				if x == x0 or x == x1 or z == z0 or z == z1 or y == y0 or y == y1 then
+					ids[area:index(x, y, z)] = b
+				end
+			end
+		end
+	end
+	vm:set_data(ids)
+	vm:write_to_map(true)
+end
+
 -- Rebuild everything (level change, or prefabs changed).
 function terrain.build_all(map)
 	terrain.built = {}
@@ -794,6 +825,7 @@ function terrain.build_all(map)
 		sqs[#sqs + 1] = {tx = 0, ty = ty, seen = true, slot = "stone", rot = 0, typ = T.STONE}
 	end
 	write_squares(sqs)
+	build_bounds()
 end
 
 -- slot built at a square (or nil)
