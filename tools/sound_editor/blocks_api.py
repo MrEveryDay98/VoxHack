@@ -71,7 +71,14 @@ def clean_block(b):
     if tex.get("file"):
         if not re.match(r"^[A-Za-z0-9_.-]+\.png$", tex["file"]):
             raise ValueError("bad texture file name")
-        tex = {"file": tex["file"]}
+        # (an animation: that many frames stacked top to bottom, looping
+        # every "length" seconds)
+        frames = int(max(1, min(64, float(tex.get("frames") or 1))))
+        out = {"file": tex["file"]}
+        if frames > 1:
+            out["frames"] = frames
+            out["length"] = max(0.1, min(30.0, float(tex.get("length") or 1)))
+        tex = out
     elif tex.get("sheet") is not None:
         tex = {"sheet": int(tex["sheet"])}
     else:

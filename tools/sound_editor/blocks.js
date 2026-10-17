@@ -65,7 +65,9 @@ const Blocks = (() => {
     const d = el("div", { class: "tex", style: `width:${size}px;height:${size}px` });
     if (t && (t.file || t.gamefile)) {
       d.style.backgroundImage = t.file ? `url(/blocktex/${t.file})` : `url(/gametex/${t.gamefile})`;
-      d.style.backgroundSize = "100% 100%";
+      // (an animation: its first frame)
+      d.style.backgroundSize = `100% ${(t.frames || 1) * 100}%`;
+      d.style.backgroundPosition = "0 0";
     } else if (t && t.color) {
       d.style.background = t.color;
     } else if (t && t.sheet != null) {
@@ -81,7 +83,7 @@ const Blocks = (() => {
 
   function texCss(t) {
     // CSS for a face of the preview (background stretched over the face)
-    if (t && t.file) return `background-image:url(/blocktex/${t.file});background-size:100% 100%;`;
+    if (t && t.file) return `background-image:url(/blocktex/${t.file});background-size:100% ${(t.frames || 1) * 100}%;background-position:0 0;`;
     if (t && t.gamefile) return `background-image:url(/gametex/${t.gamefile});background-size:100% 100%;`;
     if (t && t.color) return `background:${t.color};`;
     if (t && t.sheet != null) {
@@ -146,9 +148,17 @@ const Blocks = (() => {
   function texturePicker(b) {
     const box = el("div", { class: "blk-texpick" });
     const tabs = el("div", { class: "chips" },
-      ...[["sheet", "Sprite sheet"], ["file", "Your pictures"]].map(([k, l]) =>
+      ...[["sheet", "Sprite sheet"], ["file", "Your pictures"], ["gen", "Generate"]].map(([k, l]) =>
         el("button", { class: "chip", "aria-pressed": String(texTab === k), onclick: () => { texTab = k; render(); } }, l)));
     box.append(tabs);
+    if (texTab === "gen") {
+      // (saved as one of your pictures, and used for this block)
+      box.append(TexGen.panel((t) => {
+        if (!textures.includes(t.file)) textures.push(t.file);
+        b.texture = t; touch(); render();
+      }));
+      return box;
+    }
     if (texTab === "sheet") {
       const q = el("input", { type: "search", placeholder: "Search sprites (e.g. spike, door, tree)…", value: sheetQuery,
         oninput: (e) => { sheetQuery = e.target.value; drawGrid(); } });

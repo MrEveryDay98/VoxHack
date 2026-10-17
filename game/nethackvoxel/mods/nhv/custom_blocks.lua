@@ -29,6 +29,15 @@ nhv.custom_blocks = cblocks
 local MODPATH = core.get_modpath("nhv_blocks")
 local DATA = MODPATH and (MODPATH .. DIR_DELIM .. "blocks.json")
 
+-- an animated picture (frames stacked top to bottom): its tile animation
+local function animation_of(t)
+	local frames = type(t) == "table" and tonumber(t.frames) or 1
+	if frames > 1 and t.file and t.file ~= "" then
+		return {type = "vertical_frames", aspect_w = 16, aspect_h = 16,
+			length = tonumber(t.length) or 1}
+	end
+end
+
 local function texture_of(t)
 	if type(t) ~= "table" then
 		return "blank.png"
@@ -53,6 +62,7 @@ local function register(b)
 	end
 	local name = "nhv:x_" .. id
 	local tex = texture_of(b.texture)
+	local anim = animation_of(b.texture)
 	local shape = b.shape or "cube"
 	local solid = b.solid == true
 	local light = math.max(0, math.min(14, tonumber(b.light) or 0))
@@ -87,7 +97,7 @@ local function register(b)
 			tiles[i] = {name = "blank.png"} -- not drawn (fully see-through)
 			any_hidden = true
 		else
-			tiles[i] = {name = tex, backface_culling = not back[side]}
+			tiles[i] = {name = tex, backface_culling = not back[side], animation = anim}
 		end
 	end
 	local def = {
@@ -100,7 +110,7 @@ local function register(b)
 		def[k] = v
 	end
 	if shape == "x" then
-		def.tiles = {tex}
+		def.tiles = {{name = tex, animation = anim}}
 		def.drawtype = "plantlike"
 		def.visual_scale = tonumber(b.scale) or 1
 		def.sunlight_propagates = true

@@ -265,3 +265,10 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .sky-level { margin: 4px 0; }
 .sky-level-name { display: inline-block; min-width: 11em; }
 @media (max-width: 860px) { .sky-top, .sky-layers { grid-template-columns: 1fr; } }
+
+.tg { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: start; }
+.tg > .inline { grid-column: 1 / -1; }
+.tg-preview { display: flex; flex-direction: column; gap: 4px; }
+.tg-view { width: 256px; height: 256px; image-rendering: pixelated; background: #0b0b10; border-radius: 6px; }
+.tg-controls { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 6px 14px; }
+@media (max-width: 860px) { .tg, .tg-controls { grid-template-columns: 1fr; } }

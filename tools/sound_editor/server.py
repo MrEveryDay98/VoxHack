@@ -63,6 +63,7 @@ CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/voices.js": ("voices.js", "text/javascript"),
           "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"), "/sky.js": ("sky.js", "text/javascript"),
+          "/texgen.js": ("texgen.js", "text/javascript"),
           "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
