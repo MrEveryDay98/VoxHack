@@ -799,6 +799,14 @@
    ],
    "volume": 100,
    "pitch_var": 0.05
+  },
+  "music_sokoban": {
+   "sounds": [
+    "nhv_music_happyadveture"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {

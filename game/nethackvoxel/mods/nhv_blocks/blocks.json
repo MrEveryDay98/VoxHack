@@ -15,9 +15,29 @@
    "damage": "1d4",
    "repeat": 0.0,
    "cause": "sharp spikes",
+   "spikes": true,
    "backfaces": {},
-   "hidden": {},
-   "spikes": true
+   "hidden": {}
+  },
+  {
+   "id": "block1",
+   "name": "Portal",
+   "shape": "cube",
+   "texture": {
+    "file": "nhvb_portal1.png",
+    "frames": 16,
+    "length": 1.0
+   },
+   "scale": 1.0,
+   "solid": true,
+   "climbable": false,
+   "light": 0,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {},
+   "hidden": {}
   }
  ]
 }

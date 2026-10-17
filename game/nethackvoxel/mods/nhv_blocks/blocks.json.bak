@@ -15,7 +15,9 @@
    "damage": "1d4",
    "repeat": 0.0,
    "cause": "sharp spikes",
-   "backfaces": {}
+   "backfaces": {},
+   "hidden": {},
+   "spikes": true
   }
  ]
 }
