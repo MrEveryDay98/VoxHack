@@ -113,8 +113,8 @@ local function set_speed(player)
 	if h and stuck(h) then
 		speed = 0
 	end
-	if player_mod.frozen then
-		speed = 0
+	if player_mod.frozen or nhv.clock.searching() then
+		speed = 0 -- (a prompt is up; searching)
 	end
 	-- Only the walking speeds change: the engine's "speed" also scales how
 	-- fast you speed up AND slow down, so at 0 you'd keep sliding at
@@ -592,8 +592,15 @@ local function hold_still(player)
 	return true
 end
 
+local was_searching = false
 core.register_globalstep(function()
 	local player = player_mod.get()
+	-- (searching started or ended: stand still / walk again)
+	local searching = nhv.clock.searching()
+	if player and searching ~= was_searching then
+		was_searching = searching
+		set_speed(player)
+	end
 	if player and nh.snap then
 		try_escape(player)
 		if not hold_still(player) then

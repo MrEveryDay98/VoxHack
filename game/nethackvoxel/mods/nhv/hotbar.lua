@@ -430,6 +430,15 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
+		if param == "search" then
+			nhv.clock.search_held = true -- (searches on until let go)
+		elseif param == "searchup" then
+			nhv.clock.search_held = false
+			return true
+		elseif param == "searchcount" then
+			hotbar.ask_search_count(core.get_player_by_name(pname))
+			return true
+		end
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
 			or (param == "pay" and hotbar.PAY)
@@ -459,6 +468,60 @@ core.register_chatcommand("nhvkey", {
 		return true
 	end,
 })
+
+-- ---------------------------------------------------------------- searching
+-- Search held: another search as soon as the last has played out (time
+-- runs fast meanwhile; clock.lua)
+core.register_globalstep(function()
+	if not nhv.clock.search_held then
+		return
+	end
+	-- (a question or menu came up: searching stops - letting go of the key
+	-- while it's up wouldn't be noticed)
+	if nhv.ui.open or nhv.ui.menu_open or nhv.ui.chat_open then
+		nhv.clock.search_held = false
+		return
+	end
+	if not nh.ready() or nhv.clock.busy() then
+		return
+	end
+	hotbar.flash_search()
+	nhv.actions.run({label = hotbar.SEARCH[1], keys = {{key = "s"}}}, {kind = "search"})
+end)
+
+-- Ctrl+X: search for a number of turns (NetHack's count, "20s"); it
+-- plays out fast, and stops early if something turns up, as in NetHack
+local COUNT_FORM = "nhv:searchcount"
+hotbar.search_count = 20
+function hotbar.ask_search_count(player)
+	if not player or nhv.ui.open or not nh.ready() then
+		return
+	end
+	core.show_formspec(player:get_player_name(), COUNT_FORM, nhv.theme.head(8, 3.6)
+		.. "label[0.5,0.7;Search for how many turns?]"
+		.. ("field[0.5,1.3;3,0.8;count;;%d]field_close_on_enter[count;false]"):format(hotbar.search_count)
+		.. "button[3.8,1.3;3.7,0.8;go;Search]"
+		.. "button[3.8,2.4;3.7,0.8;cancel;Cancel]")
+end
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= COUNT_FORM then
+		return false
+	end
+	if fields.go or fields.key_enter_field == "count" then
+		local n = math.floor(tonumber(fields.count or "") or 0)
+		core.close_formspec(player:get_player_name(), COUNT_FORM)
+		if n >= 1 and nh.ready() and not nhv.clock.busy() then
+			n = math.min(n, 999)
+			hotbar.search_count = n
+			hotbar.flash_search()
+			nhv.clock.act(tostring(n) .. "s", {kind = "search_count"})
+		end
+	elseif fields.cancel then
+		core.close_formspec(player:get_player_name(), COUNT_FORM)
+	end
+	return true
+end)
 
 -- ---------------------------------------------------------------- command line
 nhv.ui.chat_open = false

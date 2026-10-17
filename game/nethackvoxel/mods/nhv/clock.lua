@@ -34,6 +34,18 @@ clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0.12
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
+clock.FAST = 6              -- searching: time runs this x the full rate
+
+-- Searching passes time fast: while Search is held (one search after
+-- another; hotbar.lua) and while a counted search (Ctrl+X) plays out, time
+-- runs FAST x the full rate - the world (monsters walking...) keeps up
+-- with NetHack - and you stand still. It drops back to the usual rate the
+-- moment it ends. Getting hurt stops a held search (until pressed again).
+clock.search_held = false
+clock.fast_debt = false -- (paying a counted search's turns)
+function clock.searching()
+	return clock.search_held or (clock.fast_debt and clock.debt > 0)
+end
 
 function clock.realtime()
 	return core.settings:get("nhv_time_mode") == "realtime"
@@ -110,13 +122,24 @@ function clock.update(dtime, player)
 	if nhv.wheel and nhv.wheel.is_open() then
 		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen
 	end
-	clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
+	local fast = clock.searching()
+	if fast then
+		target = clock.FAST
+		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
+	elseif clock.scale > 1 then
+		clock.scale = target -- (searching just ended: straight back, no easing)
+	else
+		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
+	end
 	local dtg = dtime * clock.scale * clock.RATE
 	if clock.debt > 0 then
 		clock.debt = clock.debt - dtg
 		if clock.debt < 0 then
 			clock.acc = clock.acc - clock.debt
 			clock.debt = 0
+		end
+		if clock.debt <= 0 then
+			clock.fast_debt = false
 		end
 	else
 		clock.acc = clock.acc + dtg
@@ -138,7 +161,8 @@ end
 -- Do an action that takes game time (charged when its result arrives).
 -- (aimed first: whatever it throws or zaps goes where the crosshair points;
 -- see actions.aim)
-local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true}
+local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true,
+	search = true, search_count = true}
 function clock.act(keys, info)
 	local player = nhv.player.get()
 	local aim = player and not (info and NO_AIM[info.kind]) and nhv.actions.aim_keys(player)
@@ -165,6 +189,11 @@ nh.on_snapshot(function(snap, action)
 	end
 	local prev = clock.last_moves
 	clock.last_moves = snap.hero.moves
+	-- (hurt while holding Search: it stops, until pressed again)
+	if clock.last_hp and snap.hero.hp < clock.last_hp then
+		clock.search_held = false
+	end
+	clock.last_hp = snap.hero.hp
 	if prev and action and action.kind ~= "tick" and action.kind ~= "hmove" then
 		local passed = snap.hero.moves - prev
 		if passed > 0 and passed < 1000 then -- (not a level change's jump)
@@ -172,6 +201,9 @@ nh.on_snapshot(function(snap, action)
 			local paid = math.min(clock.acc, owed)
 			clock.acc = clock.acc - paid
 			clock.add_debt(owed - paid)
+			if action.kind == "search_count" and clock.debt > 0 then
+				clock.fast_debt = true
+			end
 		end
 	end
 end)
