@@ -797,7 +797,7 @@ core.register_globalstep(function(dtime)
 			text = ("Cell: %s%s\n%s\n(red block in the base = north)"):format(slot,
 				info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
 		end
-		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 2x speed - /fullbright"
+		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 4x speed - /fullbright"
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
@@ -834,7 +834,17 @@ core.register_chatcommand("fullbright", {
 	end,
 })
 
--- holding Ctrl moves you (flying or walking) at twice the speed; a light
+-- Quit in the pause menu sends "/nhvtitle" (the game's title screen); the
+-- editor has none, so it just closes (everything is saved on the way out)
+core.register_chatcommand("nhvtitle", {
+	description = "(NetHack Voxel) leave the editor",
+	func = function(pname)
+		core.disconnect_player(pname, "nhv:quit")
+		return true
+	end,
+})
+
+-- holding Ctrl moves you (flying or walking) at four times the speed; a light
 -- goes with you, as in the game (never saved into a cell or area)
 local ctrl_held = {}
 core.register_globalstep(function()
@@ -844,7 +854,7 @@ core.register_globalstep(function()
 		local ctrl = player:get_player_control().nhv_ctrl or false
 		if ctrl ~= (ctrl_held[name] or false) then
 			ctrl_held[name] = ctrl
-			player:set_physics_override({speed = ctrl and 2 or 1})
+			player:set_physics_override({speed = ctrl and 4 or 1})
 		end
 	end
 end)

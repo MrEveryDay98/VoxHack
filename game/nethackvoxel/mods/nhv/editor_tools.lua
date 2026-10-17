@@ -5,6 +5,8 @@
 --   /fill [block]           fill the box (default: the last block you placed)
 --   /clear                  empty it
 --   /replace <from> [<to>]  swap one block for another (or for air)
+--   /replace                the block you're looking at for the one in
+--                           your hand (or for air, with an empty hand)
 --   /walls [block]          the box's four sides only
 --   /cutaway ceiling        the ceiling (and everything above it) off every
 --                           square of the area you're on - or, with a box
@@ -205,8 +207,11 @@ cmd("sel", "", "Hold the selector (left-click: corner 1, right-click: corner 2)"
 end)
 
 cmd("desel", "", "Forget the selected box", function(pname)
+	local s = tools.sel[pname]
+	if s and s.obj and s.obj:get_pos() then
+		s.obj:remove()
+	end
 	tools.sel[pname] = {}
-	show_box(pname)
 	return true, "Selection cleared."
 end)
 
@@ -236,18 +241,48 @@ cmd("clear", "", "Empty the selected box", function(pname)
 	end)
 end)
 
-cmd("replace", "<from> [<to>]", "In the selected box, swap one block for another (or for air)",
+-- the block the player is looking at (within reach), and the one in hand
+local function looked_at(player)
+	local eye = vector.add(player:get_pos(), vector.new(0, player:get_properties().eye_height or 1.625, 0))
+	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 20))
+	for pt in core.raycast(eye, to, false, false) do
+		if pt.type == "node" then
+			return core.get_node(pt.under).name
+		end
+	end
+end
+
+local function in_hand(player)
+	local n = player:get_wielded_item():get_name()
+	return core.registered_nodes[n] and n or "air"
+end
+
+cmd("replace", "[<from> [<to>]]", "In the selected box, swap one block for another (or for air); "
+	.. "with nothing after it: the block you're looking at for the one in your hand",
 	function(pname, param)
 		local minp, maxp, err = need_box(pname)
 		if not minp then
 			return false, err
 		end
-		local a, b = param:match("^%s*(%S+)%s*(%S*)%s*$")
-		local from, to = block(a), (b and b ~= "") and block(b) or "air"
+		local from, to, b
+		if param:match("^%s*$") then
+			local player = core.get_player_by_name(pname)
+			from = player and looked_at(player)
+			to = player and in_hand(player)
+			if not from then
+				return false, "Look at a block of the kind to replace (and hold the new one), or /replace <from> [<to>]."
+			end
+		else
+			local a
+			a, b = param:match("^%s*(%S+)%s*(%S*)%s*$")
+			from, to = block(a), (b and b ~= "") and block(b) or "air"
+		end
 		if not from then
 			return false, "Which block? /replace <from> [<to>]"
 		elseif not to then
 			return false, ("No block called \"%s\"."):format(b)
+		elseif from == to then
+			return false, "That's the same block."
 		end
 		local fid, tid = core.get_content_id(from), core.get_content_id(to)
 		return apply(pname, minp, maxp, function(_, _, _, id, p2)
