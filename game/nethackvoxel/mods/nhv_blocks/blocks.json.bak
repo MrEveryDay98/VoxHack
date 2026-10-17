@@ -11,6 +11,7 @@
    "scale": 1.0,
    "solid": false,
    "climbable": false,
+   "turns": "",
    "light": 0,
    "damage": "1d4",
    "repeat": 0.0,
@@ -31,6 +32,7 @@
    "scale": 1.0,
    "solid": true,
    "climbable": false,
+   "turns": "",
    "light": 0,
    "damage": "",
    "repeat": 0.0,
@@ -59,6 +61,7 @@
    "scale": 1.0,
    "solid": true,
    "climbable": false,
+   "turns": "north",
    "light": 0,
    "damage": "",
    "repeat": 0.0,
@@ -73,6 +76,28 @@
     "east": true,
     "west": true,
     "south": true
+   }
+  },
+  {
+   "id": "block3",
+   "name": "Column",
+   "shape": "cube",
+   "texture": {
+    "file": "nhv_wall_column.png"
+   },
+   "scale": 1.0,
+   "solid": false,
+   "climbable": false,
+   "turns": "",
+   "light": 0,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {},
+   "hidden": {},
+   "texture_top": {
+    "file": "nhv_wall_columnTop.png"
    }
   }
  ]
