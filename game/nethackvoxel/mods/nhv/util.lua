@@ -39,6 +39,7 @@ U.LOC_SEEN = 0x01
 U.LOC_CANSEE = 0x02
 U.LOC_LIT = 0x04
 U.LOC_WASLIT = 0x08
+U.LOC_TRAP = 0x20 -- a trap there, found or not (only where stepping sets it off)
 
 -- nhv_mon.flags
 U.MON_PET = 0x01

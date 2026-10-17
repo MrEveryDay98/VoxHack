@@ -141,6 +141,8 @@ NHV_API int nhv_poll_event(nhv_event *out);
 #define NHV_LOC_LIT      0x04  /* location is lit */
 #define NHV_LOC_WASLIT   0x08  /* remembered as lit */
 #define NHV_LOC_COULDSEE 0x10  /* clear path from hero (ignoring light) */
+#define NHV_LOC_TRAP     0x20  /* a trap is here, found or not (for where
+                                  stepping sets it off; never shown) */
 
 typedef struct nhv_loc {
     int glyph;      /* display buffer: what is shown right now */

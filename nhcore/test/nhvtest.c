@@ -134,6 +134,18 @@ send_arg(const char *a)
             }
         printf("INTO: nobody next to the hero\n");
         nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strcmp(a, "traps")) {
+        /* every square with a trap (NHV_LOC_TRAP), and whether it's known */
+        static nhv_loc map[NHV_COLNO * NHV_ROWNO];
+        int x, y;
+
+        nhv_get_map(map);
+        for (x = 1; x < NHV_COLNO; x++)
+            for (y = 0; y < NHV_ROWNO; y++)
+                if (map[x * NHV_ROWNO + y].flags & NHV_LOC_TRAP)
+                    printf("TRAP at %d,%d (%s)\n", x, y,
+                           map[x * NHV_ROWNO + y].trap != 255 ? "known" : "not found");
+        nhv_send_key('#'), nhv_send_text("nhvtick");
     } else if (!strcmp(a, "mons")) {
         static nhv_mon mons[64];
         nhv_hero h;

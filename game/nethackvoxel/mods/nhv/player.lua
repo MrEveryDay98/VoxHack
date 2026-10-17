@@ -19,9 +19,9 @@ local player_mod = {
 nhv.player = player_mod
 
 local GRACE_US = 400000 -- after we move the body, ignore stale positions
--- a known trap's square is stepped on only this far (nodes) in from its
--- edges: its middle 1.4 x 1.4 of the 3 x 3
-local TRAP_EDGE = 0.8
+-- a trap's square is stepped on only this far (nodes) in from its edges:
+-- its middle 1 x 1 of the 3 x 3
+local TRAP_EDGE = 1.0
 
 function player_mod.get()
 	return core.get_connected_players()[1]
@@ -363,13 +363,13 @@ local function step(player)
 	if boulder_at(tx, ty) or blocker_at(tx, ty) then
 		return
 	end
-	-- a trap you know of is only stepped on well inside its square: cutting
-	-- across its corner or along its edge (stepping diagonally past it out
-	-- of a doorway, as NetHack lets you) doesn't set it off
+	-- a trap's square (found or not) is only stepped on well inside it:
+	-- cutting across its corner or along its edge (stepping diagonally past
+	-- it out of a doorway, as NetHack lets you) doesn't set it off
 	local snap_map = nh.snap and nh.snap.map
-	local trap = snap_map and snap_map.trap and snap_map.trap[U.idx(tx, ty)]
+	local trap = snap_map and U.has(snap_map.flags[U.idx(tx, ty)] or 0, U.LOC_TRAP)
 	-- (dropped into its hole, a pit's: you're in it, edge or not)
-	if trap and trap ~= 255 and pos.y > U.STAND_Y - 0.3 then
+	if trap and pos.y > U.STAND_Y - 0.3 then
 		local c = U.tile_center(tx, ty)
 		local inner = U.TILE / 2 - TRAP_EDGE
 		if math.abs(pos.x - c.x) > inner or math.abs(pos.z - c.z) > inner then

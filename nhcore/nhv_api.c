@@ -342,7 +342,8 @@ nhv_get_map(nhv_loc *buf)
                        | (cansee(x, y) ? NHV_LOC_CANSEE : 0)
                        | (lev->lit ? NHV_LOC_LIT : 0)
                        | (lev->waslit ? NHV_LOC_WASLIT : 0)
-                       | (couldsee(x, y) ? NHV_LOC_COULDSEE : 0);
+                       | (couldsee(x, y) ? NHV_LOC_COULDSEE : 0)
+                       | (t_at(x, y) ? NHV_LOC_TRAP : 0);
             l->door = (IS_DOOR(lev->typ) || lev->typ == SDOOR)
                               ? (unsigned char) lev->doormask : 0;
             {
