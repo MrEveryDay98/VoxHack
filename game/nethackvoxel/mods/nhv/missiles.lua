@@ -96,8 +96,7 @@ end)
 local function solid_at(p)
 	local node = core.get_node(vector.round(p))
 	local def = core.registered_nodes[node.name]
-	-- (a monster's square stops only the player)
-	return def and def.walkable and not (def.groups and def.groups.nhv_monblock)
+	return def and def.walkable
 end
 
 local function hits_hero(p, hp)
