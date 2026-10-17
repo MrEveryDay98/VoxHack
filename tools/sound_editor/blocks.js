@@ -37,10 +37,12 @@ const Blocks = (() => {
     // before pictures brought them along: it gets them, to be saved)
     let fixed = false;
     for (const blk of data.blocks) {
-      const a = blk.texture && blk.texture.file && anims[blk.texture.file];
-      if (a && blk.texture.frames !== a.frames) {
-        Object.assign(blk.texture, a);
-        fixed = true;
+      for (const k of ["texture", "texture_top", "texture_bottom"]) {
+        const a = blk[k] && blk[k].file && anims[blk[k].file];
+        if (a && blk[k].frames !== a.frames) {
+          Object.assign(blk[k], a);
+          fixed = true;
+        }
       }
     }
     const b = data.blocks[sel];
@@ -126,8 +128,10 @@ const Blocks = (() => {
     const rig = el("div", { class: "blk-rig" });
     scene.append(rig);
     const tex = texCss(b.texture);
-    const face = (w, h, transform, extra = "") =>
-      el("div", { class: "blk-face", style: `width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${transform};${tex}${extra}` });
+    const topTex = b.texture_top ? texCss(b.texture_top) : tex;
+    const botTex = b.texture_bottom ? texCss(b.texture_bottom) : topTex;
+    const face = (w, h, transform, extra = "", t = tex) =>
+      el("div", { class: "blk-face", style: `width:${w}px;height:${h}px;margin:${-h / 2}px 0 0 ${-w / 2}px;transform:${transform};${t}${extra}` });
     const shape = b.shape || "cube";
     const s = (b.scale || 1) * S;
     const bf = b.backfaces || {};
@@ -142,8 +146,8 @@ const Blocks = (() => {
         face(S, h, `translateY(${y}px) rotateY(180deg) translateZ(${d / 2}px)`, show("north")),
         face(d, h, `translateY(${y}px) rotateY(90deg) translateZ(${S / 2}px)`, show("east")),
         face(d, h, `translateY(${y}px) rotateY(-90deg) translateZ(${S / 2}px)`, show("west")),
-        face(S, d, `translateY(${y - h / 2}px) rotateX(90deg)`, show("top")),
-        face(S, d, `translateY(${y + h / 2}px) rotateX(-90deg)`, show("bottom")));
+        face(S, d, `translateY(${y - h / 2}px) rotateX(90deg)`, show("top"), topTex),
+        face(S, d, `translateY(${y + h / 2}px) rotateX(-90deg)`, show("bottom"), botTex));
     } else if (shape === "x") {
       const y = (S - s) / 2;
       rig.append(face(s * 1.41, s, `translateY(${y}px) rotateY(45deg)`, "backface-visibility:visible"),
@@ -169,7 +173,7 @@ const Blocks = (() => {
       hint ? el("small", { class: "muted" }, hint) : null);
   }
 
-  function texturePicker(b) {
+  function texturePicker(b, key = "texture") {
     const box = el("div", { class: "blk-texpick" });
     const tabs = el("div", { class: "chips" },
       ...[["sheet", "Sprite sheet"], ["file", "Your pictures"], ["gen", "Generate"]].map(([k, l]) =>
@@ -181,7 +185,7 @@ const Blocks = (() => {
         if (!textures.includes(t.file)) textures.push(t.file);
         if (t.frames > 1) anims[t.file] = { frames: t.frames, length: t.length };
         else delete anims[t.file];
-        b.texture = t; touch(); render();
+        b[key] = t; touch(); render();
       }));
       return box;
     }
@@ -203,8 +207,8 @@ const Blocks = (() => {
           cell.title = `${i}: ${name}`;
           cell.tabIndex = 0;
           cell.setAttribute("role", "button");
-          if (b.texture && b.texture.sheet === i) cell.classList.add("on");
-          cell.onclick = () => { b.texture = { sheet: i }; touch(); render(); };
+          if (b[key] && b[key].sheet === i) cell.classList.add("on");
+          cell.onclick = () => { b[key] = { sheet: i }; touch(); render(); };
           grid.append(cell);
         }
         if (!shown) grid.append(el("p", { class: "muted" }, "No sprites match."));
@@ -216,8 +220,8 @@ const Blocks = (() => {
       for (const f of textures) {
         // (an animated picture brings its frames along)
         const t = Object.assign({ file: f }, anims[f] || {});
-        const cell = el("div", { class: "blk-file" + (b.texture && b.texture.file === f ? " on" : ""), role: "button", tabindex: 0,
-          onclick: () => { b.texture = Object.assign({}, t); touch(); render(); } },
+        const cell = el("div", { class: "blk-file" + (b[key] && b[key].file === f ? " on" : ""), role: "button", tabindex: 0,
+          onclick: () => { b[key] = Object.assign({}, t); touch(); render(); } },
         texView(t, 48), el("small", {}, f));
         grid.append(cell);
       }
@@ -227,7 +231,7 @@ const Blocks = (() => {
         try {
           const res = await api("/api/blocks/texture?name=" + encodeURIComponent(file.name), { method: "POST", body: file });
           if (!textures.includes(res.file)) textures.push(res.file);
-          b.texture = { file: res.file };
+          b[key] = Object.assign({ file: res.file }, anims[res.file] || {});
           touch(); render();
         } catch (err) { toast(err.message); }
       } });
@@ -294,7 +298,39 @@ const Blocks = (() => {
             field("Cause of death", text("cause", "sharp spikes"), "“killed by …”")),
           check("spikes", "Iron spikes (iron boots protect; 1 in 6 are poisoned)"))),
       ["cube", "slab", "pane", "floor"].includes(b.shape || "cube") ? backfaces(b) : null,
-      el("h4", {}, "Texture"), texturePicker(b));
+      el("h4", {}, "Texture"), endsPicker(b));
+  }
+
+  // A cube, slab or pane can have its own top and bottom (a tree trunk's
+  // rings, a crate's lid): the same as the sides, one texture for both
+  // ends, or each its own. The picker below edits the one chosen.
+  let texSide = "texture";
+  function endsPicker(b) {
+    if (!["cube", "slab", "pane"].includes(b.shape || "cube")) return texturePicker(b);
+    const mode = b.texture_bottom ? "each" : b.texture_top ? "ends" : "same";
+    const setMode = (m) => {
+      if (m === "same") { delete b.texture_top; delete b.texture_bottom; texSide = "texture"; }
+      if (m === "ends") { b.texture_top = b.texture_top || Object.assign({}, b.texture || {}); delete b.texture_bottom; texSide = "texture_top"; }
+      if (m === "each") {
+        b.texture_top = b.texture_top || Object.assign({}, b.texture || {});
+        b.texture_bottom = b.texture_bottom || Object.assign({}, b.texture_top);
+        texSide = "texture_top";
+      }
+      touch(); render();
+    };
+    const choice = el("select", { onchange: (e) => setMode(e.target.value) },
+      ...[["same", "Same as the sides"], ["ends", "Their own (top and bottom alike)"], ["each", "Each their own"]]
+        .map(([v, l]) => el("option", { value: v, selected: v === mode || null }, l)));
+    const sides = [["texture", "Sides"]];
+    if (mode === "ends") sides.push(["texture_top", "Top and bottom"]);
+    if (mode === "each") sides.push(["texture_top", "Top"], ["texture_bottom", "Bottom"]);
+    if (!sides.some(([k]) => k === texSide)) texSide = "texture";
+    const chips = el("div", { class: "chips" }, ...sides.map(([k, l]) =>
+      el("button", { class: "chip", "aria-pressed": String(texSide === k), onclick: () => { texSide = k; render(); } },
+        el("span", { class: "inline" }, texView(b[k], 18), l))));
+    return el("div", {},
+      el("div", { class: "inline" }, field("Top and bottom", choice), mode !== "same" ? chips : null),
+      texturePicker(b, texSide));
   }
 
   function render() {

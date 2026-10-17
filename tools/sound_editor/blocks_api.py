@@ -110,15 +110,8 @@ def _remember_anim(fname, frames, length):
         json.dump(saved, f, indent=1)
 
 
-def clean_block(b):
-    """Validate one block definition (raises ValueError)."""
-    bid = re.sub(r"[^a-z0-9_]+", "_", str(b.get("id", "")).lower()).strip("_")
-    if not bid:
-        raise ValueError("every block needs an id")
-    shape = b.get("shape", "cube")
-    if shape not in SHAPES:
-        raise ValueError("unknown shape: %s" % shape)
-    tex = b.get("texture") or {}
+def clean_texture(tex):
+    tex = tex if isinstance(tex, dict) else {}
     if tex.get("file"):
         if not re.match(r"^[A-Za-z0-9_.-]+\.png$", tex["file"]):
             raise ValueError("bad texture file name")
@@ -134,10 +127,26 @@ def clean_block(b):
         tex = {"sheet": int(tex["sheet"])}
     else:
         tex = {}
+    return tex
+
+
+def clean_block(b):
+    """Validate one block definition (raises ValueError)."""
+    bid = re.sub(r"[^a-z0-9_]+", "_", str(b.get("id", "")).lower()).strip("_")
+    if not bid:
+        raise ValueError("every block needs an id")
+    shape = b.get("shape", "cube")
+    if shape not in SHAPES:
+        raise ValueError("unknown shape: %s" % shape)
+    tex = clean_texture(b.get("texture"))
+    ends = {}
+    for k in ("texture_top", "texture_bottom"):
+        if isinstance(b.get(k), dict) and (b[k].get("file") or b[k].get("sheet") is not None):
+            ends[k] = clean_texture(b[k])
     dmg = str(b.get("damage", "")).strip()
     if dmg and not re.match(r"^\d*d\d+\s*([+-]\s*\d+)?$|^\d+$", dmg):
         raise ValueError("damage must be like 1d4, 2d6+1 or 3")
-    return {
+    out = {
         "id": bid, "name": str(b.get("name") or bid)[:60], "shape": shape, "texture": tex,
         "scale": max(0.1, min(4.0, float(b.get("scale") or 1))),
         "solid": bool(b.get("solid")), "climbable": bool(b.get("climbable")),
@@ -151,6 +160,9 @@ def clean_block(b):
         # sides that aren't drawn at all
         "hidden": {s: True for s in SIDES if (b.get("hidden") or {}).get(s)},
     }
+    # its own top and bottom (bottom alone: the top's too)
+    out.update(ends)
+    return out
 
 
 def save(data):

@@ -92,12 +92,18 @@ local function register(b)
 	local back = type(b.backfaces) == "table" and b.backfaces or {}
 	local hide = type(b.hidden) == "table" and b.hidden or {}
 	local tiles, any_hidden = {}, false
+	-- (its own top and bottom, if it has them: a tree trunk's rings; a bottom
+	-- alone is the top's too)
+	local top = b.texture_top or b.texture
+	local bottom = b.texture_bottom or b.texture_top or b.texture
+	local of_side = {top = top, bottom = bottom}
 	for i, side in ipairs({"top", "bottom", "east", "west", "north", "south"}) do
 		if hide[side] then
 			tiles[i] = {name = "blank.png"} -- not drawn (fully see-through)
 			any_hidden = true
 		else
-			tiles[i] = {name = tex, backface_culling = not back[side], animation = anim}
+			local t = of_side[side] or b.texture
+			tiles[i] = {name = texture_of(t), backface_culling = not back[side], animation = animation_of(t)}
 		end
 	end
 	local def = {
