@@ -635,7 +635,7 @@ local function describe(map, tx, ty)
 		end
 	end
 	-- a special level's hand-built area covers it? (areas.lua)
-	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ)
+	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ, map)
 	if cell then
 		sq.area_cell = cell
 	end

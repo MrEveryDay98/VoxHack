@@ -680,6 +680,7 @@ static struct {
     struct {
         int x, y, w, h;
     } r[MAXSPREG];
+    int flip, minx, miny, maxx, maxy; /* flip_level's, once built */
 } splev;
 static FILE *splev_out; /* #nhvsplevdump: templates go here */
 
@@ -690,9 +691,23 @@ nhv_splev_begin(const char *protofile)
 
     splev.active = TRUE;
     splev.n = 0;
+    splev.flip = 0;
     Snprintf(splev.proto, sizeof splev.proto, "%s", protofile);
     if ((dot = strrchr(splev.proto, '.')) != 0)
         *dot = '\0'; /* ("minetn-3.lua" -> "minetn-3") */
+}
+
+/* the level was flipped (top/bottom: flp & 1, left/right: flp & 2) within
+   minx..maxx, miny..maxy: the regions, as the level file placed them, are
+   reported with it so the host can find them where they are now */
+void
+nhv_splev_flip(int flp, int minx, int miny, int maxx, int maxy)
+{
+    if (!splev.active)
+        return;
+    splev.flip = flp & 3;
+    splev.minx = minx, splev.miny = miny;
+    splev.maxx = maxx, splev.maxy = maxy;
 }
 
 void
@@ -737,14 +752,21 @@ nhv_splev_end(void)
             fprintf(splev_out, "%s %d %d %d %d %d ", splev.proto, i + 1,
                     splev.r[i].x, splev.r[i].y, splev.r[i].w, splev.r[i].h);
             for (y = splev.r[i].y; y < splev.r[i].y + splev.r[i].h; y++)
-                for (x = splev.r[i].x; x < splev.r[i].x + splev.r[i].w; x++)
-                    fputc('0' + levl[x][y].typ, splev_out);
+                for (x = splev.r[i].x; x < splev.r[i].x + splev.r[i].w; x++) {
+                    /* (where that square went if the level was flipped) */
+                    int fx = (splev.flip & 2) ? splev.maxx - x + splev.minx : x,
+                        fy = (splev.flip & 1) ? splev.maxy - y + splev.miny : y;
+
+                    fputc('0' + levl[fx][fy].typ, splev_out);
+                }
             fputc('\n', splev_out);
         } else {
-            Snprintf(buf, sizeof buf, "%ld %d %s %d %d %d %d %d",
+            /* "... <flip> <minx> <miny> <maxx> <maxy>": how it was flipped */
+            Snprintf(buf, sizeof buf, "%ld %d %s %d %d %d %d %d %d %d %d %d %d",
                      (long) ubirthday, (int) ledger_no(&u.uz), splev.proto,
                      i + 1, splev.r[i].x, splev.r[i].y, splev.r[i].w,
-                     splev.r[i].h);
+                     splev.r[i].h, splev.flip, splev.minx, splev.miny,
+                     splev.maxx, splev.maxy);
             nhv_push_event(NHV_EV_SPLEV, 0, buf);
         }
     }
