@@ -292,6 +292,22 @@ def save_overrides(data):
     return out
 
 
+def game_textures():
+    """The game's own texture folders' pictures, for blocks to use too:
+    [{"folder": "nhv_tiles", "files": [...]}, ...] - nhv_tiles (your
+    textures) first; not the blocks' own folder, nor the sprite sheet."""
+    out = []
+    mods = sorted(os.listdir(MODS), key=lambda m: (m != "nhv_tiles", m))
+    for mod in mods:
+        d = os.path.join(MODS, mod, "textures")
+        if mod == "nhv_blocks" or not os.path.isdir(d):
+            continue
+        files = sorted(f for f in os.listdir(d) if f.lower().endswith(".png") and f != "nhv_tiles.png")
+        if files:
+            out.append({"folder": mod, "files": files})
+    return out
+
+
 def game_texture_path(fname):
     """A texture file from any of the game's mods (for previews)."""
     if not re.match(r"^[A-Za-z0-9_.-]+\.png$", fname):

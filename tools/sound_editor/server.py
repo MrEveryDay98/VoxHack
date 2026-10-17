@@ -292,7 +292,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(blocks_api.SHEET, "image/png")
         m = re.match(r"^/blocktex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
-            return self.send_file(blocks_api.texture_path(m.group(1)), "image/png")
+            # (the blocks' folder, else any of the game's texture folders)
+            return self.send_file(blocks_api.texture_path(m.group(1))
+                                  or blocks_api.game_texture_path(m.group(1)), "image/png")
         m = re.match(r"^/gametex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             return self.send_file(blocks_api.game_texture_path(m.group(1)), "image/png")
@@ -321,7 +323,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
                                    "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
                                    "overrides": blocks_api.load_overrides(),
-                                   "anims": blocks_api.anim_info()})
+                                   "anims": blocks_api.anim_info(),
+                                   "gametex": blocks_api.game_textures()})
         if path == "/api/sky":
             return self.send(200, {"data": sky_api.load(), "textures": sky_api.textures(),
                                    "levels": sky_api.level_names()})

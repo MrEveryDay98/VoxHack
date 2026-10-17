@@ -14,6 +14,7 @@ const Blocks = (() => {
   let dirty = false;
   let texTab = "sheet";
   let anims = {}; // picture -> {frames, length}: the animated ones
+  let gameTex = []; // the game's own texture folders: [{folder, files}]
   let sheetQuery = "";
   // the game's own blocks ("Game blocks" tab)
   let mode = "custom";      // "custom" | "game"
@@ -30,6 +31,7 @@ const Blocks = (() => {
     data = res.data;
     textures = res.textures;
     anims = res.anims || {};
+    gameTex = res.gametex || [];
     sheet = res.sheet;
     game = res.game;
     overrides = res.overrides || {};
@@ -235,8 +237,20 @@ const Blocks = (() => {
           touch(); render();
         } catch (err) { toast(err.message); }
       } });
-      box.append(el("p", { class: "muted" }, "PNG pictures in mods/nhv_blocks/textures. Use 16×16 for the NetHack look; transparent pixels are see-through."),
-        grid, el("label", { class: "button" }, "Upload a PNG…", up));
+      // (the game's own texture folders too: nhv_tiles first)
+      const more = gameTex.map((g) => {
+        const gg = el("div", { class: "blk-grid big" });
+        for (const f of g.files) {
+          const t = { file: f };
+          gg.append(el("div", { class: "blk-file" + (b[key] && b[key].file === f ? " on" : ""), role: "button", tabindex: 0,
+            onclick: () => { b[key] = Object.assign({}, t); touch(); render(); } },
+          texView(t, 48), el("small", {}, f)));
+        }
+        return el("div", {}, el("div", { class: "blk-group" }, "mods/" + g.folder + "/textures"), gg);
+      });
+      box.append(el("p", { class: "muted" }, "PNG pictures: the blocks' own (mods/nhv_blocks/textures, where uploads go) and the game's texture folders. Use 16×16 for the NetHack look; transparent pixels are see-through."),
+        el("div", { class: "blk-group" }, "mods/nhv_blocks/textures"), grid,
+        el("label", { class: "button" }, "Upload a PNG…", up), ...more);
     }
     return box;
   }
