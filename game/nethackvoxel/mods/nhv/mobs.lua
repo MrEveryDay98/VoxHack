@@ -775,8 +775,9 @@ end)
 
 -- ---------------------------------------------------------------- rolling boulders
 -- A rolling boulder trap's boulder (NetHack's "roll" event: tile, from,
--- to, gone) rolls along the ground from where it started to where it
--- stopped, tumbling, at ROLL_SPEED; the boulder NetHack already put there
+-- to, gone) slides along the ground from where it started to where it
+-- stopped, at ROLL_SPEED (facing you, like any boulder - not turning over);
+-- the boulder NetHack already put there
 -- stays hidden until it arrives. One that fell into a pit or a hole ends
 -- in a puff of dust.
 local ROLL_SPEED = 12 -- nodes per second
@@ -810,8 +811,7 @@ local function start_roll(tile, x0, y0, x1, y1, gone)
 	obj:set_properties(nhv_tiles.look(tile, BOULDER_H))
 	local d = vector.distance(from, to)
 	rolls[#rolls + 1] = {obj = obj, from = from, to = to, t0 = core.get_us_time(),
-		dur = math.max(0.1, d / ROLL_SPEED), gone = gone, dest = U.idx(x1, y1),
-		yaw = core.dir_to_yaw(vector.direction(from, to))}
+		dur = math.max(0.1, d / ROLL_SPEED), gone = gone, dest = U.idx(x1, y1)}
 end
 
 local function update_rolls(now)
@@ -839,9 +839,12 @@ local function update_rolls(now)
 		else
 			local pos = vector.add(r.from, vector.multiply(vector.subtract(r.to, r.from), t))
 			r.obj:move_to(pos, true)
-			-- (tumbling forward as it rolls: a turn per circumference)
-			local turned = t * r.dur * ROLL_SPEED / (BOULDER_H / 2)
-			r.obj:set_rotation(vector.new(-turned, r.yaw, 0))
+			-- (facing you, as boulders do)
+			local player = core.get_connected_players()[1]
+			local pp = player and player:get_pos()
+			if pp then
+				r.obj:set_yaw(math.atan2(pp.z - pos.z, pp.x - pos.x) - math.pi / 2)
+			end
 		end
 	end
 end
