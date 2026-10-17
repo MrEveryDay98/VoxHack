@@ -41,6 +41,12 @@ end
 reg("squeeze_block", {description = "Tight gap", drawtype = "airlike", walkable = true,
 	pointable = false, sunlight_propagates = true, buildable_to = false})
 
+-- a monster's square, to you (player.lua): you can't walk into it, as
+-- NetHack wouldn't let you - so you're never put back where you were
+reg("mon_block", {description = "Someone's square", drawtype = "airlike", walkable = true,
+	pointable = false, diggable = false, sunlight_propagates = true, buildable_to = false,
+	groups = {not_in_creative_inventory = 1, nhv_monblock = 1}})
+
 -- the level's safety wall: an invisible box all round the level (its four
 -- sides, over the top and under the bottom) that nothing can go through,
 -- so you can never leave the level however you get past its own walls

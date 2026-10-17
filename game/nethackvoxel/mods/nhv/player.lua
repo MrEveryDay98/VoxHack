@@ -632,6 +632,60 @@ local function hold_still(player)
 	return true
 end
 
+-- Monsters' squares are solid to you: someone NetHack won't let you step
+-- onto (anyone but a pet that swaps places with you) fills the space of
+-- their square with invisible blocks, so your body stops at its edge -
+-- instead of walking in and NetHack refusing and putting you back. (Not
+-- the square you're in, nor one your body is still in.)
+local MB = "nhv:mon_block"
+local mb_placed = {} -- "x,y,z" -> pos
+local mb_next = 0
+local function monster_walls(player)
+	local now = core.get_us_time()
+	if now < mb_next then
+		return
+	end
+	mb_next = now + 100000
+	local h = player_mod.hero
+	local want = {}
+	if h and nhv.mobs then
+		local bx, by = U.pos_to_tile(player:get_pos())
+		for _, e in pairs(nhv.mobs.mons) do
+			local pet = U.has(e.mon and e.mon.flags or 0, U.MON_PET)
+			if e.id and e.id > 0 and e.x and U.in_map(e.x, e.y)
+					and not (e.x == h.x and e.y == h.y) and not (e.x == bx and e.y == by)
+					and (not pet or (player_mod.unswappable[e.id] or 0) > now) then
+				local ox, oz = U.tile_origin(e.x, e.y)
+				for lx = 0, U.TILE - 1 do
+					for lz = 0, U.TILE - 1 do
+						for dy = 1, 3 do
+							local p = vector.new(ox + lx, U.FLOOR_Y + dy, oz + lz)
+							want[p.x .. "," .. p.y .. "," .. p.z] = p
+						end
+					end
+				end
+			end
+		end
+	end
+	for k, p in pairs(mb_placed) do
+		if not want[k] then
+			if core.get_node(p).name == MB then
+				core.set_node(p, {name = "air"})
+			end
+			mb_placed[k] = nil
+		end
+	end
+	for k, p in pairs(want) do
+		local n = core.get_node(p).name
+		if n == "air" then
+			core.set_node(p, {name = MB})
+			mb_placed[k] = p
+		elseif n == MB then
+			mb_placed[k] = p
+		end
+	end
+end
+
 local was_searching = false
 core.register_globalstep(function()
 	local player = player_mod.get()
@@ -646,6 +700,7 @@ core.register_globalstep(function()
 		if not hold_still(player) then
 			step(player)
 		end
+		monster_walls(player)
 		check_gap(player)
 		check_trigger(player)
 		terrain.place_hero_light(player:get_pos())

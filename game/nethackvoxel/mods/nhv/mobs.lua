@@ -161,7 +161,8 @@ end
 -- (slabs, stair blocks) by their collision or node box
 local function block_top(y, nd)
 	local def = core.registered_nodes[nd.name]
-	if not (def and def.walkable) then
+	-- (a monster's square, solid only to the player: not ground)
+	if not (def and def.walkable) or (def.groups and def.groups.nhv_monblock) then
 		return nil
 	end
 	local box = def.collision_box or def.node_box
