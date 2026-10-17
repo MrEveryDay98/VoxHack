@@ -357,10 +357,11 @@ nhv_get_map(nhv_loc *buf)
                 l->trap = (t && t->tseen)
                               ? (unsigned char) trap_to_defsym(t->ttyp)
                               : 255;
-                /* a pit or a hole not seen yet is still a hole in the
-                   ground the host draws (128 + its symbol: not a known
-                   trap) */
-                if (t && !t->tseen
+                /* Sokoban's pits and holes are open from the start (unlike
+                   a pit trap, which opens as you step on it): one not
+                   seen yet is still a hole in the ground the host draws
+                   (128 + its symbol: not a known trap) */
+                if (t && !t->tseen && Sokoban
                     && (is_pit(t->ttyp) || t->ttyp == HOLE))
                     l->trap = (unsigned char) (128 + trap_to_defsym(t->ttyp));
             }
