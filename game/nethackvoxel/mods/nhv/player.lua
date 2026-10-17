@@ -545,6 +545,7 @@ end)
 -- touching an nhv:trigger node uses the stairs/ladder it belongs to
 local TRIGGER_KEYS = {
 	stairs_down = ">", ladder_down = ">", stairs_up = "<", ladder_up = "<",
+	stairs_up_sky = "<", ladder_up_sky = "<",
 }
 local in_trigger = false
 local function check_trigger(player)

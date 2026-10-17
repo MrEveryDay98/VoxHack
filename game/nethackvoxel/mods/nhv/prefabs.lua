@@ -88,6 +88,13 @@ local TRAPS = {
 for _, t in ipairs(TRAPS) do
 	table.insert(prefabs.SLOTS, {"trap_" .. t, "overlay", "Trap: " .. t:gsub("_", " ")})
 end
+-- the ways up on a level open to the sky (no ceiling to climb through:
+-- a portal...); used there once hand-built, else the usual ones. (At the
+-- end, so the editor's other plates keep their places.)
+table.insert(prefabs.SLOTS, {"stairs_up_sky", "base",
+	"Staircase up on a level open to the sky - put an nhv:trigger where it leads"})
+table.insert(prefabs.SLOTS, {"ladder_up_sky", "base",
+	"Ladder up on a level open to the sky - with an nhv:trigger"})
 prefabs.SLOT_INFO = {}
 for i, s in ipairs(prefabs.SLOTS) do
 	prefabs.SLOT_INFO[s[1]] = {kind = s[2], desc = s[3], order = i}
@@ -226,6 +233,9 @@ local DEFAULTS = {
 	drawbridge_down = function() return room("nhv:drawbridge") end,
 	air = function() return room("nhv:air_floor") end,
 	cloud = function() return room("nhv:air_floor") end,
+	-- (start as a copy of the usual way up, to build on)
+	stairs_up_sky = function() return table.copy(prefabs.get("stairs_up").nodes) end,
+	ladder_up_sky = function() return table.copy(prefabs.get("ladder_up").nodes) end,
 }
 
 -- (a default that changed gets a higher number: the prefab editor rebuilds

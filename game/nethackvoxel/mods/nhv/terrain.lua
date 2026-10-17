@@ -380,7 +380,8 @@ end
 -- in a way up: up stairs and ladders climb into that space, and the trigger
 -- that takes you up is up there)
 local function goes_up(sq)
-	if sq.slot == "stairs_up" or sq.slot == "ladder_up" then
+	if sq.slot == "stairs_up" or sq.slot == "ladder_up"
+			or sq.slot == "stairs_up_sky" or sq.slot == "ladder_up_sky" then
 		return true
 	end
 	if sq.area_cell then
@@ -472,7 +473,7 @@ end
 -- OPEN_SKY) do; so does one with a cell whose ceiling is open - a column
 -- with nothing from the ceiling layer up. Not the cells that open it on
 -- purpose for something else: traps (holes, trap doors...) and the ways up.
-local NO_SKY_SLOT = {stairs_up = true, ladder_up = true}
+local NO_SKY_SLOT = {stairs_up = true, ladder_up = true, stairs_up_sky = true, ladder_up_sky = true}
 local open_cache = setmetatable({}, {__mode = "k"}) -- nodes -> open?
 
 local function nodes_open(nodes)
@@ -643,6 +644,11 @@ local function describe(map, tx, ty)
 	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap,
 		cansee = has_bit(map.flags[i], U.LOC_CANSEE)}
 	sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
+	-- (a way up on a level open to the sky: its own cell, once built)
+	if terrain.open_sky and (sq.slot == "stairs_up" or sq.slot == "ladder_up")
+			and prefabs.custom(sq.slot .. "_sky") then
+		sq.slot = sq.slot .. "_sky"
+	end
 	local fs = memcmap and terrain.feature_slot(memcmap)
 	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
 		sq.overlay = fs
