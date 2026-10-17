@@ -374,8 +374,28 @@ local function level_open_sky()
 	return false
 end
 
--- (open sky: the ceiling layer and everything above it is air)
+-- (open sky: the ceiling layer and everything above it is air - but not
+-- in a way up: up stairs and ladders climb into that space, and the trigger
+-- that takes you up is up there)
+local function goes_up(sq)
+	if sq.slot == "stairs_up" or sq.slot == "ladder_up" then
+		return true
+	end
+	if sq.area_cell then
+		for i, nd in pairs(sq.area_cell.nodes) do
+			local _, ly = prefabs.unindex(i)
+			if nd.n == "nhv:trigger" and ly >= prefabs.CEIL then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 local function clear_above(data, area, sq)
+	if goes_up(sq) then
+		return
+	end
 	local ox, oz = U.tile_origin(sq.tx, sq.ty)
 	local air = cid("air")
 	for lx = 0, U.TILE - 1 do

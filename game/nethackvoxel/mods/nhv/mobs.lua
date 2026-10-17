@@ -157,6 +157,41 @@ end
 -- ---------------------------------------------------------------- monsters
 -- where to draw a perceived monster: its body if we simulate it, else
 -- the middle of its square (remembered 'I's, warnings)
+-- the top of a block a body could stand on (nil: not one); shaped blocks
+-- (slabs, stair blocks) by their collision or node box
+local function block_top(y, nd)
+	local def = core.registered_nodes[nd.name]
+	if not (def and def.walkable) then
+		return nil
+	end
+	local box = def.collision_box or def.node_box
+	if box and box.type == "fixed" and type(box.fixed) == "table" then
+		local boxes = type(box.fixed[1]) == "table" and box.fixed or {box.fixed}
+		local top = -0.5
+		for _, b in ipairs(boxes) do
+			top = math.max(top, b[5] or 0.5)
+		end
+		return y + top
+	end
+	return y + 0.5
+end
+
+-- The ground under a body at (x, z), standing at about from_y now: the
+-- highest standable block top at most a step above (a block it could
+-- climb: stairs, a raised floor) - not a wall, which has no room above it
+-- - down to a few blocks below. nil: nothing found.
+local function ground_at(x, z, from_y)
+	local rx, rz = math.floor(x + 0.5), math.floor(z + 0.5)
+	for y = math.floor(from_y + 1.1), math.floor(from_y - 3), -1 do
+		local nd = core.get_node(vector.new(rx, y, rz))
+		local top = block_top(y, nd)
+		if top and not block_top(y + 1, core.get_node(vector.new(rx, y + 1, rz))) then
+			return top
+		end
+	end
+	return nil
+end
+
 local function mon_draw_pos(e)
 	local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 	local base
@@ -165,11 +200,21 @@ local function mon_draw_pos(e)
 	else
 		base = U.tile_center(e.x, e.y)
 	end
-	local y = scale.mon_center_y(e.mon and e.mon.mndx, e.h, U.STAND_Y, U.CEIL_Y - 0.5)
-	-- trapped down in a pit: at its bottom
+	-- the ground it walks on: built steps and raised floors carry it up (a
+	-- step at a time, eased); a trap square's hole only when it's in it
+	local floor = U.STAND_Y
+	local map = nhv.nh.snap and nhv.nh.snap.map
+	local trap = map and map.trap and e.x and U.in_map(e.x, e.y) and (map.trap[U.idx(e.x, e.y)] or 0) > 0
 	if e.mon and U.has(e.mon.flags, U.MON_IN_PIT) then
-		y = y - (U.STAND_Y - nhv.terrain.stand_y(e.x, e.y))
+		floor = nhv.terrain.stand_y(e.x, e.y)
+	else
+		local g = ground_at(base.x, base.z, e.ground_y or U.STAND_Y)
+		if g and not (trap and g < U.STAND_Y) then
+			floor = g
+		end
 	end
+	e.ground_y = e.ground_y and (e.ground_y + (floor - e.ground_y) * 0.35) or floor
+	local y = scale.mon_center_y(e.mon and e.mon.mndx, e.h, e.ground_y, U.CEIL_Y - 0.5)
 	return vector.new(base.x, y, base.z)
 end
 
