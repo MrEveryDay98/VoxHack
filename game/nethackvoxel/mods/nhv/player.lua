@@ -342,17 +342,18 @@ local function step(player)
 		local e = nhv.mobs.objs[U.idx(x, y)]
 		return e and e.boulder
 	end
-	-- someone NetHack won't let you step onto: not a pet you swap places
-	-- with - unless it just wouldn't swap (eating, trapped, ...)
+	-- someone whose square you can't walk into: you share squares with
+	-- monsters (#nhvmove moves you in among them), but a shopkeeper stands
+	-- where it does to bar the way
 	local function blocker_at(x, y)
 		local e = nhv.mobs.monster_at(x, y)
-		if not (e and e.id and e.id > 0) then
-			return false
-		end
-		if U.has(e.mon and e.mon.flags or 0, U.MON_PET) then
-			return (player_mod.unswappable[e.id] or 0) > core.get_us_time()
-		end
-		return true
+		return e and e.id and e.id > 0 and U.has(e.mon and e.mon.flags or 0, U.MON_SHOPKEEPER) or false
+	end
+	-- a pet that wouldn't swap places a moment ago: share its square instead
+	local function stubborn_pet_at(x, y)
+		local e = nhv.mobs.monster_at(x, y)
+		return e and e.id and e.id > 0 and U.has(e.mon and e.mon.flags or 0, U.MON_PET)
+			and (player_mod.unswappable[e.id] or 0) > core.get_us_time() or false
 	end
 	-- (the body is beside a boulder or walking past someone, in their
 	-- square: wait for it to come out the other side)
@@ -402,7 +403,7 @@ local function step(player)
 		tx = h.x + U.sign(tx - h.x)
 		ty = h.y + U.sign(ty - h.y)
 	end
-	nh.act({{key = "#"}, {text = ("nhvmove %d %d"):format(tx, ty)}},
+	nh.act({{key = "#"}, {text = ("nhvmove %d %d%s"):format(tx, ty, stubborn_pet_at(tx, ty) and " 1" or "")}},
 		{kind = "hmove", tx = tx, ty = ty, from_x = h.x, from_y = h.y})
 end
 

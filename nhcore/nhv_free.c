@@ -77,8 +77,16 @@ mon_by_id(unsigned id)
 
 /* ---------------------------------------------------------------- commands */
 
-/* #nhvmove x y: the hero's body entered square <x,y>; move there without
-   using time (time passes separately through ticks). */
+/* #nhvmove x y [share]: the hero's body entered square <x,y>; move there
+   without using time (time passes separately through ticks).
+
+   Someone there you can see: in 3D you walk in among them - the hero and
+   a monster share the square (as a monster may come into yours) - rather
+   than NetHack refusing the step. Not a pet (you swap places with it, as
+   in NetHack) unless share is given (it wouldn't swap), and not a
+   shopkeeper, priest or guard: they stand where they do to bar the way.
+   Someone you can't see is bumped into as NetHack does (a hider is found,
+   a mimic sticks to you). */
 int
 donhvmove(void)
 {
@@ -89,6 +97,14 @@ donhvmove(void)
     if (!isok(x, y) || (!dx && !dy) || abs(dx) > 1 || abs(dy) > 1)
         return ECMD_OK;
     mtmp = m_at(x, y);
+    if (mtmp && canspotmon(mtmp) && !M_AP_TYPE(mtmp)
+        && (!mtmp->mtame || nhv_cmd_args[2])
+        && !mtmp->isshk && !mtmp->ispriest && !mtmp->isgd
+        && !u.ustuck && !u.utrap && !u.uswallow && !u.usteed
+        && test_move(u.ux, u.uy, dx, dy, TEST_MOVE)) {
+        teleds(x, y, TELEDS_ALLOW_DRAG);
+        return ECMD_OK;
+    }
     u.dx = dx, u.dy = dy, u.dz = 0;
     /* walking never fights (the no-fighting flag, as NetHack's 'm' prefix,
        when someone is there); it may swap places with a pet. With nobody

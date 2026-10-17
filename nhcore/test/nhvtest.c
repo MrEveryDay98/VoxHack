@@ -115,6 +115,35 @@ send_arg(const char *a)
                 nhv_send_key('#'), nhv_send_text(buf);
             }
         }
+    } else if (!strcmp(a, "into")) {
+        /* walk into the first monster next to the hero (#nhvmove): they
+           share the square; then list who's where */
+        static nhv_mon mons[64];
+        nhv_hero h;
+        int n = nhv_get_monsters(mons, 64), k;
+        char buf[64];
+
+        nhv_get_hero(&h);
+        for (k = 0; k < n && k < 64; k++)
+            if (abs(mons[k].x - h.x) <= 1 && abs(mons[k].y - h.y) <= 1
+                && (mons[k].x != h.x || mons[k].y != h.y)) {
+                printf("INTO %d,%d (hero %d,%d)\n", mons[k].x, mons[k].y, h.x, h.y);
+                sprintf(buf, "nhvmove %d %d", mons[k].x, mons[k].y);
+                nhv_send_key('#'), nhv_send_text(buf);
+                return;
+            }
+        printf("INTO: nobody next to the hero\n");
+        nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strcmp(a, "mons")) {
+        static nhv_mon mons[64];
+        nhv_hero h;
+        int n = nhv_get_monsters(mons, 64), k;
+
+        nhv_get_hero(&h);
+        for (k = 0; k < n && k < 64; k++)
+            printf("MON id %u at %d,%d%s\n", mons[k].id, mons[k].x, mons[k].y,
+                   (mons[k].x == h.x && mons[k].y == h.y) ? " (sharing the hero's square)" : "");
+        nhv_send_key('#'), nhv_send_text("nhvtick");
     } else if (!strcmp(a, "passchain")) {
         /* #nhvpass in its route form: over the first monster next to the
            hero to a free floor square beyond it */

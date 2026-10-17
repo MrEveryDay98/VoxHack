@@ -381,8 +381,15 @@ nhv_get_monsters(nhv_mon *buf, int max)
             nhv_mon m;
             struct monst *mtmp;
 
-            if (u_at(x, y))
-                continue;
+            if (u_at(x, y)) {
+                /* someone sharing the hero's square (the map shows the
+                   hero there): as it would look on its own */
+                mtmp = m_at(x, y);
+                if (!mtmp || mtmp == u.ustuck || !canspotmon(mtmp))
+                    continue;
+                g = mtmp->mtame ? pet_to_glyph(mtmp, rn2_on_display_rng)
+                                : mon_to_glyph(mtmp, rn2_on_display_rng);
+            }
             if (!glyph_is_monster(g) && !glyph_is_invisible(g)
                 && !glyph_is_warning(g))
                 continue;
