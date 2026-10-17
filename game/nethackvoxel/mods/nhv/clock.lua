@@ -1,8 +1,9 @@
 -- Game time, Superhot style.
 --
--- Time always runs, but its rate follows the hero: standing still it
--- crawls at MIN_SCALE, walking at full speed it runs at 1. The rate
--- eases toward its target so it never snaps.
+-- Time runs only as the hero does: standing still it stops (MIN_SCALE,
+-- 0 unless the setting nhv_time_min says otherwise), walking at full speed
+-- it runs at 1. The rate eases toward its target so it never snaps (and
+-- comes to a real stop, not a crawl).
 --
 -- Actions (attacks, using items) cost the NetHack time they really took
 -- (a refused one, "You can't...", costs nothing). That time is paid from
@@ -30,7 +31,7 @@ local clock = {
 }
 nhv.clock = clock
 
-clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0.12
+clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
@@ -130,6 +131,9 @@ function clock.update(dtime, player)
 		clock.scale = target -- (searching just ended: straight back, no easing)
 	else
 		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
+	end
+	if target == 0 and clock.scale < 0.01 then
+		clock.scale = 0 -- (stopped: no endless creeping toward 0)
 	end
 	local dtg = dtime * clock.scale * clock.RATE
 	if clock.debt > 0 then
