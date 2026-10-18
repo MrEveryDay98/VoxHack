@@ -130,8 +130,8 @@ DESCRIBE_NETHACK = {
     "bars_whap": "A harmless missile (a cream pie, an egg...) hits iron bars: \"Whap\"",
     "bees": "A beehive on the level (hallucinating): bees in your bonnet",
     "blast": "An explosion out of sight: \"You hear a blast\"",
-    "board_squeak": "(not used by NetHack's code)",
-    "board_squeaks_loudly": "(not used by NetHack's code)",
+    "board_squeak": "A monster steps on a squeaky board (seen, or heard near or far); its note plays too",
+    "board_squeaks_loudly": "You step on a squeaky board; its note plays too",
     "boing": "A monster's wand of striking hits you but your magic resistance stops it: \"Boing!\"",
     "bolt_of_lightning": "A monster's spell calls down a bolt of lightning on you",
     "bone_rattle": "A skeleton rattles noisily at you (you freeze for a moment)",
@@ -142,18 +142,18 @@ DESCRIBE_NETHACK = {
     "bubble_rising": "Quaffing from a fountain: a large bubble rises and a water nymph appears",
     "bugle_playing_reveille": "A soldier plays a bugle to wake the barracks (reveille)",
     "buzz": "An insect monster buzzes (chatting, or angry)",
-    "canine_bark": "(not used by NetHack's code)",
-    "canine_growl": "(not used by NetHack's code)",
+    "canine_bark": "A peaceful dog barks (#chat)",
+    "canine_growl": "A hostile dog growls (#chat), or a pet dog turns on you",
     "canine_howl": "A dog-like monster howls (also a werewolf howling at the moon)",
     "canine_whine": "A pet dog whines (hungry, or kept from what it wants)",
     "canine_yelp": "A pet dog yelps when you hurt or abuse it",
-    "canine_yip": "(not used by NetHack's code)",
-    "canine_yowl": "(not used by NetHack's code)",
+    "canine_yip": "A well-fed pet dog yips (#chat)",
+    "canine_yowl": "A dingo yowls (#chat; dingos don't bark)",
     "chain_shatters": "An explosion shatters an iron chain",
     "chains_rattling_gears_turning": "A drawbridge is raised: chains rattle and gears turn",
-    "chant": "(not used by NetHack's code)",
+    "chant": "Turning undead (you chant an arcane formula), or an invisible choir chants",
     "chirp": "A bird-like monster chirps",
-    "clanging_sound": "(not used by NetHack's code)",
+    "clanging_sound": "A hard helmet saves a head: falling rocks, an iron ball, a thrown object",
     "clank": "A monster grows too big to hold its shield: it falls with a clank",
     "clanking_pipe": "Quaffing from a sink: clanking from the pipes",
     "clash": "Digging with a pick-axe into iron bars or something too hard: \"Clash!\"",
@@ -161,14 +161,14 @@ DESCRIBE_NETHACK = {
     "cough": "A monster breathes in something nasty (a breath attack, a gas cloud) and coughs",
     "courtly_conversation": "A throne room on the level: courtly conversation",
     "cracking_sound": "A monster grows and bursts out of its armor",
-    "crackling": "(not used by NetHack's code)",
+    "crackling": "An electric attack: the air crackles with electricity",
     "crackling_of_hellfire": "Using a stethoscope in Gehennom: the crackling of hellfire",
-    "crash": "(not used by NetHack's code)",
+    "crash": "Something glass shatters where you can see it (a mirror, a potion, a crystal ball...)",
     "crash_door": "Kicking a wall reveals a secret door or passage: \"Crash!\"",
-    "crash_something_broke": "(not used by NetHack's code)",
+    "crash_something_broke": "Something glass shatters out of sight: \"You hear something shatter!\"",
     "crash_throne_destroyed": "Kicking a throne to pieces: \"CRASH! You destroy it.\"",
     "crash_through_floor": "A monster out of sight digs a hole and falls through the floor",
-    "crashed_ceiling": "(not used by NetHack's code)",
+    "crashed_ceiling": "A cave-in: \"Crash! The ceiling collapses around you!\"",
     "crashing_boulder": "A boulder falls into a pit or hole under you: a CRASH beneath you",
     "crashing_rock": "Rock crashes: a cave-in around you, or a monster digging through rock",
     "crashing_sound": "A door is forced open out of sight (force bolt, striking): a crashing sound",
@@ -199,7 +199,7 @@ DESCRIBE_NETHACK = {
     "feline_mew": "A kitten mews",
     "feline_purr": "A happy cat-like monster purrs",
     "feline_yelp": "A pet cat yowls when you hurt or abuse it",
-    "feline_yip": "(not used by NetHack's code)",
+    "feline_yip": "A distressed pet cat whimpers",
     "feline_yowl": "A cat-like monster yowls (angry or hungry)",
     "furious_bubbling": "Quaffing from a fountain: it bubbles furiously (snakes or a demon come out)",
     "gear_turn": "Playing the passtune at a drawbridge: gears turn",
@@ -217,7 +217,7 @@ DESCRIBE_NETHACK = {
     "hiss": "A snake or reptile hisses",
     "hollow_sound": "Using a stethoscope on a wall with a secret door: a hollow sound",
     "horn_being_played": "A monster plays a fire or frost horn (near or far)",
-    "iron_ball_dragging_you": "(not used by NetHack's code)",
+    "iron_ball_dragging_you": "Punished, going downstairs: \"The iron ball drags you downstairs!\"",
     "iron_ball_hits_you": "Falling down stairs or a hole while punished: the iron ball smacks into you",
     "item_tumble_downwards": "Objects tumble down a hole or trap door",
     "jabberwock_burble": "A jabberwock burbles",
@@ -233,7 +233,7 @@ DESCRIBE_NETHACK = {
     "klunk": "Unlocking a box or chest: \"Klunk!\"",
     "klunk_pipe": "Kicking a sink: \"Klunk! The pipes vibrate noisily.\"",
     "laughter": "A monster laughs (giggles, chuckles; also a cursing attack)",
-    "lid_slams_open_falls_shut": "(not used by NetHack's code)",
+    "lid_slams_open_falls_shut": "Kicking a box or chest: the lid slams open, then falls shut",
     "loud_click": "Stepping on an arrow trap: a loud click",
     "loud_crash": "A drawbridge is destroyed, or a rolling boulder hits another: a loud crash",
     "loud_pop": "Quaffing from a fountain: a large bubble rises and pops",
@@ -247,29 +247,29 @@ DESCRIBE_NETHACK = {
     "mutter_imprecations": "Entering a shop with a pick-axe: the shopkeeper mutters imprecations",
     "mutter_incantation": "A shopkeeper repairs shop damage, muttering an incantation",
     "orc_grunt": "An orc grunts",
-    "paranoid_confirmation": "(not used by NetHack's code)",
+    "paranoid_confirmation": "A paranoid confirmation prompt: answer \"yes\" to be sure",
     "potion_crash_and_break": "A thrown potion crashes and breaks: \"Crash!\"",
     "ring_in_drain": "Dropping a ring down a sink: it bounces down the drainpipe",
     "ripping_sound": "A monster grows and its cloak or shirt tears apart",
     "roar": "A big cat or bear roars (also a bear caught in a trap or web)",
     "rumbling": "A rolling boulder trap goes off: rumbling, near or far",
-    "rumbling_of_earth": "(not used by NetHack's code)",
+    "rumbling_of_earth": "An earthquake (drum of earthquake): the whole level shakes",
     "rushing_wind_noise": "An unseen monster swoops at you: a rushing noise",
     "rustling_paper": "Flipping through a spellbook: the pages rustle",
     "sad_wailing": "Reading a scroll of scare monster: sad wailing (also a monster wailing)",
     "sceptor_pounding": "A throne room on the level: a sceptre pounded in judgment",
     "scratching": "A corpse comes back to life inside a box: scratching noises",
     "scream": "Someone screams (falling into a chasm, or a monster's blood-curdling shriek)",
-    "screech": "(not used by NetHack's code)",
+    "screech": "A pet bird turns on you: it screeches",
     "sewer_song": "Quaffing from a sink: snatches of song from the sewers",
-    "sharp_crack": "(not used by NetHack's code)",
+    "sharp_crack": "Rubbing a gem on a touchstone: \"A sharp crack shatters\" it",
     "shriek": "A shrieker shrieks (it draws monsters to you)",
     "shrill_whistle": "Blowing a whistle (also the vault guards' whistles when they turn angry)",
     "sinister_laughter": "Eating something that puts you to sleep: sinister laughter",
     "sizzling": "A boulder drops into lava out of sight: sizzling",
     "slurping_sound": "A monster eats objects out of sight (a gelatinous cube...): slurping",
     "smashing_and_crushing": "A drawbridge closes on someone: smashing and crushing",
-    "snake_rattle": "(not used by NetHack's code)",
+    "snake_rattle": "A pet snake turns on you: it rattles",
     "snakes_hissing": "Quaffing from a fountain: a stream of water moccasins pours out, hissing",
     "snarl": "A dog-like monster snarls",
     "soft_click": "Stepping on a dart trap: a soft click",
@@ -277,10 +277,22 @@ DESCRIBE_NETHACK = {
     "someone_bowling": "A rolling boulder trap goes off out of sight: someone bowling",
     "someone_searching": "A vault on the level: someone counting money or searching",
     "someone_summoning": "A monster's spell summons insects",
-    "someone_yells": "(commented out in NetHack's code: never heard)",
+    "someone_yells": "A monster out of sight yells something: \"You hear someone yell\"",
     "splash": "Something falls into water: \"Splash!\"",
     "splat_egg": "A thrown egg hits a monster: \"Splat!\"",
-    "splat_from_engulf": "(not used by NetHack's code)",
+    "splat_from_engulf": "You get regurgitated, or expelled \"with a squelch\", from an engulfer",
+    "squeak_C": "A squeaky board's note: C (a generated note plays unless you give it a sound)",
+    "squeak_D_flat": "A squeaky board's note: D flat (a generated note plays unless you give it a sound)",
+    "squeak_D": "A squeaky board's note: D (a generated note plays unless you give it a sound)",
+    "squeak_E_flat": "A squeaky board's note: E flat (a generated note plays unless you give it a sound)",
+    "squeak_E": "A squeaky board's note: E (a generated note plays unless you give it a sound)",
+    "squeak_F": "A squeaky board's note: F (a generated note plays unless you give it a sound)",
+    "squeak_F_sharp": "A squeaky board's note: F sharp (a generated note plays unless you give it a sound)",
+    "squeak_G": "A squeaky board's note: G (a generated note plays unless you give it a sound)",
+    "squeak_G_sharp": "A squeaky board's note: G sharp (a generated note plays unless you give it a sound)",
+    "squeak_A": "A squeaky board's note: A (a generated note plays unless you give it a sound)",
+    "squeak_B_flat": "A squeaky board's note: B flat (a generated note plays unless you give it a sound)",
+    "squeak_B": "A squeaky board's note: B (a generated note plays unless you give it a sound)",
     "squawk": "A raven or parrot squawks (\"Nevermore!\")",
     "squeak": "A rodent squeaks",
     "squeal": "A pet rodent squeals when you hurt or abuse it (or whines)",
@@ -307,12 +319,20 @@ def main():
     root, out = sys.argv[1:3]
     hooks = []
     seffects = open(os.path.join(root, "include", "seffects.h"), encoding="latin-1").read()
-    for name in re.findall(r'seffect\(([a-z_0-9]+)\)', seffects):
-        if name == "basename":
-            continue
-        hooks.append({"id": name, "group": "nethack",
-                      "desc": DESCRIBE_NETHACK.get(name, name.replace("_", " "))})
-    found = set()
+    srcs = [open(os.path.join(root, "src", f), encoding="latin-1").read()
+            for f in sorted(os.listdir(os.path.join(root, "src"))) if f.endswith(".c")]
+    names = [n for n in re.findall(r'seffect\(([A-Za-z_0-9]+)\)', seffects)
+             if n != "basename"]
+    for name in dict.fromkeys(names):
+        desc = DESCRIBE_NETHACK.get(name, name.replace("_", " "))
+        # (one NetHack never plays: no Soundeffect(se_<name>) nor
+        # NHV_HOOK("<name>") anywhere - give it a place in NetHack's code)
+        played = re.compile(r'\bse_%s\b|NHV_HOOK\([^;]*"%s"' % (name, name))
+        if not any(played.search(src) for src in srcs):
+            desc += " [never played by NetHack]"
+        hooks.append({"id": name, "group": "nethack", "desc": desc})
+    # (an NHV_HOOK named as one of NetHack's own sounds is that sound)
+    found = set(names)
     for fname in sorted(os.listdir(os.path.join(root, "src"))):
         if fname.endswith(".c"):
             src = open(os.path.join(root, "src", fname), encoding="latin-1").read()

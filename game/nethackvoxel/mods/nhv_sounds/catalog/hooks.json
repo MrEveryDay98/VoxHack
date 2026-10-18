@@ -78,12 +78,12 @@
   {
    "id": "board_squeak",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A monster steps on a squeaky board (seen, or heard near or far); its note plays too"
   },
   {
    "id": "board_squeaks_loudly",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "You step on a squeaky board; its note plays too"
   },
   {
    "id": "boing",
@@ -138,12 +138,12 @@
   {
    "id": "canine_bark",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A peaceful dog barks (#chat)"
   },
   {
    "id": "canine_growl",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A hostile dog growls (#chat), or a pet dog turns on you"
   },
   {
    "id": "canine_howl",
@@ -163,12 +163,12 @@
   {
    "id": "canine_yip",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A well-fed pet dog yips (#chat)"
   },
   {
    "id": "canine_yowl",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A dingo yowls (#chat; dingos don't bark)"
   },
   {
    "id": "chain_shatters",
@@ -183,7 +183,7 @@
   {
    "id": "chant",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Turning undead (you chant an arcane formula), or an invisible choir chants"
   },
   {
    "id": "chirp",
@@ -193,7 +193,7 @@
   {
    "id": "clanging_sound",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A hard helmet saves a head: falling rocks, an iron ball, a thrown object"
   },
   {
    "id": "clank",
@@ -233,7 +233,7 @@
   {
    "id": "crackling",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "An electric attack: the air crackles with electricity"
   },
   {
    "id": "crackling_of_hellfire",
@@ -243,7 +243,7 @@
   {
    "id": "crash",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Something glass shatters where you can see it (a mirror, a potion, a crystal ball...)"
   },
   {
    "id": "crash_door",
@@ -253,7 +253,7 @@
   {
    "id": "crash_something_broke",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Something glass shatters out of sight: \"You hear something shatter!\""
   },
   {
    "id": "crash_throne_destroyed",
@@ -268,7 +268,7 @@
   {
    "id": "crashed_ceiling",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A cave-in: \"Crash! The ceiling collapses around you!\""
   },
   {
    "id": "crashing_boulder",
@@ -423,7 +423,7 @@
   {
    "id": "feline_yip",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A distressed pet cat whimpers"
   },
   {
    "id": "feline_yowl",
@@ -513,7 +513,7 @@
   {
    "id": "iron_ball_dragging_you",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Punished, going downstairs: \"The iron ball drags you downstairs!\""
   },
   {
    "id": "iron_ball_hits_you",
@@ -593,7 +593,7 @@
   {
    "id": "lid_slams_open_falls_shut",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Kicking a box or chest: the lid slams open, then falls shut"
   },
   {
    "id": "loud_click",
@@ -663,7 +663,7 @@
   {
    "id": "paranoid_confirmation",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A paranoid confirmation prompt: answer \"yes\" to be sure"
   },
   {
    "id": "potion_crash_and_break",
@@ -698,7 +698,7 @@
   {
    "id": "rumbling_of_earth",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "An earthquake (drum of earthquake): the whole level shakes"
   },
   {
    "id": "rushing_wind_noise",
@@ -733,7 +733,7 @@
   {
    "id": "screech",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A pet bird turns on you: it screeches"
   },
   {
    "id": "sewer_song",
@@ -743,7 +743,7 @@
   {
    "id": "sharp_crack",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "Rubbing a gem on a touchstone: \"A sharp crack shatters\" it"
   },
   {
    "id": "shriek",
@@ -778,7 +778,7 @@
   {
    "id": "snake_rattle",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "A pet snake turns on you: it rattles"
   },
   {
    "id": "snakes_hissing",
@@ -813,7 +813,7 @@
   {
    "id": "someone_yells",
    "group": "nethack",
-   "desc": "(commented out in NetHack's code: never heard)"
+   "desc": "A monster out of sight yells something: \"You hear someone yell\""
   },
   {
    "id": "splash",
@@ -828,7 +828,7 @@
   {
    "id": "splat_from_engulf",
    "group": "nethack",
-   "desc": "(not used by NetHack's code)"
+   "desc": "You get regurgitated, or expelled \"with a squelch\", from an engulfer"
   },
   {
    "id": "squawk",
@@ -839,6 +839,66 @@
    "id": "squeak",
    "group": "nethack",
    "desc": "A rodent squeaks"
+  },
+  {
+   "id": "squeak_A",
+   "group": "nethack",
+   "desc": "A squeaky board's note: A (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_B",
+   "group": "nethack",
+   "desc": "A squeaky board's note: B (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_B_flat",
+   "group": "nethack",
+   "desc": "A squeaky board's note: B flat (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_C",
+   "group": "nethack",
+   "desc": "A squeaky board's note: C (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_D",
+   "group": "nethack",
+   "desc": "A squeaky board's note: D (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_D_flat",
+   "group": "nethack",
+   "desc": "A squeaky board's note: D flat (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_E",
+   "group": "nethack",
+   "desc": "A squeaky board's note: E (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_E_flat",
+   "group": "nethack",
+   "desc": "A squeaky board's note: E flat (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_F",
+   "group": "nethack",
+   "desc": "A squeaky board's note: F (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_F_sharp",
+   "group": "nethack",
+   "desc": "A squeaky board's note: F sharp (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_G",
+   "group": "nethack",
+   "desc": "A squeaky board's note: G (a generated note plays unless you give it a sound)"
+  },
+  {
+   "id": "squeak_G_sharp",
+   "group": "nethack",
+   "desc": "A squeaky board's note: G sharp (a generated note plays unless you give it a sound)"
   },
   {
    "id": "squeal",
@@ -965,12 +1025,6 @@
    "id": "break_open_lock",
    "group": "events",
    "desc": "break open lock",
-   "source": "dokick.c"
-  },
-  {
-   "id": "lid_slams_open_falls_shut",
-   "group": "events",
-   "desc": "Kicking a box: the lid slams open, then shut",
    "source": "dokick.c"
   },
   {
