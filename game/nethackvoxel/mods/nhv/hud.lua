@@ -348,7 +348,7 @@ core.register_on_joinplayer(function(player)
 	hud.ids.compass = player:hud_add({
 		type = "compass", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
 		offset = {x = 0, y = 8}, size = {x = 480, y = 48}, scale = {x = 1, y = 1},
-		text = "nhv_compass.png", dir = 3,
+		text = "nhv_compass.png", dir = 2,
 	})
 	hud.ids.compass_mark = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
