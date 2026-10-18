@@ -320,6 +320,38 @@ tile_of(int glyph)
     return glyphmap[glyph].tileidx;
 }
 
+/* In 3D you make out what lies in view across a room, not just within a
+   couple of squares as NetHack has it (see_nearby_objects()): objects you
+   can see within NEAR_OBJ squares count as seen up close (their look - a
+   red gem, a pink potion - not what they are), so they aren't drawn as
+   the generic object of their class. */
+#define NEAR_OBJ 8
+
+static void
+nhv_see_objects_in_view(void)
+{
+    int x, y;
+    struct obj *otmp;
+    boolean changed;
+
+    if (Blind)
+        return;
+    for (x = u.ux - NEAR_OBJ; x <= u.ux + NEAR_OBJ; x++)
+        for (y = u.uy - NEAR_OBJ; y <= u.uy + NEAR_OBJ; y++) {
+            if (!isok(x, y) || !cansee(x, y))
+                continue;
+            changed = FALSE;
+            for (otmp = svl.level.objects[x][y]; otmp; otmp = otmp->nexthere)
+                if (!otmp->dknown) {
+                    observe_object(otmp);
+                    changed = TRUE;
+                }
+            /* (the remembered picture, if it was the generic one) */
+            if (changed && glyph_is_generic_object(levl[x][y].glyph))
+                newsym_force(x, y);
+        }
+}
+
 NHV_API void
 nhv_get_map(nhv_loc *buf)
 {
@@ -328,6 +360,7 @@ nhv_get_map(nhv_loc *buf)
     memset(buf, 0, sizeof *buf * NHV_COLNO * NHV_ROWNO);
     if (!safe_to_read())
         return;
+    nhv_see_objects_in_view();
     for (x = 0; x < COLNO && x < NHV_COLNO; x++)
         for (y = 0; y < ROWNO && y < NHV_ROWNO; y++) {
             nhv_loc *l = &buf[x * NHV_ROWNO + y];
@@ -620,8 +653,6 @@ fill_obj(struct obj *otmp, nhv_obj *o)
     o->oclass = otmp->oclass;
     o->otyp = otmp->otyp;
     o->quan = otmp->quan;
-    o->glyph = obj_to_glyph(otmp, rn2_on_display_rng);
-    o->tile = tile_of(o->glyph);
     o->weight = otmp->owt;
     if (otmp->owornmask & (W_ARMOR | W_ACCESSORY))
         o->flags |= NHV_OBJ_WORN;
@@ -643,6 +674,11 @@ fill_obj(struct obj *otmp, nhv_obj *o)
     o->armcat = (otmp->oclass == ARMOR_CLASS) ? objects[otmp->otyp].oc_armcat
                                               : -1;
     Snprintf(o->name, sizeof o->name, "%s", doname(otmp));
+    /* (after its name: naming it is what marks it seen up close, which
+       its picture depends on - else a gem looked at for the first time,
+       in a box say, shows as the generic gem) */
+    o->glyph = obj_to_glyph(otmp, rn2_on_display_rng);
+    o->tile = tile_of(o->glyph);
 }
 
 NHV_API int
