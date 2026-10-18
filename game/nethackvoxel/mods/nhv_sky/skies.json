@@ -47,7 +47,9 @@
    "daynight": true,
    "sun": true,
    "moon": true,
-   "stars": true
+   "stars": true,
+   "stars_always": false,
+   "cloud_brightness": 1.0
   },
   {
    "id": "sky1",
@@ -95,7 +97,9 @@
    "daynight": false,
    "sun": true,
    "moon": true,
-   "stars": true
+   "stars": true,
+   "stars_always": false,
+   "cloud_brightness": 1.0
   },
   {
    "id": "sky2",
@@ -143,7 +147,9 @@
    "daynight": false,
    "sun": true,
    "moon": true,
-   "stars": true
+   "stars": true,
+   "stars_always": false,
+   "cloud_brightness": 1.0
   },
   {
    "id": "sky3",
@@ -160,8 +166,8 @@
      "opacity": 1,
      "tint": "#C457FF",
      "see_through_black": false,
-     "coverage": 0.52,
-     "softness": 0.15,
+     "coverage": 0.77,
+     "softness": 0.43,
      "detail": 4,
      "shade": "#FF00F7"
     },
@@ -174,10 +180,10 @@
      ],
      "scale": 2.0,
      "opacity": 0.8,
-     "tint": "#FF0000",
+     "tint": "#297BFF",
      "see_through_black": false,
-     "coverage": 0.41,
-     "softness": 0.1,
+     "coverage": 0.54,
+     "softness": 0.15,
      "detail": 4,
      "shade": "#FF75E1"
     }
@@ -188,10 +194,12 @@
    },
    "pixels": 64,
    "fog_color": "#000000",
-   "daynight": true,
+   "daynight": false,
    "sun": false,
    "moon": false,
-   "stars": true
+   "stars": true,
+   "stars_always": true,
+   "cloud_brightness": 0.4
   }
  ],
  "levels": {

@@ -807,6 +807,46 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "music_mines": {
+   "sounds": [
+    "nhv_music_mines"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_shop": {
+   "sounds": [
+    "nhv_music_shop1"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_minetown": {
+   "sounds": [
+    "nhv_music_cavewonder"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_vlad": {
+   "sounds": [
+    "nhv_music_tocatafuga"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_gehennom": {
+   "sounds": [
+    "nhv_music_gehennom"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {
