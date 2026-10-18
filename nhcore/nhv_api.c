@@ -413,6 +413,8 @@ nhv_get_monsters(nhv_mon *buf, int max)
                     m.flags |= NHV_MON_DETECTED;
                 if ((mtmp = m_at(x, y)) != 0) {
                     m.id = mtmp->m_id;
+                    if (!canseemon(mtmp) && sensemon(mtmp))
+                        m.flags |= NHV_MON_SENSED;
                     if (mtmp->mpeaceful && canspotmon(mtmp))
                         m.flags |= NHV_MON_PEACEFUL;
                     if (mtmp->isshk && inhishop(mtmp))

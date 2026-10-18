@@ -17,9 +17,43 @@ local mobs = {
 }
 nhv.mobs = mobs
 
+-- A monster you sense but can't see (telepathy, an amulet of ESP, being
+-- warned of its kind, monster detection) is a ghost: a faint see-through
+-- flat picture that shows through walls (infotext "nhv:xray": the NetHack
+-- Voxel build of Luanti draws it over everything) and wavers (e.wavy).
+local GHOST_ALPHA = 110
+local function look_for(e, kind)
+	if e.ghost then
+		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(GHOST_ALPHA)
+		return {visual = "upright_sprite", textures = {tex, tex .. "^[transformFX"},
+			visual_size = {x = e.h, y = e.h, z = e.h}, use_texture_alpha = true,
+			infotext = "nhv:xray", glow = 6}
+	end
+	local props = nhv_tiles.look(e.tile, e.h, kind)
+	props.use_texture_alpha, props.infotext, props.glow = false, "", 0
+	return props
+end
+
+-- visual_size for monster e, squashed/stretched by w
+local function size_for(e, w)
+	if e.ghost then
+		w = w or 1
+		return {x = e.h * w, y = e.h / w, z = e.h}
+	end
+	return nhv_tiles.size(e.h, w)
+end
+
 local function sprite_props(tile, height)
 	local s = height / 2
 	local props = nhv_tiles.look(tile, height)
+	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
+	return props
+end
+
+-- a monster's: as it looks now (seen, or a ghost)
+local function monster_props(e)
+	local s = e.h / 2
+	local props = look_for(e)
 	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
 	return props
 end
@@ -70,7 +104,10 @@ local function fade_apply(e, a)
 		return
 	end
 	a = math.max(0.02, math.min(1, a))
-	if nhv_tiles.flat() then
+	if e.ghost then
+		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(math.floor(a * GHOST_ALPHA))
+		e.obj:set_properties({textures = {tex, tex .. "^[transformFX"}})
+	elseif nhv_tiles.flat() then
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(math.floor(a * 255))
 		e.obj:set_properties({textures = {tex, tex .. "^[transformFX"}, use_texture_alpha = a < 1})
 	else
@@ -226,8 +263,10 @@ local function apply_sprite(e, m)
 	-- a shopkeeper in its shop fills its whole square, so standing inside
 	-- the door it really blocks the way out, as in NetHack
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
-	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk then
-		local props = sprite_props(m.tile, h)
+	local ghost = U.has(m.flags, U.MON_SENSED)
+	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost then
+		e.tile, e.h, e.ghost = m.tile, h, ghost
+		local props = monster_props(e)
 		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
 		props.physical = solid
 		props.collide_with_objects = solid
@@ -264,6 +303,7 @@ local function update_monsters(snap)
 		if e then
 			e.x, e.y, e.mon, e.id = m.x, m.y, m, m.id
 			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
+				or U.has(m.flags, U.MON_SENSED)
 			apply_sprite(e, m)
 			e.obj:set_pos(mon_draw_pos(e))
 			if fresh then
@@ -704,7 +744,9 @@ function mobs.flash(id, kind, secs)
 		return
 	end
 	e.flash_until = core.get_us_time() + (secs or 0.15) * 1e6
-	e.obj:set_properties(nhv_tiles.look(e.tile, e.h, kind))
+	if not e.ghost then -- (a ghost doesn't flash)
+		e.obj:set_properties(look_for(e, kind))
+	end
 	if kind == "r" then
 		mobs.blood(e)
 	end
@@ -943,7 +985,7 @@ core.register_globalstep(function(dtime)
 		local obj = e.obj
 		if e.flash_until and now > e.flash_until and obj:get_pos() then
 			e.flash_until = nil
-			obj:set_properties(nhv_tiles.look(e.tile, e.h))
+			obj:set_properties(look_for(e))
 		end
 		if obj:get_pos() and e.h then
 			local pos = mon_draw_pos(e)
@@ -954,7 +996,7 @@ core.register_globalstep(function(dtime)
 				if e.wavy then
 					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
 					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
-					obj:set_properties({visual_size = nhv_tiles.size(e.h, w)})
+					obj:set_properties({visual_size = size_for(e, w)})
 				end
 				obj:set_yaw(yaw)
 			end
