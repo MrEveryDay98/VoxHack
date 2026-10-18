@@ -1034,6 +1034,12 @@
    "source": "fountain.c"
   },
   {
+   "id": "boulder_push",
+   "group": "events",
+   "desc": "boulder push",
+   "source": "hack.c"
+  },
+  {
    "id": "delphi_welcome",
    "group": "events",
    "desc": "Welcomed to Delphi by the Oracle",
@@ -1094,6 +1100,12 @@
    "source": "potion.c"
   },
   {
+   "id": "god_angry",
+   "group": "events",
+   "desc": "Your god is angry with you (a bad sacrifice, prayer...)",
+   "source": "pray.c"
+  },
+  {
    "id": "god_gift",
    "group": "events",
    "desc": "A god's gift appears at your feet",
@@ -1103,6 +1115,24 @@
    "id": "prayer_answered",
    "group": "events",
    "desc": "A god answers favourably",
+   "source": "pray.c"
+  },
+  {
+   "id": "sacrifice_accepted",
+   "group": "events",
+   "desc": "A sacrifice is accepted (consumed in a flash, smoke or flame)",
+   "source": "pray.c"
+  },
+  {
+   "id": "altar_converted",
+   "group": "events",
+   "desc": "A cross-aligned altar is converted to your god",
+   "source": "pray.c"
+  },
+  {
+   "id": "sacrifice_ignored",
+   "group": "events",
+   "desc": "A sacrifice is ignored: too old (\"Nothing happens\")",
    "source": "pray.c"
   },
   {
