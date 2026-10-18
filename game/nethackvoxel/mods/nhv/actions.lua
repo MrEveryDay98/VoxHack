@@ -6,9 +6,11 @@
 --                     (open a door, take the stairs, pick up, chat...)
 --                     hold: action wheel for it - move the mouse toward
 --                     an action and let go
---   Shift+right click the same for yourself (search, pray, rest...)
---   Alt+right click   use an item (eat, quaff, read, zap, wear...)
---   Ctrl+right click  magic and abilities (cast, turn undead, ...)
+--   Shift+right click the same for yourself (pick up, pray, rest...)
+--   Alt+right click   use an item (quaff, read, apply, wear...)
+--                     (what the hotbar does - fire, kick, zap, cast, eat,
+--                     search, pay - is left off these wheels)
+--   Ctrl+right click  magic and abilities (turn undead, invoke, ...)
 --   E (aux1)          same, for your wielded weapon
 --   1-5               the hotbar's action keys (hotbar.lua)
 --   T                 NetHack command line (hotbar.lua)
@@ -741,8 +743,8 @@ function actions.context(player)
 		local peaceful = mon.mon and U.has(mon.mon.flags, U.MON_PEACEFUL)
 		add(act("Chat", ext("chat", {key = key})), peaceful)
 		add(act("Fight", ext("nhvattack " .. (mon.id or 0))))
-		add(act("Fire at it", "f" .. key))
 		add(act("Throw at it", "t"))
+		add(act("Apply at it", "a"))
 		return list, primary
 	end
 
@@ -772,7 +774,7 @@ function actions.context(player)
 			add(act("Dip", ext("dip")))
 		elseif c == "S_sink" then
 			add(act("Drink", "q"), true)
-			add(act("Kick sink", "\4."))
+			add(act("Dip", ext("dip")))
 		elseif c == "S_altar" then
 			add(act("Offer", ext("offer")), true)
 			add(act("Drop on altar", "D"))
@@ -788,42 +790,39 @@ function actions.context(player)
 	if sq.typ == U.TYP.DOOR then
 		if door_closed(sq.door) then
 			add(act("Open", "o" .. key), true)
-			add(act("Kick", "\4" .. key))
-			add(act("Force lock", ext("force")))
-			add(act("Untrap", ext("untrap", {key = key})))
+			add(act("Unlock", "a"))
 		elseif door_open(sq.door) then
 			add(act("Close", "c" .. key), true)
-			add(act("Kick", "\4" .. key))
 		end
 	end
-	if sq.has_obj then
-		add(act("Kick object", "\4" .. key))
-	end
-	add(act("Search", "s"))
-	add(act("Kick", "\4" .. key))
+	-- (kicking and searching are on the hotbar)
+	add(act("Untrap", ext("untrap", {key = key})))
 	return list, primary
 end
 
 -- Shift + right click: things you do by yourself
 function actions.self_context()
 	local list = {
-		act("Search", "s"),
+		act("Pick up", ","),
+		act("Drop many", "D"),
 		act("Rest 20 turns", "20s"),
 		act("Pray", ext("pray")),
 		act("Sit", ext("sit")),
 		act("Engrave", "E"),
 		act("Loot", ext("loot")),
+		act("Jump", ext("jump")),
 		info_act("Look here", ":"),
 		info_act("Attributes", "\24"),
 		act("Save & quit", "S"),
 	}
-	return list, list[1] -- (a tap searches)
+	return list, list[1] -- (a tap picks up; searching is on the hotbar)
 end
 
 -- Alt + right click: use an item (NetHack asks which)
 function actions.item_verbs()
+	-- (eating and zapping are on the hotbar)
 	return {
-		act("Eat", "e"), act("Quaff", "q"), act("Read", "r"), act("Zap", "z"),
+		act("Quaff", "q"), act("Read", "r"), act("Drop", "d"), act("Throw", "t"),
 		act("Apply", "a"), act("Wear", "W"), act("Take off", "T"), act("Put on", "P"),
 		act("Remove", "R"), act("Wield", "w"),
 		act("Swap weapons", "x"), act("Dual wield", ext("twoweapon")),
@@ -833,13 +832,14 @@ end
 -- Ctrl + right click: magic and abilities
 function actions.magic()
 	local list = {
-		act("Cast a spell", "Z"),
+		info_act("Known spells", "+"),
 		act("Turn undead", ext("turn")),
 		act("Monster ability", ext("monster")),
+		act("Invoke", ext("invoke")),
 		info_act("Enhance skills", ext("enhance")),
 		act("Teleport", "\20"),
 	}
-	return list, list[1] -- (a tap casts)
+	return list, nil -- (a tap does nothing: casting is on the hotbar)
 end
 
 -- ---------------------------------------------------------------- items
@@ -874,7 +874,6 @@ function actions.item_context(o)
 		end
 		add("Throw", "t" .. inv)
 		add("Quiver", "Q" .. inv)
-		add("Fire", "f")
 	elseif c == OC.ARMOR then
 		add(worn and "Take off" or "Wear", (worn and "T" or "W") .. inv, true)
 	elseif c == OC.RING or c == OC.AMULET then
