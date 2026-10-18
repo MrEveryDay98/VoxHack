@@ -840,9 +840,25 @@
    "pitch_var": 0,
    "loop": true
   },
-  "music_gehennom": {
+  "music_temple": {
    "sounds": [
-    "nhv_music_gehennom"
+    "nhv_music_temple"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_bigroom": {
+   "sounds": [
+    "nhv_music_bigroom"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_endgame": {
+   "sounds": [
+    "yh_music_endgame"
    ],
    "volume": 100,
    "pitch_var": 0,
