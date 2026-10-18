@@ -448,19 +448,28 @@ end
 -- Tell NetHack who can reach the hero / what pets are fighting: a body
 -- close enough to touch you plus an arm's reach (REACH), with nothing
 -- solid in between - not merely in the next square.
+-- Melee reach between you and monster id's body - the same both ways
+-- (what it can hit you from is what you can hit it from): touching plus
+-- REACH, level with you more or less (not you up a staircase over it; a
+-- tall one reaches higher), nothing solid in between.
+function sim.in_reach(id, hp)
+	local e = sim.mons[id]
+	if not (e and hp) then
+		return false
+	end
+	local map = nh.snap and nh.snap.map
+	local m = nhv.mobs and nhv.mobs.mons["id" .. id]
+	local up = math.max(1.6, (m and m.h or 1.5) * 0.9)
+	return flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH
+		and math.abs(hp.y - feet_y(id)) <= up
+		and (not map or clear_line(map, e.pos, hp))
+end
+
 function sim.push_states()
 	local hp = hero_pos()
-	local map = nh.snap and nh.snap.map
 	local states = {}
 	for id, e in pairs(sim.mons) do
-		-- (and level with you, more or less: not you up a staircase over it;
-		-- a tall one reaches higher)
-		local m = nhv.mobs and nhv.mobs.mons["id" .. id]
-		local up = hp and math.max(1.6, (m and m.h or 1.5) * 0.9)
-		local reach = hp and flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH
-			and math.abs(hp.y - feet_y(id)) <= up
-			and (not map or clear_line(map, e.pos, hp))
-		states[#states + 1] = {id = id, in_reach = reach and true or false, target = e.target or 0}
+		states[#states + 1] = {id = id, in_reach = sim.in_reach(id, hp), target = e.target or 0}
 	end
 	core.nh_set_monstates(states)
 end

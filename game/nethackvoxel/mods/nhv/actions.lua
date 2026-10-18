@@ -108,7 +108,8 @@ end
 local ATTACK_CONE = 0.6 -- radians either side of the crosshair
 
 -- the perceived monster your swing would hit: within reach of your body
--- and closest to the crosshair
+-- (the same reach monsters have on you: sim.in_reach) and closest to the
+-- crosshair
 local function attack_target(player, prefer_id)
 	local pos = player:get_pos()
 	local look = player:get_look_dir()
@@ -116,9 +117,7 @@ local function attack_target(player, prefer_id)
 	for _, e in pairs(nhv.mobs.mons) do
 		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 		if body then
-			local d = vector.distance(vector.new(pos.x, 0, pos.z), body.pos)
-			local reach = body.r + nhv.sim.HERO_R + 1.6 -- (your own reach: as it was)
-			if d <= reach then
+			if nhv.sim.in_reach(e.id, pos) then
 				local a = angle_between(look, vector.subtract(body.pos, pos))
 				if e.id == prefer_id then
 					a = a - 0.3
