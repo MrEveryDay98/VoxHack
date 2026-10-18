@@ -203,6 +203,15 @@ nh.on_snapshot(function(snap, action)
 	clock.last_hp = snap.hero.hp
 	if prev and action and action.kind ~= "tick" and action.kind ~= "hmove" then
 		local passed = snap.hero.moves - prev
+		-- an attack (or a swing at the air) costs its steady share of time,
+		-- as fast as you are (Fast: 3/4 of a turn), not NetHack's whole
+		-- turns: a fast hero's extra moves land at random, so a punch would
+		-- sometimes cost nothing and the next come at once - a rhythm of
+		-- quick doubles instead of right, left, right... (on average it's
+		-- the same speed)
+		if (action.kind == "attack" or action.kind == "swing") and passed <= 1 then
+			passed = clock.action_turns()
+		end
 		if passed > 0 and passed < 1000 then -- (not a level change's jump)
 			local owed = passed * 1.0
 			local paid = math.min(clock.acc, owed)
