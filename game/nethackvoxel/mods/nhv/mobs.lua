@@ -106,7 +106,11 @@ local function fade_apply(e, a)
 		return
 	end
 	a = math.max(0.02, math.min(1, a))
-	if e.ghost then
+	if e.tex then
+		-- (a picture of its own, an engraving's writing: always flat)
+		local tex = e.tex .. ("^[opacity:%d"):format(math.floor(a * 255))
+		e.obj:set_properties({textures = {tex, tex}, use_texture_alpha = true})
+	elseif e.ghost then
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(math.floor(a * GHOST_ALPHA))
 		e.obj:set_properties({textures = {tex, tex .. "^[transformFX"}})
 	elseif nhv_tiles.flat() then
@@ -673,11 +677,11 @@ local FEATURES = {
 	S_altar = false, S_grave = false, S_throne = false, S_sink = false,
 	S_fountain = false, S_tree = false, S_engroom = true, S_engrcorr = true,
 }
--- Engravings: NetHack's tiles paint the writing over a patch of floor
--- (its colour and speckles), which would lie on the 3D floor as a square of
--- another colour: those colours are made see-through
-local ENGRAVINGS = {S_engroom = true, S_engrcorr = true}
-local ENGRAVING_KEY = "^[makealpha:72,108,108^[makealpha:108,145,182"
+-- Engravings: NetHack's tiles paint the writing over a patch of floor,
+-- which would lie on the 3D floor as a square of another colour: just the
+-- writing is drawn, a flat see-through picture of its marks
+-- (tools/make_engraving_marks.py)
+local ENGRAVINGS = {S_engroom = "nhv_engr_room.png", S_engrcorr = "nhv_engr_corr.png"}
 -- traps are the '^' cmap symbols (plus webs)
 local function is_trap(name, gi)
 	return gi.sym == 94 or name == "S_web"
@@ -759,12 +763,11 @@ local function update_features(snap)
 						e.pos = pos
 						local props = sprite_props(tile, h)
 						props.pointable = false
-						if ENGRAVINGS[name] then
-							-- (only the writing: the tile's own floor behind
-							-- it is keyed out, so it lies on the real floor)
-							local tex = nhv_tiles.texture(tile) .. ENGRAVING_KEY
+						-- (an engraving: only its writing)
+						e.tex = ENGRAVINGS[name] or nil
+						if e.tex then
 							props.visual = "upright_sprite"
-							props.textures = {tex, tex}
+							props.textures = {e.tex, e.tex}
 							props.visual_size = {x = h, y = h, z = h}
 							props.use_texture_alpha = true
 						end
