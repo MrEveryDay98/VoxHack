@@ -188,7 +188,7 @@ function mobs.clear()
 			vector.new(U.COLNO * U.TILE + 10, U.CEIL_Y + 10, U.ROWNO * U.TILE + 10))) do
 		local ent = obj:get_luaentity()
 		if ent and (ent.name == "nhv:mon" or ent.name == "nhv:obj" or ent.name == "nhv:feat"
-				or ent.name == "nhv:chainlink") then
+				or ent.name == "nhv:chainlink" or ent.name == "nhv:ball") then
 			obj:remove()
 		end
 	end
@@ -459,11 +459,14 @@ local function update_objects(snap)
 			local i = U.idx(tx, ty)
 			local g = map.mem[i]
 			local gi = nhv.glyph_info(g)
-			-- (a punished hero's chain is drawn as a chain, below, not as
-			-- an item lying on its square)
-			if ball and tx == ball.cx and ty == ball.cy and gi.kind == "obj"
-					and core.nh_obj_name(gi.index) == "iron chain" then
-				goto next_square
+			-- (a punished hero's ball and chain are drawn trailing behind
+			-- you, below, not as items lying on their squares)
+			if ball and gi.kind == "obj" then
+				local oname = core.nh_obj_name(gi.index)
+				if (oname == "iron chain" and tx == ball.cx and ty == ball.cy)
+						or (oname == "heavy iron ball" and tx == ball.bx and ty == ball.by) then
+					goto next_square
+				end
 			end
 			if gi.kind == "obj" or gi.kind == "body" or gi.kind == "statue" then
 				seen[i] = true
@@ -921,23 +924,41 @@ end)
 
 -- ---------------------------------------------------------------- the ball
 -- Punished (a scroll of punishment...): a heavy iron ball is chained to
--- your leg. NetHack keeps the ball and chain on squares and drags them
--- after you; here the chain is drawn as links from your ankle to the ball,
--- lying on the floor where it's slack, pulled up off it when taut. Carried,
--- the ball is in your hands: the chain hangs from them to your ankle.
-local LINK_LEN = 0.16   -- one link's length (nodes)
-local CHAIN_LEN = 2.6 * U.TILE -- (slack up to this far, as NetHack lets
-                        -- the ball lie up to two squares away)
-local BALL_R = 0.3      -- the ball's radius (its middle above the floor)
-local links = {}        -- the chain's link entities, in order
+-- your leg. NetHack keeps it on your square (nhv_free.c); here it trails
+-- right behind you, dragged along the floor on its chain, a picture
+-- facing you. Carried, it's in your hands, the chain hanging to your ankle.
+local BALL_H = OBJ_H * 1.5 -- (its picture: half again an item's)
+-- (the ball in its tile's picture: rows 7-12 of 16, so its picture is set
+-- that much down to rest it on the floor, the chain to its middle)
+local BALL_FOOT = 3 / 16
+local ROPE = 1.3           -- how far behind you it drags (nodes)
+local SNAP = 6             -- further than this (teleported...): put it back
+local SEG = 0.5            -- one piece of chain (its picture's length)
+local CHAIN_W = SEG / 4    -- (its picture: 16 x 4 pixels of chain)
+local CHAIN_TEX = "[combine:16x4:0,-6=nhv_sprite_chainLong.png"
+local NONE = "[combine:1x1"
+local ball = {}            -- {obj=, pos=} the ball's picture
+local links = {}           -- the chain's pieces, in order
 
+core.register_entity("nhv:ball", {
+	initial_properties = {
+		visual = "sprite", textures = {"blank.png"},
+		visual_size = {x = BALL_H, y = BALL_H},
+		physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0}, use_texture_alpha = true,
+	},
+})
+
+-- a piece of chain: a thin square tube showing the chain on its four sides
+-- (so it looks the same from any side), along its z
 core.register_entity("nhv:chainlink", {
 	initial_properties = {
-		visual = "cube", visual_size = {x = 0.07, y = 0.07, z = LINK_LEN},
-		textures = {"[fill:1x1:#5c5c64", "[fill:1x1:#5c5c64", "[fill:1x1:#76767e",
-			"[fill:1x1:#76767e", "[fill:1x1:#4a4a52", "[fill:1x1:#4a4a52"},
+		visual = "cube", visual_size = {x = CHAIN_W, y = CHAIN_W, z = SEG},
+		textures = {CHAIN_TEX .. "^[transformR90", CHAIN_TEX .. "^[transformR90",
+			CHAIN_TEX, CHAIN_TEX, NONE, NONE},
 		physical = false, pointable = false, static_save = false,
-		collisionbox = {0, 0, 0, 0, 0, 0}, shaded = true,
+		collisionbox = {0, 0, 0, 0, 0, 0}, use_texture_alpha = true,
+		backface_culling = false, shaded = true,
 	},
 })
 
@@ -959,6 +980,13 @@ local function set_links(n)
 	return true
 end
 
+local function remove_ball()
+	if ball.obj and ball.obj:get_pos() then
+		ball.obj:remove()
+	end
+	ball.obj, ball.pos, ball.tile = nil, nil, nil
+end
+
 local function floor_at(p)
 	local tx, ty = U.pos_to_tile(p)
 	if U.in_map(tx, ty) then
@@ -967,71 +995,106 @@ local function floor_at(p)
 	return U.STAND_Y
 end
 
-local function update_chain()
-	local ball = mobs.ball
+local function solid_at(p)
+	local def = core.registered_nodes[core.get_node(vector.round(p)).name]
+	return def and def.walkable and not (def.groups and def.groups.nhv_door)
+end
+
+-- where the ball goes now: dragged after you, no further than ROPE behind;
+-- not into a wall (pulled in nearer you until it's clear)
+local function drag_ball(pp, dtime)
+	local want = ball.pos
+	if not want or vector.distance(want, pp) > SNAP then
+		local back = vector.new(0, 0, 0)
+		local player = core.get_connected_players()[1]
+		if player then
+			local yaw = player:get_look_horizontal()
+			back = vector.new(math.sin(yaw), 0, -math.cos(yaw))
+		end
+		want = vector.add(pp, vector.multiply(back, ROPE))
+	end
+	local d = vector.subtract(want, pp)
+	d.y = 0
+	local len = vector.length(d)
+	if len > ROPE then
+		want = vector.add(pp, vector.multiply(d, ROPE / len))
+		-- (a little slide on: it catches up smoothly rather than at once)
+		if ball.pos then
+			want = vector.add(ball.pos, vector.multiply(vector.subtract(want, ball.pos),
+				math.min(1, dtime * 14)))
+		end
+	end
+	for _ = 1, 5 do
+		local probe = vector.new(want.x, floor_at(want) + 0.3, want.z)
+		if not solid_at(probe) then
+			break
+		end
+		want = vector.add(pp, vector.multiply(vector.subtract(want, pp), 0.6))
+	end
+	want.y = floor_at(want)
+	return want
+end
+
+local function update_ball(dtime)
+	local b = mobs.ball
 	local player = core.get_connected_players()[1]
 	local pp = player and player:get_pos()
-	if not ball or not pp or not nhv.nh.snap then
+	if not b or not pp or not nhv.nh.snap then
 		set_links(0)
+		remove_ball()
 		return
 	end
-	-- the ankle (a little to the right of your feet), the far end: the
-	-- ball on the floor, or in your hands when you carry it
 	local yaw = player:get_look_horizontal()
 	local right = vector.new(math.cos(yaw), 0, math.sin(yaw))
-	local a = vector.add(vector.add(pp, vector.multiply(right, 0.18)), vector.new(0, 0.15, 0))
-	local b
-	if ball.carried then
+	-- the chain's ends: your ankle, and the ball (or your hands)
+	local a = vector.add(vector.add(pp, vector.multiply(right, 0.15)), vector.new(0, 0.1, 0))
+	local z
+	if b.carried then
+		remove_ball()
 		local fwd = vector.new(-math.sin(yaw), 0, math.cos(yaw))
-		b = vector.add(vector.add(pp, vector.multiply(fwd, 0.35)), vector.new(0, 0.9, 0))
+		z = vector.add(vector.add(pp, vector.multiply(fwd, 0.35)), vector.new(0, 0.9, 0))
 	else
-		local e = mobs.objs[U.idx(ball.bx, ball.by)]
-		local bp = e and e.obj:get_pos()
-		if bp then
-			b = vector.new(bp.x, floor_at(bp) + BALL_R, bp.z)
-		else
-			b = U.tile_center(ball.bx, ball.by, nhv.terrain.stand_y(ball.bx, ball.by) + BALL_R)
+		ball.pos = drag_ball(pp, dtime)
+		local tile = b.tile
+		if tile and not (ball.obj and ball.obj:get_pos()) then
+			ball.obj = core.add_entity(ball.pos, "nhv:ball")
+			ball.tile = nil
 		end
-		-- (from the ball's near side, not its middle)
-		local d = vector.subtract(a, b)
-		d.y = 0
-		local len = vector.length(d)
-		if len > BALL_R then
-			b = vector.add(b, vector.multiply(d, BALL_R / len))
+		if ball.obj and tile and ball.tile ~= tile then
+			ball.obj:set_properties({textures = {nhv_tiles.texture(tile)}})
+			ball.tile = tile
 		end
+		if ball.obj then
+			ball.obj:move_to(vector.new(ball.pos.x, ball.pos.y + BALL_H * (0.5 - BALL_FOOT),
+				ball.pos.z), true)
+		end
+		z = vector.new(ball.pos.x, ball.pos.y + BALL_H * BALL_FOOT, ball.pos.z)
 	end
-	local span = vector.distance(a, b)
-	-- slack: how far the middle sags (to the floor and along it)
-	local sag = math.sqrt(math.max(0, CHAIN_LEN * CHAIN_LEN - span * span)) * 0.5
-	if ball.carried then
-		sag = 0.35
-	end
-	local n = math.max(4, math.min(60, math.floor(span / LINK_LEN * 1.15)))
+	local span = vector.distance(a, z)
+	local n = math.max(1, math.ceil(span / SEG))
 	if not set_links(n) then
 		return
 	end
-	local prev
-	for k = 0, n do
+	-- slack: the middle sags (on the floor when the ball is dragged)
+	local sag = b.carried and 0.3 or 0.15
+	local prev = a
+	for k = 1, n do
 		local t = k / n
-		local p = vector.add(a, vector.multiply(vector.subtract(b, a), t))
-		p.y = math.max(floor_at(p) + 0.035, p.y - sag * 4 * t * (1 - t))
-		if prev then
-			local l = links[k]
-			local mid = vector.multiply(vector.add(prev, p), 0.5)
-			local d = vector.subtract(p, prev)
-			l:move_to(mid, true)
-			-- along the chain, every other link turned on its side
-			if vector.length(d) > 1e-4 then
-				local rot = vector.dir_to_rotation(d)
-				rot.z = k % 2 == 0 and math.pi / 2 or 0
-				l:set_rotation(rot)
-			end
+		local p = vector.add(a, vector.multiply(vector.subtract(z, a), t))
+		p.y = math.max(floor_at(p) + CHAIN_W / 2, p.y - sag * 4 * t * (1 - t))
+		local d = vector.subtract(p, prev)
+		local l = links[k]
+		l:move_to(vector.multiply(vector.add(prev, p), 0.5), true)
+		local len = vector.length(d)
+		if len > 1e-4 then
+			l:set_rotation(vector.dir_to_rotation(d))
+			l:set_properties({visual_size = {x = CHAIN_W, y = CHAIN_W, z = len}})
 		end
 		prev = p
 	end
 end
 
-core.register_globalstep(update_chain)
+core.register_globalstep(update_ball)
 
 -- ---------------------------------------------------------------- asleep
 -- A sleeping monster you can see breathes out Z's: one every so often,

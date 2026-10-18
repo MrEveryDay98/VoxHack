@@ -411,8 +411,9 @@ NHV_API int nhv_get_lights(nhv_light *buf, int max);
 /* Punishment (a scroll of punishment...): the heavy iron ball chained to
  * the hero. Returns 0 if not punished; 1 with the ball on the floor at
  * <bx,by>; 2 with the ball carried (at the hero's square). <cx,cy> is the
- * chain's square (it lies between the hero and the ball, or under you). */
-NHV_API int nhv_get_ball(int *bx, int *by, int *cx, int *cy);
+ * chain's square (it lies between the hero and the ball, or under you);
+ * tile: the ball's picture. */
+NHV_API int nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile);
 
 /* Rays (wands, spells, breath) are handed to the host too. It flies and
  * bounces them and reports: "#nhvrayhit rid m_id" (reached a body; m_id 0

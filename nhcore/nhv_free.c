@@ -78,6 +78,21 @@ mon_by_id(unsigned id)
 
 /* ---------------------------------------------------------------- commands */
 
+/* Punished: the ball and chain are kept under the hero (in 3D the ball
+   trails right behind you, drawn by the host), so walking never drags
+   them a square behind nor is held back by them. */
+static void
+nhv_bc_follow(void)
+{
+    if (!Punished || !uball || !uchain || u.uswallow || carried(uball)
+        || uball->where != OBJ_FLOOR || uchain->where != OBJ_FLOOR)
+        return;
+    if (u_at(uball->ox, uball->oy) && u_at(uchain->ox, uchain->oy))
+        return;
+    unplacebc();
+    placebc();
+}
+
 /* #nhvmove x y [share]: the hero's body entered square <x,y>; move there
    without using time (time passes separately through ticks).
 
@@ -106,6 +121,7 @@ donhvmove(void)
         nhv_walking = TRUE;
         teleds(x, y, TELEDS_ALLOW_DRAG);
         nhv_walking = FALSE;
+        nhv_bc_follow();
         return ECMD_OK;
     }
     u.dx = dx, u.dy = dy, u.dz = 0;
@@ -123,6 +139,7 @@ donhvmove(void)
     domove();
     nhv_walking = FALSE;
     svc.context.nopick = 0;
+    nhv_bc_follow();
     return ECMD_OK;
 }
 
@@ -180,6 +197,7 @@ donhvpass(void)
             nhv_walking = TRUE;
             teleds(px, py, TELEDS_ALLOW_DRAG);
             nhv_walking = FALSE;
+            nhv_bc_follow();
         }
         return ECMD_OK;
     }
@@ -196,6 +214,7 @@ donhvpass(void)
                 nhv_walking = TRUE;
                 teleds(x, y, TELEDS_ALLOW_DRAG);
                 nhv_walking = FALSE;
+                nhv_bc_follow();
                 return ECMD_OK;
             }
         }
@@ -503,10 +522,11 @@ nhv_get_lights(nhv_light *buf, int max)
 }
 
 NHV_API int
-nhv_get_ball(int *bx, int *by, int *cx, int *cy)
+nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile)
 {
     if (nhv_state() != NHV_WAITING || !Punished || !uball || !uchain)
         return 0;
+    *tile = glyphmap[obj_to_glyph(uball, rn2_on_display_rng)].tileidx;
     *cx = uchain->ox, *cy = uchain->oy;
     if (carried(uball)) {
         *bx = u.ux, *by = u.uy;
