@@ -679,6 +679,45 @@ local function hold_still(player)
 	return true
 end
 
+-- Helpless (asleep, frozen, fainted...): the camera goes behind you, so you
+-- see what's happening to you, and straight back to first person when you
+-- can act again (then it's yours to change again). Asleep, you breathe out
+-- Z's, as sleeping monsters do (mobs.lua).
+local camera_out = false
+local z_next = 0
+local function helpless_view(player)
+	local h = player_mod.hero
+	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or false
+	if helpless ~= camera_out then
+		camera_out = helpless
+		player:set_camera({mode = helpless and "third" or "first"})
+		if not helpless then
+			-- (back in first person: free to change it again)
+			core.after(0.2, function()
+				if player:is_player() and not camera_out then
+					player:set_camera({mode = "any"})
+				end
+			end)
+		end
+	end
+	if h and U.has(h.flags, U.HERO.ASLEEP) then
+		local now = core.get_us_time() / 1e6
+		if now >= z_next then
+			z_next = now + 1.1 * (0.8 + math.random() * 0.4)
+			local side = (math.random() - 0.5) * 0.6
+			core.add_particle({
+				pos = vector.offset(player:get_pos(), side * 0.5, 1.9, side * 0.5),
+				velocity = vector.new(side, 0.55, (math.random() - 0.5) * 0.6),
+				expirationtime = 2.2,
+				size = 1.6,
+				texture = {name = "nhv_z.png^[multiply:#E8F0FF", alpha_tween = {1, 0},
+					scale_tween = {0.6, 1.5}},
+				glow = 10,
+			})
+		end
+	end
+end
+
 local was_searching = false
 core.register_globalstep(function()
 	local player = player_mod.get()
@@ -696,6 +735,7 @@ core.register_globalstep(function()
 		check_gap(player)
 		check_trigger(player)
 		check_traps(player)
+		helpless_view(player)
 		terrain.place_hero_light(player:get_pos())
 		tell_pit(player)
 	end

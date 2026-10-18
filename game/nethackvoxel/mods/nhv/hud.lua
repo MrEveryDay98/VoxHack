@@ -590,7 +590,7 @@ nh.on_snapshot(function(snap)
 		or U.has(h.flags, U.HERO.HELPLESS) and "frozen" or nil
 	if look ~= sleep_shown and hud.ids.sleep then
 		sleep_shown = look
-		player:hud_change(hud.ids.sleep, "text", look == "asleep" and "[fill:16x16:#000008^[opacity:225"
+		player:hud_change(hud.ids.sleep, "text", look == "asleep" and "[fill:16x16:#000010^[opacity:150"
 			or look == "frozen" and "[fill:16x16:#5070A0^[opacity:90" or "blank.png")
 	end
 	-- blindness: black fog that hides everything beyond arm's reach
