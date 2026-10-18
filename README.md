@@ -3,6 +3,8 @@
 **NetHack 3.7 in first person, in a voxel world.** Based on NetHack, running on a
 modified [Luanti](https://www.luanti.org/) engine. Windows only.
 
+**Website:** https://mreveryday98.github.io/VoxHack/ · **Download:** [latest release](../../releases/latest)
+
 NetHack still decides everything: every rule, every die roll, every monster.
 VoxHack is how you see it and move through it: walk the dungeon freely, look
 around in 3D, swing at what's in front of you, and watch the Mazes of Menace
