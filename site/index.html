@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoxHack</title>
+<meta name="description" content="NetHack 3.7 in first person, in a voxel world. Free for Windows.">
+<meta property="og:title" content="VoxHack">
+<meta property="og:description" content="NetHack 3.7 in first person, in a voxel world. Free for Windows.">
+<meta property="og:image" content="assets/shot-room.jpg">
+<style>
+@font-face { font-family: "Retro"; src: url("assets/nhv_retro.ttf") format("truetype"); font-display: swap; }
+:root {
+  --bg: #0e0f14; --panel: #171922; --line: #2a2d3a;
+  --text: #e8e6df; --dim: #a3a3ad; --gold: #ffd25a; --gold-deep: #c98e1c; --sky: #78c8ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+a { color: var(--sky); }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.retro { font-family: "Retro", ui-monospace, monospace; letter-spacing: 0.02em; }
+
+header.hero { text-align: center; padding: 64px 0 40px; }
+header.hero .logo {
+  width: min(560px, 90%); image-rendering: pixelated; image-rendering: crisp-edges;
+}
+header.hero p.tag { font-size: 1.25rem; color: var(--dim); margin: 18px auto 28px; max-width: 34em; }
+.buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-block; padding: 14px 26px; border-radius: 4px; text-decoration: none;
+  font-family: "Retro", ui-monospace, monospace; font-size: 1.05rem;
+  border: 2px solid var(--line); color: var(--text); background: var(--panel);
+}
+.btn.primary { background: var(--gold); color: #1d1405; border-color: var(--gold-deep); box-shadow: 0 4px 0 var(--gold-deep); }
+.btn:hover { filter: brightness(1.08); }
+.small { color: var(--dim); font-size: 0.9rem; margin-top: 12px; }
+
+.shot { margin: 8px 0 56px; }
+.shot img { width: 100%; display: block; border: 2px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
+
+h2 { font-family: "Retro", ui-monospace, monospace; color: var(--gold); font-weight: normal; font-size: 1.5rem; margin: 48px 0 16px; }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.feature { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; }
+.feature h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--text); }
+.feature p { margin: 0; color: var(--dim); }
+
+table.keys { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+table.keys td { padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+table.keys tr:first-child td { border-top: 0; }
+table.keys td:first-child { white-space: nowrap; font-family: "Retro", ui-monospace, monospace; color: var(--gold); width: 1%; }
+
+ol.steps { padding-left: 1.3em; }
+ol.steps li { margin: 6px 0; }
+code { background: var(--panel); border: 1px solid var(--line); padding: 1px 6px; border-radius: 3px; font-size: 0.92em; }
+
+footer { margin: 64px 0 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 0.92rem; }
+
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  header.hero { padding: 40px 0 28px; }
+  table.keys td:first-child { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <img class="logo" src="assets/logo.png" alt="VoxHack">
+  <p class="tag">NetHack 3.7 in first person. Walk the Mazes of Menace in a 3D voxel world, where NetHack still decides every rule and every roll of the dice.</p>
+  <div class="buttons">
+    <a class="btn primary" href="https://github.com/MrEveryDay98/VoxHack/releases/latest">Download for Windows</a>
+    <a class="btn" href="https://github.com/MrEveryDay98/VoxHack">Source code</a>
+  </div>
+  <p class="small">Free. Windows 10/11, 64-bit. Early alpha.</p>
+</header>
+
+<div class="shot"><img src="assets/shot-room.jpg" alt="A lit dungeon room with a fountain, seen in first person"></div>
+
+<h2>What it is</h2>
+<div class="features">
+  <div class="feature"><h3>The real NetHack underneath</h3><p>The whole of NetHack 3.7 runs the game: every monster, item, trap, prayer and death is NetHack's own.</p></div>
+  <div class="feature"><h3>A dungeon you walk through</h3><p>Move freely, look around, swing at what's in front of you. Time crawls while you stand still and runs as you move.</p></div>
+  <div class="feature"><h3>Built from NetHack's levels</h3><p>Every level is built in 3D from NetHack's own map, with special levels hand-made as places of their own.</p></div>
+  <div class="feature"><h3>Mouse and hotbar play</h3><p>Aim with the crosshair, act with a right-click wheel, and keep NetHack's command line one key away.</p></div>
+  <div class="feature"><h3>Sound and atmosphere</h3><p>Sound effects for NetHack's events, music for each part of the dungeon, and skies above the open levels.</p></div>
+  <div class="feature"><h3>Your saves stay put</h3><p>Unzip and play. Your game, settings and high scores live in the game's own folder.</p></div>
+</div>
+
+<h2>How to play</h2>
+<ol class="steps">
+  <li>Download <a href="https://github.com/MrEveryDay98/VoxHack/releases/latest">the latest release</a> and unpack it anywhere (not in Program Files).</li>
+  <li>Run <code>Create Play Shortcut.bat</code>, or <code>Launchers\Play VoxHack.bat</code>.</li>
+  <li>Make a character on the title screen and descend.</li>
+</ol>
+
+<table class="keys">
+  <tr><td>WASD + mouse</td><td>Move and look</td></tr>
+  <tr><td>Left click</td><td>Attack what's in reach under your crosshair</td></tr>
+  <tr><td>Shift + left click</td><td>Fire your quivered ammo where you look</td></tr>
+  <tr><td>Right click</td><td>Act on what you point at (open, climb, talk); hold for an action wheel</td></tr>
+  <tr><td>1 - 5</td><td>Fire, Kick, Zap, Spell, Eat</td></tr>
+  <tr><td>R / X</td><td>Pick up / Search</td></tr>
+  <tr><td>I / Z</td><td>Inventory / the big map</td></tr>
+  <tr><td>T</td><td>NetHack's command line (<code>#pray</code>, <code>20s</code>...)</td></tr>
+</table>
+
+<h2>Open source</h2>
+<p>VoxHack is free software. The <a href="https://github.com/MrEveryDay98/VoxHack">source code</a> is on GitHub, with the modified <a href="https://github.com/MrEveryDay98/NetHack/tree/nhv">NetHack</a> and <a href="https://github.com/MrEveryDay98/luanti/tree/nhv">Luanti</a> engines. Bugs and ideas are welcome in <a href="https://github.com/MrEveryDay98/VoxHack/issues">Issues</a>.</p>
+
+<footer>
+  VoxHack is based on <a href="https://www.nethack.org/">NetHack</a> by the NetHack DevTeam and runs on the <a href="https://www.luanti.org/">Luanti</a> engine. It is not an official NetHack release.
+  Distributed under the NetHack General Public License; see <a href="https://github.com/MrEveryDay98/VoxHack/blob/master/CREDITS.md">credits and licences</a>.
+</footer>
+
+</div>
+</body>
+</html>
