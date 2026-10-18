@@ -580,9 +580,7 @@
    "loop": true
   },
   "music_victory": {
-   "sounds": [
-    "yh_music_endingyiruma"
-   ],
+   "sounds": [],
    "volume": 100,
    "loop": true
   },
@@ -756,14 +754,6 @@
    "volume": 100,
    "pitch_var": 0.05
   },
-  "music_dungeon": {
-   "sounds": [
-    "yh_music_df"
-   ],
-   "volume": 100,
-   "pitch_var": 0,
-   "loop": true
-  },
   "footstep": {
    "sounds": [
     "268758__deleted_user_5093904__footsteps"
@@ -850,9 +840,7 @@
    "loop": true
   },
   "music_endgame": {
-   "sounds": [
-    "yh_music_endgame"
-   ],
+   "sounds": [],
    "volume": 100,
    "pitch_var": 0,
    "loop": true
@@ -898,6 +886,14 @@
    ],
    "volume": 100,
    "pitch_var": 0.05
+  },
+  "music_dungeon": {
+   "sounds": [
+    "nhv_music_dungeon1"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {
