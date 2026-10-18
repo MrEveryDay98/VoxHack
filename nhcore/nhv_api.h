@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 11
+#define NHV_API_VERSION 12
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -68,9 +68,12 @@ enum nhv_req_kind {
     NHV_REQ_MENU,   /* menu selection; see nhv_get_menu_item() */
     NHV_REQ_LINE,   /* getlin: free text */
     NHV_REQ_EXTCMD, /* extended command name, answer with nhv_send_text */
-    NHV_REQ_POS     /* a place on the map (getpos: where to teleport, what
+    NHV_REQ_POS,    /* a place on the map (getpos: where to teleport, what
                        to look at...): answer with nhv_send_text("@x,y"),
                        or a key (Esc: cancel) */
+    NHV_REQ_TURN    /* the hero is helpless (asleep, paralysed, fainted...):
+                       answer (any key) when a turn of time has passed - the
+                       host's clock, so it lasts as long as it should */
 };
 
 enum nhv_menu_how { NHV_PICK_NONE = 0, NHV_PICK_ONE = 1, NHV_PICK_ANY = 2 };
@@ -223,6 +226,9 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_ENHANCE   0x100000 /* a skill can be advanced (#enhance) */
 #define NHV_HERO_POLE      0x200000 /* wielding a polearm or lance (reaches 2 squares) */
 #define NHV_HERO_FEMALE    0x400000 /* the hero is female (as it is now) */
+#define NHV_HERO_HELPLESS  0x800000 /* can't act: asleep, paralysed, fainted,
+                                       ... (NHV_REQ_TURN until it ends) */
+#define NHV_HERO_ASLEEP    0x1000000 /* (and the reason is sleep) */
 
 typedef struct nhv_hero {
     int x, y;

@@ -68,6 +68,8 @@ U.HERO = {
 	ENHANCE = 0x100000, -- (a skill can be advanced: #enhance)
 	POLE = 0x200000, -- (wielding a polearm or lance: hits 2 squares away)
 	FEMALE = 0x400000, -- (the hero is female, as it is now)
+	HELPLESS = 0x800000, -- (can't act: asleep, paralysed, fainted...)
+	ASLEEP = 0x1000000, -- (helpless because asleep)
 }
 
 -- nhv_obj.flags

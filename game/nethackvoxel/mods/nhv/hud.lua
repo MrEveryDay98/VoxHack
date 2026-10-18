@@ -34,6 +34,8 @@ local COL = {
 	hero = {255, 255, 255, 255},
 }
 
+local sleep_shown = nil -- (the asleep overlay is up)
+
 local function color_for(map, i)
 	local gi = nhv.glyph_info(map.glyph[i])
 	local k = gi.kind
@@ -336,6 +338,12 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png",
 	})
+	-- asleep: your eyes are shut (nearly black; the messages still show)
+	hud.ids.sleep = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+		scale = {x = -100, y = -100}, text = "blank.png", z_index = 500,
+	})
+	sleep_shown = nil
 	place_map(player)
 	hud.build_meters(player)
 	hud.apply_fog(player)
@@ -576,6 +584,11 @@ nh.on_snapshot(function(snap)
 		hud.flash("#30FF60", 0.7) -- (healed a good chunk; not each point regained)
 	end
 	last_hp = h.hp
+	local asleep = U.has(h.flags, U.HERO.ASLEEP)
+	if asleep ~= sleep_shown and hud.ids.sleep then
+		sleep_shown = asleep
+		player:hud_change(hud.ids.sleep, "text", asleep and "[fill:16x16:#000008^[opacity:225" or "blank.png")
+	end
 	-- blindness: black fog that hides everything beyond arm's reach
 	local blind = U.has(h.flags, U.HERO.BLIND)
 	if blind ~= hud.blind then

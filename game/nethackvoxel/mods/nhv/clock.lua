@@ -109,7 +109,8 @@ end
 -- Advance the clock; returns game turns passed this step.
 function clock.update(dtime, player)
 	-- prompts, menus and the command line: paused
-	if not nh.ready() or nhv.ui.open or nhv.ui.chat_open or nhv.ui.menu_open then
+	local helpless = nh.helpless_wait()
+	if not (nh.ready() or helpless) or nhv.ui.open or nhv.ui.chat_open or nhv.ui.menu_open then
 		return 0
 	end
 	local v = player:get_velocity()
@@ -117,8 +118,8 @@ function clock.update(dtime, player)
 	-- (walking flat out at the speed you can manage is full speed)
 	local walk = math.max(0.1, clock.WALK * clock.move_speed() / 12)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
-	if clock.debt > 0 or clock.realtime() then
-		target = 1
+	if clock.debt > 0 or clock.realtime() or helpless then
+		target = 1 -- (helpless, asleep...: time runs on without you)
 	end
 	if nhv.wheel and nhv.wheel.is_open() then
 		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen

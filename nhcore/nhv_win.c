@@ -469,6 +469,17 @@ nhv_nh_poskey(coordxy *x, coordxy *y, int *mod)
     return in.str[0] ? (unsigned char) in.str[0] : '\033';
 }
 
+/* the hero is helpless this turn (moveloop): wait until the host says a
+   turn of time has passed, so sleeping, being paralysed, fainting... last
+   as long in the world as they do in NetHack, instead of all at once */
+void
+nhv_helpless_turn(void)
+{
+    nhv_qitem in;
+
+    wait_for(NHV_REQ_TURN, "", "", 0, &in);
+}
+
 static int
 nhv_nhgetch(void)
 {

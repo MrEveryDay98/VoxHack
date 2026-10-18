@@ -124,7 +124,7 @@ player_mod.unswappable = {}
 
 local function stuck(h)
 	return U.has(h.flags, U.HERO.TRAPPED) or U.has(h.flags, U.HERO.SWALLOWED)
-		or U.has(h.flags, U.HERO.HELD)
+		or U.has(h.flags, U.HERO.HELD) or U.has(h.flags, U.HERO.HELPLESS)
 end
 
 local function set_speed(player)

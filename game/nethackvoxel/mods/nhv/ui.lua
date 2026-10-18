@@ -333,6 +333,15 @@ nh.on_request(function(req)
 		nh.answer_text("")
 		return true
 	end
+	if req.kind == "turn" then
+		-- (a helpless turn: the clock answers it - loop.lua; any question
+		-- on screen goes, as when a new command is wanted)
+		if ui.open and not ui.persistent[ui.open] then
+			close(ui.open)
+			ui.open = nil
+		end
+		return true
+	end
 	-- queued answers (e.g. which hand a ring goes on; a readied spell's
 	-- menu choice and direction)
 	-- (ones that timed out are dropped: e.g. the direction for a spell that
@@ -376,7 +385,7 @@ end)
 -- show NetHack's current question again (the watchdog in loop.lua: the
 -- game was waiting on one with nothing on screen)
 function ui.reshow()
-	if nh.state == "waiting" and nh.req and not nh.ready() then
+	if nh.state == "waiting" and nh.req and not nh.ready() and nh.req.kind ~= "turn" then
 		show_request(nh.req)
 		return true
 	end

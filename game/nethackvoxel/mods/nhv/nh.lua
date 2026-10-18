@@ -93,6 +93,12 @@ function nh.start(name)
 	return true
 end
 
+-- NetHack is waiting for a helpless turn to pass (asleep, paralysed...):
+-- the clock answers it when a turn's time has passed (loop.lua)
+function nh.helpless_wait()
+	return nh.state == "waiting" and nh.req and nh.req.kind == "turn"
+end
+
 function nh.ready()
 	return nh.state == "waiting" and nh.req and nh.req.kind == "key" and nh.req.for_command
 end

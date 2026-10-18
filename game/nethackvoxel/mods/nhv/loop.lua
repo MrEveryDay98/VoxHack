@@ -23,7 +23,8 @@ local function watchdog()
 		paused_since = nil
 		return
 	end
-	local paused = not nh.ready() or ui.open or ui.chat_open or ui.menu_open
+	-- (a helpless turn isn't a pause: the clock answers it)
+	local paused = not (nh.ready() or nh.helpless_wait()) or ui.open or ui.chat_open or ui.menu_open
 	if not paused then
 		paused_since, logged = nil, false
 		return
@@ -58,7 +59,8 @@ end
 core.register_globalstep(function(dtime)
 	watchdog()
 	local player = nhv.player.get()
-	if not player or not nh.snap or not nh.ready() or nhv.ui.open or nhv.ui.chat_open
+	local helpless = nh.helpless_wait()
+	if not player or not nh.snap or not (nh.ready() or helpless) or nhv.ui.open or nhv.ui.chat_open
 			or nhv.ui.menu_open then
 		return
 	end
@@ -89,7 +91,9 @@ core.register_globalstep(function(dtime)
 		nhv.sim.dirty = false
 		nh.refresh()
 	end
-	if nh.ready() and nhv.clock.tick_due() then
+	if helpless and nhv.clock.tick_due() then
+		nh.answer_key(32) -- (a helpless turn has passed)
+	elseif nh.ready() and nhv.clock.tick_due() then
 		nh.act({{key = "#"}, {text = "nhvtick"}}, {kind = "tick"})
 	end
 end)
