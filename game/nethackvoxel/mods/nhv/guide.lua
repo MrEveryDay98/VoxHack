@@ -37,10 +37,11 @@ Shift + left click: fire your quivered ammo where the crosshair points
 Throwing, firing, zapping and casting go where the crosshair points.
 The white bar above the hotbar shows your last action playing out; you can act again when it's gone.]]},
 	{"Right click and the wheel", [[
-Right click (tap): the obvious action for what you point at (open a door, take the stairs, pick up, talk...)
+Right click (tap): the obvious action for what you point at (open a door, take the stairs, talk...)
 Right click (hold): a wheel of actions for it; move the mouse toward one and let go, or let go in the middle to cancel
 
-Shift + right click: actions on yourself (pick up, pray, rest...); a tap picks up
+Shift + right click: actions on yourself (pray, rest, engrave...)
+R: pick up what is here
 Alt + right click: use an item (quaff, read, apply, wear, drop...)
 Ctrl + right click: magic and abilities
 E: actions with your wielded weapon]]},

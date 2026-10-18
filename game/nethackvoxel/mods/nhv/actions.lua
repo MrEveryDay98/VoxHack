@@ -3,10 +3,11 @@
 --   Left click        attack the monster in reach nearest your crosshair
 --   Shift+left click  fire your quivered ammo where you look
 --   Right click       tap: the obvious action for what you point at
---                     (open a door, take the stairs, pick up, chat...)
+--                     (open a door, take the stairs, chat...)
 --                     hold: action wheel for it - move the mouse toward
 --                     an action and let go
---   Shift+right click the same for yourself (pick up, pray, rest...)
+--   Shift+right click the same for yourself (pray, rest, engrave...)
+--   R                 pick up what is here (hotbar.lua)
 --   Alt+right click   use an item (quaff, read, apply, wear...)
 --                     (what the hotbar does - fire, kick, zap, cast, eat,
 --                     search, pay - is left off these wheels)
@@ -816,7 +817,7 @@ function actions.context(player)
 			add(act("Go up", "<"), true)
 		end
 		if sq.has_obj then
-			add(act("Pick up", ","), true)
+			-- (picking up is R)
 			add(info_act("Look here", ":"))
 		end
 		local c = sq.cmap or ""
@@ -854,7 +855,6 @@ end
 -- Shift + right click: things you do by yourself
 function actions.self_context()
 	local list = {
-		act("Pick up", ","),
 		act("Drop many", "D"),
 		act("Rest 20 turns", "20s"),
 		act("Pray", ext("pray")),
@@ -866,7 +866,8 @@ function actions.self_context()
 		info_act("Attributes", "\24"),
 		act("Save & quit", "S"),
 	}
-	return list, list[1] -- (a tap picks up; searching is on the hotbar)
+	-- (picking up is R, searching X: a tap does nothing - pick one)
+	return list, nil
 end
 
 -- Alt + right click: use an item (NetHack asks which)

@@ -30,6 +30,8 @@ hotbar.ACTIONS = {
 -- "/nhvkey pay"; paying only works in a shop)
 hotbar.SEARCH = {"Search", "s"}
 hotbar.PAY = {"Pay", "p", shop = true}
+-- R picks up (the VoxHack build of Luanti sends "/nhvkey pickup")
+hotbar.PICKUP = {"Pick up", ","}
 
 local W = {WEP = 0x100, SWAPWEP = 0x400}
 local SLOT, GAP, Y   -- slot size, gap and height on screen (pixels; see measure)
@@ -468,10 +470,12 @@ core.register_chatcommand("nhvkey", {
 		end
 		local n = tonumber(param)
 		local a = n and hotbar.ACTIONS[n] or (param == "search" and hotbar.SEARCH)
-			or (param == "pay" and hotbar.PAY)
+			or (param == "pay" and hotbar.PAY) or (param == "pickup" and hotbar.PICKUP)
 		-- (a held key repeats: each press waits until the last action has
-		-- played out, so it repeats at action speed instead of piling up)
-		if not a or nhv.ui.open or not nh.ready() or nhv.clock.busy() then
+		-- played out, so it repeats at action speed instead of piling up;
+		-- picking up just after a step waits for it instead - actions.run)
+		if not a or nhv.ui.open or not nh.ready()
+				or (nhv.clock.busy() and a ~= hotbar.PICKUP) then
 			return true
 		end
 		local hero = nh.snap and nh.snap.hero
