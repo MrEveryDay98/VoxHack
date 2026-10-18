@@ -1,12 +1,12 @@
-"""Make a release zip of NetHack Voxel: dist/NetHackVoxel-<date>-<commit>.zip
+"""Make a release zip of VoxHack: dist/VoxHack-<date>-<commit>.zip
 
 Packs the game as it's built now (run tools/deploy.sh first), with no saves,
 no editors and no developer tools. Inside the zip:
 
-    NetHack Voxel/
-        Create Play Shortcut.bat    makes a "Play NetHack Voxel" shortcut
+    VoxHack/
+        Create Play Shortcut.bat    makes a "Play VoxHack" shortcut
         README.txt
-        Launchers/                  Play NetHack Voxel, Reset NetHack Save
+        Launchers/                  Play VoxHack, Reset NetHack Save
         engine/                     Luanti, NetHack and the game
         licenses/
 
@@ -25,7 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LUANTI = os.path.join(ROOT, "external", "luanti")
 GAME = os.path.join(ROOT, "game", "nethackvoxel")
 DIST = os.path.join(ROOT, "dist")
-TOP = "NetHack Voxel"
+TOP = "VoxHack"
 
 # from the engine folder (external/luanti)
 ENGINE_DIRS = ["builtin", "client", "fonts", "textures"]
@@ -33,7 +33,7 @@ ENGINE_DIRS = ["builtin", "client", "fonts", "textures"]
 GAME_SKIP = ["*.bak", "*.before-*", "voice_cast*.json", "__pycache__"]
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
-LAUNCHERS = ["Play NetHack Voxel.bat", "make_shortcut.ps1"]
+LAUNCHERS = ["Play VoxHack.bat", "make_shortcut.ps1"]
 # (renamed: in a release it's for starting over, not just testing)
 RESET = ("Reset NetHack Save (testing).bat", "Reset NetHack Save.bat")
 
@@ -44,7 +44,7 @@ auth_backend = sqlite3
 mod_storage_backend = sqlite3
 """
 
-CONF = """# NetHack Voxel settings. The game adds to this as you change its options
+CONF = """# VoxHack settings. The game adds to this as you change its options
 # (Inventory > Graphics / NetHack options).
 window_maximized = true
 fov = 90
@@ -55,16 +55,16 @@ trilinear_filter = false
 anisotropic_filter = true
 """
 
-README = """NetHack Voxel
+README = """VoxHack
 =============
 
 NetHack 3.7 in first person, built on the Luanti engine. Windows only.
 
 Playing
 -------
-Run "Create Play Shortcut.bat" once: it makes a "Play NetHack Voxel" shortcut
+Run "Create Play Shortcut.bat" once: it makes a "Play VoxHack" shortcut
 in this folder (and on your Desktop if you like). Or use
-Launchers\\Play NetHack Voxel.bat.
+Launchers\\Play VoxHack.bat.
 
 Run "Create Play Shortcut.bat" again if you move this folder.
 
@@ -252,7 +252,7 @@ def libraries(engine, lic):
 def main():
 	check_built()
 	keep = "--keep" in sys.argv
-	name = "NetHackVoxel-%s-%s" % (datetime.date.today().isoformat(), commit())
+	name = "VoxHack-%s-%s" % (datetime.date.today().isoformat(), commit())
 	stage_dir = os.path.join(DIST, name)
 	if os.path.exists(stage_dir):
 		shutil.rmtree(stage_dir)

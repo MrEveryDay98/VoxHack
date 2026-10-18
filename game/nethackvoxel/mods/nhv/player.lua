@@ -476,7 +476,7 @@ nh.on_snapshot(function(snap, action)
 			player:set_pos(player_mod.free_spot(p))
 		end
 	end
-	-- confused / stunned: the NetHack Voxel build of Luanti scrambles the
+	-- confused / stunned: the VoxHack build of Luanti scrambles the
 	-- controls (rotated / reversed walking, inverted looking up and down)
 	-- (and the screen waves; hallucinating, it waves and its colours drift)
 	local conf, stun = U.has(h.flags, U.HERO.CONF), U.has(h.flags, U.HERO.STUN)

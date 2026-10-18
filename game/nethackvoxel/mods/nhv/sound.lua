@@ -2,7 +2,7 @@
 -- attaches to each hook.
 --
 -- Hooks come from code, never from reading messages:
---   * NetHack's own sound effects and the hooks NetHack Voxel added to its
+--   * NetHack's own sound effects and the hooks VoxHack added to its
 --     code (sound events "effect|<hook>|<volume>"),
 --   * spoken lines and quest messages (voice acting, matched to the
 --     dialogue catalog),
@@ -28,7 +28,7 @@ local SOUND_DIR = MODPATH .. DIR_DELIM .. "sounds"
 
 -- ---------------------------------------------------------------- config
 -- every sound under sounds/, folders included: {name = path}. .ogg, and
--- .mid / .midi music, which the NetHack Voxel build of Luanti renders with
+-- .mid / .midi music, which the VoxHack build of Luanti renders with
 -- the SoundFont in mods/nhv_sounds/soundfonts (see below).
 -- (names are global in Luanti, so the editor keeps them unique)
 local function scan(dir, out)
@@ -206,7 +206,7 @@ end
 local tried
 core.register_chatcommand("nhvplay", {
 	params = "[sound name]",
-	description = "(NetHack Voxel) play a sound or music track to try it",
+	description = "(VoxHack) play a sound or music track to try it",
 	func = function(name, param)
 		if tried then
 			core.sound_stop(tried)

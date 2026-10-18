@@ -1,4 +1,4 @@
--- NetHack Voxel main mod.
+-- VoxHack main mod.
 nhv = {}
 
 local path = core.get_modpath("nhv") .. DIR_DELIM

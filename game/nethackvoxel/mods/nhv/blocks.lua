@@ -124,7 +124,7 @@ core.register_node("nhv:room_light", {
 })
 
 -- ---------------------------------------------------------------- culling
--- Backface culling for every NetHack Voxel block: the back of a face is
+-- Backface culling for every VoxHack block: the back of a face is
 -- never drawn (from inside a block you see out, not its inner walls).
 core.register_on_mods_loaded(function()
 	for name, def in pairs(core.registered_nodes) do

@@ -1,4 +1,4 @@
-# Makes a "Play NetHack Voxel" shortcut (run by "Create Play Shortcut.bat").
+# Makes a "Play VoxHack" shortcut (run by "Create Play Shortcut.bat").
 # The shortcut starts the game directly, with its icon; it goes next to the
 # .bat, and on the Desktop too if you like.
 param([switch]$Desktop)
@@ -24,13 +24,13 @@ if ($Desktop) { $places += [Environment]::GetFolderPath("Desktop") }
 
 $shell = New-Object -ComObject WScript.Shell
 foreach ($dir in $places) {
-	$lnk = Join-Path $dir "Play NetHack Voxel.lnk"
+	$lnk = Join-Path $dir "Play VoxHack.lnk"
 	$s = $shell.CreateShortcut($lnk)
 	$s.TargetPath = $exe
 	$s.Arguments = "--go --world worlds\nethack --name $name --password `"`""
 	$s.WorkingDirectory = $engine
 	$s.IconLocation = "$exe,0"
-	$s.Description = "Play NetHack Voxel"
+	$s.Description = "Play VoxHack"
 	$s.Save()
 	Write-Host "Made $lnk"
 }

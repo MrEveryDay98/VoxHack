@@ -3,7 +3,7 @@
     python tools/make_title_placeholders.py
 
 Writes game/nethackvoxel/mods/nhv_tiles/textures/:
-  nhv_title_logo.png  "NETHACK VOXEL" in the game's pixel font (transparent)
+  nhv_title_logo.png  "VOXHACK" in the game's pixel font (transparent)
   nhv_title_bg.png    a dim brick wall (the screen's background)
 Any PNGs with those names work: the logo is drawn 4:1 (wide), the
 background stretched over the whole screen.
@@ -23,10 +23,10 @@ def logo():
     w, h = 256, 64
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    big = ImageFont.truetype(FONT, 28)
+    big = ImageFont.truetype(FONT, 42)
     small = ImageFont.truetype(FONT, 14)
-    for text, font, y, col in (("NETHACK", big, 4, (255, 210, 90, 255)),
-                               ("V O X E L", small, 40, (120, 200, 255, 255))):
+    for text, font, y, col in (("VOXHACK", big, 0, (255, 210, 90, 255)),
+                               ("BASED ON NETHACK", small, 46, (120, 200, 255, 255))):
         tw = d.textlength(text, font=font)
         x = (w - tw) // 2
         d.text((x + 2, y + 2), text, font=font, fill=(60, 20, 0, 255))  # shadow

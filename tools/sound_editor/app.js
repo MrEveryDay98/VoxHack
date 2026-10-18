@@ -1,4 +1,4 @@
-// NetHack Voxel sound & voice editor.
+// VoxHack sound & voice editor.
 "use strict";
 
 const GROUPS = {

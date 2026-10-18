@@ -1,4 +1,4 @@
-/* nhv_win.c - the "shim" window port for NetHack Voxel.
+/* nhv_win.c - the "shim" window port for VoxHack.
  *
  * Nothing is drawn here. Output becomes events for the host (messages,
  * text windows); input requests block the game thread until the host

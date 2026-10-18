@@ -3,7 +3,7 @@ for the sound editor and the game.
 
 Groups:
   nethack   NetHack's own sound effects (Soundeffect(se_*) in its code)
-  events    hooks added to NetHack's code by NetHack Voxel (NHV_HOOK)
+  events    hooks added to NetHack's code by VoxHack (NHV_HOOK)
   traps     one per trap type (when the hero sets it off)
   game      hooks raised by the 3D game itself (footsteps, missiles, ...)
   music     music for places and moments

@@ -1,7 +1,7 @@
-# NetHack Voxel: status
+# VoxHack: status
 
 ## How to play
-Double-click `Launchers/Play NetHack Voxel.bat` (or run `Create Play Shortcut.bat` once for a
+Double-click `Launchers/Play VoxHack.bat` (or run `Create Play Shortcut.bat` once for a
 shortcut). The other launchers (debug, editors, reset save) are in `Launchers/` too. Closing the window saves the
 game; launching again continues it. Dying shows the end screen with a New Game button.
 
@@ -9,7 +9,7 @@ To rebuild after code changes: `tools/clang64.sh 'sh tools/deploy.sh'`
 (Lua-only changes need no rebuild: the game folder is linked into Luanti.)
 
 To make a release zip (no saves, editors or dev tools): build, then
-`python -I tools/make_release.py` -> `dist/NetHackVoxel-<date>-<commit>.zip`.
+`python -I tools/make_release.py` -> `dist/VoxHack-<date>-<commit>.zip`.
 
 ## Controls
 | Input | Action |
@@ -78,10 +78,10 @@ pathfinding when they can't see you.
   corpses lie flat.
 
 ## Runs as a local application
-The NetHack Voxel build of Luanti always plays a world on the command line in single-player
+The VoxHack build of Luanti always plays a world on the command line in single-player
 mode, keeping your name (NetHack saves go by it). Its built-in server and client sockets exist
 only on 127.0.0.1, on ports the OS picks, so nothing is reachable from the network. The window
-is titled "NetHack Voxel"; the pause menu is Continue / Settings / Sound Volume / Quit, with no
+is titled "VoxHack"; the pause menu is Continue / Settings / Sound Volume / Quit, with no
 server or version information; loading shows "Loading...".
 
 ## Graphics options
@@ -92,7 +92,7 @@ Inventory > Graphics (applies immediately, remembered):
   characters come from the fallback font) at whole multiples of 14 px, and old-PC style boxes and
   buttons (`nhv_tiles/textures/nhv_ui_*.png`, from `tools/make_ui_textures.py`) given to every
   screen through the formspec prepend (`theme.lua`).
-- **HUD size / Menu size:** Luanti's `hud_scaling` / `gui_scaling`. The NetHack Voxel build of
+- **HUD size / Menu size:** Luanti's `hud_scaling` / `gui_scaling`. The VoxHack build of
   Luanti sizes HUD text by the HUD size (not the menu size) and rounds it down to the pixel font's
   steps, so labels stay inside their boxes.
 - **Map size:** the corner map's pixels per square (`nhv_map_scale`, 0 hides it); the big map
@@ -100,7 +100,7 @@ Inventory > Graphics (applies immediately, remembered):
 - **Sprites:** extruded voxel models, or flat sprites (setting `nhv_flat_sprites`).
 - **Render resolution:** full down to 1/8. The world is drawn smaller and scaled up with sharp
   pixels for a retro look; the HUD and menus stay sharp (Luanti's `undersampling`, which the
-  NetHack Voxel build of Luanti now applies without a restart).
+  VoxHack build of Luanti now applies without a restart).
 - **Distant textures:** sharp, or smoothed by mipmaps (setting `mip_map`). Turning it off applies
   at once; turning it back on may need a restart if the game started with it off.
 
@@ -126,7 +126,7 @@ All sprites and tile textures come from one sprite sheet:
   it's missing (delete it and run the deploy script to start over).
 
 ## Sounds and voice lines
-- **Sound editor:** run `Launchers/NetHack Voxel Editor.bat` (sounds, voices and blocks). It opens a browser page where you
+- **Sound editor:** run `Launchers/VoxHack Editor.bat` (sounds, voices and blocks). It opens a browser page where you
   assign sounds to hooks. Changes are picked up by a running game within about 2 seconds.
 - **Hooks** are called from NetHack's code (`NHV_HOOK`), traps, NetHack's own sound effects,
   game events and music. They are not read from the message feed. The list is in

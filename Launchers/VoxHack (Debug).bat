@@ -1,5 +1,5 @@
 @echo off
-rem NetHack Voxel in debug (wizard) mode: its own world and character ("wizard"),
+rem VoxHack in debug (wizard) mode: its own world and character ("wizard"),
 rem separate from your normal game. Debug commands: T, then e.g. wizwish, wizmap, wizgenesis.
 rem (the game is in ..\engine in a release, ..\external\luanti in the source tree)
 set "ENGINE=%~dp0..\engine"

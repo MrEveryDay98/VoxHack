@@ -1,7 +1,7 @@
 -- The sky: Quake-style clouds - two scrolling layers, generated (layered
 -- noise) or pictures, on one flat plane high overhead - over a plain colour
 -- or the day and night sky (the sun, the moon and the stars, following the
--- real clock as NetHack's own night does). Drawn by the NetHack Voxel build
+-- real clock as NetHack's own night does). Drawn by the VoxHack build
 -- of Luanti (client/shaders/nhv_sky_shader). Skies are made in the
 -- editor's Sky tab and saved to mods/nhv_sky/skies.json, which also says
 -- which sky each level gets; the file is re-read when it changes.

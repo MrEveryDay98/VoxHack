@@ -1,4 +1,4 @@
-# NetHack Voxel: credits and licences
+# VoxHack: credits and licences
 
 What the game is made of, where each part comes from, and under which
 licence. The licence texts are in the release's `licenses` folder
@@ -9,7 +9,7 @@ licence. The licence texts are in the release's `licenses` folder
 | Part | Licence | Notes |
 |---|---|---|
 | NetHack 3.7 (modified: `external/nethack`, branch nhv) | NetHack General Public License | Copyleft: the modified source must be made available with the game. Copyright © Stichting Mathematisch Centrum and M. Stephenson, and the NetHack DevTeam. |
-| NetHack Voxel core library (`nhcore`) | NetHack General Public License | Built into `nethack.dll` with NetHack. |
+| VoxHack core library (`nhcore`) | NetHack General Public License | Built into `nethack.dll` with NetHack. |
 | Luanti 5.18-dev (modified: `external/luanti`, branch nhv) | LGPL-2.1-or-later | Includes IrrlichtMt and the libraries listed in Luanti's `LICENSE.txt`. |
 | TinySoundFont (MIDI playback, in `luanti.exe`) | MIT | Bernhard Schelling. |
 | The game (`game/nethackvoxel`: Lua, prefabs, areas) | NetHack General Public License (as a work based on NetHack) | Licence still to be chosen formally; see "To do". |
@@ -48,9 +48,9 @@ licence. The licence texts are in the release's `licenses` folder
 4. **The game's licence.** State the licence of the game's own code and
    assets formally (a `LICENSE` file). Because it's built on NetHack, the
    NetHack General Public License is the safe choice for the code.
-5. **The name.** NetHack's licence covers the code, not the name. Ask the
-   NetHack DevTeam whether "NetHack Voxel" is all right, or use a name of
-   your own with "based on NetHack" in the description.
+5. **The name.** NetHack's licence covers the code, not the name. The game is
+   called "VoxHack": say "based on NetHack" in its description, and ask the
+   NetHack DevTeam if unsure.
 6. **Steamworks.** Don't link the Steamworks SDK into the game without
    checking its compatibility with the copyleft licences first.
 

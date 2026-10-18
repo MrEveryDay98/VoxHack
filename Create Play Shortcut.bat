@@ -1,5 +1,5 @@
 @echo off
-rem Makes a "Play NetHack Voxel" shortcut in this folder (and on the Desktop if
+rem Makes a "Play VoxHack" shortcut in this folder (and on the Desktop if
 rem you like). Run it again if you move the folder.
 choice /C YN /M "Also put a shortcut on the Desktop"
 if errorlevel 2 (

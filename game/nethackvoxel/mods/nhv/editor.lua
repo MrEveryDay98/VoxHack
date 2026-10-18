@@ -819,7 +819,7 @@ core.register_on_leaveplayer(function(player)
 	nhv.terrain.hero_light_pos = nil
 end)
 
--- /fullbright: see everything at full brightness (the NetHack Voxel build
+-- /fullbright: see everything at full brightness (the VoxHack build
 -- of Luanti draws blocks and objects without light or shadow)
 core.register_chatcommand("fullbright", {
 	description = "Toggle seeing everything at full brightness",
@@ -837,7 +837,7 @@ core.register_chatcommand("fullbright", {
 -- Quit in the pause menu sends "/nhvtitle" (the game's title screen); the
 -- editor has none, so it just closes (everything is saved on the way out)
 core.register_chatcommand("nhvtitle", {
-	description = "(NetHack Voxel) leave the editor",
+	description = "(VoxHack) leave the editor",
 	func = function(pname)
 		core.disconnect_player(pname, "nhv:quit")
 		return true

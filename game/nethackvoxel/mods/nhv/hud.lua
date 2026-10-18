@@ -323,7 +323,7 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
 		style = 4, -- monospace
 	})
-	-- (z_index 1000 and up: the NetHack Voxel build of Luanti draws it
+	-- (z_index 1000 and up: the VoxHack build of Luanti draws it
 	-- above menus and prompts, so it can be read while answering them)
 	hud.ids.msg = player:hud_add({
 		type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},

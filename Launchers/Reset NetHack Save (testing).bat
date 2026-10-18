@@ -1,6 +1,6 @@
 @echo off
 rem Deletes the saved NetHack game(s) in the main world (worlds\nethack), so
-rem the next "Play NetHack Voxel" starts a new character. For testing.
+rem the next "Play VoxHack" starts a new character. For testing.
 rem Keeps the high scores / game log and the game's own settings file.
 setlocal
 rem (the game is in ..\engine in a release, ..\external\luanti in the source tree)
@@ -10,7 +10,7 @@ set "SAVES=%ENGINE%\worlds\nethack\nethack"
 
 tasklist /FI "IMAGENAME eq luanti.exe" 2>nul | find /I "luanti.exe" >nul
 if not errorlevel 1 (
-    echo NetHack Voxel is still running. Close the game first, then run this again.
+    echo VoxHack is still running. Close the game first, then run this again.
     pause
     exit /b 1
 )

@@ -1,4 +1,4 @@
-"""Local server for the NetHack Voxel sound & voice editor.
+"""Local server for the VoxHack sound & voice editor.
 
 Serves the editor page and reads/writes the game's sound data in
 game/nethackvoxel/mods/nhv_sounds:
@@ -611,7 +611,7 @@ def main():
     os.makedirs(SOUNDS, exist_ok=True)
     srv = Server(("127.0.0.1", PORT), Handler)
     url = "http://127.0.0.1:%d/" % PORT + ("#blocks" if "--blocks" in sys.argv else "")
-    print("NetHack Voxel sound editor: " + url + "  (stops when the editor tab is closed)")
+    print("VoxHack sound editor: " + url + "  (stops when the editor tab is closed)")
     if "--no-browser" not in sys.argv:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     if "--stay" not in sys.argv:

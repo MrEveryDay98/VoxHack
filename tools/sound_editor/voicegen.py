@@ -271,7 +271,7 @@ def list_macros():
 
 
 def save_macro(name, steps):
-    name = re.sub(r'[\\/:*?"<>|]+', "_", name).strip() or "NetHack Voxel preset"
+    name = re.sub(r'[\\/:*?"<>|]+', "_", name).strip() or "VoxHack preset"
     os.makedirs(TENACITY_MACROS, exist_ok=True)
     with open(os.path.join(TENACITY_MACROS, name + ".txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(s for s in steps if s.strip()) + "\n")

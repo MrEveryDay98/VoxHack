@@ -22,7 +22,7 @@ nhv.mobs = mobs
 -- can't see it, or a wall is in the way in 3D (NetHack's line of sight is
 -- by squares; the walls you build can hide more) - is a ghost: a half
 -- see-through flat picture that shows through walls (infotext "nhv:xray":
--- the NetHack Voxel build of Luanti draws it over everything) and wavers.
+-- the VoxHack build of Luanti draws it over everything) and wavers.
 local GHOST_ALPHA = 128
 local function look_for(e, kind)
 	if e.ghost then

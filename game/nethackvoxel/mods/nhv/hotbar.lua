@@ -4,7 +4,7 @@
 -- it can be selected):
 --   [primary weapon] [alternate weapon]   [1] [2] [3] [4] [5]
 -- The weapon you're wielding has a green frame. Keys 1-5 do the actions in
--- ACTIONS (the NetHack Voxel build of Luanti sends them as "/nhvkey <n>").
+-- ACTIONS (the VoxHack build of Luanti sends them as "/nhvkey <n>").
 -- Your hand always holds the wielded weapon.
 --
 -- Chat (T) is a NetHack command line: type a command and press Enter. The
@@ -26,7 +26,7 @@ hotbar.ACTIONS = {
 	{"Spell", "Z"},
 	{"Eat", "e"},
 }
--- X and P (the NetHack Voxel build of Luanti sends "/nhvkey search" and
+-- X and P (the VoxHack build of Luanti sends "/nhvkey search" and
 -- "/nhvkey pay"; paying only works in a shop)
 hotbar.SEARCH = {"Search", "s"}
 hotbar.PAY = {"Pay", "p", shop = true}
@@ -276,7 +276,7 @@ local function refresh(player, inv)
 	end
 	pinv:set_list("main", {st})
 	-- dual wielding, your left hand holds the secondary weapon; a Monk
-	-- fighting bare-handed has a fist in each (drawn by the NetHack Voxel
+	-- fighting bare-handed has a fist in each (drawn by the VoxHack
 	-- build of Luanti from this list; empty: no left hand)
 	local left = ItemStack("")
 	if two then
@@ -439,7 +439,7 @@ local function flash_slot(k)
 end
 
 core.register_chatcommand("nhvkey", {
-	description = "(NetHack Voxel) action key",
+	description = "(VoxHack) action key",
 	func = function(pname, param)
 		if param == "look" then
 			local player = core.get_player_by_name(pname)
@@ -553,7 +553,7 @@ end)
 -- ---------------------------------------------------------------- command line
 nhv.ui.chat_open = false
 core.register_chatcommand("nhvchat", {
-	description = "(NetHack Voxel) chat prompt opened/closed",
+	description = "(VoxHack) chat prompt opened/closed",
 	func = function(_, param)
 		nhv.ui.chat_open = param == "open"
 		return true
@@ -561,10 +561,10 @@ core.register_chatcommand("nhvchat", {
 })
 
 -- any menu on screen (the inventory, a NetHack question, a container...):
--- the game pauses (the NetHack Voxel build of Luanti reports these)
+-- the game pauses (the VoxHack build of Luanti reports these)
 nhv.ui.menu_open = false
 core.register_chatcommand("nhvmenu", {
-	description = "(NetHack Voxel) a menu opened/closed",
+	description = "(VoxHack) a menu opened/closed",
 	func = function(_, param)
 		nhv.ui.menu_open = param == "open"
 		return true

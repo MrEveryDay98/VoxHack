@@ -79,10 +79,10 @@ local function start(player, name)
 	nhv.new_game(player, name)
 end
 
--- Quit in the pause menu (the NetHack Voxel build of Luanti sends
+-- Quit in the pause menu (the VoxHack build of Luanti sends
 -- "/nhvtitle"): save the game and go back to the title screen
 core.register_chatcommand("nhvtitle", {
-	description = "(NetHack Voxel) save and go back to the title screen",
+	description = "(VoxHack) save and go back to the title screen",
 	func = function(pname)
 		local player = core.get_player_by_name(pname)
 		if not player then
