@@ -24,13 +24,13 @@ def logo():
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     big = ImageFont.truetype(FONT, 42)
-    small = ImageFont.truetype(FONT, 14)
-    for text, font, y, col in (("VOXHACK", big, 0, (255, 210, 90, 255)),
-                               ("BASED ON NETHACK", small, 46, (120, 200, 255, 255))):
-        tw = d.textlength(text, font=font)
-        x = (w - tw) // 2
-        d.text((x + 2, y + 2), text, font=font, fill=(60, 20, 0, 255))  # shadow
-        d.text((x, y), text, font=font, fill=col)
+    text = "VOXHACK"
+    # (centred: the letters' own box, not the font's line)
+    box = d.textbbox((0, 0), text, font=big)
+    x = (w - (box[2] - box[0])) // 2 - box[0]
+    y = (h - (box[3] - box[1])) // 2 - box[1]
+    d.text((x + 2, y + 2), text, font=big, fill=(60, 20, 0, 255))  # shadow
+    d.text((x, y), text, font=big, fill=(255, 210, 90, 255))
     return im
 
 
