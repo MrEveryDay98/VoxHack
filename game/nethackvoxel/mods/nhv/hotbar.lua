@@ -264,10 +264,17 @@ local function refresh(player, inv)
 		meta:set_string("nhv_invlet", wep.invlet)
 	end
 	pinv:set_list("main", {st})
-	-- dual wielding, your left hand holds the secondary weapon (drawn by the
-	-- NetHack Voxel build of Luanti from this list; empty: no left hand)
+	-- dual wielding, your left hand holds the secondary weapon; a Monk
+	-- fighting bare-handed has a fist in each (drawn by the NetHack Voxel
+	-- build of Luanti from this list; empty: no left hand)
+	local left = ItemStack("")
+	if two then
+		left = ItemStack(nhv_tiles.item(alt.tile))
+	elseif h and U.has(h.flags, U.HERO.TWOFISTS) then
+		left = ItemStack("nhv:fist")
+	end
 	pinv:set_size("nhv_offhand", 1)
-	pinv:set_list("nhv_offhand", {two and ItemStack(nhv_tiles.item(alt.tile)) or ItemStack("")})
+	pinv:set_list("nhv_offhand", {left})
 end
 
 -- redraw at a new size (Graphics > Text size)

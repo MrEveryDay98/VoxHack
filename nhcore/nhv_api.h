@@ -232,6 +232,8 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
                                         without it: awake, frozen) */
 #define NHV_HERO_TWOWEAP   0x2000000 /* fighting with two weapons (#twoweapon):
                                         the secondary one in the left hand */
+#define NHV_HERO_TWOFISTS  0x4000000 /* a Monk fighting bare-handed (no weapon,
+                                        no shield): a fist in each hand */
 
 typedef struct nhv_hero {
     int x, y;

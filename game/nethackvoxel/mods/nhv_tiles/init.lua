@@ -101,6 +101,13 @@ function nhv_tiles.flash_item(tile, kind)
 	return string.format("nhv_tiles:t%04d_%s", tile, kind)
 end
 
+-- a fist (a Monk's left hand, fighting bare-handed; the right hand's is the
+-- hand item's picture, actions.lua)
+core.register_craftitem(":nhv:fist", {
+	description = "Fist", inventory_image = "nhv_weapon_Fist.png",
+	wield_image = "nhv_weapon_Fist.png", groups = {not_in_creative_inventory = 1},
+})
+
 for i = 0, meta.count - 1 do
 	local tex = nhv_tiles.texture(i)
 	core.register_craftitem(nhv_tiles.item(i), {

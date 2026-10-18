@@ -71,6 +71,7 @@ U.HERO = {
 	HELPLESS = 0x800000, -- (can't act: asleep, paralysed, fainted...)
 	ASLEEP = 0x1000000, -- (helpless because asleep)
 	TWOWEAP = 0x2000000, -- (dual wielding: the secondary weapon in your left hand)
+	TWOFISTS = 0x4000000, -- (a Monk bare-handed: a fist in each hand)
 }
 
 -- nhv_obj.flags

@@ -63,25 +63,66 @@ end
 
 -- One arm swing (right-click doesn't swing by itself; see hud.lua)
 local swing_state = false
--- (dual wielding, the left hand follows a moment later: NetHack hits with
--- both weapons)
 local off_swing_state = false
 function actions.swing()
 	local player = nhv.player.get()
 	if player then
 		swing_state = not swing_state
 		player:hud_set_flags({nhv_swing = swing_state})
-		local h = nhv.nh.snap and nhv.nh.snap.hero
-		if h and U.has(h.flags, U.HERO.TWOWEAP) then
-			core.after(0.15, function()
-				if player:is_player() then
-					off_swing_state = not off_swing_state
-					player:hud_set_flags({nhv_off_swing = off_swing_state})
-				end
-			end)
-		end
 	end
 end
+
+-- the left hand's swing (dual wielding, a Monk's second fist)
+local function off_swing(player)
+	off_swing_state = not off_swing_state
+	player:hud_set_flags({nhv_off_swing = off_swing_state})
+end
+
+-- Melee swings as NetHack makes them: it reports each one it rolls
+-- ("uswing <hand>", 0 right / 1 left) - two dual wielding or with a
+-- martial artist's double punch, several for a polymorphed form's attacks
+-- - and each is a quick swing in turn. Dual wielding the hands go as
+-- NetHack says (primary, secondary...); a Monk's fists take turns from one
+-- attack to the next too; otherwise it's the right hand every time.
+local SWING_GAP = 0.13 -- seconds between quick swings
+local swing_queue, swing_at = {}, 0
+local fist_next = 0 -- (a Monk's next fist)
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local hand = ev.text:match("^uswing (%d+)")
+			if hand then
+				swing_queue[#swing_queue + 1] = tonumber(hand)
+			end
+		end
+	end
+end)
+core.register_globalstep(function()
+	if #swing_queue == 0 then
+		return
+	end
+	local now = core.get_us_time()
+	if now < swing_at then
+		return
+	end
+	local player = nhv.player.get()
+	local hand = table.remove(swing_queue, 1)
+	if not player then
+		return
+	end
+	local h = nh.snap and nh.snap.hero
+	local left_shown = h and (U.has(h.flags, U.HERO.TWOWEAP) or U.has(h.flags, U.HERO.TWOFISTS))
+	if h and U.has(h.flags, U.HERO.TWOFISTS) then
+		hand = fist_next
+		fist_next = 1 - fist_next
+	end
+	if hand == 1 and left_shown then
+		off_swing(player)
+	else
+		actions.swing()
+	end
+	swing_at = now + SWING_GAP * 1e6
+end)
 
 -- ---------------------------------------------------------------- pits
 -- Down in a pit (a hole below the floor), Space climbs out onto the square
@@ -186,7 +227,7 @@ function actions.attack(player, prefer_id)
 	local t = attack_target(player, prefer_id)
 	local far = not t and pole_target(player, prefer_id)
 	if t then
-		actions.swing()
+		-- (the arm swings as NetHack reports each swing: above)
 		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
 	elseif far then

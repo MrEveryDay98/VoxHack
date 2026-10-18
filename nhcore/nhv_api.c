@@ -588,6 +588,8 @@ nhv_get_hero(nhv_hero *out)
         f |= NHV_HERO_ASLEEP;
     if (u.twoweap)
         f |= NHV_HERO_TWOWEAP;
+    if (Role_if(PM_MONK) && !uwep && !uarms)
+        f |= NHV_HERO_TWOFISTS;
     {
         int sk;
 
