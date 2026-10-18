@@ -51,19 +51,55 @@ local function info_act(label, keys)
 	return {label = label, keys = keys, free = true}
 end
 
-function actions.run(a, info)
-	if not a or busy() then
-		return
-	end
+-- An action asked for while the last one is still playing out (or NetHack
+-- is busy) waits for it rather than being dropped: chosen from a menu (the
+-- inventory, a wheel - time stands still while those are open) for a few
+-- seconds, a key press only for a moment. One waits at a time: the latest.
+local WAIT_US = {item = 5000000, wheel = 5000000}
+local WAIT_KEY_US = 600000
+local waiting -- {a=, info=, until_t=}
+
+local function run_now(a, info)
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
-	elseif not nhv.clock.busy() then -- (the last action has played out)
+	else
 		if not actions.kick_start(a.keys) then
 			actions.swing()
 		end
 		nhv.clock.act(a.keys, info or {kind = "action"})
 	end
 end
+
+local function ready_for(a)
+	return not busy() and (a.free or not nhv.clock.busy())
+end
+
+function actions.run(a, info)
+	if not a then
+		return
+	end
+	if ready_for(a) then
+		waiting = nil
+		run_now(a, info)
+	else
+		local kind = info and info.kind
+		waiting = {a = a, info = info,
+			until_t = core.get_us_time() + (WAIT_US[kind] or WAIT_KEY_US)}
+	end
+end
+
+core.register_globalstep(function()
+	if not waiting then
+		return
+	end
+	if core.get_us_time() > waiting.until_t then
+		waiting = nil
+	elseif ready_for(waiting.a) then
+		local w = waiting
+		waiting = nil
+		run_now(w.a, w.info)
+	end
+end)
 
 -- ---------------------------------------------------------------- kicks
 -- A kick isn't an arm swing: both hands drop out of view and come back
