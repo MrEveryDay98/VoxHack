@@ -85,7 +85,7 @@ mon_by_id(unsigned id)
    a monster share the square (as a monster may come into yours) - rather
    than NetHack refusing the step. Not a pet (you swap places with it, as
    in NetHack) unless share is given (it wouldn't swap), and not a
-   shopkeeper, priest or guard: they stand where they do to bar the way.
+   shopkeeper: it stands in its shop's door to bar the way out.
    Someone you can't see is bumped into as NetHack does (a hider is found,
    a mimic sticks to you). */
 int
@@ -100,7 +100,7 @@ donhvmove(void)
     mtmp = m_at(x, y);
     if (mtmp && canspotmon(mtmp) && !M_AP_TYPE(mtmp)
         && (!mtmp->mtame || nhv_cmd_args[2])
-        && !mtmp->isshk && !mtmp->ispriest && !mtmp->isgd
+        && !mtmp->isshk
         && !u.ustuck && !u.utrap && !u.uswallow && !u.usteed
         && test_move(u.ux, u.uy, dx, dy, TEST_MOVE)) {
         nhv_walking = TRUE;
