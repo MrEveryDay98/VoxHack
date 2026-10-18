@@ -30,7 +30,8 @@ TOP = "VoxHack"
 # from the engine folder (external/luanti)
 ENGINE_DIRS = ["builtin", "client", "fonts", "textures"]
 # left out of the game: backups and the editors' own files
-GAME_SKIP = ["*.bak", "*.before-*", "voice_cast*.json", "__pycache__"]
+GAME_SKIP = ["*.bak", "*.before-*", "voice_cast*.json", "__pycache__",
+	"voices"]  # (the ElevenLabs lines: not in public releases)
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
 LAUNCHERS = ["Play VoxHack.bat", "make_shortcut.ps1"]

@@ -10,3 +10,5 @@ __pycache__/
 *.before-*
 # made by Create Play Shortcut.bat
 *.lnk
+# editor backups of the areas
+/mod_data/nhv/areas_backup_*/

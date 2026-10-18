@@ -1,0 +1,1443 @@
+[
+	{
+		"climbable" : false,
+		"description" : "Air",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:air_floor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:5,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Altar stone",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_altar",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:38,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Altar stone pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_altar_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:38,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Altar stone post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_altar_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:38,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Altar stone slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_altar_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:38,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Altar stone stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_altar_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:38,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Invisible barrier",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:b_barrier",
+		"solid" : true,
+		"texture" : "[fill:16x16:#40FFFF40"
+	},
+	{
+		"climbable" : false,
+		"description" : "Black",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_black",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Black pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_black_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Black post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_black_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Black slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_black_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Black stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_black_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Blue",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_blue",
+		"solid" : true,
+		"texture" : "[fill:16x16:#2040B0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Blue pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_blue_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#2040B0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Blue post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_blue_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#2040B0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Blue slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_blue_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#2040B0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Blue stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_blue_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#2040B0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall brick",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_brick",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dark wall brick",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_brick_dark",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png^[multiply:#808080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dark wall brick pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_dark_pane",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png^[multiply:#808080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dark wall brick post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_dark_post",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png^[multiply:#808080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dark wall brick slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_dark_slab",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png^[multiply:#808080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dark wall brick stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_dark_stair",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png^[multiply:#808080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall brick pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_pane",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall brick post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_post",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall brick slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_slab",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall brick stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brick_stair",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Brown",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_brown",
+		"solid" : true,
+		"texture" : "[fill:16x16:#704020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Brown pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brown_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#704020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Brown post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brown_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#704020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Brown slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brown_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#704020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Brown stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_brown_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#704020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor floor",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_corridor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor floor pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_corridor_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor floor post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_corridor_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor floor slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_corridor_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor floor stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_corridor_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Door (joins with other door blocks into one picture)",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:b_door",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Door (joins with other door blocks into one picture) pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_door_pane",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Door (joins with other door blocks into one picture) post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_door_post",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Door (joins with other door blocks into one picture) slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_door_slab",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Door (joins with other door blocks into one picture) stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_door_stair",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Drawbridge planks",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_drawbridge",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Drawbridge planks pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_drawbridge_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Drawbridge planks post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_drawbridge_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Drawbridge planks slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_drawbridge_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Drawbridge planks stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_drawbridge_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Room floor",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_floor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Room floor pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_floor_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Room floor post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_floor_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Room floor slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_floor_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Room floor stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_floor_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Fountain basin",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_fountain",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:44,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Fountain basin pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_fountain_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:44,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Fountain basin post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_fountain_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:44,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Fountain basin slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_fountain_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:44,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Fountain basin stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_fountain_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:44,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Grave",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_grave",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:41,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Grave pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_grave_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:41,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Grave post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_grave_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:41,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Grave slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_grave_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:41,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Grave stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_grave_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:41,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Gray",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_gray",
+		"solid" : true,
+		"texture" : "[fill:16x16:#707070"
+	},
+	{
+		"climbable" : false,
+		"description" : "Gray pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_gray_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#707070"
+	},
+	{
+		"climbable" : false,
+		"description" : "Gray post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_gray_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#707070"
+	},
+	{
+		"climbable" : false,
+		"description" : "Gray slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_gray_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#707070"
+	},
+	{
+		"climbable" : false,
+		"description" : "Gray stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_gray_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#707070"
+	},
+	{
+		"climbable" : false,
+		"description" : "Green",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_green",
+		"solid" : true,
+		"texture" : "[fill:16x16:#208030"
+	},
+	{
+		"climbable" : false,
+		"description" : "Green pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_green_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#208030"
+	},
+	{
+		"climbable" : false,
+		"description" : "Green post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_green_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#208030"
+	},
+	{
+		"climbable" : false,
+		"description" : "Green slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_green_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#208030"
+	},
+	{
+		"climbable" : false,
+		"description" : "Green stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_green_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#208030"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_ice",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ice_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ice_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ice_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ice_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_ladder",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ladder_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ladder_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ladder_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_ladder_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Lamp",
+		"drawtype" : "normal",
+		"light" : 14,
+		"name" : "nhv:b_lamp",
+		"solid" : true,
+		"texture" : "[fill:16x16:#FFE0A0"
+	},
+	{
+		"climbable" : false,
+		"description" : "Dim lamp",
+		"drawtype" : "normal",
+		"light" : 8,
+		"name" : "nhv:b_lamp_dim",
+		"solid" : true,
+		"texture" : "[fill:16x16:#A08060"
+	},
+	{
+		"climbable" : false,
+		"description" : "Metal",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_metal",
+		"solid" : true,
+		"texture" : "[fill:16x16:#9098A8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Metal pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_metal_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#9098A8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Metal post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_metal_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#9098A8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Metal slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_metal_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#9098A8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Metal stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_metal_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#9098A8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Red",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_red",
+		"solid" : true,
+		"texture" : "[fill:16x16:#B02020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Red pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_red_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#B02020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Red post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_red_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#B02020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Red slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_red_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#B02020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Red stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_red_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#B02020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sink",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_sink",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:43,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sink pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_sink_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:43,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sink post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_sink_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:43,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sink slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_sink_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:43,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sink stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_sink_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:43,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stair steps",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_stairs",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stair steps pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stairs_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stair steps post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stairs_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stair steps slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stairs_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stair steps stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stairs_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_stone",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stone_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stone_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stone_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_stone_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Throne",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_throne",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:42,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Throne pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_throne_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:42,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Throne post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_throne_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:42,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Throne slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_throne_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:42,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Throne stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_throne_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:42,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_tree",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:21,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_tree_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:21,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_tree_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:21,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_tree_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:21,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_tree_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:21,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "White",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_white",
+		"solid" : true,
+		"texture" : "[fill:16x16:#E8E8E8"
+	},
+	{
+		"climbable" : false,
+		"description" : "White pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_white_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#E8E8E8"
+	},
+	{
+		"climbable" : false,
+		"description" : "White post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_white_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#E8E8E8"
+	},
+	{
+		"climbable" : false,
+		"description" : "White slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_white_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#E8E8E8"
+	},
+	{
+		"climbable" : false,
+		"description" : "White stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_white_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#E8E8E8"
+	},
+	{
+		"climbable" : false,
+		"description" : "Yellow",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:b_yellow",
+		"solid" : true,
+		"texture" : "[fill:16x16:#D0B020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Yellow pane",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_yellow_pane",
+		"solid" : true,
+		"texture" : "[fill:16x16:#D0B020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Yellow post",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_yellow_post",
+		"solid" : true,
+		"texture" : "[fill:16x16:#D0B020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Yellow slab",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_yellow_slab",
+		"solid" : true,
+		"texture" : "[fill:16x16:#D0B020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Yellow stair",
+		"drawtype" : "nodebox",
+		"light" : 0,
+		"name" : "nhv:b_yellow_stair",
+		"solid" : true,
+		"texture" : "[fill:16x16:#D0B020"
+	},
+	{
+		"climbable" : false,
+		"description" : "Iron bars",
+		"drawtype" : "allfaces",
+		"light" : 0,
+		"name" : "nhv:bars",
+		"solid" : true,
+		"texture" : "nhv_tiles.png^[sheet:48x25:20,19"
+	},
+	{
+		"climbable" : false,
+		"description" : "Carve (overlays: force air)",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:carve",
+		"solid" : false,
+		"texture" : "[fill:16x16:#FFFF4060"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ceiling",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:ceiling",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)^[multiply:#606060"
+	},
+	{
+		"climbable" : false,
+		"description" : "Corridor",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:corridor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:25,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Closed door",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:door_closed",
+		"solid" : true,
+		"texture" : "nhv_wall_door.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Doorway",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:doorway",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:15,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Lowered drawbridge",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:drawbridge",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:2,20)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Floor",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:floor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:22,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ice",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:ice",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:46,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder down",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:ladder_down",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:31,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Ladder up",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:ladder_up",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:30,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Molten lava",
+		"drawtype" : "glasslike",
+		"light" : 10,
+		"name" : "nhv:lava",
+		"solid" : false,
+		"texture" : "[combine:16x32:0,0=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:47,19):0,16=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:47,19)\\^[transformFX^[opacity:255"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall of lava",
+		"drawtype" : "normal",
+		"light" : 8,
+		"name" : "nhv:lavawall",
+		"solid" : true,
+		"texture" : "[combine:16x32:0,0=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:0,20):0,16=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:0,20)\\^[transformFX^[opacity:255"
+	},
+	{
+		"climbable" : false,
+		"description" : "Monster path (to the trigger)",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:mpath",
+		"solid" : false,
+		"texture" : "[fill:16x16:#40FF4080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Object: ladder",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:prop_ladder",
+		"prop" : true,
+		"solid" : false,
+		"texture" : "nhv_object_ladder.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stone",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:rock",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tight gap",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:squeeze_block",
+		"solid" : true,
+		"texture" : ""
+	},
+	{
+		"climbable" : false,
+		"description" : "Staircase down",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:stairs_down",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:29,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Staircase up",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:stairs_up",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:28,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Tree",
+		"drawtype" : "allfaces",
+		"light" : 0,
+		"name" : "nhv:tree",
+		"solid" : true,
+		"texture" : "nhv_tiles.png^[sheet:48x25:21,19"
+	},
+	{
+		"climbable" : false,
+		"description" : "Stairs trigger (touch to change level)",
+		"drawtype" : "airlike",
+		"light" : 0,
+		"name" : "nhv:trigger",
+		"solid" : false,
+		"texture" : "[fill:16x16:#FF404080"
+	},
+	{
+		"climbable" : false,
+		"description" : "Unexplored",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:void",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Unexplored",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:void_floor",
+		"solid" : true,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Unexplored",
+		"drawtype" : "glasslike",
+		"light" : 0,
+		"name" : "nhv:void_liquid",
+		"solid" : false,
+		"texture" : "[fill:16x16:#000000"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:wall",
+		"solid" : true,
+		"texture" : "nhv_wall_main.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall (gehennom)",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:wall_gehennom",
+		"solid" : true,
+		"texture" : "nhv_wall_gehennom.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall (knox)",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:wall_knox",
+		"solid" : true,
+		"texture" : "nhv_wall_knox.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall (mines)",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:wall_mines",
+		"solid" : true,
+		"texture" : "nhv_wall_mines.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall (sokoban)",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:wall_sokoban",
+		"solid" : true,
+		"texture" : "nhv_wall_sokoban.png"
+	},
+	{
+		"climbable" : false,
+		"description" : "Water",
+		"drawtype" : "glasslike",
+		"light" : 0,
+		"name" : "nhv:water",
+		"solid" : false,
+		"texture" : "[combine:16x32:0,0=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:45,19):0,16=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:45,19)\\^[transformFX^[opacity:200"
+	},
+	{
+		"climbable" : false,
+		"description" : "Wall of water",
+		"drawtype" : "glasslike",
+		"light" : 0,
+		"name" : "nhv:waterwall",
+		"solid" : false,
+		"texture" : "[combine:16x32:0,0=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:7,20):0,16=[fill\\:16x16\\:#000000\\^(nhv_tiles.png\\^[sheet\\:48x25\\:7,20)\\^[transformFX^[opacity:180"
+	}
+]

@@ -12,7 +12,7 @@ licence. The licence texts are in the release's `licenses` folder
 | VoxHack core library (`nhcore`) | NetHack General Public License | Built into `nethack.dll` with NetHack. |
 | Luanti 5.18-dev (modified: `external/luanti`, branch nhv) | LGPL-2.1-or-later | Includes IrrlichtMt and the libraries listed in Luanti's `LICENSE.txt`. |
 | TinySoundFont (MIDI playback, in `luanti.exe`) | MIT | Bernhard Schelling. |
-| The game (`game/nethackvoxel`: Lua, prefabs, areas) | NetHack General Public License (as a work based on NetHack) | Licence still to be chosen formally; see "To do". |
+| The game (`game/nethackvoxel`: Lua, prefabs, areas) | NetHack General Public License (as a work based on NetHack) | See `LICENSE`. |
 | Libraries in `engine/bin` (SDL2, OpenAL Soft, freetype, curl, ...) | Zlib, MIT, BSD, Apache-2.0, LGPL (see `THIRD-PARTY.txt`) | All allow redistribution, including commercially. |
 
 ## Media
@@ -27,31 +27,22 @@ licence. The licence texts are in the release's `licenses` folder
 | Blocks, prefabs and areas built in the editors | Made for this project | Project's own | OK |
 | GeneralUser GS SoundFont | S. Christian Collins | GeneralUser GS License v2.0: free use, including commercial | OK (licence file ships) |
 | Test MIDI (`nhv_miditest.mid`) | Made for this project | Project's own | OK |
-| Sound effects `yh_*.ogg` (about 100 files) | "You Hear A Clicking Sound - It Bites!" (YHACSIB v0.2), based on the original YHACS sound pack | **None stated** | **Blocker:** see "To do" |
-| Voice lines (`sounds/voices`) | Generated with ElevenLabs | ElevenLabs terms, depending on the plan used | **Check:** see "To do" |
+| Sound effects `yh_*.ogg` | "You Hear A Clicking Sound - It Bites!" (YHACSIB), made by VoxHack's author | Project's own | OK |
+| Music (`nhv_music_*.ogg`), magic effect sounds (`nhv_sound_magiceffect`), footsteps (Freesound 268758) | Royalty-free / CC0 sources (per the author) | Free redistribution | OK |
+| Voice lines (`sounds/voices`) | Generated with ElevenLabs | ElevenLabs terms | Not in the public release (voice work is on hold) |
 
-## To do before a public or Steam release
+## Before a Steam release
 
-1. **YHACSIB sounds.** The pack states no licence and only credits the
-   original YHACS pack (`xoomer.virgilio.it/pid`), and no licence could be
-   found for that either. With no licence the sounds can't safely be
-   redistributed. Ask the YHACSIB author (and if possible the YHACS
-   author) for permission, ideally under a stated licence, or replace the
-   sounds with ones under a clear licence (CC0 / CC-BY packs, your own).
-2. **ElevenLabs voices.** Commercial use and redistribution depend on the
-   ElevenLabs plan the lines were made with (free plans have not allowed
-   commercial use and required attribution). Check your plan's terms, or
-   regenerate the lines on a plan that allows it.
-3. **Source code.** Publish the full source (this repository with its
-   `external/nethack` and `external/luanti` branches) and link to it from
-   the game's README and store page, as NetHack's licence requires.
-4. **The game's licence.** State the licence of the game's own code and
-   assets formally (a `LICENSE` file). Because it's built on NetHack, the
-   NetHack General Public License is the safe choice for the code.
-5. **The name.** NetHack's licence covers the code, not the name. The game is
-   called "VoxHack": say "based on NetHack" in its description, and ask the
-   NetHack DevTeam if unsure.
-6. **Steamworks.** Don't link the Steamworks SDK into the game without
+1. **Voice lines.** If voice work resumes, check the ElevenLabs plan's terms
+   for commercial use and redistribution before shipping the lines.
+2. **The name.** NetHack's licence covers the code, not the name. The game
+   says "based on NetHack" in its description; ask the NetHack DevTeam if
+   unsure.
+3. **Steamworks.** Don't link the Steamworks SDK into the game without
    checking its compatibility with the copyleft licences first.
+
+The source is published with each release (this repository, with its
+`external/nethack` and `external/luanti` submodules), as NetHack's licence
+requires.
 
 This is a practical inventory, not legal advice.

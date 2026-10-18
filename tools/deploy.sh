@@ -25,6 +25,11 @@ python -I "$ROOT/tools/make_wall_textures.py" "$GAME/mods/nhv_tiles/textures"
 cp "$ROOT/build/nhcore/nethack.dll" "$LUANTI/bin/"
 rm -rf "$GAME/mods/nhv/nhdata"
 cp -r "$ROOT/build/nhcore/nhdata" "$GAME/mods/nhv/nhdata"
+# the editors' data (prefabs, areas, sizes) lives in the repository's mod_data;
+# the engine reads and writes it through a link
+if [ ! -e "$LUANTI/mod_data" ]; then
+	/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "New-Item -ItemType Junction -Path '$(cygpath -w "$LUANTI/mod_data")' -Target '$(cygpath -w "$ROOT/mod_data")'" > /dev/null
+fi
 if [ ! -e "$LUANTI/games/nethackvoxel" ]; then
 	/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "New-Item -ItemType Junction -Path '$(cygpath -w "$LUANTI/games/nethackvoxel")' -Target '$(cygpath -w "$GAME")'" > /dev/null
 fi
