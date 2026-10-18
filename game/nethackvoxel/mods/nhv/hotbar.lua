@@ -270,6 +270,8 @@ local function refresh(player, inv)
 	local left = ItemStack("")
 	if two then
 		left = ItemStack(nhv_tiles.item(alt.tile))
+		-- (mirrored: the left hand's picture, not the right's)
+		left:get_meta():set_string("wield_image", nhv_tiles.texture(alt.tile) .. "^[transformFX")
 	elseif h and U.has(h.flags, U.HERO.TWOFISTS) then
 		left = ItemStack("nhv:fist")
 	end

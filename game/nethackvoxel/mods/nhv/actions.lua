@@ -105,10 +105,19 @@ core.register_globalstep(function()
 	if now < swing_at then
 		return
 	end
-	local player = nhv.player.get()
 	local hand = table.remove(swing_queue, 1)
+	if actions.melee_swing(hand) then
+		swing_at = now + SWING_GAP * 1e6
+	end
+end)
+
+-- one melee swing with hand (0 right, 1 left): the left only when it holds
+-- something (dual wielding, a Monk's fist); a Monk's fists take turns
+-- whatever NetHack says, punching the air too
+function actions.melee_swing(hand)
+	local player = nhv.player.get()
 	if not player then
-		return
+		return false
 	end
 	local h = nh.snap and nh.snap.hero
 	local left_shown = h and (U.has(h.flags, U.HERO.TWOWEAP) or U.has(h.flags, U.HERO.TWOFISTS))
@@ -121,8 +130,8 @@ core.register_globalstep(function()
 	else
 		actions.swing()
 	end
-	swing_at = now + SWING_GAP * 1e6
-end)
+	return true
+end
 
 -- ---------------------------------------------------------------- pits
 -- Down in a pit (a hole below the floor), Space climbs out onto the square
@@ -239,7 +248,7 @@ function actions.attack(player, prefer_id)
 		-- (digging with the wielded pick-axe; it swings)
 	else
 		-- a swing at nothing still takes the time a swing takes
-		actions.swing()
+		actions.melee_swing(0)
 		nhv.sound.hook("hero_swing_miss_air")
 		nhv.clock.act(ext("nhvtick"), {kind = "swing"})
 	end

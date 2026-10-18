@@ -105,7 +105,8 @@ end
 -- hand item's picture, actions.lua)
 core.register_craftitem(":nhv:fist", {
 	description = "Fist", inventory_image = "nhv_weapon_Fist.png",
-	wield_image = "nhv_weapon_Fist.png", groups = {not_in_creative_inventory = 1},
+	wield_image = "nhv_weapon_Fist.png^[transformFX", -- (mirrored: a left hand)
+	groups = {not_in_creative_inventory = 1},
 })
 
 for i = 0, meta.count - 1 do
