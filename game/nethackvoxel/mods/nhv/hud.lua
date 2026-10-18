@@ -238,6 +238,7 @@ local function update_tiles(player, snap)
 	local map, h = snap.map, snap.hero
 	for y = 0, U.ROWNO - 1 do
 		for x = 1, U.COLNO - 1 do
+			local i = U.idx(x, y)
 			local tex = hud.square_tex(map, h, x, y)
 			if tex ~= tiles.shown[i] then
 				tiles.shown[i] = tex
