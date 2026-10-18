@@ -89,7 +89,7 @@
     "file": "nhv_wall_column.png"
    },
    "scale": 1.0,
-   "solid": false,
+   "solid": true,
    "climbable": false,
    "stretch": false,
    "turns": "",

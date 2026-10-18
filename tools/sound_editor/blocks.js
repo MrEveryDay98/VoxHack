@@ -376,7 +376,7 @@ const Blocks = (() => {
       el("button", { class: "add", onclick: () => {
         let n = 1;
         while (data.blocks.some((b) => b.id === "block" + n)) n++;
-        data.blocks.push({ id: "block" + n, name: "New block", shape: "cube", texture: {}, scale: 1, light: 0, damage: "", repeat: 0, cause: "" });
+        data.blocks.push({ id: "block" + n, name: "New block", shape: "cube", texture: {}, scale: 1, light: 0, damage: "", repeat: 0, cause: "", solid: true });
         sel = data.blocks.length - 1; touch(); render();
       } }, "+ New block"));
     const b = data.blocks[sel];
