@@ -123,6 +123,7 @@ function actions.kick_start(keys)
 	if player then
 		hands_down_state = not hands_down_state
 		player:hud_set_flags({nhv_hands_down = hands_down_state})
+		nhv.sound.hook("hero_swing") -- (the whoosh of the kick going out)
 		-- (the view shakes as the kick goes out, hit or not)
 		core.after(0.15, function()
 			if player:is_player() then
