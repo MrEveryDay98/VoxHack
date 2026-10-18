@@ -134,6 +134,42 @@ local function status_text(h)
 end
 
 local msg_shown
+
+-- The things on your square, listed down the left side while you stand
+-- there (instead of NetHack's "Things that are here:" window, which ui.lua
+-- leaves out). Hidden under the inventory and other menus.
+local HERE_MAX = 12
+local here_shown
+local function update_here(player, snap)
+	if not hud.ids.here then
+		return
+	end
+	local h = snap and snap.hero
+	local covered = nhv.ui.menu_open or nhv.ui.chat_open or (nhv.title and nhv.title.open)
+		or hud.big_map
+	local lines = {}
+	if h and h.x and not covered and not U.has(h.flags, U.HERO.SWALLOWED) then
+		local items = nhv.mobs.floor_items(h.x, h.y)
+		if #items > 0 then
+			lines[1] = U.has(h.flags, U.HERO.BLIND) and "Things that you feel here:"
+				or "Things that are here:"
+			for k, o in ipairs(items) do
+				if k > HERE_MAX then
+					lines[#lines + 1] = ("  ...and %d more"):format(#items - HERE_MAX)
+					break
+				end
+				lines[#lines + 1] = "  " .. o.name
+			end
+		end
+	end
+	local text = table.concat(lines, "\n")
+	if text ~= here_shown then
+		here_shown = text
+		player:hud_change(hud.ids.here, "text", text)
+		player:hud_change(hud.ids.here_shadow, "text", text)
+	end
+end
+
 local function update_messages(player)
 	local now = core.get_us_time() / 1e6
 	-- (while a prompt is up the messages stay: they're often what it's
@@ -330,6 +366,17 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "", z_index = 1000,
 	})
 	msg_shown = nil
+	-- what lies on your square, down the left side: no box, a black shadow
+	-- (the same text again, a little down and right, behind it)
+	hud.ids.here_shadow = player:hud_add({
+		type = "text", position = {x = 0, y = 0.3}, alignment = {x = 1, y = 1},
+		offset = {x = 22, y = 2}, number = 0x000000, text = "", z_index = 10,
+	})
+	hud.ids.here = player:hud_add({
+		type = "text", position = {x = 0, y = 0.3}, alignment = {x = 1, y = 1},
+		offset = {x = 20, y = 0}, number = 0xFFFFFF, text = "", z_index = 11,
+	})
+	here_shown = nil
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
@@ -545,6 +592,8 @@ core.register_globalstep(function(dtime)
 	if tick > 0.2 then
 		tick = 0
 		update_messages(player)
+		-- (a menu opened or closed over it; the square's things changed)
+		update_here(player, nh.snap)
 	end
 end)
 
@@ -591,6 +640,7 @@ nh.on_snapshot(function(snap)
 	local h = snap.hero
 	player:hud_change(hud.ids.status, "text", status_text(h))
 	update_meters(player, h)
+	update_here(player, snap)
 	if hud.big_map then
 		update_tiles(player, snap)
 	else

@@ -557,7 +557,23 @@ nh.on_event(function(evs)
 					any = true
 				end
 			end
-			if any then
+			-- "Things that are here:" (stepping onto a pile, or ':'): the
+			-- list down the left side shows them (hud.lua) - no window;
+			-- what comes before it ("There is a doorway here.") is said
+			local here
+			for k, l in ipairs(t.lines) do
+				if l:find("^%s*Things that .*here:%s*$") then
+					here = k
+					break
+				end
+			end
+			if any and here then
+				for k = 1, here - 1 do
+					if t.lines[k]:find("%S") then
+						nhv.hud.message(t.lines[k])
+					end
+				end
+			elseif any then
 				-- short single-line windows read better as messages
 				if #t.lines <= 2 then
 					for _, l in ipairs(t.lines) do
