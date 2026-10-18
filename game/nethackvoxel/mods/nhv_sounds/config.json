@@ -863,6 +863,34 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "god_angry": {
+   "sounds": [
+    "nhv_sound_magiceffect15"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "sacrifice_accepted": {
+   "sounds": [
+    "nhv_sound_magiceffect11"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "sacrifice_ignored": {
+   "sounds": [
+    "nhv_sound_magiceffect10"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "altar_converted": {
+   "sounds": [
+    "nhv_sound_magiceffect19"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {
