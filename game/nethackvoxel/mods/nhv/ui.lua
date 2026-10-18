@@ -885,6 +885,10 @@ function ui.show_death()
 		lines[#lines + 1] = ""
 	end
 	ui.pending_text = {}
+	-- (your gravestone: now the death music, if you died)
+	if nhv.sound.died then
+		nhv.sound.set_music("music_death")
+	end
 	show("nhv:dead", head(14, 11)
 		.. "label[0.5,0.6;" .. E(ui.end_title or "Your game is over.") .. "]"
 		.. ("textarea[0.5,1;13,8.6;;;%s]"):format(E(table.concat(lines, "\n")))

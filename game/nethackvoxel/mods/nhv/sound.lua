@@ -257,7 +257,9 @@ local DUNGEON_MUSIC = {
 
 local function music_for(h)
 	if U.has(h.flags, U.HERO.DEAD) then
-		return "music_death"
+		-- (dying - NetHack's last questions: silence; music_death waits for
+		-- your gravestone, ui.show_death)
+		return nil
 	elseif U.has(h.flags, U.HERO.INSHOP) and sound.cfg.hooks.music_shop then
 		return "music_shop"
 	elseif U.has(h.flags, U.HERO.INTEMPLE) and sound.cfg.hooks.music_temple then
@@ -399,13 +401,10 @@ end)
 local last = nil
 nh.on_snapshot(function(snap)
 	if not snap then
-		-- the game ended: death music only if you died (not saving, quitting
-		-- to the title screen...); otherwise the music just stops
-		if last and U.has(last.flags or 0, U.HERO.DEAD) then
-			sound.set_music("music_death")
-		else
-			sound.stop_music()
-		end
+		-- the game ended: the music stops; if you died, music_death starts
+		-- with your gravestone (ui.show_death) - not saving, quitting...
+		sound.died = last and U.has(last.flags or 0, U.HERO.DEAD) or false
+		sound.stop_music()
 		last = nil
 		return
 	end
@@ -413,7 +412,13 @@ nh.on_snapshot(function(snap)
 	local prev = last
 	last = {hp = h.hp, hpmax = h.hpmax, gold = h.gold, hunger = h.hunger, flags = h.flags,
 		depth = h.depth, ledger = h.ledger, ninv = #snap.inventory}
-	sound.set_music(music_for(h))
+	sound.died = false
+	local music = music_for(h)
+	if music then
+		sound.set_music(music)
+	elseif sound.music then
+		sound.stop_music()
+	end
 	if not prev then
 		return
 	end
