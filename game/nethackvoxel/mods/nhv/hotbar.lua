@@ -257,6 +257,17 @@ local function refresh(player, inv)
 	pinv:set_size("main", 1)
 	pinv:set_size("craft", 0)
 	local st = ItemStack("")
+	-- (bare-handed in gloves: fists of the gloves' colour)
+	local glove
+	for _, o in ipairs(inv or {}) do
+		if has_mask(o, 0x10) then -- (W_ARMG: gloves worn)
+			glove = nhv_tiles.glove_color(o.tile)
+		end
+	end
+	if not wep and glove then
+		st = ItemStack("nhv:fist")
+		st:get_meta():set_string("wield_image", nhv_tiles.fist(false, glove))
+	end
 	if wep then
 		st = ItemStack(nhv_tiles.item(wep.tile))
 		local meta = st:get_meta()
@@ -274,6 +285,7 @@ local function refresh(player, inv)
 		left:get_meta():set_string("wield_image", nhv_tiles.texture(alt.tile) .. "^[transformFX")
 	elseif h and U.has(h.flags, U.HERO.TWOFISTS) then
 		left = ItemStack("nhv:fist")
+		left:get_meta():set_string("wield_image", nhv_tiles.fist(true, glove))
 	end
 	pinv:set_size("nhv_offhand", 1)
 	pinv:set_list("nhv_offhand", {left})

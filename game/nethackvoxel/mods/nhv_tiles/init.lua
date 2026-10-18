@@ -101,13 +101,31 @@ function nhv_tiles.flash_item(tile, kind)
 	return string.format("nhv_tiles:t%04d_%s", tile, kind)
 end
 
--- a fist (a Monk's left hand, fighting bare-handed; the right hand's is the
--- hand item's picture, actions.lua)
+-- a fist (a Monk's left hand fighting bare-handed; either hand in gloves;
+-- the bare right hand is the hand item's picture, actions.lua). Its picture
+-- is set per use (nhv_tiles.fist): mirrored for the left, the gloves' colour.
 core.register_craftitem(":nhv:fist", {
 	description = "Fist", inventory_image = "nhv_weapon_Fist.png",
-	wield_image = "nhv_weapon_Fist.png^[transformFX", -- (mirrored: a left hand)
-	groups = {not_in_creative_inventory = 1},
+	wield_image = "nhv_weapon_Fist.png", groups = {not_in_creative_inventory = 1},
 })
+
+-- the gloves' colours (tools/make_glove_colors.py): NetHack tile -> colour
+local GLOVES = dofile(core.get_modpath("nhv_tiles") .. "/glove_colors.lua")
+function nhv_tiles.glove_color(tile)
+	return GLOVES[tile]
+end
+
+-- a fist's picture: the left hand's mirrored; in gloves, their colour over
+-- the hand (where textures/nhv_glove_mask.png is white: to the wrist), the
+-- fist's shading kept (grey, then tinted), the arm bare
+function nhv_tiles.fist(left, color)
+	local tex = "nhv_weapon_Fist.png"
+	if color then
+		tex = tex .. "^(nhv_weapon_Fist.png^[hsl:0:-100:15^[multiply:" .. color
+			.. "^[mask:nhv_glove_mask.png)"
+	end
+	return left and (tex .. "^[transformFX") or tex
+end
 
 for i = 0, meta.count - 1 do
 	local tex = nhv_tiles.texture(i)

@@ -953,6 +953,12 @@ core.override_item("", {
 	tool_capabilities = {full_punch_interval = 0.3, max_drop_level = 0,
 		groupcaps = {}, damage_groups = {}},
 })
+-- (a fist in gloves is held as nhv:fist: it acts as the bare hand)
+core.override_item("nhv:fist", {
+	on_use = on_use, on_place = noop, on_secondary_use = noop, on_drop = on_drop, range = 5,
+	tool_capabilities = {full_punch_interval = 0.3, max_drop_level = 0,
+		groupcaps = {}, damage_groups = {}},
+})
 for i = 0, nhv_tiles.count - 1 do
 	core.override_item(nhv_tiles.item(i), {
 		on_use = on_use, on_place = noop, on_secondary_use = noop,
