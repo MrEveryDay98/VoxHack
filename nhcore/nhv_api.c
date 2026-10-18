@@ -584,7 +584,7 @@ nhv_get_hero(nhv_hero *out)
         f |= NHV_HERO_FEMALE;
     if (gm.multi < 0)
         f |= NHV_HERO_HELPLESS;
-    if (u.usleep)
+    if (unconscious()) /* (asleep, fainted, knocked out) */
         f |= NHV_HERO_ASLEEP;
     {
         int sk;

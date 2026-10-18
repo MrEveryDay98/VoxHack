@@ -34,7 +34,7 @@ local COL = {
 	hero = {255, 255, 255, 255},
 }
 
-local sleep_shown = nil -- (the asleep overlay is up)
+local sleep_shown = nil -- (the helpless overlay shown: "asleep", "frozen")
 
 local function color_for(map, i)
 	local gi = nhv.glyph_info(map.glyph[i])
@@ -338,7 +338,9 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png",
 	})
-	-- asleep: your eyes are shut (nearly black; the messages still show)
+	-- helpless: asleep or fainted, your eyes are shut (nearly black);
+	-- awake but frozen (a floating eye's gaze, paralysis), a cold grey-blue
+	-- you can still see through. (The messages show over both.)
 	hud.ids.sleep = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png", z_index = 500,
@@ -584,10 +586,12 @@ nh.on_snapshot(function(snap)
 		hud.flash("#30FF60", 0.7) -- (healed a good chunk; not each point regained)
 	end
 	last_hp = h.hp
-	local asleep = U.has(h.flags, U.HERO.ASLEEP)
-	if asleep ~= sleep_shown and hud.ids.sleep then
-		sleep_shown = asleep
-		player:hud_change(hud.ids.sleep, "text", asleep and "[fill:16x16:#000008^[opacity:225" or "blank.png")
+	local look = U.has(h.flags, U.HERO.ASLEEP) and "asleep"
+		or U.has(h.flags, U.HERO.HELPLESS) and "frozen" or nil
+	if look ~= sleep_shown and hud.ids.sleep then
+		sleep_shown = look
+		player:hud_change(hud.ids.sleep, "text", look == "asleep" and "[fill:16x16:#000008^[opacity:225"
+			or look == "frozen" and "[fill:16x16:#5070A0^[opacity:90" or "blank.png")
 	end
 	-- blindness: black fog that hides everything beyond arm's reach
 	local blind = U.has(h.flags, U.HERO.BLIND)

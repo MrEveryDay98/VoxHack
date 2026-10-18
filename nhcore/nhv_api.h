@@ -228,7 +228,8 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_FEMALE    0x400000 /* the hero is female (as it is now) */
 #define NHV_HERO_HELPLESS  0x800000 /* can't act: asleep, paralysed, fainted,
                                        ... (NHV_REQ_TURN until it ends) */
-#define NHV_HERO_ASLEEP    0x1000000 /* (and the reason is sleep) */
+#define NHV_HERO_ASLEEP    0x1000000 /* (and unconscious: asleep, fainted...;
+                                        without it: awake, frozen) */
 
 typedef struct nhv_hero {
     int x, y;
