@@ -748,7 +748,10 @@ local function on_drop(itemstack)
 	return itemstack
 end
 
+-- (bare-handed, your hand is a fist: nhv_tiles/textures/nhv_weapon_Fist.png,
+-- drawn like a wielded weapon's sprite instead of the engine's plain block)
 core.override_item("", {
+	wield_image = "nhv_weapon_Fist.png", inventory_image = "nhv_weapon_Fist.png",
 	on_use = on_use, on_place = noop, on_secondary_use = noop, range = 5,
 	tool_capabilities = {full_punch_interval = 0.3, max_drop_level = 0,
 		groupcaps = {}, damage_groups = {}},
