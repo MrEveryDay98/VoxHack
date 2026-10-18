@@ -29,7 +29,7 @@ settings and high scores stay inside that folder.
 | Left click | Attack what's in reach under your crosshair |
 | Shift + left click | Fire your quivered ammo where you look |
 | Right click | Tap: the obvious action for what you point at (open a door, take the stairs, talk). Hold: an action wheel |
-| Shift / Alt / Ctrl + right click | Wheels for yourself, your items, and magic |
+| Hold Shift, Ctrl, Alt, or E | Other wheel options |
 | 1-5 | Fire, Kick, Zap, Spell, Eat |
 | R | Pick up |
 | X | Search (hold to keep searching) |
