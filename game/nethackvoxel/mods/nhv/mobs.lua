@@ -378,10 +378,19 @@ end
 
 -- An object that's now a square away (a pushed boulder, ...) glides there
 -- instead of going and appearing again: its entity moves to the new square.
-local function match_moves(map)
+-- When more than one square around could be where it went (a boulder you
+-- pushed, and another just come into sight beside it), it's the one the
+-- way you just stepped (a pushed boulder goes on ahead of you), else
+-- straight away from you; then a square straight across before a diagonal.
+local function match_moves(map, hero)
 	local moved = {}
+	local mx, my = 0, 0
+	if hero and hero.x and hero.ux0 then
+		mx, my = U.sign(hero.x - hero.ux0), U.sign(hero.y - hero.uy0)
+	end
 	for j, e in pairs(mobs.objs) do
 		if e.tile and e.x and map.mem_tile[j] ~= e.tile and e.obj:get_pos() then
+			local best, best_score
 			for dx = -1, 1 do
 				for dy = -1, 1 do
 					local kx, ky = e.x + dx, e.y + dy
@@ -389,13 +398,25 @@ local function match_moves(map)
 					local there = k and mobs.objs[k]
 					if k and k ~= j and not moved[k] and map.mem_tile[k] == e.tile
 							and is_obj_glyph(map.mem[k]) and not (there and there.tile == e.tile) then
-						moved[k] = {e = e, from = j, x = kx, y = ky}
-						goto next_entity
+						local score = (dx ~= 0 and dy ~= 0) and 0 or 1
+						if hero and hero.x then
+							local ax, ay = U.sign(e.x - hero.x), U.sign(e.y - hero.y)
+							if ax == 0 and ay == 0 then
+								-- (you stepped onto its square: pushed on)
+								ax, ay = mx, my
+							end
+							score = score + 4 * (dx * ax + dy * ay)
+						end
+						if not best_score or score > best_score then
+							best, best_score = {e = e, from = j, x = kx, y = ky, k = k}, score
+						end
 					end
 				end
 			end
+			if best then
+				moved[best.k] = best
+			end
 		end
-		::next_entity::
 	end
 	for k, m in pairs(moved) do
 		local displaced = mobs.objs[k]
@@ -453,7 +474,7 @@ local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
 	local ball = mobs.ball
-	match_moves(map)
+	match_moves(map, snap.hero)
 	for tx = 1, U.COLNO - 1 do
 		for ty = 0, U.ROWNO - 1 do
 			local i = U.idx(tx, ty)
