@@ -428,6 +428,26 @@ async function moveSounds(names, folder) {
   renderLibrary();
 }
 
+// deleting: the files go to editor_trash/sounds (not lost), and whatever
+// used them stops using them
+async function deleteSounds(names) {
+  const used = usage();
+  const inUse = names.filter((n) => used[n]);
+  const what = names.length === 1 ? `"${names[0]}"` : `${names.length} sounds`;
+  const warn = inUse.length ? `\n\nIt's used ${inUse.reduce((t, n) => t + used[n], 0)}× - those hooks and voice lines will stop playing it.` : "";
+  if (!confirm(`Delete ${what}?${warn}\n\n(The file goes to editor_trash/sounds, so it can be put back by hand.)`)) return;
+  try {
+    const res = await api("/api/sounds/delete", { method: "POST", json: { names } });
+    catalog.sounds = catalog.sounds.filter((s) => !res.deleted.includes(s.name));
+    // (the saved settings were cleaned up too; this keeps any unsaved
+    // changes made here)
+    for (const e of Object.values(config.hooks)) if (e.sounds) e.sounds = e.sounds.filter((n) => !res.deleted.includes(n));
+    for (const [k, v] of Object.entries(config.voices)) if (res.deleted.includes(v.sound)) delete config.voices[k];
+    toast(`Deleted ${res.deleted.length} sound(s)` + (res.unhooked ? `, removed from ${res.unhooked} place(s) that used them` : ""));
+  } catch (e) { toast(e.message); }
+  renderLibrary();
+}
+
 function folderButton(label, folder, depth, count) {
   const b = el("button", { class: "folder", "aria-pressed": String(libFolder === folder),
     style: `padding-left:${10 + depth * 14}px`,
@@ -491,7 +511,9 @@ function renderLibrary() {
       el("div", { class: "info" }, el("div", { class: "name" }, s.name, s.midi ? el("span", { class: "folder-tag" }, " MIDI") : null),
         el("div", { class: "uses" }, used[s.name] ? `used ${used[s.name]}×` : "not used yet"),
         libFolder === null || q ? el("div", { class: "folder-tag" }, f || "(top level)") : null),
-      move);
+      move,
+      el("button", { class: "icon danger", title: "Delete", "aria-label": "Delete " + s.name,
+        onclick: () => deleteSounds([s.name]) }, "✕"));
     card.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/x-nhv-sound", s.name));
     list.append(card);
   }

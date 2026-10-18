@@ -58,6 +58,8 @@ def fresh_blocks_api():
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 MOD = os.path.join(ROOT, "game", "nethackvoxel", "mods", "nhv_sounds")
 SOUNDS = os.path.join(MOD, "sounds")
+# deleted sounds go here (outside the game), not away for good
+SOUND_TRASH = os.path.join(ROOT, "editor_trash", "sounds")
 CONFIG = os.path.join(MOD, "config.json")
 CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
@@ -509,6 +511,35 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Only empty folders can be deleted")
             shutil.rmtree(full)
             return self.send(200, {"ok": True})
+        if path == "/api/sounds/delete":
+            # the files go to editor_trash/sounds (keeping their folders; a
+            # name already there gets a time added), and the hooks and voice
+            # lines that used them stop using them
+            index = sound_index()
+            names = [n for n in data.get("names", []) if n in index]
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            for name in names:
+                src = sound_path(name, index[name])
+                dst_dir = os.path.join(SOUND_TRASH, *(index[name].split("/") if index[name] else []))
+                os.makedirs(dst_dir, exist_ok=True)
+                base, ext = os.path.splitext(os.path.basename(src))
+                dst = os.path.join(dst_dir, base + ext)
+                if os.path.exists(dst):
+                    dst = os.path.join(dst_dir, "%s.%s%s" % (base, stamp, ext))
+                shutil.move(src, dst)
+            gone = set(names)
+            cfg = load_config()
+            unhooked = 0
+            for e in cfg.get("hooks", {}).values():
+                before = len(e.get("sounds") or [])
+                e["sounds"] = [n for n in (e.get("sounds") or []) if n not in gone]
+                unhooked += before - len(e["sounds"])
+            for k in [k for k, v in cfg.get("voices", {}).items() if v.get("sound") in gone]:
+                del cfg["voices"][k]
+                unhooked += 1
+            if unhooked:
+                save_config(cfg)
+            return self.send(200, {"deleted": names, "unhooked": unhooked})
         if path == "/api/move":
             folder = clean_folder(data.get("folder", ""))
             moved = []

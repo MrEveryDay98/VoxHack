@@ -3,6 +3,7 @@
 /dist/
 *.log
 /voice_work/
+/editor_trash/
 __pycache__/
 # editor backups
 *.bak

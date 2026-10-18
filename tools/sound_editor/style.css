@@ -26,6 +26,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 button.primary:disabled { opacity: .45; cursor: default; }
 button.icon { padding: 2px 8px; }
+button.icon.danger:hover { color: #ff6b6b; border-color: #ff6b6b; }
 
 .top {
   display: flex; align-items: center; gap: 24px; padding: 14px 24px;
