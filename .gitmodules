@@ -2,7 +2,9 @@
 	path = external/nethack
 	url = https://github.com/MrEveryDay98/NetHack.git
 	branch = nhv
+	ignore = untracked
 [submodule "external/luanti"]
 	path = external/luanti
 	url = https://github.com/MrEveryDay98/luanti.git
 	branch = nhv
+	ignore = untracked
