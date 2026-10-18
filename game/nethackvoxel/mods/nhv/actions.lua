@@ -56,10 +56,128 @@ function actions.run(a, info)
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
 	elseif not nhv.clock.busy() then -- (the last action has played out)
-		actions.swing()
+		if not actions.kick_start(a.keys) then
+			actions.swing()
+		end
 		nhv.clock.act(a.keys, info or {kind = "action"})
 	end
 end
+
+-- ---------------------------------------------------------------- kicks
+-- A kick isn't an arm swing: both hands drop out of view and come back
+-- (your body moved), and when it lands - NetHack says it hit something (a
+-- door, a box, a monster, a wall) - dust puffs from what you kicked and the
+-- view shakes. A kick at the air or a strained muscle gets neither.
+local kick = nil -- {x, y, t}: the square kicked, until NetHack has said
+local hands_down_state, shake_state = false, false
+
+-- the square a kick's keys aim at (nil: not a kick)
+local function kick_square(keys)
+	local h = nh.snap and nh.snap.hero
+	if not h or type(keys) ~= "table" then
+		return nil
+	end
+	local bx, by = h.x, h.y
+	for k, item in ipairs(keys) do
+		local mx, my = (item.text or ""):match("^nhvmove (%d+) (%d+)")
+		if mx then
+			bx, by = tonumber(mx), tonumber(my) -- (kicking from where the body is)
+		end
+		if (item.text or ""):match("^nhvkickhere") then
+			return bx, by -- (what's on your own square)
+		end
+		if item.key == "\4" then
+			local d = keys[k + 1] and keys[k + 1].key
+			for dx = -1, 1 do
+				for dy = -1, 1 do
+					if d and (dx ~= 0 or dy ~= 0) and U.dir_key(dx, dy) == d then
+						return bx + dx, by + dy
+					end
+				end
+			end
+			return bx, by
+		end
+	end
+	return nil
+end
+
+-- (a kick's keys: start its look; false if they aren't a kick)
+function actions.kick_start(keys)
+	if type(keys) == "string" then
+		local t = {}
+		for c in keys:gmatch(".") do
+			t[#t + 1] = {key = c}
+		end
+		keys = t
+	end
+	local x, y = kick_square(keys)
+	if not x then
+		return false
+	end
+	local player = nhv.player.get()
+	if player then
+		hands_down_state = not hands_down_state
+		player:hud_set_flags({nhv_hands_down = hands_down_state})
+	end
+	kick = {x = x, y = y, t = core.get_us_time()}
+	return true
+end
+
+local KICK_MISS = {"empty space", "strain a muscle", "dumb move", "you miss", "kick at nothing",
+	"you kick at"}
+local KICK_HIT = {"whamm", "thump", "thud", "crash", "you kick", "ouch", "breaks open",
+	"bursts open", "shatter", "flies", "kick the", "kicks", "klunk", "budge", "slam"}
+
+local function kick_landed(player, k)
+	shake_state = not shake_state
+	player:hud_set_flags({nhv_shake = shake_state})
+	local c = U.tile_center(k.x, k.y, U.STAND_Y + 0.6)
+	core.add_particlespawner({
+		amount = 26, time = 0.1,
+		pos = {min = vector.offset(c, -0.6, -0.4, -0.6), max = vector.offset(c, 0.6, 0.5, 0.6)},
+		vel = {min = vector.new(-1.6, 0.2, -1.6), max = vector.new(1.6, 1.4, 1.6)},
+		acc = vector.new(0, -1.5, 0),
+		exptime = {min = 0.4, max = 0.9},
+		size = {min = 1.2, max = 3},
+		texture = {name = "[fill:4x4:#8A7A66", alpha_tween = {0.9, 0}, scale_tween = {0.6, 1.4}},
+		collisiondetection = true,
+	})
+end
+
+nh.on_event(function(evs)
+	if not kick then
+		return
+	end
+	if core.get_us_time() - kick.t > 1500000 then
+		kick = nil -- (NetHack never said: a refused kick)
+		return
+	end
+	for _, ev in ipairs(evs) do
+		if ev.kind == "message" then
+			local m = ev.text:lower()
+			local miss, hit = false, false
+			for _, w in ipairs(KICK_MISS) do
+				if m:find(w, 1, true) then
+					miss = true
+				end
+			end
+			for _, w in ipairs(KICK_HIT) do
+				if m:find(w, 1, true) then
+					hit = true
+				end
+			end
+			local player = nhv.player.get()
+			if miss then
+				kick = nil
+				return
+			elseif hit and player then
+				kick_landed(player, kick)
+				kick = nil
+				return
+			end
+		end
+	end
+end)
 
 -- One arm swing (right-click doesn't swing by itself; see hud.lua)
 local swing_state = false
