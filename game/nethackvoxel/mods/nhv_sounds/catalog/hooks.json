@@ -3,927 +3,927 @@
   {
    "id": "air_crackles",
    "group": "nethack",
-   "desc": "air crackles"
+   "desc": "A monster's spell fizzles: the air crackles around it"
   },
   {
    "id": "alarm",
    "group": "nethack",
-   "desc": "alarm"
+   "desc": "An alarm sounds: robbing a shop (the Keystone Kops come) or entering a vault's security area"
   },
   {
    "id": "angry_drone",
    "group": "nethack",
-   "desc": "angry drone"
+   "desc": "A beehive on the level: an angry drone (also a bee buzzing angrily)"
   },
   {
    "id": "angry_snakes",
    "group": "nethack",
-   "desc": "angry snakes"
+   "desc": "Iron bars dissolved by acid hiss like angry snakes"
   },
   {
    "id": "angry_voice",
    "group": "nethack",
-   "desc": "angry voice"
+   "desc": "A shopkeeper shouts at you for damaging the shop (\"Out of my way, scum!\")"
   },
   {
    "id": "applause",
    "group": "nethack",
-   "desc": "applause"
+   "desc": "Killing a peaceful while hallucinating: the studio audience applauds"
   },
   {
    "id": "avian_screak",
    "group": "nethack",
-   "desc": "avian screak"
+   "desc": "A pet bird (parrot, raven...) screaks when you hurt or abuse it"
   },
   {
    "id": "bang_weapon_side",
    "group": "nethack",
-   "desc": "bang weapon side"
+   "desc": "Digging with a blade that isn't for digging: \"Bang! You hit with the broad side\""
   },
   {
    "id": "bars_clink",
    "group": "nethack",
-   "desc": "bars clink"
+   "desc": "Gold, silver or coins hit iron bars: \"Clink\""
   },
   {
    "id": "bars_clonk",
    "group": "nethack",
-   "desc": "bars clonk"
+   "desc": "A weapon or other object hits iron bars: \"Clonk\""
   },
   {
    "id": "bars_flapp",
    "group": "nethack",
-   "desc": "bars flapp"
+   "desc": "Something flimsy (a scroll, cloth...) hits iron bars: \"Flapp\""
   },
   {
    "id": "bars_whang",
    "group": "nethack",
-   "desc": "bars whang"
+   "desc": "A boulder or heavy iron ball hits iron bars: \"Whang\""
   },
   {
    "id": "bars_whap",
    "group": "nethack",
-   "desc": "bars whap"
+   "desc": "A harmless missile (a cream pie, an egg...) hits iron bars: \"Whap\""
   },
   {
    "id": "bees",
    "group": "nethack",
-   "desc": "bees"
+   "desc": "A beehive on the level (hallucinating): bees in your bonnet"
   },
   {
    "id": "blast",
    "group": "nethack",
-   "desc": "blast"
+   "desc": "An explosion out of sight: \"You hear a blast\""
   },
   {
    "id": "board_squeak",
    "group": "nethack",
-   "desc": "board squeak"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "board_squeaks_loudly",
    "group": "nethack",
-   "desc": "board squeaks loudly"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "boing",
    "group": "nethack",
-   "desc": "boing"
+   "desc": "A monster's wand of striking hits you but your magic resistance stops it: \"Boing!\""
   },
   {
    "id": "bolt_of_lightning",
    "group": "nethack",
-   "desc": "bolt of lightning"
+   "desc": "A monster's spell calls down a bolt of lightning on you"
   },
   {
    "id": "bone_rattle",
    "group": "nethack",
-   "desc": "bone rattle"
+   "desc": "A skeleton rattles noisily at you (you freeze for a moment)"
   },
   {
    "id": "boomerang_klonk",
    "group": "nethack",
-   "desc": "boomerang klonk"
+   "desc": "A thrown boomerang comes back and hits you: \"Klonk!\""
   },
   {
    "id": "boulder_drop",
    "group": "nethack",
-   "desc": "boulder drop"
+   "desc": "A boulder falls into a pit or hole and fills it"
   },
   {
    "id": "bovine_bellow",
    "group": "nethack",
-   "desc": "bovine bellow"
+   "desc": "A cow-like monster bellows (angry)"
   },
   {
    "id": "bovine_moo",
    "group": "nethack",
-   "desc": "bovine moo"
+   "desc": "A cow-like monster moos"
   },
   {
    "id": "bubble_rising",
    "group": "nethack",
-   "desc": "bubble rising"
+   "desc": "Quaffing from a fountain: a large bubble rises and a water nymph appears"
   },
   {
    "id": "bugle_playing_reveille",
    "group": "nethack",
-   "desc": "bugle playing reveille"
+   "desc": "A soldier plays a bugle to wake the barracks (reveille)"
   },
   {
    "id": "buzz",
    "group": "nethack",
-   "desc": "buzz"
+   "desc": "An insect monster buzzes (chatting, or angry)"
   },
   {
    "id": "canine_bark",
    "group": "nethack",
-   "desc": "canine bark"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "canine_growl",
    "group": "nethack",
-   "desc": "canine growl"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "canine_howl",
    "group": "nethack",
-   "desc": "canine howl"
+   "desc": "A dog-like monster howls (also a werewolf howling at the moon)"
   },
   {
    "id": "canine_whine",
    "group": "nethack",
-   "desc": "canine whine"
+   "desc": "A pet dog whines (hungry, or kept from what it wants)"
   },
   {
    "id": "canine_yelp",
    "group": "nethack",
-   "desc": "canine yelp"
+   "desc": "A pet dog yelps when you hurt or abuse it"
   },
   {
    "id": "canine_yip",
    "group": "nethack",
-   "desc": "canine yip"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "canine_yowl",
    "group": "nethack",
-   "desc": "canine yowl"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "chain_shatters",
    "group": "nethack",
-   "desc": "chain shatters"
+   "desc": "An explosion shatters an iron chain"
   },
   {
    "id": "chains_rattling_gears_turning",
    "group": "nethack",
-   "desc": "chains rattling gears turning"
+   "desc": "A drawbridge is raised: chains rattle and gears turn"
   },
   {
    "id": "chant",
    "group": "nethack",
-   "desc": "chant"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "chirp",
    "group": "nethack",
-   "desc": "chirp"
+   "desc": "A bird-like monster chirps"
   },
   {
    "id": "clanging_sound",
    "group": "nethack",
-   "desc": "clanging sound"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "clank",
    "group": "nethack",
-   "desc": "clank"
+   "desc": "A monster grows too big to hold its shield: it falls with a clank"
   },
   {
    "id": "clanking_pipe",
    "group": "nethack",
-   "desc": "clanking pipe"
+   "desc": "Quaffing from a sink: clanking from the pipes"
   },
   {
    "id": "clash",
    "group": "nethack",
-   "desc": "clash"
+   "desc": "Digging with a pick-axe into iron bars or something too hard: \"Clash!\""
   },
   {
    "id": "cockatrice_hiss",
    "group": "nethack",
-   "desc": "cockatrice hiss"
+   "desc": "A cockatrice hisses at someone (turning them to stone)"
   },
   {
    "id": "cough",
    "group": "nethack",
-   "desc": "cough"
+   "desc": "A monster breathes in something nasty (a breath attack, a gas cloud) and coughs"
   },
   {
    "id": "courtly_conversation",
    "group": "nethack",
-   "desc": "courtly conversation"
+   "desc": "A throne room on the level: courtly conversation"
   },
   {
    "id": "cracking_sound",
    "group": "nethack",
-   "desc": "cracking sound"
+   "desc": "A monster grows and bursts out of its armor"
   },
   {
    "id": "crackling",
    "group": "nethack",
-   "desc": "crackling"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "crackling_of_hellfire",
    "group": "nethack",
-   "desc": "crackling of hellfire"
+   "desc": "Using a stethoscope in Gehennom: the crackling of hellfire"
   },
   {
    "id": "crash",
    "group": "nethack",
-   "desc": "crash"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "crash_door",
    "group": "nethack",
-   "desc": "crash door"
+   "desc": "Kicking a wall reveals a secret door or passage: \"Crash!\""
   },
   {
    "id": "crash_something_broke",
    "group": "nethack",
-   "desc": "crash something broke"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "crash_throne_destroyed",
    "group": "nethack",
-   "desc": "crash throne destroyed"
+   "desc": "Kicking a throne to pieces: \"CRASH! You destroy it.\""
   },
   {
    "id": "crash_through_floor",
    "group": "nethack",
-   "desc": "crash through floor"
+   "desc": "A monster out of sight digs a hole and falls through the floor"
   },
   {
    "id": "crashed_ceiling",
    "group": "nethack",
-   "desc": "crashed ceiling"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "crashing_boulder",
    "group": "nethack",
-   "desc": "crashing boulder"
+   "desc": "A boulder falls into a pit or hole under you: a CRASH beneath you"
   },
   {
    "id": "crashing_rock",
    "group": "nethack",
-   "desc": "crashing rock"
+   "desc": "Rock crashes: a cave-in around you, or a monster digging through rock"
   },
   {
    "id": "crashing_sound",
    "group": "nethack",
-   "desc": "crashing sound"
+   "desc": "A door is forced open out of sight (force bolt, striking): a crashing sound"
   },
   {
    "id": "croc_bellow",
    "group": "nethack",
-   "desc": "croc bellow"
+   "desc": "A crocodile bellows"
   },
   {
    "id": "crumbling_sound",
    "group": "nethack",
-   "desc": "crumbling sound"
+   "desc": "A boulder or statue is smashed apart (force bolt, striking)"
   },
   {
    "id": "crunching_sound",
    "group": "nethack",
-   "desc": "crunching sound"
+   "desc": "A rust monster or rock mole eats metal out of sight: crunching"
   },
   {
    "id": "crushing_sound",
    "group": "nethack",
-   "desc": "crushing sound"
+   "desc": "A drawbridge's portcullis falls and crushes someone"
   },
   {
    "id": "deafening_roar_atmospheric",
    "group": "nethack",
-   "desc": "deafening roar atmospheric"
+   "desc": "A magic trap: a deafening roar (you may be deafened)"
   },
   {
    "id": "destroy_web",
    "group": "nethack",
-   "desc": "destroy web"
+   "desc": "A dragged iron ball tears through a web"
   },
   {
    "id": "distant_thunder",
    "group": "nethack",
-   "desc": "distant thunder"
+   "desc": "Killing a peaceful: the rumble of distant thunder (your god is displeased)"
   },
   {
    "id": "divine_music",
    "group": "nethack",
-   "desc": "divine music"
+   "desc": "Praying successfully: divine music"
   },
   {
    "id": "door_crash_open",
    "group": "nethack",
-   "desc": "door crash open"
+   "desc": "A monster smashes down a door"
   },
   {
    "id": "door_open",
    "group": "nethack",
-   "desc": "door open"
+   "desc": "A monster opens a door"
   },
   {
    "id": "door_unlock_and_open",
    "group": "nethack",
-   "desc": "door unlock and open"
+   "desc": "A monster unlocks and opens a door"
   },
   {
    "id": "drain_noises",
    "group": "nethack",
-   "desc": "drain noises"
+   "desc": "Dropping a ring down a sink: loud noises from the drain"
   },
   {
    "id": "dry_throat_rattle",
    "group": "nethack",
-   "desc": "dry throat rattle"
+   "desc": "A monster tries to spit venom but has none left: a dry rattle"
   },
   {
    "id": "egg_cracking",
    "group": "nethack",
-   "desc": "egg cracking"
+   "desc": "Eggs break inside a kicked box or chest"
   },
   {
    "id": "egg_splatting",
    "group": "nethack",
-   "desc": "egg splatting"
+   "desc": "Eggs splat when a kicked box or chest lands"
   },
   {
    "id": "elephant_trumpet",
    "group": "nethack",
-   "desc": "elephant trumpet"
+   "desc": "An elephant-like monster (mastodon, mumak) trumpets"
   },
   {
    "id": "equine_neigh",
    "group": "nethack",
-   "desc": "equine neigh"
+   "desc": "A horse-like monster neighs"
   },
   {
    "id": "equine_whicker",
    "group": "nethack",
-   "desc": "equine whicker"
+   "desc": "A horse-like monster whickers"
   },
   {
    "id": "equine_whinny",
    "group": "nethack",
-   "desc": "equine whinny"
+   "desc": "A horse-like monster whinnies"
   },
   {
    "id": "explosion",
    "group": "nethack",
-   "desc": "explosion"
+   "desc": "An explosion out of sight (a booby-trapped door blowing up, near or far)"
   },
   {
    "id": "faint_chime",
    "group": "nethack",
-   "desc": "faint chime"
+   "desc": "Reading the Book of the Dead without the Bell of Opening: a faint chime"
   },
   {
    "id": "faint_sloshing",
    "group": "nethack",
-   "desc": "faint sloshing"
+   "desc": "Two puddings merge out of sight: faint sloshing"
   },
   {
    "id": "faint_splashing",
    "group": "nethack",
-   "desc": "faint splashing"
+   "desc": "Using a stethoscope on water: faint splashing"
   },
   {
    "id": "feline_meow",
    "group": "nethack",
-   "desc": "feline meow"
+   "desc": "A cat-like monster meows"
   },
   {
    "id": "feline_mew",
    "group": "nethack",
-   "desc": "feline mew"
+   "desc": "A kitten mews"
   },
   {
    "id": "feline_purr",
    "group": "nethack",
-   "desc": "feline purr"
+   "desc": "A happy cat-like monster purrs"
   },
   {
    "id": "feline_yelp",
    "group": "nethack",
-   "desc": "feline yelp"
+   "desc": "A pet cat yowls when you hurt or abuse it"
   },
   {
    "id": "feline_yip",
    "group": "nethack",
-   "desc": "feline yip"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "feline_yowl",
    "group": "nethack",
-   "desc": "feline yowl"
+   "desc": "A cat-like monster yowls (angry or hungry)"
   },
   {
    "id": "furious_bubbling",
    "group": "nethack",
-   "desc": "furious bubbling"
+   "desc": "Quaffing from a fountain: it bubbles furiously (snakes or a demon come out)"
   },
   {
    "id": "gear_turn",
    "group": "nethack",
-   "desc": "gear turn"
+   "desc": "Playing the passtune at a drawbridge: gears turn"
   },
   {
    "id": "gears_turning_chains_rattling",
    "group": "nethack",
-   "desc": "gears turning chains rattling"
+   "desc": "A drawbridge is lowered: gears turn and chains rattle"
   },
   {
    "id": "glass_crashing",
    "group": "nethack",
-   "desc": "glass crashing"
+   "desc": "Glass breaks inside a kicked box (a muffled crash)"
   },
   {
    "id": "glass_shattering",
    "group": "nethack",
-   "desc": "glass shattering"
+   "desc": "Glass shatters inside a kicked box or chest"
   },
   {
    "id": "groan",
    "group": "nethack",
-   "desc": "groan"
+   "desc": "A monster groans"
   },
   {
    "id": "groans_and_moans",
    "group": "nethack",
-   "desc": "groans and moans"
+   "desc": "Arriving in the Valley of the Dead: groans and moans everywhere"
   },
   {
    "id": "growl",
    "group": "nethack",
-   "desc": "growl"
+   "desc": "A dog-like monster growls"
   },
   {
    "id": "grunt",
    "group": "nethack",
-   "desc": "grunt"
+   "desc": "A monster grunts"
   },
   {
    "id": "guards_footsteps",
    "group": "nethack",
-   "desc": "guards footsteps"
+   "desc": "A vault on the level: the footsteps of a guard on patrol"
   },
   {
    "id": "gurgle",
    "group": "nethack",
-   "desc": "gurgle"
+   "desc": "A water monster gurgles"
   },
   {
    "id": "gushing_sound",
    "group": "nethack",
-   "desc": "gushing sound"
+   "desc": "Kicking a fountain or sink: a gushing sound"
   },
   {
    "id": "heart_beat",
    "group": "nethack",
-   "desc": "heart beat"
+   "desc": "Using a stethoscope on yourself: your heartbeat"
   },
   {
    "id": "hiss",
    "group": "nethack",
-   "desc": "hiss"
+   "desc": "A snake or reptile hisses"
   },
   {
    "id": "hollow_sound",
    "group": "nethack",
-   "desc": "hollow sound"
+   "desc": "Using a stethoscope on a wall with a secret door: a hollow sound"
   },
   {
    "id": "horn_being_played",
    "group": "nethack",
-   "desc": "horn being played"
+   "desc": "A monster plays a fire or frost horn (near or far)"
   },
   {
    "id": "iron_ball_dragging_you",
    "group": "nethack",
-   "desc": "iron ball dragging you"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "iron_ball_hits_you",
    "group": "nethack",
-   "desc": "iron ball hits you"
+   "desc": "Falling down stairs or a hole while punished: the iron ball smacks into you"
   },
   {
    "id": "item_tumble_downwards",
    "group": "nethack",
-   "desc": "item tumble downwards"
+   "desc": "Objects tumble down a hole or trap door"
   },
   {
    "id": "jabberwock_burble",
    "group": "nethack",
-   "desc": "jabberwock burble"
+   "desc": "A jabberwock burbles"
   },
   {
    "id": "kaablamm_of_mine",
    "group": "nethack",
-   "desc": "kaablamm of mine"
+   "desc": "A land mine goes off: \"KAABLAMM!!!\""
   },
   {
    "id": "kaboom",
    "group": "nethack",
-   "desc": "kaboom"
+   "desc": "A booby-trapped box or chest explodes when opened: \"KABOOM!!\""
   },
   {
    "id": "kaboom_boom_boom",
    "group": "nethack",
-   "desc": "kaboom boom boom"
+   "desc": "A storm on the Plane of Air: \"Kaboom!!! Boom!! Boom!!\""
   },
   {
    "id": "kaboom_door_explodes",
    "group": "nethack",
-   "desc": "kaboom door explodes"
+   "desc": "A booby-trapped door explodes: \"KABOOM!! You see a door explode.\""
   },
   {
    "id": "kadoom_boulder_falls_in",
    "group": "nethack",
-   "desc": "kadoom boulder falls in"
+   "desc": "Digging a hole under a boulder: \"KADOOM! The boulder falls in!\""
   },
   {
    "id": "kerplunk_boulder_gone",
    "group": "nethack",
-   "desc": "kerplunk boulder gone"
+   "desc": "Pushing a boulder into water out of sight: \"Kerplunk!\""
   },
   {
    "id": "kick_door_it_crashes_open",
    "group": "nethack",
-   "desc": "kick door it crashes open"
+   "desc": "Kicking a door: it crashes open"
   },
   {
    "id": "kick_door_it_shatters",
    "group": "nethack",
-   "desc": "kick door it shatters"
+   "desc": "Kicking a door: it shatters to pieces"
   },
   {
    "id": "klick",
    "group": "nethack",
-   "desc": "klick"
+   "desc": "Locking a box or chest: \"Klick!\""
   },
   {
    "id": "klunk",
    "group": "nethack",
-   "desc": "klunk"
+   "desc": "Unlocking a box or chest: \"Klunk!\""
   },
   {
    "id": "klunk_pipe",
    "group": "nethack",
-   "desc": "klunk pipe"
+   "desc": "Kicking a sink: \"Klunk! The pipes vibrate noisily.\""
   },
   {
    "id": "laughter",
    "group": "nethack",
-   "desc": "laughter"
+   "desc": "A monster laughs (giggles, chuckles; also a cursing attack)"
   },
   {
    "id": "lid_slams_open_falls_shut",
    "group": "nethack",
-   "desc": "lid slams open falls shut"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "loud_click",
    "group": "nethack",
-   "desc": "loud click"
+   "desc": "Stepping on an arrow trap: a loud click"
   },
   {
    "id": "loud_crash",
    "group": "nethack",
-   "desc": "loud crash"
+   "desc": "A drawbridge is destroyed, or a rolling boulder hits another: a loud crash"
   },
   {
    "id": "loud_pop",
    "group": "nethack",
-   "desc": "loud pop"
+   "desc": "Quaffing from a fountain: a large bubble rises and pops"
   },
   {
    "id": "loud_splash",
    "group": "nethack",
-   "desc": "loud splash"
+   "desc": "A drawbridge's portcullis falls into the moat"
   },
   {
    "id": "low_buzzing",
    "group": "nethack",
-   "desc": "low buzzing"
+   "desc": "A beehive on the level: a low buzzing"
   },
   {
    "id": "low_hum",
    "group": "nethack",
-   "desc": "low hum"
+   "desc": "A magic trap: a low hum"
   },
   {
    "id": "maniacal_laughter",
    "group": "nethack",
-   "desc": "maniacal laughter"
+   "desc": "Reading a scroll of scare monster while confused: maniacal laughter"
   },
   {
    "id": "masticating_sound",
    "group": "nethack",
-   "desc": "masticating sound"
+   "desc": "A monster eats a corpse out of sight: a masticating sound"
   },
   {
    "id": "mon_chugging_potion",
    "group": "nethack",
-   "desc": "mon chugging potion"
+   "desc": "A monster drinks a potion out of sight: a chugging sound"
   },
   {
    "id": "monster_behind_boulder",
    "group": "nethack",
-   "desc": "monster behind boulder"
+   "desc": "Pushing a boulder against a monster on the other side"
   },
   {
    "id": "mutter_imprecations",
    "group": "nethack",
-   "desc": "mutter imprecations"
+   "desc": "Entering a shop with a pick-axe: the shopkeeper mutters imprecations"
   },
   {
    "id": "mutter_incantation",
    "group": "nethack",
-   "desc": "mutter incantation"
+   "desc": "A shopkeeper repairs shop damage, muttering an incantation"
   },
   {
    "id": "orc_grunt",
    "group": "nethack",
-   "desc": "orc grunt"
+   "desc": "An orc grunts"
   },
   {
    "id": "paranoid_confirmation",
    "group": "nethack",
-   "desc": "paranoid confirmation"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "potion_crash_and_break",
    "group": "nethack",
-   "desc": "potion crash and break"
+   "desc": "A thrown potion crashes and breaks: \"Crash!\""
   },
   {
    "id": "ring_in_drain",
    "group": "nethack",
-   "desc": "ring in drain"
+   "desc": "Dropping a ring down a sink: it bounces down the drainpipe"
   },
   {
    "id": "ripping_sound",
    "group": "nethack",
-   "desc": "ripping sound"
+   "desc": "A monster grows and its cloak or shirt tears apart"
   },
   {
    "id": "snarl",
    "group": "nethack",
-   "desc": "snarl"
+   "desc": "A dog-like monster snarls"
   },
   {
    "id": "roar",
    "group": "nethack",
-   "desc": "roar"
+   "desc": "A big cat or bear roars (also a bear caught in a trap or web)"
   },
   {
    "id": "rumbling",
    "group": "nethack",
-   "desc": "rumbling"
+   "desc": "A rolling boulder trap goes off: rumbling, near or far"
   },
   {
    "id": "rumbling_of_earth",
    "group": "nethack",
-   "desc": "rumbling of earth"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "rushing_wind_noise",
    "group": "nethack",
-   "desc": "rushing wind noise"
+   "desc": "An unseen monster swoops at you: a rushing noise"
   },
   {
    "id": "rustling_paper",
    "group": "nethack",
-   "desc": "rustling paper"
+   "desc": "Flipping through a spellbook: the pages rustle"
   },
   {
    "id": "sad_wailing",
    "group": "nethack",
-   "desc": "sad wailing"
+   "desc": "Reading a scroll of scare monster: sad wailing (also a monster wailing)"
   },
   {
    "id": "sceptor_pounding",
    "group": "nethack",
-   "desc": "sceptor pounding"
+   "desc": "A throne room on the level: a sceptre pounded in judgment"
   },
   {
    "id": "scratching",
    "group": "nethack",
-   "desc": "scratching"
+   "desc": "A corpse comes back to life inside a box: scratching noises"
   },
   {
    "id": "scream",
    "group": "nethack",
-   "desc": "scream"
+   "desc": "Someone screams (falling into a chasm, or a monster's blood-curdling shriek)"
   },
   {
    "id": "screech",
    "group": "nethack",
-   "desc": "screech"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "sewer_song",
    "group": "nethack",
-   "desc": "sewer song"
+   "desc": "Quaffing from a sink: snatches of song from the sewers"
   },
   {
    "id": "sharp_crack",
    "group": "nethack",
-   "desc": "sharp crack"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "shriek",
    "group": "nethack",
-   "desc": "shriek"
+   "desc": "A shrieker shrieks (it draws monsters to you)"
   },
   {
    "id": "shrill_whistle",
    "group": "nethack",
-   "desc": "shrill whistle"
+   "desc": "Blowing a whistle (also the vault guards' whistles when they turn angry)"
   },
   {
    "id": "sinister_laughter",
    "group": "nethack",
-   "desc": "sinister laughter"
+   "desc": "Eating something that puts you to sleep: sinister laughter"
   },
   {
    "id": "sizzling",
    "group": "nethack",
-   "desc": "sizzling"
+   "desc": "A boulder drops into lava out of sight: sizzling"
   },
   {
    "id": "slurping_sound",
    "group": "nethack",
-   "desc": "slurping sound"
+   "desc": "A monster eats objects out of sight (a gelatinous cube...): slurping"
   },
   {
    "id": "smashing_and_crushing",
    "group": "nethack",
-   "desc": "smashing and crushing"
+   "desc": "A drawbridge closes on someone: smashing and crushing"
   },
   {
    "id": "snake_rattle",
    "group": "nethack",
-   "desc": "snake rattle"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "snakes_hissing",
    "group": "nethack",
-   "desc": "snakes hissing"
+   "desc": "Quaffing from a fountain: a stream of water moccasins pours out, hissing"
   },
   {
    "id": "soft_click",
    "group": "nethack",
-   "desc": "soft click"
+   "desc": "Stepping on a dart trap: a soft click"
   },
   {
    "id": "soft_crackling",
    "group": "nethack",
-   "desc": "soft crackling"
+   "desc": "Cold freezes water or lava for a moment: a soft crackling"
   },
   {
    "id": "someone_bowling",
    "group": "nethack",
-   "desc": "someone bowling"
+   "desc": "A rolling boulder trap goes off out of sight: someone bowling"
   },
   {
    "id": "someone_searching",
    "group": "nethack",
-   "desc": "someone searching"
+   "desc": "A vault on the level: someone counting money or searching"
   },
   {
    "id": "someone_summoning",
    "group": "nethack",
-   "desc": "someone summoning"
+   "desc": "A monster's spell summons insects"
   },
   {
    "id": "someone_yells",
    "group": "nethack",
-   "desc": "someone yells"
+   "desc": "(commented out in NetHack's code: never heard)"
   },
   {
    "id": "splash",
    "group": "nethack",
-   "desc": "splash"
+   "desc": "Something falls into water: \"Splash!\""
   },
   {
    "id": "splat_egg",
    "group": "nethack",
-   "desc": "splat egg"
+   "desc": "A thrown egg hits a monster: \"Splat!\""
   },
   {
    "id": "splat_from_engulf",
    "group": "nethack",
-   "desc": "splat from engulf"
+   "desc": "(not used by NetHack's code)"
   },
   {
    "id": "squawk",
    "group": "nethack",
-   "desc": "squawk"
+   "desc": "A raven or parrot squawks (\"Nevermore!\")"
   },
   {
    "id": "squeak",
    "group": "nethack",
-   "desc": "squeak"
+   "desc": "A rodent squeaks"
   },
   {
    "id": "squeal",
    "group": "nethack",
-   "desc": "squeal"
+   "desc": "A pet rodent squeals when you hurt or abuse it (or whines)"
   },
   {
    "id": "squelch",
    "group": "nethack",
-   "desc": "squelch"
+   "desc": "Sitting on a cream pie: \"Squelch!\""
   },
   {
    "id": "stone_breaking",
    "group": "nethack",
-   "desc": "stone breaking"
+   "desc": "An explosion breaks a boulder or statue apart"
   },
   {
    "id": "stone_crumbling",
    "group": "nethack",
-   "desc": "stone crumbling"
+   "desc": "A boulder or statue crumbles out of sight"
   },
   {
    "id": "swoosh",
    "group": "nethack",
-   "desc": "swoosh"
+   "desc": "A door springs up in an empty doorway (wizard lock): a swoosh"
   },
   {
    "id": "sword_blade_rings",
    "group": "nethack",
-   "desc": "sword blade rings"
+   "desc": "Applying a polearm at something hard: \"Shkinng!\""
   },
   {
    "id": "thud",
    "group": "nethack",
-   "desc": "thud"
+   "desc": "A monster grows too big and its armor falls off: a thud"
   },
   {
    "id": "thump",
    "group": "nethack",
-   "desc": "thump"
+   "desc": "An earthquake (drum of earthquake) shakes something loose from the ceiling"
   },
   {
    "id": "thunderclap",
    "group": "nethack",
-   "desc": "thunderclap"
+   "desc": "Offering a fake Amulet of Yendor at the end: a thunderclap"
   },
   {
    "id": "tumbler_click",
    "group": "nethack",
-   "desc": "tumbler click"
+   "desc": "Playing a tune at a drawbridge: tumblers click"
   },
   {
    "id": "typing_noise",
    "group": "nethack",
-   "desc": "typing noise"
+   "desc": "Using a stethoscope off the edge of the map: a faint typing noise"
   },
   {
    "id": "wail",
    "group": "nethack",
-   "desc": "wail"
+   "desc": "A wailing pet (a ghost-like one) wails when you hurt or abuse it"
   },
   {
    "id": "wailing_of_the_banshee",
    "group": "nethack",
-   "desc": "wailing of the banshee"
+   "desc": "Your hit points get very low: the wailing of the Banshee"
   },
   {
    "id": "wall_of_force",
    "group": "nethack",
-   "desc": "wall of force"
+   "desc": "Breaking a wand of striking or force bolt: a wall of force smashes down"
   },
   {
    "id": "yelp",
    "group": "nethack",
-   "desc": "yelp"
+   "desc": "A pet yelps when you hurt or abuse it"
   },
   {
    "id": "zap",
    "group": "nethack",
-   "desc": "zap"
+   "desc": "A monster zaps a wand (near or far)"
   },
   {
    "id": "zap_then_explosion",
    "group": "nethack",
-   "desc": "zap then explosion"
+   "desc": "A monster zaps a wand that blows up: a zap and an explosion"
   },
   {
    "id": "whip_snap",
