@@ -579,11 +579,6 @@
    "volume": 100,
    "loop": true
   },
-  "music_victory": {
-   "sounds": [],
-   "volume": 100,
-   "loop": true
-  },
   "door_opens": {
    "sounds": [
     "yh_door2"
@@ -835,12 +830,6 @@
    "sounds": [
     "nhv_music_bigroom"
    ],
-   "volume": 100,
-   "pitch_var": 0,
-   "loop": true
-  },
-  "music_endgame": {
-   "sounds": [],
    "volume": 100,
    "pitch_var": 0,
    "loop": true
