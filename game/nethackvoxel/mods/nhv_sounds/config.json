@@ -677,13 +677,6 @@
    "volume": 100,
    "pitch_var": 0.05
   },
-  "blinded_by_flash": {
-   "sounds": [
-    "yh_camera"
-   ],
-   "volume": 100,
-   "pitch_var": 0.05
-  },
   "mimic_revealed": {
    "sounds": [
     "yh_mimic1",
@@ -888,6 +881,20 @@
   "altar_converted": {
    "sounds": [
     "nhv_sound_magiceffect19"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "blinded_by_flash": {
+   "sounds": [
+    "nhv_sound_magiceffect10"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "air_crackles": {
+   "sounds": [
+    "nhv_sound_magiceffect18"
    ],
    "volume": 100,
    "pitch_var": 0.05
