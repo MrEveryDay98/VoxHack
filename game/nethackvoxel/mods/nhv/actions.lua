@@ -84,37 +84,14 @@ end
 -- - and each is a quick swing in turn. Dual wielding the hands go as
 -- NetHack says (primary, secondary...); a Monk's fists take turns from one
 -- attack to the next too; otherwise it's the right hand every time.
-local SWING_GAP = 0.13 -- seconds between quick swings
+local SWING_GAP = 0.18 -- seconds between quick swings (each fully seen)
 local swing_queue, swing_at = {}, 0
 local fist_next = 0 -- (a Monk's next fist)
-nh.on_event(function(evs)
-	for _, ev in ipairs(evs) do
-		if ev.kind == "combat" then
-			local hand = ev.text:match("^uswing (%d+)")
-			if hand then
-				swing_queue[#swing_queue + 1] = tonumber(hand)
-			end
-		end
-	end
-end)
-core.register_globalstep(function()
-	if #swing_queue == 0 then
-		return
-	end
-	local now = core.get_us_time()
-	if now < swing_at then
-		return
-	end
-	local hand = table.remove(swing_queue, 1)
-	if actions.melee_swing(hand) then
-		swing_at = now + SWING_GAP * 1e6
-	end
-end)
 
--- one melee swing with hand (0 right, 1 left): the left only when it holds
--- something (dual wielding, a Monk's fist); a Monk's fists take turns
--- whatever NetHack says, punching the air too
-function actions.melee_swing(hand)
+-- play one swing with hand (0 right, 1 left): the left only when it holds
+-- something (dual wielding, a Monk's fist); a Monk's fists take turns -
+-- right, left, right... - whatever NetHack says, punching the air too
+local function play_swing(hand)
 	local player = nhv.player.get()
 	if not player then
 		return false
@@ -132,6 +109,35 @@ function actions.melee_swing(hand)
 	end
 	return true
 end
+
+-- a melee swing, after any still to play (one at a time, never two at once)
+function actions.melee_swing(hand)
+	swing_queue[#swing_queue + 1] = hand or 0
+end
+
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local hand = ev.text:match("^uswing (%d+)")
+			if hand then
+				actions.melee_swing(tonumber(hand))
+			end
+		end
+	end
+end)
+
+core.register_globalstep(function()
+	if #swing_queue == 0 then
+		return
+	end
+	local now = core.get_us_time()
+	if now < swing_at then
+		return
+	end
+	if play_swing(table.remove(swing_queue, 1)) then
+		swing_at = now + SWING_GAP * 1e6
+	end
+end)
 
 -- ---------------------------------------------------------------- pits
 -- Down in a pit (a hole below the floor), Space climbs out onto the square
