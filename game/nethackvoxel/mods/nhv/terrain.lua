@@ -117,12 +117,37 @@ liquid_node("waterwall", "Wall of water", flowing(tile_tex(1324), 180), nil)
 reg("lavawall", {description = "Wall of lava", tiles = {flowing(tile_tex(1317), 255)},
 	light_source = 8})
 
--- invisible light carried with the hero
+-- invisible light carried with the hero: just enough to see the squares
+-- next to you, as in NetHack in the dark - brighter with a lit lamp or
+-- candles (nhv:hero_light_<level>, see light_level)
 reg("hero_light", {
 	description = "Light", drawtype = "airlike", walkable = false,
 	pointable = false, buildable_to = true, sunlight_propagates = true,
-	light_source = 9, groups = {not_in_creative_inventory = 1},
+	light_source = 9, groups = {not_in_creative_inventory = 1, nhv_hero_light = 1},
 })
+for level = 10, 14 do
+	reg("hero_light_" .. level, {
+		description = "Light", drawtype = "airlike", walkable = false,
+		pointable = false, buildable_to = true, sunlight_propagates = true,
+		light_source = level, groups = {not_in_creative_inventory = 1, nhv_hero_light = 1},
+	})
+end
+-- other light sources NetHack has on the level (a lamp on the floor, a
+-- monster carrying one, one that glows): a light in their square
+for level = 4, 14 do
+	reg("ls_light_" .. level, {
+		description = "Light", drawtype = "airlike", walkable = false,
+		pointable = false, buildable_to = true, sunlight_propagates = true,
+		light_source = level, groups = {not_in_creative_inventory = 1, nhv_ls_light = 1},
+	})
+end
+
+-- how bright a light NetHack says reaches `range` squares is: light falls
+-- off a level a node and a square is 3 nodes (a candle, 2 squares: 11; a
+-- lamp, 3: 14)
+local function light_level(range)
+	return math.max(4, math.min(14, 5 + 3 * range))
+end
 
 -- content ids, looked up lazily (prefabs may use any registered node)
 local cids = {}
@@ -860,24 +885,78 @@ end
 -- Move the hero's light to where the player's head is. It follows the
 -- body node by node (not square by square), and smooth lighting blends
 -- the steps, so walking into the dark fades instead of jumping.
+-- the light you carry: what NetHack says lights you up (lamps, candles,
+-- glowing), else the dim light to see the squares next to you
+terrain.hero_light_node = "nhv:hero_light"
+local function is_hero_light(name)
+	local def = core.registered_nodes[name]
+	return def and def.groups and def.groups.nhv_hero_light
+end
+
 function terrain.place_hero_light(pos)
 	local p = vector.round(vector.new(pos.x, pos.y + 1.5, pos.z))
 	local old = terrain.hero_light_pos
-	if old and vector.equals(old, p) then
+	local want = terrain.hero_light_node
+	if old and vector.equals(old, p) and core.get_node(old).name == want then
 		return
 	end
-	if core.get_node(p).name ~= "air" then
+	local here = core.get_node(p).name
+	if here ~= "air" and not is_hero_light(here) then
 		p = vector.offset(p, 0, -1, 0) -- head in a low ceiling or a block
 	end
 	-- light the new spot first, then put out the old one (no dark frame)
-	local placed = core.get_node(p).name == "air"
+	local n = core.get_node(p).name
+	local placed = n == "air" or is_hero_light(n)
 	if placed then
-		core.set_node(p, {name = "nhv:hero_light"})
+		core.set_node(p, {name = want})
 	end
-	if old and not vector.equals(old, p) and core.get_node(old).name == "nhv:hero_light" then
+	if old and not vector.equals(old, p) and is_hero_light(core.get_node(old).name) then
 		core.set_node(old, {name = "air"})
 	end
 	terrain.hero_light_pos = placed and p or nil
+end
+
+-- NetHack's light sources: the brightest at the hero sets the light you
+-- carry; the rest each light their own square (in the air at head height)
+local ls_placed = {} -- "x,y,z" -> pos
+function terrain.update_lights()
+	local lights = core.nh_get_lights and core.nh_get_lights() or {}
+	local carried = 0
+	local want = {}
+	for _, l in ipairs(lights) do
+		if l.at_hero then
+			carried = math.max(carried, l.range)
+		elseif U.in_map(l.x, l.y) then
+			local p = vector.round(U.tile_center(l.x, l.y, U.STAND_Y + 1.5))
+			local k = p.x .. "," .. p.y .. "," .. p.z
+			local level = light_level(l.range)
+			if not want[k] or want[k].level < level then
+				want[k] = {pos = p, level = level}
+			end
+		end
+	end
+	local level = carried > 0 and math.max(9, light_level(carried)) or 9
+	terrain.hero_light_node = level > 9 and ("nhv:hero_light_" .. level) or "nhv:hero_light"
+	for k, p in pairs(ls_placed) do
+		local w = want[k]
+		local n = core.get_node(p).name
+		if not w and n:sub(1, 13) == "nhv:ls_light_" then
+			core.set_node(p, {name = "air"})
+		end
+		if not w then
+			ls_placed[k] = nil
+		end
+	end
+	for k, w in pairs(want) do
+		local name = "nhv:ls_light_" .. w.level
+		local n = core.get_node(w.pos).name
+		if n == "air" or (n ~= name and n:sub(1, 13) == "nhv:ls_light_") then
+			core.set_node(w.pos, {name = name})
+			ls_placed[k] = w.pos
+		elseif n == name then
+			ls_placed[k] = w.pos
+		end
+	end
 end
 
 -- Where something standing on square (tx, ty) rests: the floor, or the

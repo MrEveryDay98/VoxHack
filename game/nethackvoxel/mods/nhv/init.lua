@@ -65,6 +65,7 @@ nh.on_snapshot(function(snap)
 	else
 		nhv.terrain.update(snap.map)
 	end
+	nhv.terrain.update_lights() -- (lamps, candles, glowing monsters)
 	nhv.sim.sync()
 	nhv.mobs.update(snap, changed)
 end)

@@ -474,6 +474,34 @@ nhv_get_missiles(nhv_missile *buf, int max)
     return n;
 }
 
+NHV_API int
+nhv_get_lights(nhv_light *buf, int max)
+{
+    light_source *ls;
+    int n = 0;
+    coordxy x, y;
+
+    if (nhv_state() != NHV_WAITING)
+        return 0;
+    for (ls = gl.light_base; ls && n < max; ls = ls->next) {
+        if (ls->range <= 0)
+            continue; /* (a camera flash) */
+        if (ls->type == LS_OBJECT) {
+            if (!get_obj_location(ls->id.a_obj, &x, &y, 0))
+                continue;
+        } else if (ls->type == LS_MONSTER) {
+            if (!get_mon_location(ls->id.a_monst, &x, &y, 0))
+                continue;
+        } else
+            continue;
+        buf[n].x = x, buf[n].y = y;
+        buf[n].range = ls->range;
+        buf[n].at_hero = u_at(x, y) ? 1 : 0;
+        n++;
+    }
+    return n;
+}
+
 /* forget missiles still in flight (e.g. after a level change) */
 NHV_API void
 nhv_clear_missiles(void)

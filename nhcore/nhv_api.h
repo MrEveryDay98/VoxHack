@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 9
+#define NHV_API_VERSION 10
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -377,6 +377,18 @@ typedef struct nhv_missile {
 /* missiles launched since the last call */
 NHV_API int nhv_get_missiles(nhv_missile *buf, int max);
 NHV_API void nhv_clear_missiles(void);
+
+/* Light sources on the level: lit lamps and candles (carried, on the
+ * floor, carried by monsters), glowing monsters, the hero if glowing.
+ * range is NetHack's radius in squares; at_hero: where the hero is (what
+ * you carry, or are). Only ones with a place on the map (not in a box,
+ * not buried). */
+typedef struct nhv_light {
+    int x, y;
+    int range;
+    int at_hero;
+} nhv_light;
+NHV_API int nhv_get_lights(nhv_light *buf, int max);
 
 /* Rays (wands, spells, breath) are handed to the host too. It flies and
  * bounces them and reports: "#nhvrayhit rid m_id" (reached a body; m_id 0
