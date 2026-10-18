@@ -1062,13 +1062,9 @@ local function drag_ball(pp, dtime)
 	d.y = 0
 	local len = vector.length(d)
 	-- (the chain pulling it after you: you're dragging it, which slows you
-	-- as in NetHack; standing, or walking back towards it, you aren't till
-	-- it pulls again. Held a moment so it doesn't flicker step to step)
-	local now = core.get_us_time()
-	if len > ROPE * 1.01 then
-		ball.pulled = now
-	end
-	mobs.dragging = ball.pulled ~= nil and now - ball.pulled < 250000
+	-- as in NetHack; the moment it isn't moving - you stand, or walk back
+	-- towards it - you're at your own speed again)
+	mobs.dragging = len > ROPE * 1.01
 	if len > ROPE then
 		want = vector.add(pp, vector.multiply(d, ROPE / len))
 		-- (a little slide on: it catches up smoothly rather than at once)
