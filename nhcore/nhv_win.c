@@ -444,11 +444,25 @@ nhv_raw_print(const char *str)
 }
 
 static int
-nhv_nh_poskey(coordxy *x UNUSED, coordxy *y UNUSED, int *mod UNUSED)
+nhv_nh_poskey(coordxy *x, coordxy *y, int *mod)
 {
     nhv_qitem in;
+    /* picking a place on the map (getpos): the host shows the map, and a
+       square clicked there comes back as "@x,y" - a mouse click, which
+       getpos takes as the choice */
+    boolean pos = (x && y && mod && program_state.input_state == getposInp);
 
-    wait_for(NHV_REQ_KEY, last_msg, "", 0, &in);
+    wait_for(pos ? NHV_REQ_POS : NHV_REQ_KEY, last_msg, "", 0, &in);
+    if (pos && in.type == NHV_Q_TEXT && in.str[0] == '@') {
+        int px, py;
+
+        if (sscanf(in.str + 1, "%d,%d", &px, &py) == 2 && isok(px, py)) {
+            *x = (coordxy) px, *y = (coordxy) py;
+            *mod = CLICK_1;
+            return 0;
+        }
+        return '\033';
+    }
     if (in.type == NHV_Q_KEY)
         return in.key;
     /* text where a key was expected: use its first char */

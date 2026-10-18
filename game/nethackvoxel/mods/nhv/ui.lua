@@ -226,6 +226,44 @@ local function line_dialog(req)
 		.. "button[0.5,2.4;3,0.8;line_ok;OK]button[6.5,2.4;3,0.8;line_cancel;Cancel]"
 end
 
+-- ---------------------------------------------------------------- places
+-- NetHack wants a place on the map (where to teleport with teleport
+-- control, a detection scroll's "look around", ...): the whole level, each
+-- square a button; clicking one picks it
+local POS_S = 0.4
+local function pos_dialog()
+	local snap = nh.snap
+	local mw, mh = (U.COLNO - 1) * POS_S, U.ROWNO * POS_S
+	local w, h = mw + 1, mh + 1.6
+	-- (low on the screen: what NetHack asked - "Where do you want to be
+	-- teleported?" - shows at the top with its other messages; position[]
+	-- has to come straight after size[])
+	local fs = {head(w, h):gsub("(size%[[^%]]*%])", "%1position[0.5,0.72]anchor[0.5,0.5]", 1),
+		-- (the squares: invisible buttons over the pictures, a light square
+		-- over the one under the pointer)
+		"style_type[image_button;border=false;bgimg=;bgimg_hovered=;bgimg_pressed=;"
+			.. "fgimg_hovered=[fill:16x16:#FFFF00^[opacity:120]",
+		("box[0.5,0.5;%f,%f;#000000FF]"):format(mw, mh)}
+	local buttons = {}
+	if snap and snap.map then
+		for y = 0, U.ROWNO - 1 do
+			for x = 1, U.COLNO - 1 do
+				local px, py = 0.5 + (x - 1) * POS_S, 0.5 + y * POS_S
+				local tex = nhv.hud.square_tex(snap.map, snap.hero, x, y)
+				if tex then
+					fs[#fs + 1] = ("image[%f,%f;%f,%f;%s]"):format(px, py, POS_S, POS_S, E(tex))
+				end
+				buttons[#buttons + 1] = ("image_button[%f,%f;%f,%f;blank.png;pos_%d_%d;]"):format(
+					px, py, POS_S, POS_S, x, y)
+			end
+		end
+	end
+	fs[#fs + 1] = table.concat(buttons)
+	fs[#fs + 1] = ("label[0.5,%f;%s]"):format(h - 0.5, E("Click a square to choose it."))
+	fs[#fs + 1] = ("button[%f,%f;3,0.8;pos_cancel;Cancel]"):format(w - 3.5, h - 0.9)
+	return table.concat(fs)
+end
+
 -- ---------------------------------------------------------------- requests
 local function show_request(req)
 	ui.req = req
@@ -261,6 +299,9 @@ local function show_request(req)
 	elseif req.kind == "line" then
 		ui.open = "nhv:req"
 		show("nhv:req", line_dialog(req))
+	elseif req.kind == "pos" then
+		ui.open = "nhv:req"
+		show("nhv:req", pos_dialog())
 	else
 		ui.open = "nhv:req"
 		show("nhv:req", key_dialog(req))
@@ -375,6 +416,13 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			return true
 		end
 		for k in pairs(fields) do
+			local px, py = k:match("^pos_(%d+)_(%d+)$")
+			if px then
+				answered()
+				close("nhv:req")
+				nh.answer_text(("@%d,%d"):format(px, py))
+				return true
+			end
 			local yn = k:match("^yn_(%d+)$") or k:match("^key_(%d+)$")
 			if yn then
 				answered()
@@ -424,7 +472,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			nh.answer_text(fields.line or "")
 			return true
 		end
-		if fields.menu_cancel or fields.line_cancel or fields.quit then
+		if fields.menu_cancel or fields.line_cancel or fields.pos_cancel or fields.quit then
 			answered()
 			-- (Esc already closed it; the Cancel button didn't)
 			close("nhv:req")

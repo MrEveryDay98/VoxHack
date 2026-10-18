@@ -134,6 +134,19 @@ send_arg(const char *a)
             }
         printf("INTO: nobody next to the hero\n");
         nhv_send_key('#'), nhv_send_text("nhvtick");
+    } else if (!strncmp(a, "posrel:", 7)) {
+        /* answer a place request (getpos) with a square relative to the
+           hero, as clicking it on the map does */
+        int dx, dy;
+        nhv_hero h;
+        char buf[64];
+
+        if (sscanf(a + 7, "%d,%d", &dx, &dy) == 2) {
+            nhv_get_hero(&h);
+            sprintf(buf, "@%d,%d", h.x + dx, h.y + dy);
+            printf("POS %s\n", buf);
+            nhv_send_text(buf);
+        }
     } else if (!strcmp(a, "touchtrap")) {
         /* the body touches the trap on the hero's square (#nhvtrap) */
         nhv_hero h;

@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 10
+#define NHV_API_VERSION 11
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -67,7 +67,10 @@ enum nhv_req_kind {
     NHV_REQ_YN,     /* yn_function: prompt + allowed choices */
     NHV_REQ_MENU,   /* menu selection; see nhv_get_menu_item() */
     NHV_REQ_LINE,   /* getlin: free text */
-    NHV_REQ_EXTCMD  /* extended command name, answer with nhv_send_text */
+    NHV_REQ_EXTCMD, /* extended command name, answer with nhv_send_text */
+    NHV_REQ_POS     /* a place on the map (getpos: where to teleport, what
+                       to look at...): answer with nhv_send_text("@x,y"),
+                       or a key (Esc: cancel) */
 };
 
 enum nhv_menu_how { NHV_PICK_NONE = 0, NHV_PICK_ONE = 1, NHV_PICK_ANY = 2 };

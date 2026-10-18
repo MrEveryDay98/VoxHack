@@ -200,6 +200,23 @@ local TILE_PX = 16
 local BACKDROP = "[fill:16x16:#000000^[opacity:200"
 local tiles = {ids = {}, shown = {}, scale = nil}
 
+-- the picture for map square (x, y) as the big map shows it: you, a
+-- monster (or pet, or a remembered unseen one) you know is there, else
+-- what you remember of the square (objects, traps, terrain); nil unknown
+function hud.square_tex(map, h, x, y)
+	local i = U.idx(x, y)
+	if x == h.x and y == h.y then
+		return nhv_tiles.texture(h.tile)
+	end
+	local c = color_for(map, i)
+	if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
+		return nhv_tiles.texture(map.tile[i])
+	end
+	if c ~= COL.unknown and (map.mem_tile[i] or -1) >= 0 then
+		return nhv_tiles.texture(map.mem_tile[i])
+	end
+end
+
 local function clear_tiles(player)
 	for i, id in pairs(tiles.ids) do
 		player:hud_remove(id)
@@ -221,13 +238,7 @@ local function update_tiles(player, snap)
 	local map, h = snap.map, snap.hero
 	for y = 0, U.ROWNO - 1 do
 		for x = 1, U.COLNO - 1 do
-			local i = U.idx(x, y)
-			local tex
-			if x == h.x and y == h.y then
-				tex = nhv_tiles.texture(h.tile)
-			elseif color_for(map, i) ~= COL.unknown and (map.mem_tile[i] or -1) >= 0 then
-				tex = nhv_tiles.texture(map.mem_tile[i])
-			end
+			local tex = hud.square_tex(map, h, x, y)
 			if tex ~= tiles.shown[i] then
 				tiles.shown[i] = tex
 				local id = tiles.ids[i]
