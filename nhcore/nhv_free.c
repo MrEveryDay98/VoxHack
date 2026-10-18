@@ -502,6 +502,20 @@ nhv_get_lights(nhv_light *buf, int max)
     return n;
 }
 
+NHV_API int
+nhv_get_ball(int *bx, int *by, int *cx, int *cy)
+{
+    if (nhv_state() != NHV_WAITING || !Punished || !uball || !uchain)
+        return 0;
+    *cx = uchain->ox, *cy = uchain->oy;
+    if (carried(uball)) {
+        *bx = u.ux, *by = u.uy;
+        return 2;
+    }
+    *bx = uball->ox, *by = uball->oy;
+    return 1;
+}
+
 /* forget missiles still in flight (e.g. after a level change) */
 NHV_API void
 nhv_clear_missiles(void)
