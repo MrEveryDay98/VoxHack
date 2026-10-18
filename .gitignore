@@ -12,3 +12,5 @@ __pycache__/
 *.lnk
 # editor backups of the areas
 /mod_data/nhv/areas_backup_*/
+# ElevenLabs voice lines (not published; kept in voice_work)
+/game/nethackvoxel/mods/nhv_sounds/sounds/voices/
