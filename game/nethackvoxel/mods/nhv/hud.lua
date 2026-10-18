@@ -338,6 +338,22 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png",
 	})
+	-- the compass at the top middle (Skyrim style): a strip of directions
+	-- that slides as you turn - the engine moves it every frame, from the
+	-- camera (textures from tools/make_compass.py; NetHack's north is +z)
+	hud.ids.compass_frame = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 8}, scale = {x = 1, y = 1}, text = "nhv_compass_frame.png",
+	})
+	hud.ids.compass = player:hud_add({
+		type = "compass", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 8}, size = {x = 480, y = 48}, scale = {x = 1, y = 1},
+		text = "nhv_compass.png", dir = 3,
+	})
+	hud.ids.compass_mark = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 2}, scale = {x = 1, y = 1}, text = "nhv_compass_mark.png",
+	})
 	-- helpless: asleep or fainted, your eyes are shut (nearly black);
 	-- awake but frozen (a floating eye's gaze, paralysis), a cold grey-blue
 	-- you can still see through. (The messages show over both.)
