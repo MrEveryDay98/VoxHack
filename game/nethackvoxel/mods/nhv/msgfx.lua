@@ -415,4 +415,78 @@ nh.on_event(function(evs)
 	end
 end)
 
+-- ---------------------------------------------------------------- altars
+-- Sacrifices, as NetHack's sound hooks report them (pray.c): accepted -
+-- consumed in a flash of light (lawful), a plume of smoke (neutral) or a
+-- burst of flame (chaotic): a flash of that colour and it rising from the
+-- altar; your god angry: a red flash; an altar converted - "The altar
+-- glows white / gray / black" - glows so for a few seconds.
+local ACCEPT = {
+	Lawful = {flash = "#FFFFFF", tex = "[fill:2x2:#FFFFF0", glow = 14, rise = 1.2, n = 40},
+	Neutral = {flash = "#B0B0B0", tex = "[fill:4x4:#9A9A9A", glow = 0, rise = 0.7, n = 50},
+	Chaotic = {flash = "#FF7020", tex = "[fill:2x2:#FF8A20", glow = 14, rise = 1.6, n = 45},
+}
+local GLOW = {Lawful = "#FFFFFF", Neutral = "#A0A0A0", Chaotic = "#101010"}
+
+local function altar_top()
+	local h = nh.snap and nh.snap.hero
+	return h and U.tile_center(h.x, h.y, U.STAND_Y + 0.3)
+end
+
+-- (small specks from the altar's top, below your eyes - you stand on it -
+-- spread round you and rising)
+local function rising(at, tex, glow, rise, n, secs)
+	core.add_particlespawner({
+		amount = n, time = secs or 0.4,
+		pos = {min = vector.offset(at, -1.2, 0, -1.2), max = vector.offset(at, 1.2, 0.3, 1.2)},
+		vel = {min = vector.new(-0.2, rise * 0.6, -0.2), max = vector.new(0.2, rise * 1.4, 0.2)},
+		exptime = {min = 0.6, max = 1.4},
+		size = {min = 0.4, max = 0.9},
+		texture = {name = tex, alpha_tween = {1, 0}, scale_tween = {1, 1.4}},
+		glow = glow,
+	})
+end
+
+local function altar_glow(color)
+	local at = altar_top()
+	if not at then
+		return
+	end
+	local bright = color ~= GLOW.Chaotic
+	rising(at, "[fill:2x2:" .. color, bright and 12 or 0, 0.4, 60, 3)
+	-- (a light over it meanwhile; a black glow gives none)
+	if bright then
+		local p = vector.round(vector.offset(at, 0, 1, 0))
+		if core.get_node(p).name == "air" then
+			core.set_node(p, {name = "nhv:ls_light_12"})
+			core.after(3, function()
+				if core.get_node(p).name == "nhv:ls_light_12" then
+					core.set_node(p, {name = "air"})
+				end
+			end)
+		end
+	end
+end
+
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "sound" then
+			local id = ev.text:match("^effect|([%w_]+)|")
+			local h = nh.snap and nh.snap.hero
+			if id == "sacrifice_accepted" then
+				local a = ACCEPT[h and h.align or ""] or ACCEPT.Neutral
+				nhv.hud.flash(a.flash, 0.8)
+				local at = altar_top()
+				if at then
+					rising(at, a.tex, a.glow, a.rise, a.n)
+				end
+			elseif id == "god_angry" then
+				nhv.hud.flash("#B00000", 1)
+			elseif id == "altar_converted" then
+				altar_glow(GLOW[h and h.align or ""] or GLOW.Neutral)
+			end
+		end
+	end
+end)
+
 return msgfx
