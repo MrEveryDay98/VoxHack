@@ -35,7 +35,7 @@ clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
-clock.FAST = 6              -- searching: time runs this x the full rate
+clock.FAST = 6              -- searching, or helpless: time runs this x the full rate
 
 -- Searching passes time fast: while Search is held (one search after
 -- another; hotbar.lua) and while a counted search (Ctrl+X) plays out, time
@@ -118,13 +118,15 @@ function clock.update(dtime, player)
 	-- (walking flat out at the speed you can manage is full speed)
 	local walk = math.max(0.1, clock.WALK * clock.move_speed() / 12)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
-	if clock.debt > 0 or clock.realtime() or helpless then
-		target = 1 -- (helpless, asleep...: time runs on without you)
+	if clock.debt > 0 or clock.realtime() then
+		target = 1
 	end
 	if nhv.wheel and nhv.wheel.is_open() then
 		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen
 	end
-	local fast = clock.searching()
+	-- (searching, or helpless - asleep, frozen...: fast forward, the world
+	-- keeping up, until it ends)
+	local fast = clock.searching() or helpless
 	if fast then
 		target = clock.FAST
 		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
