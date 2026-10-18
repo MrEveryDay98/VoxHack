@@ -673,6 +673,11 @@ local FEATURES = {
 	S_altar = false, S_grave = false, S_throne = false, S_sink = false,
 	S_fountain = false, S_tree = false, S_engroom = true, S_engrcorr = true,
 }
+-- Engravings: NetHack's tiles paint the writing over a patch of floor
+-- (its colour and speckles), which would lie on the 3D floor as a square of
+-- another colour: those colours are made see-through
+local ENGRAVINGS = {S_engroom = true, S_engrcorr = true}
+local ENGRAVING_KEY = "^[makealpha:72,108,108^[makealpha:108,145,182"
 -- traps are the '^' cmap symbols (plus webs)
 local function is_trap(name, gi)
 	return gi.sym == 94 or name == "S_web"
@@ -754,6 +759,15 @@ local function update_features(snap)
 						e.pos = pos
 						local props = sprite_props(tile, h)
 						props.pointable = false
+						if ENGRAVINGS[name] then
+							-- (only the writing: the tile's own floor behind
+							-- it is keyed out, so it lies on the real floor)
+							local tex = nhv_tiles.texture(tile) .. ENGRAVING_KEY
+							props.visual = "upright_sprite"
+							props.textures = {tex, tex}
+							props.visual_size = {x = h, y = h, z = h}
+							props.use_texture_alpha = true
+						end
 						e.obj:set_properties(props)
 						e.obj:set_pos(pos)
 						if flat then
