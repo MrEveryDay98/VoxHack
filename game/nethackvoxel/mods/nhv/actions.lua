@@ -65,11 +65,16 @@ end
 
 -- ---------------------------------------------------------------- kicks
 -- A kick isn't an arm swing: both hands drop out of view and come back
--- (your body moved), and when it lands - NetHack says it hit something (a
--- door, a box, a monster, a wall) - dust puffs from what you kicked and the
--- view shakes. A kick at the air or a strained muscle gets neither.
+-- (your body moved), and the view shakes; when it lands - NetHack says it
+-- hit something (a door, a box, a monster, a wall) - dust puffs from what
+-- you kicked too.
 local kick = nil -- {x, y, t}: the square kicked, until NetHack has said
 local hands_down_state, shake_state = false, false
+
+local function kick_shake(player)
+	shake_state = not shake_state
+	player:hud_set_flags({nhv_shake = shake_state})
+end
 
 -- the square a kick's keys aim at (nil: not a kick)
 local function kick_square(keys)
@@ -118,6 +123,12 @@ function actions.kick_start(keys)
 	if player then
 		hands_down_state = not hands_down_state
 		player:hud_set_flags({nhv_hands_down = hands_down_state})
+		-- (the view shakes as the kick goes out, hit or not)
+		core.after(0.15, function()
+			if player:is_player() then
+				kick_shake(player)
+			end
+		end)
 	end
 	kick = {x = x, y = y, t = core.get_us_time()}
 	return true
@@ -128,9 +139,7 @@ local KICK_MISS = {"empty space", "strain a muscle", "dumb move", "you miss", "k
 local KICK_HIT = {"whamm", "thump", "thud", "crash", "you kick", "ouch", "breaks open",
 	"bursts open", "shatter", "flies", "kick the", "kicks", "klunk", "budge", "slam"}
 
-local function kick_landed(player, k)
-	shake_state = not shake_state
-	player:hud_set_flags({nhv_shake = shake_state})
+local function kick_landed(_, k)
 	local c = U.tile_center(k.x, k.y, U.STAND_Y + 0.6)
 	core.add_particlespawner({
 		amount = 26, time = 0.1,
