@@ -480,13 +480,20 @@ local function update_objects(snap)
 			local i = U.idx(tx, ty)
 			local g = map.mem[i]
 			local gi = nhv.glyph_info(g)
+			local tile = map.mem_tile[i]
 			-- (a punished hero's ball and chain are drawn trailing behind
-			-- you, below, not as items lying on their squares)
-			if ball and gi.kind == "obj" then
+			-- you, below, not as items lying on their squares: what's under
+			-- them is drawn there instead, or nothing)
+			if ball and gi.kind == "obj" and ((tx == ball.cx and ty == ball.cy)
+					or (tx == ball.bx and ty == ball.by)) then
 				local oname = core.nh_obj_name(gi.index)
-				if (oname == "iron chain" and tx == ball.cx and ty == ball.cy)
-						or (oname == "heavy iron ball" and tx == ball.bx and ty == ball.by) then
-					goto next_square
+				if oname == "iron chain" or oname == "heavy iron ball" then
+					local under = mobs.floor_items(tx, ty)[1]
+					if not under then
+						goto next_square
+					end
+					g, tile = under.glyph, under.tile
+					gi = nhv.glyph_info(g)
 				end
 			end
 			if gi.kind == "obj" or gi.kind == "body" or gi.kind == "statue" then
@@ -509,8 +516,8 @@ local function update_objects(snap)
 					end
 				end
 				local bw = name == "boulder" and boulder_w(map, tx, ty, h, snap.hero) or nil
-				if e and (e.tile ~= map.mem_tile[i] or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
-					local props = sprite_props(map.mem_tile[i], h)
+				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
+					local props = sprite_props(tile, h)
 					e.bw = bw
 					if name == "boulder" then
 						-- boulders are solid; pushing into one tries to roll it
@@ -527,7 +534,7 @@ local function update_objects(snap)
 					if not e.glide then
 						e.obj:set_pos(pos)
 					end
-					e.tile, e.h, e.ground = map.mem_tile[i], h, ground
+					e.tile, e.h, e.ground = tile, h, ground
 					-- small items spin; chests and boxes face you; corpses lie flat
 					e.flat = flat
 					e.spin = (h == OBJ_H) and not BILLBOARD[name]
@@ -563,6 +570,23 @@ local PILE_MAX = 5
 local PILE_OFS = {{0.6, 0.4}, {-0.55, 0.5}, {0.45, -0.6}, {-0.6, -0.45}}
 mobs.piles = {} -- square index -> {top = tile, items = {{tile=, glyph=}}, extras = {entity...}}
 
+-- the objects on a square, top first; a punished hero's ball and chain
+-- left out (they're drawn trailing behind you)
+function mobs.floor_items(tx, ty)
+	local list = core.nh_get_floor_objects(tx, ty) or {}
+	local b = mobs.ball
+	if not b then
+		return list
+	end
+	local out = {}
+	for _, o in ipairs(list) do
+		if o.id ~= b.ball_id and o.id ~= b.chain_id then
+			out[#out + 1] = o
+		end
+	end
+	return out
+end
+
 local function set_extra(e, item, tx, ty, k)
 	local gi = nhv.glyph_info(item.glyph)
 	local h, flat = obj_shape(gi)
@@ -594,7 +618,7 @@ function mobs.update_piles(snap)
 			items = {} -- (a boulder hides what's under it)
 		elseif visible then
 			items = {}
-			for k, o in ipairs(core.nh_get_floor_objects(top.x, top.y) or {}) do
+			for k, o in ipairs(mobs.floor_items(top.x, top.y)) do
 				if k > 1 and #items < PILE_MAX - 1 then
 					items[#items + 1] = {tile = o.tile, glyph = o.glyph}
 				end
@@ -1037,6 +1061,14 @@ local function drag_ball(pp, dtime)
 	local d = vector.subtract(want, pp)
 	d.y = 0
 	local len = vector.length(d)
+	-- (the chain pulling it after you: you're dragging it, which slows you
+	-- as in NetHack; standing, or walking back towards it, you aren't till
+	-- it pulls again. Held a moment so it doesn't flicker step to step)
+	local now = core.get_us_time()
+	if len > ROPE * 1.01 then
+		ball.pulled = now
+	end
+	mobs.dragging = ball.pulled ~= nil and now - ball.pulled < 250000
 	if len > ROPE then
 		want = vector.add(pp, vector.multiply(d, ROPE / len))
 		-- (a little slide on: it catches up smoothly rather than at once)
@@ -1061,6 +1093,7 @@ local function update_ball(dtime)
 	local player = core.get_connected_players()[1]
 	local pp = player and player:get_pos()
 	if not b or not pp or not nhv.nh.snap then
+		mobs.dragging = false
 		set_links(0)
 		remove_ball()
 		return
@@ -1071,6 +1104,7 @@ local function update_ball(dtime)
 	local a = vector.add(vector.add(pp, vector.multiply(right, 0.15)), vector.new(0, 0.1, 0))
 	local z
 	if b.carried then
+		mobs.dragging = false
 		remove_ball()
 		local fwd = vector.new(-math.sin(yaw), 0, math.cos(yaw))
 		z = vector.add(vector.add(pp, vector.multiply(fwd, 0.35)), vector.new(0, 0.9, 0))

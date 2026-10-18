@@ -412,8 +412,10 @@ NHV_API int nhv_get_lights(nhv_light *buf, int max);
  * the hero. Returns 0 if not punished; 1 with the ball on the floor at
  * <bx,by>; 2 with the ball carried (at the hero's square). <cx,cy> is the
  * chain's square (it lies between the hero and the ball, or under you);
- * tile: the ball's picture. */
-NHV_API int nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile);
+ * tile: the ball's picture; ids: the ball's and chain's object ids (as in
+ * nhv_get_floor_objects). */
+NHV_API int nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile,
+                         unsigned *ball_id, unsigned *chain_id);
 
 /* Rays (wands, spells, breath) are handed to the host too. It flies and
  * bounces them and reports: "#nhvrayhit rid m_id" (reached a body; m_id 0

@@ -718,13 +718,15 @@ local function helpless_view(player)
 	end
 end
 
-local was_searching = false
+local was_searching, was_dragging = false
 core.register_globalstep(function()
 	local player = player_mod.get()
 	-- (searching started or ended: stand still / walk again)
 	local searching = nhv.clock.searching()
-	if player and searching ~= was_searching then
-		was_searching = searching
+	-- (or started or stopped dragging the iron ball: slower / faster)
+	local dragging = nhv.mobs.dragging or false
+	if player and (searching ~= was_searching or dragging ~= was_dragging) then
+		was_searching, was_dragging = searching, dragging
 		set_speed(player)
 	end
 	if player and nh.snap then

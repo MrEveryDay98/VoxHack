@@ -522,10 +522,12 @@ nhv_get_lights(nhv_light *buf, int max)
 }
 
 NHV_API int
-nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile)
+nhv_get_ball(int *bx, int *by, int *cx, int *cy, int *tile,
+             unsigned *ball_id, unsigned *chain_id)
 {
     if (nhv_state() != NHV_WAITING || !Punished || !uball || !uchain)
         return 0;
+    *ball_id = uball->o_id, *chain_id = uchain->o_id;
     *tile = glyphmap[obj_to_glyph(uball, rn2_on_display_rng)].tileidx;
     *cx = uchain->ox, *cy = uchain->oy;
     if (carried(uball)) {

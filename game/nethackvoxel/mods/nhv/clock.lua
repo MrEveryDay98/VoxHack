@@ -75,9 +75,16 @@ end
 clock.ENCUMBRANCE = {[0] = 1, 0.75, 0.5, 0.25, 0.125, 0}
 
 -- how fast the hero really moves (12 = normal), carrying what it carries
+-- Punished, dragging the heavy iron ball behind you (its chain taut,
+-- mobs.lua) costs NetHack a turn more for every step: half speed
+clock.DRAG_BALL = 0.5
 function clock.move_speed()
 	local h = nh.snap and nh.snap.hero
-	return clock.hero_speed() * (clock.ENCUMBRANCE[h and h.encumbrance or 0] or 1)
+	local s = clock.hero_speed() * (clock.ENCUMBRANCE[h and h.encumbrance or 0] or 1)
+	if nhv.mobs and nhv.mobs.dragging then
+		s = s * clock.DRAG_BALL
+	end
+	return s
 end
 
 -- turns one hero action takes
