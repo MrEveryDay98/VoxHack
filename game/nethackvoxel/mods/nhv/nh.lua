@@ -138,6 +138,16 @@ end
 -- Send keys for an action. keys: string (each char a key) or list of
 -- {key=}/{text=}/{menu=} items. info is kept until the result arrives.
 function nh.act(keys, info)
+	-- (the command, for the questions that follow: what an "In what
+	-- direction?" is for - zapping, casting, applying can go up and down)
+	if type(keys) == "string" then
+		nh.last_cmd = keys:sub(1, 1)
+	elseif keys[1] then
+		nh.last_cmd = keys[1].key or keys[1].text
+		if nh.last_cmd == "#" and keys[2] then
+			nh.last_cmd = "#" .. (keys[2].text or "")
+		end
+	end
 	if type(keys) == "string" then
 		for c in keys:gmatch(".") do
 			core.nh_send_key(c)

@@ -411,7 +411,7 @@ function actions.try_dig(player)
 		return false
 	end
 	local dk = actions.pointed_dir_key(player, "dig")
-	if dk ~= ">" then
+	if dk ~= ">" and dk ~= "<" then
 		local p = actions.pointed(player)
 		local wx, wy = p.wx or p.tx, p.wy or p.ty
 		if not wx or math.abs(wx - h.x) > 1 or math.abs(wy - h.y) > 1
@@ -561,6 +561,21 @@ function actions.pointed_dir_key(player, prompt, no_self)
 	local p = actions.pointed(player)
 	if p.kind ~= "mon" and not no_self and self_spell() then
 		return "."
+	end
+	-- looking steeply up or down: up or down, where that can mean something
+	-- (zapping, casting, applying - a pick-axe digs down, a wand of digging
+	-- digs through the floor or brings rock down from the ceiling) -
+	-- before the square under your crosshair, which looking down at the
+	-- floor or up at the ceiling may well be the next one
+	local cmd = nh.last_cmd or ""
+	local vertical = (prompt and (prompt:find("dig") or prompt:find("zap")))
+		or cmd == "z" or cmd == "Z" or cmd == "a"
+	if vertical and p.kind ~= "mon" then
+		if pitch > 1.0 then
+			return ">"
+		elseif pitch < -1.0 then
+			return "<"
+		end
 	end
 	local dx, dy = p.tx - h.x, p.ty - h.y
 	-- a wall face on the edge of your own square: the wall's square
@@ -895,6 +910,8 @@ function actions.item_context(o)
 		add("Read", "r" .. inv, true)
 	elseif c == OC.WAND then
 		add("Zap", "z" .. inv, true)
+		-- (looking down zaps the floor: this zaps you)
+		add("Zap yourself", {{key = "z"}, {key = inv}, {key = "."}})
 		add("Engrave", "E" .. inv)
 		add("Break", "a" .. inv)
 	elseif c == OC.GEM or c == OC.ROCK then
