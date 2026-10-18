@@ -180,9 +180,10 @@ NHV_API void nhv_get_map(nhv_loc *buf);
                                    listed at the hero's square, not drawn */
 #define NHV_MON_SELF     0x200 /* the hero (its form's size and tile) */
 #define NHV_MON_STEED    0x400 /* what the hero is riding */
-#define NHV_MON_SENSED   0x800 /* not seen, but sensed where it is (telepathy,
-                                  extrinsic ESP, warned of its kind,
-                                  monster detection): through walls too */
+#define NHV_MON_SENSED   0x800 /* sensed where it is (telepathy, extrinsic
+                                  ESP, warned of its kind, monster
+                                  detection): known through walls too */
+#define NHV_MON_UNSEEN   0x1000 /* (with SENSED) not seen, only sensed */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */

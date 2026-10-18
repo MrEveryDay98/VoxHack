@@ -17,11 +17,13 @@ local mobs = {
 }
 nhv.mobs = mobs
 
--- A monster you sense but can't see (telepathy, an amulet of ESP, being
--- warned of its kind, monster detection) is a ghost: a faint see-through
--- flat picture that shows through walls (infotext "nhv:xray": the NetHack
--- Voxel build of Luanti draws it over everything) and wavers (e.wavy).
-local GHOST_ALPHA = 110
+-- A monster you sense (telepathy, an amulet of ESP, being warned of its
+-- kind, monster detection) but don't have in plain view - NetHack says you
+-- can't see it, or a wall is in the way in 3D (NetHack's line of sight is
+-- by squares; the walls you build can hide more) - is a ghost: a half
+-- see-through flat picture that shows through walls (infotext "nhv:xray":
+-- the NetHack Voxel build of Luanti draws it over everything) and wavers.
+local GHOST_ALPHA = 128
 local function look_for(e, kind)
 	if e.ghost then
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(GHOST_ALPHA)
@@ -263,7 +265,7 @@ local function apply_sprite(e, m)
 	-- a shopkeeper in its shop fills its whole square, so standing inside
 	-- the door it really blocks the way out, as in NetHack
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
-	local ghost = U.has(m.flags, U.MON_SENSED)
+	local ghost = U.has(m.flags, U.MON_SENSED) and (U.has(m.flags, U.MON_UNSEEN) or e.occluded == true)
 	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost then
 		e.tile, e.h, e.ghost = m.tile, h, ghost
 		local props = monster_props(e)
@@ -303,7 +305,6 @@ local function update_monsters(snap)
 		if e then
 			e.x, e.y, e.mon, e.id = m.x, m.y, m, m.id
 			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
-				or U.has(m.flags, U.MON_SENSED)
 			apply_sprite(e, m)
 			e.obj:set_pos(mon_draw_pos(e))
 			if fresh then
@@ -974,9 +975,49 @@ local function update_glides(now)
 end
 
 local clock_t = 0
+-- is there a wall between your eyes and point p?
+local function wall_between(eye, p)
+	for pt in core.raycast(eye, p, false, false) do
+		if pt.type == "node" then
+			local def = core.registered_nodes[core.get_node(pt.under).name]
+			if def and def.walkable and def.drawtype ~= "airlike" then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- sensed monsters: in plain view, or behind a wall (a ghost)? checked a few
+-- times a second
+local occl_t = 0
+local function update_occlusion(player, dtime)
+	occl_t = occl_t + dtime
+	if occl_t < 0.2 then
+		return
+	end
+	occl_t = 0
+	local eye = vector.add(player:get_pos(), vector.new(0, 1.6, 0))
+	for _, e in pairs(mobs.mons) do
+		if e.mon and U.has(e.mon.flags, U.MON_SENSED) and e.obj:get_pos() then
+			local occluded = wall_between(eye, e.obj:get_pos())
+			if occluded ~= e.occluded then
+				e.occluded = occluded
+				apply_sprite(e, e.mon)
+			end
+		end
+	end
+end
+
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	update_fades()
+	do
+		local pl = core.get_connected_players()[1]
+		if pl then
+			update_occlusion(pl, dtime)
+		end
+	end
 	update_glides(core.get_us_time())
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
@@ -993,7 +1034,7 @@ core.register_globalstep(function(dtime)
 			if ppos then
 				local d = vector.subtract(ppos, pos)
 				local yaw = math.atan2(d.z, d.x) - math.pi / 2
-				if e.wavy then
+				if e.wavy or e.ghost then
 					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
 					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
 					obj:set_properties({visual_size = size_for(e, w)})

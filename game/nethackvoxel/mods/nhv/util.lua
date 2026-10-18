@@ -53,7 +53,8 @@ U.MON_HOLDING = 0x80 -- (holding on to you: U.HERO.HELD)
 U.MON_ENGULFING = 0x100 -- (has swallowed you: listed at your square, not drawn)
 U.MON_SELF = 0x200 -- (you: your form's tile and size; avatar.lua)
 U.MON_STEED = 0x400 -- (what you ride; avatar.lua)
-U.MON_SENSED = 0x800 -- (not seen but sensed - telepathy...: a ghost through walls)
+U.MON_SENSED = 0x800 -- (sensed - telepathy...: a ghost when not in plain view)
+U.MON_UNSEEN = 0x1000 -- (with SENSED: NetHack says you don't see it)
 
 -- nhv_hero.flags
 U.HERO = {
