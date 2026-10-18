@@ -230,6 +230,8 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
                                        ... (NHV_REQ_TURN until it ends) */
 #define NHV_HERO_ASLEEP    0x1000000 /* (and unconscious: asleep, fainted...;
                                         without it: awake, frozen) */
+#define NHV_HERO_TWOWEAP   0x2000000 /* fighting with two weapons (#twoweapon):
+                                        the secondary one in the left hand */
 
 typedef struct nhv_hero {
     int x, y;

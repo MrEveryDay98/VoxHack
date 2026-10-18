@@ -586,6 +586,8 @@ nhv_get_hero(nhv_hero *out)
         f |= NHV_HERO_HELPLESS;
     if (unconscious()) /* (asleep, fainted, knocked out) */
         f |= NHV_HERO_ASLEEP;
+    if (u.twoweap)
+        f |= NHV_HERO_TWOWEAP;
     {
         int sk;
 

@@ -63,11 +63,23 @@ end
 
 -- One arm swing (right-click doesn't swing by itself; see hud.lua)
 local swing_state = false
+-- (dual wielding, the left hand follows a moment later: NetHack hits with
+-- both weapons)
+local off_swing_state = false
 function actions.swing()
 	local player = nhv.player.get()
 	if player then
 		swing_state = not swing_state
 		player:hud_set_flags({nhv_swing = swing_state})
+		local h = nhv.nh.snap and nhv.nh.snap.hero
+		if h and U.has(h.flags, U.HERO.TWOWEAP) then
+			core.after(0.15, function()
+				if player:is_player() then
+					off_swing_state = not off_swing_state
+					player:hud_set_flags({nhv_off_swing = off_swing_state})
+				end
+			end)
+		end
 	end
 end
 
@@ -630,6 +642,7 @@ function actions.item_verbs()
 		act("Eat", "e"), act("Quaff", "q"), act("Read", "r"), act("Zap", "z"),
 		act("Apply", "a"), act("Wear", "W"), act("Take off", "T"), act("Put on", "P"),
 		act("Remove", "R"), act("Wield", "w"),
+		act("Swap weapons", "x"), act("Dual wield", ext("twoweapon")),
 	}, nil -- (a tap does nothing: pick one)
 end
 

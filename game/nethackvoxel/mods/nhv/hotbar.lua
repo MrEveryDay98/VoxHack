@@ -245,10 +245,12 @@ local function refresh(player, inv)
 		return
 	end
 	local wep, alt = weapons(inv)
+	local h = nh.snap and nh.snap.hero
+	local two = h and U.has(h.flags, U.HERO.TWOWEAP) and alt
 	for k, o in ipairs({wep or false, alt or false}) do
 		player:hud_change(hud["icon" .. k], "text", o and nhv_tiles.texture(o.tile) or "blank.png")
-		-- the weapon in your hands is framed green
-		player:hud_change(hud["bg" .. k], "text", frame(o and k == 1 and "#30C040" or "#50505A"))
+		-- the weapons in your hands are framed green (both, dual wielding)
+		player:hud_change(hud["bg" .. k], "text", frame(o and (k == 1 or two) and "#30C040" or "#50505A"))
 	end
 	-- your hand shows the wielded weapon
 	local pinv = player:get_inventory()
@@ -262,6 +264,10 @@ local function refresh(player, inv)
 		meta:set_string("nhv_invlet", wep.invlet)
 	end
 	pinv:set_list("main", {st})
+	-- dual wielding, your left hand holds the secondary weapon (drawn by the
+	-- NetHack Voxel build of Luanti from this list; empty: no left hand)
+	pinv:set_size("nhv_offhand", 1)
+	pinv:set_list("nhv_offhand", {two and ItemStack(nhv_tiles.item(alt.tile)) or ItemStack("")})
 end
 
 -- redraw at a new size (Graphics > Text size)
