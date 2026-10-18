@@ -10,6 +10,8 @@ local E = core.formspec_escape
 
 local title = {}
 nhv.title = title
+-- the version shown on the title screen (the release tag)
+title.VERSION = "VoxHack v0.1.0 alpha"
 
 local FORM, NEW, CONFIRM = "nhv:title", "nhv:newchar", "nhv:replace"
 
@@ -126,7 +128,7 @@ function title.formspec(player)
 	button("new", "New game")
 	button("options", "Options")
 	button("quitgame", "Quit")
-	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E("Placeholder art (nhv_title_logo.png, nhv_title_bg.png)")) .. "]"
+	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E(title.VERSION .. " - based on NetHack 3.7")) .. "]"
 	return table.concat(fs)
 end
 
