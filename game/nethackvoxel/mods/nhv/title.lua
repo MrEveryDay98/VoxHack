@@ -10,8 +10,10 @@ local E = core.formspec_escape
 
 local title = {}
 nhv.title = title
--- the version shown on the title screen (the release tag)
-title.VERSION = "VoxHack v0.1.0 alpha"
+-- this copy's version: its release tag (bump it for each release - the
+-- update check compares it with GitHub's releases, update.lua)
+title.TAG = "v0.1.0"
+title.VERSION = "VoxHack " .. title.TAG .. " alpha"
 
 local FORM, NEW, CONFIRM = "nhv:title", "nhv:newchar", "nhv:replace"
 
@@ -129,11 +131,22 @@ function title.formspec(player)
 	button("options", "Options")
 	button("quitgame", "Quit")
 	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E(title.VERSION .. " - based on NetHack 3.7")) .. "]"
+	-- a newer release out (update.lua): say so, with a link to get it
+	local upd = nhv.update and nhv.update.available
+	if upd then
+		fs[#fs + 1] = ("hypertext[0.4,8.75;15.2,0.75;update;%s]"):format(E(
+			("<global valign=middle color=#FFD25A><tag name=action color=#78C8FF hovercolor=#FFFFFF>"
+			.. "A new version is available: <b>%s</b>   "
+			.. "<action name=get url=%s>Get it on itch.io</action>"):format(upd.tag, nhv.update.PAGE)))
+	end
 	return table.concat(fs)
 end
 
 function title.show(player)
 	title.open = true
+	if nhv.update then
+		nhv.update.check() -- (once a session)
+	end
 	nhv.player.freeze(true)
 	core.show_formspec(player:get_player_name(), FORM, title.formspec(player))
 end
