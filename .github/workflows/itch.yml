@@ -13,6 +13,10 @@ on:
       tag:
         description: "Release tag to push (e.g. v0.1.0)"
         required: true
+      status_only:
+        description: "Only report itch.io's status (push nothing)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -33,11 +37,13 @@ jobs:
           ./butler/butler -V
 
       - name: Get the release's Windows zip
+        if: ${{ !inputs.status_only }}
         run: |
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "*windows.zip" --dir build
           ls -l build
 
       - name: Push to itch.io
+        if: ${{ !inputs.status_only }}
         run: |
           ZIP=$(ls build/*windows.zip | head -n 1)
           ./butler/butler push "$ZIP" mreveryday/voxhack:windows --userversion "${TAG#v}"
