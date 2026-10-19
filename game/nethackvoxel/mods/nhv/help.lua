@@ -39,7 +39,7 @@ help.SECTIONS = {
 		{"E (tap / hold)", "The same for your wielded weapon: its usual action, or a wheel of what you can do with it"},
 	}},
 	{"Items and other keys", {
-		{"R", "Pick up what's under you (shown as \"R  Pick up\" when something is)"},
+		{"F", "Pick up what's under you (shown as \"F  Pick up\" when something is; a right click tap does it too, when nothing else is there)"},
 		{"X", "Search (hold to keep searching; Ctrl + X: search for a number of turns)"},
 		{"P", "Pay the shopkeeper, in a shop"},
 		{"G", "Advance a skill (shown when you can)"},

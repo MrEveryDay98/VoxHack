@@ -32,7 +32,7 @@ settings and high scores stay inside that folder.
 | Right click | Tap: the obvious action for what you point at (open a door, take the stairs, talk). Hold: an action wheel |
 | Hold Shift, Ctrl, Alt, or E | Other wheel options |
 | 1-5 | Fire, Kick, Zap, Spell, Eat |
-| R | Pick up |
+| F | Pick up (or tap right click while standing on items) |
 | X | Search (hold to keep searching) |
 | I | Inventory and equipment |
 | Z | The big overhead map |

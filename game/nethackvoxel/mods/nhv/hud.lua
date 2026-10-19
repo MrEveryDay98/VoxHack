@@ -175,7 +175,7 @@ local function update_here(player, snap)
 		player:hud_change(hud.ids.here, "text", text)
 		player:hud_change(hud.ids.here_shadow, "text", text)
 		-- (and the key to pick it up, under the list)
-		local key = text ~= "" and "R  Pick up" or ""
+		local key = text ~= "" and "F  Pick up" or ""
 		player:hud_change(hud.ids.here_key, "text", key)
 		player:hud_change(hud.ids.here_key_shadow, "text", key)
 	end
@@ -378,7 +378,7 @@ core.register_on_joinplayer(function(player)
 	})
 	msg_shown = nil
 	-- what lies on your square, down the left side: no box, a black shadow
-	-- (the same text again, a little down and right, behind it). "R  Pick up"
+	-- (the same text again, a little down and right, behind it). "F  Pick up"
 	-- sits at a fixed place low on the left, the list above it, growing up
 	-- (clear of the messages coming down from the top)
 	local HERE_Y = 0.72

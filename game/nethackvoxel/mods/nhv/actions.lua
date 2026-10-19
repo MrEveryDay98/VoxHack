@@ -817,7 +817,7 @@ function actions.context(player)
 			add(act("Go up", "<"), true)
 		end
 		if sq.has_obj then
-			-- (picking up is R)
+			-- (picking up is F, or a tap - below)
 			add(info_act("Look here", ":"))
 		end
 		local c = sq.cmap or ""
@@ -834,6 +834,12 @@ function actions.context(player)
 			add(act("Sit on throne", ext("sit")), true)
 		elseif c == "S_grave" then
 			add(act("Dig up grave", "a"))
+		end
+		-- things lying here and nothing else to do with this square (no
+		-- stairs, fountain, altar, box, grave...): a tap picks them up (it
+		-- isn't on the wheel: picking up is F)
+		if sq.has_obj and not primary and c ~= "S_grave" then
+			primary = act("Pick up", ",")
 		end
 		-- (things you do by yourself are on the Shift wheel)
 		return list, primary
@@ -866,7 +872,7 @@ function actions.self_context()
 		info_act("Attributes", "\24"),
 		act("Save & quit", "S"),
 	}
-	-- (picking up is R, searching X: a tap does nothing - pick one)
+	-- (picking up is F, searching X: a tap does nothing - pick one)
 	return list, nil
 end
 

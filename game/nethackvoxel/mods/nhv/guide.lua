@@ -41,7 +41,7 @@ Right click (tap): the obvious action for what you point at (open a door, take t
 Right click (hold): a wheel of actions for it; move the mouse toward one and let go, or let go in the middle to cancel
 
 Shift + right click: actions on yourself (pray, rest, engrave...)
-R: pick up what is here
+F: pick up what is here (or tap right click while looking at it)
 F2: NetHackWiki in the game - the page for what you're pointing at; F2 again closes it
 Alt + right click: use an item (quaff, read, apply, wear, drop...)
 Ctrl + right click: magic and abilities

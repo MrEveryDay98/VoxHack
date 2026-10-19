@@ -30,7 +30,7 @@ hotbar.ACTIONS = {
 -- "/nhvkey pay"; paying only works in a shop)
 hotbar.SEARCH = {"Search", "s"}
 hotbar.PAY = {"Pay", "p", shop = true}
--- R picks up (the VoxHack build of Luanti sends "/nhvkey pickup")
+-- F picks up (the VoxHack build of Luanti sends "/nhvkey pickup")
 hotbar.PICKUP = {"Pick up", ","}
 
 local W = {WEP = 0x100, SWAPWEP = 0x400}
