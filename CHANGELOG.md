@@ -2,6 +2,12 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## Unreleased
+
+- **The tutorial is back, rewritten for VoxHack.** New characters are asked "Do you want a tutorial?" (Options > NetHack options > Offer the tutorial turns the question off). Its engravings now teach the 3D game's controls: WASD and the mouse, left click to fight, the right click and its wheels, F to pick up, X to search, the 1-5 keys, the inventory, Z for the map, F2 for the wiki.
+- **Inscriptions show in the middle of the screen**, in gold: what's engraved, written or burned where you stand stays there until you step off. ("Something is engraved here" still goes with the messages, and everything is in the log, T.)
+- **Iron bars face the right way**, running along the wall or line of bars they're part of.
+
 ## v0.3.0 (alpha) - 2026-10-18
 
 - **Pick up is now F** (it was R). When you're standing on items with nothing else there to use (no stairs, fountain, altar, box...), a right click tap picks them up too.

@@ -211,6 +211,65 @@ local function update_messages(player)
 	end
 end
 
+-- Inscriptions on the floor (engravings, graffiti, headstones...) are shown
+-- in the middle of the screen in gold, not with the messages (NetHack's
+-- "Something is written here in the dust." line before them still is).
+-- They stay until you step off the square (or a while has passed), and
+-- still go to the message log (T).
+local INSCR_TTL = 15
+local inscr = nil -- {square = "x,y", t = seconds} while one is shown
+
+local function wrap(text, width)
+	local lines, line = {}, ""
+	for word in text:gmatch("%S+") do
+		if line ~= "" and #line + 1 + #word > width then
+			lines[#lines + 1] = line
+			line = word
+		else
+			line = line == "" and word or line .. " " .. word
+		end
+	end
+	if line ~= "" then
+		lines[#lines + 1] = line
+	end
+	return table.concat(lines, "\n")
+end
+
+local function hero_square()
+	local h = nh.snap and nh.snap.hero
+	return h and h.x and (h.x .. "," .. h.y) or nil
+end
+
+local function show_inscription(player, text)
+	if not hud.ids.inscr then
+		return
+	end
+	local body = text and wrap(text, 44) or ""
+	player:hud_change(hud.ids.inscr, "text", body)
+	player:hud_change(hud.ids.inscr_shadow, "text", body)
+end
+
+local function clear_inscription(player)
+	inscr = nil
+	show_inscription(player, nil)
+end
+
+-- true if the message was an inscription's words (shown in the middle,
+-- not with the messages)
+function hud.inscription(text)
+	local said = text:match('^You read: "(.*)"[.]?$')
+		or text:match('^You feel the words: "(.*)"[.]?$')
+	if not said then
+		return false
+	end
+	local player = nhv.player.get()
+	if player then
+		show_inscription(player, said)
+		inscr = {square = hero_square(), t = core.get_us_time() / 1e6}
+	end
+	return true
+end
+
 function hud.message(text)
 	if not text or text == "" then
 		return
@@ -377,6 +436,19 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "", z_index = 1000,
 	})
 	msg_shown = nil
+	-- an inscription you're standing on: in the middle of the screen, above
+	-- the crosshair, gold with a black shadow
+	local function centre(shadow)
+		return player:hud_add({
+			type = "text", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = -1},
+			offset = {x = shadow and 2 or 0, y = shadow and -68 or -70},
+			number = shadow and 0x000000 or 0xFFD25A, text = "",
+			z_index = shadow and 20 or 21, size = {x = 2, y = 0},
+		})
+	end
+	hud.ids.inscr_shadow = centre(true)
+	hud.ids.inscr = centre(false)
+	inscr = nil
 	-- what lies on your square, down the left side: no box, a black shadow
 	-- (the same text again, a little down and right, behind it). "F  Pick up"
 	-- sits at a fixed place low on the left, the list above it, growing up
@@ -663,6 +735,15 @@ core.register_globalstep(function(dtime)
 		update_messages(player)
 		-- (a menu opened or closed over it; the square's things changed)
 		update_here(player, nh.snap)
+		-- (the message can come before the hero's new square - after a
+		-- level change, say -: the square it's on settles for a second)
+		local age = inscr and core.get_us_time() / 1e6 - inscr.t
+		if inscr and age < 1 then
+			inscr.square = hero_square()
+		elseif inscr and (hero_square() ~= inscr.square or age > INSCR_TTL
+				or (nhv.title and nhv.title.open) or hud.big_map or nhv.ui.chat_open) then
+			clear_inscription(player)
+		end
 	end
 end)
 
@@ -695,7 +776,15 @@ end
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
 		if (ev.kind == "message" or ev.kind == "raw") and not hud.silenced(ev.text) then
-			hud.message(ev.text)
+			if hud.inscription(ev.text) then
+				-- (not with the messages, but still in the log)
+				local player = nhv.player.get()
+				if player then
+					core.chat_send_player(player:get_player_name(), ev.text)
+				end
+			else
+				hud.message(ev.text)
+			end
 		end
 	end
 end)

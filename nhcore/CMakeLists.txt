@@ -55,6 +55,8 @@ target_compile_options(makedefs PRIVATE ${NH_WARN})
 # makedefs reads/writes relative to the NetHack "dat" dir; run it in a
 # private copy so the source tree stays clean.
 set(DAT_WORK "${CMAKE_CURRENT_BINARY_DIR}/datwork")
+# (the source data: a changed level or text file rebuilds the archive)
+file(GLOB NH_DAT_SOURCES CONFIGURE_DEPENDS "${NH_ROOT}/dat/*")
 set(MD_OUTPUTS data oracles options rumors bogusmon engrave epitaph)
 list(TRANSFORM MD_OUTPUTS PREPEND "${DAT_WORK}/dat/" OUTPUT_VARIABLE MD_OUTPUT_FILES)
 add_custom_command(
@@ -69,7 +71,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E chdir "${DAT_WORK}/util" $<TARGET_FILE:makedefs> -r
     COMMAND ${CMAKE_COMMAND} -E chdir "${DAT_WORK}/util" $<TARGET_FILE:makedefs> -s
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    DEPENDS makedefs
+    DEPENDS makedefs ${NH_DAT_SOURCES}
     COMMENT "Generating NetHack data files with makedefs")
 add_custom_target(nhdat_gen DEPENDS ${MD_OUTPUT_FILES})
 

@@ -58,6 +58,9 @@ nhopts.OPTIONS = {
 	{key = "dogname", kind = "text", label = "Dog's name", opt = "dogname", new = true, default = ""},
 	{key = "catname", kind = "text", label = "Cat's name", opt = "catname", new = true, default = ""},
 	{key = "horsename", kind = "text", label = "Horse's name", opt = "horsename", new = true, default = ""},
+	-- (on: NetHack asks each new character "Do you want a tutorial?")
+	{key = "tutorial", kind = "bool", label = "Offer the tutorial", new = true, default = true,
+		on = "", off = "!tutorial"},
 
 	{key = "fruit", kind = "text", label = "Favourite fruit", opt = "fruit", default = "slime mold"},
 	{key = "autopickup", kind = "bool", label = "Autopickup", opt = "autopickup", default = false},
@@ -133,7 +136,7 @@ function nhopts.start_options()
 		local t = o.opt or o.on
 		if t then
 			t = option_text(o)
-			if t then
+			if t and t ~= "" then
 				lines[#lines + 1] = "OPTIONS=" .. t
 			end
 		end

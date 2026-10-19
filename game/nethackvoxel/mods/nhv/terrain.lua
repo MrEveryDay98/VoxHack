@@ -216,13 +216,30 @@ local function has_bit(v, b)
 	return v % (b * 2) >= b
 end
 
+-- Iron bars run along their line, as a wall does (the prefab's bars run
+-- east-west at rotation 0, as a door's panel): along walls or other bars
+-- either side; a lone bar across a passage spans it, blocking the way
+-- through (walkable)
+local walkable
+local function bars_rot(map, tx, ty)
+	local function solid(x, y)
+		return walllike(map, x, y) or (U.in_map(x, y) and map.typ[U.idx(x, y)] == T.IRONBARS)
+	end
+	if solid(tx - 1, ty) or solid(tx + 1, ty) then
+		return 0
+	elseif solid(tx, ty - 1) or solid(tx, ty + 1) then
+		return 1
+	end
+	return (walkable(map, tx, ty - 1) or walkable(map, tx, ty + 1)) and 0 or 1
+end
+
 -- Stairs and ladders face their way in: a prefab's front (the red block in
 -- the prefab editor, north at rotation 0; each quarter turn moves it on
 -- clockwise: east, south, west) goes to the side you can walk up to, so a
 -- staircase built against a wall can still be climbed. The side that opens
 -- most (the square in front, then the two beside it) wins; ties keep north.
 local FACING = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}} -- map dx, dy for rot 0..3
-local function walkable(map, tx, ty)
+function walkable(map, tx, ty) -- (declared above, for bars_rot)
 	if not U.in_map(tx, ty) then
 		return false
 	end
@@ -266,7 +283,7 @@ local function base_slot(map, i, tx, ty, memcmap)
 	elseif typ == T.TREE then
 		return "tree", 0
 	elseif typ == T.IRONBARS then
-		return "iron_bars", 0
+		return "iron_bars", bars_rot(map, tx, ty)
 	elseif typ == T.LAVAWALL then
 		return "lava_wall", 0
 	elseif typ == T.POOL or typ == T.MOAT or typ == T.DRAWBRIDGE_UP then

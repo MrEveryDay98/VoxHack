@@ -61,7 +61,7 @@ end
 
 -- (the player's own choices come from Options > NetHack options, nhopts.lua)
 nh.OPTIONS = table.concat({
-	"OPTIONS=!tutorial,!legacy,!splash_screen,!rest_on_space",
+	"OPTIONS=!legacy,!splash_screen,!rest_on_space", -- (tutorial: nhopts)
 	"OPTIONS=time,showexp,!mention_walls,suppress_alert:3.4.3,voices",
 }, "\n")
 
