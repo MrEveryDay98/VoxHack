@@ -416,6 +416,40 @@ function hud.toggle_map()
 	end
 end
 
+-- Picking a place on the map (ui.lua's place picker): the big map itself is
+-- shown meanwhile (and put back as it was after), and this tells where its
+-- squares are on the screen: square size and the map's top-left corner, in
+-- pixels, and the window's size.
+local picking_was = nil
+function hud.picking(on)
+	local player = nhv.player.get()
+	if on and picking_was == nil then
+		picking_was = hud.big_map or false
+		hud.big_map = true
+	elseif not on and picking_was ~= nil then
+		hud.big_map = picking_was
+		picking_was = nil
+	else
+		return
+	end
+	if player then
+		place_map(player)
+	end
+end
+
+function hud.big_map_geometry(player)
+	local info = core.get_player_window_information(player:get_player_name())
+	if not (info and info.size and info.real_hud_scaling and info.max_formspec_size) then
+		return nil
+	end
+	local px = big_map_scale(player) * info.real_hud_scaling -- (a square)
+	return {
+		info = info, square = px,
+		left = 0.5 * info.size.x - U.COLNO / 2 * px,
+		top = 0.45 * info.size.y - U.ROWNO / 2 * px,
+	}
+end
+
 core.register_on_joinplayer(function(player)
 	tiles.ids, tiles.shown, tiles.scale = {}, {}, nil -- (a new player object: none drawn yet)
 	-- right-click doesn't swing the arm by itself (actions.run swings it)

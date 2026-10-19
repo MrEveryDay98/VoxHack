@@ -228,10 +228,59 @@ end
 
 -- ---------------------------------------------------------------- places
 -- NetHack wants a place on the map (where to teleport with teleport
--- control, a detection scroll's "look around", ...): the whole level, each
--- square a button; clicking one picks it
+-- control, a detection scroll's "look around", ...): the big map (Z) is
+-- shown, exactly as ever, and a see-through, borderless form the size of
+-- the window lies over it with an invisible button on each square (lit up
+-- under the pointer); clicking one picks it, Esc cancels.
+--
+-- (One formspec unit is a whole number of pixels: with padding[0,0] and a
+-- form the window's size it's floor(window width / max_formspec_size.x),
+-- and the form starts at the window's corner; the big map's squares are
+-- placed by hud.big_map_geometry.)
+local function pick_form(player)
+	local g = nhv.hud.big_map_geometry(player)
+	if not g then
+		return nil
+	end
+	local W, H = g.info.size.x, g.info.size.y
+	local u = math.floor(W / g.info.max_formspec_size.x + 1e-6)
+	if u < 1 then
+		return nil
+	end
+	local fw, fh = W / u, H / u
+	-- (the form is centred: its drawn size is whole pixels)
+	local ox = math.floor(W / 2) - math.floor(math.floor(fw * u) / 2)
+	local oy = math.floor(H / 2) - math.floor(math.floor(fh * u) / 2)
+	local function ux(p) return (p - ox) / u end
+	local function uy(p) return (p - oy) / u end
+	local sq = g.square / u
+	local fs = {("formspec_version[6]size[%f,%f]padding[0,0]no_prepend[]"):format(fw, fh),
+		"bgcolor[#00000000;false]",
+		"style_type[image_button;border=false;bgimg=;bgimg_hovered=;bgimg_pressed=;"
+			.. "fgimg_hovered=[fill:16x16:#FFFF00^[opacity:120]"}
+	for y = 0, U.ROWNO - 1 do
+		for x = 1, U.COLNO - 1 do
+			fs[#fs + 1] = ("image_button[%f,%f;%f,%f;blank.png;pos_%d_%d;]"):format(
+				ux(g.left + x * g.square), uy(g.top + y * g.square), sq, sq, x, y)
+		end
+	end
+	-- (what to do, under the map)
+	local below = g.top + U.ROWNO * g.square
+	fs[#fs + 1] = ("style_type[label;textcolor=#E8E6DF]label[%f,%f;%s]"):format(
+		ux(g.left + g.square), uy(below) + 0.35, E("Click a square to choose it.   Esc: cancel"))
+	return table.concat(fs)
+end
+
 local POS_S = 0.4
 local function pos_dialog()
+	-- (the big map with its squares to click; this framed map is only for
+	-- when the window's size can't be known)
+	local player = nhv.player.get()
+	local form = player and pick_form(player)
+	if form then
+		nhv.hud.picking(true)
+		return form
+	end
 	local snap = nh.snap
 	local mw, mh = (U.COLNO - 1) * POS_S, U.ROWNO * POS_S
 	local w, h = mw + 1, mh + 1.6
@@ -267,6 +316,9 @@ end
 -- ---------------------------------------------------------------- requests
 local function show_request(req)
 	ui.req = req
+	if req.kind ~= "pos" then
+		nhv.hud.picking(false) -- (a place was being picked: not any more)
+	end
 	if req.kind == "yn" and req.choices == "" then
 		-- some questions carry their choices in the text: "... [ynaq]"
 		local inside = req.prompt:match("%[([%a%-%*%$#]+)%]")
@@ -312,6 +364,7 @@ end
 
 nh.on_request(function(req)
 	if req.kind == "key" and req.for_command then
+		nhv.hud.picking(false)
 		-- panels that stay open across commands (e.g. a container) keep you put
 		if ui.open and ui.persistent[ui.open] then
 			return true
@@ -427,6 +480,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		for k in pairs(fields) do
 			local px, py = k:match("^pos_(%d+)_(%d+)$")
 			if px then
+				nhv.hud.picking(false)
 				answered()
 				close("nhv:req")
 				nh.answer_text(("@%d,%d"):format(px, py))
@@ -482,6 +536,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			return true
 		end
 		if fields.menu_cancel or fields.line_cancel or fields.pos_cancel or fields.quit then
+			nhv.hud.picking(false)
 			answered()
 			-- (Esc already closed it; the Cancel button didn't)
 			close("nhv:req")
