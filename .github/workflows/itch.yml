@@ -41,3 +41,15 @@ jobs:
         run: |
           ZIP=$(ls build/*windows.zip | head -n 1)
           ./butler/butler push "$ZIP" mreveryday/voxhack:windows --userversion "${TAG#v}"
+
+      - name: Wait for itch.io to process it
+        run: |
+          # (itch.io processes a push before it's live: report how that went)
+          for i in $(seq 1 30); do
+            OUT=$(./butler/butler status mreveryday/voxhack:windows)
+            echo "$OUT"
+            if echo "$OUT" | grep -qi "failed"; then exit 1; fi
+            if ! echo "$OUT" | grep -qiE "processing|queued|uploading"; then exit 0; fi
+            sleep 20
+          done
+          echo "still processing after 10 minutes"
