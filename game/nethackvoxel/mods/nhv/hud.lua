@@ -132,9 +132,12 @@ local function status_text(h)
 end
 
 -- under the bars, top left: where you are and the numbers you check most
+-- (also: the text before the gold, and the gold, for its flash)
 function hud.info_text(h)
-	return string.format("%s   $:%d   AC:%d   XL:%d/%d", h.level_desc or "", h.gold or 0,
-		h.ac or 0, h.xlvl or 0, h.xp or 0)
+	local before = (h.level_desc or "") .. "   "
+	local gold = ("$:%d"):format(h.gold or 0)
+	return before .. gold .. ("   AC:%d   XL:%d/%d"):format(h.ac or 0, h.xlvl or 0, h.xp or 0),
+		before, gold
 end
 
 local msg_shown
@@ -462,6 +465,29 @@ end
 
 -- (row 0 is your name and title; the bars are rows 1 and 2)
 local info_shown -- (the level, gold, AC... line under the bars)
+local gold_last  -- (the gold last shown: a change flashes it)
+local GOLD_FLASH = 0xFFD040
+local flash_seq = 0
+
+-- on, off, on: the money in gold over the white (with the modern font,
+-- whose letters aren't all one width, the whole line flashes)
+local function flash_gold(player, before, gold)
+	if not meter_ids.info_flash then
+		return
+	end
+	flash_seq = flash_seq + 1
+	local mine = flash_seq
+	local text = nhv.theme.retro() and ((" "):rep(#before) .. gold) or info_shown
+	local function set(on)
+		if mine == flash_seq and meter_ids.info_flash and player:is_player() then
+			player:hud_change(meter_ids.info_flash, "text", on and text or "")
+		end
+	end
+	set(true)
+	core.after(0.25, set, false)
+	core.after(0.4, set, true)
+	core.after(0.8, set, false)
+end
 local function meter_y(row)
 	local _, h = meter_size()
 	return 12 + row * (h + 6)
@@ -529,6 +555,12 @@ function hud.build_meters(player)
 		type = "text", position = base.position, alignment = {x = 1, y = 0},
 		offset = {x = 14, y = meter_y(#METERS) + h + 6 + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
 	})
+	-- the gold's flash: the same line over it, all but the gold blanked
+	-- (the pixel font's letters are all one width, so it lines up)
+	meter_ids.info_flash = player:hud_add({
+		type = "text", position = base.position, alignment = {x = 1, y = 0},
+		offset = {x = 14, y = meter_y(#METERS) + h + 6 + h / 2}, number = GOLD_FLASH, z_index = 43, text = "",
+	})
 	info_shown = nil
 	-- (the message lines start below all that: long ones don't run over it)
 	if hud.ids.msg then
@@ -540,11 +572,16 @@ local function update_meters(player, h)
 	if not next(meter_ids) then
 		return
 	end
-	local info = hud.info_text(h)
+	local info, before, gold = hud.info_text(h)
 	if meter_ids.info and info ~= info_shown then
 		info_shown = info
 		player:hud_change(meter_ids.info, "text", info)
 	end
+	-- gold picked up or lost: the money flashes gold
+	if gold_last and h.gold ~= gold_last then
+		flash_gold(player, before, gold)
+	end
+	gold_last = h.gold
 	-- your sprite (polymorphed: what you've become) and "name the title"
 	local tex = h.tile and h.tile >= 0 and nhv_tiles.texture(h.tile) or "blank.png"
 	if tex ~= portrait_shown then
