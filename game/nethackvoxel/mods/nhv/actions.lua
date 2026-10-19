@@ -363,6 +363,26 @@ local function attack_target(player, prefer_id)
 			end
 		end
 	end
+	if best then
+		return best
+	end
+	-- nothing you can see or sense there: a monster you can't see (you're
+	-- blind, it's invisible, it's dark) is still hit if it's where you
+	-- swing, as NetHack's attack in its direction hits it ("You hit it.")
+	local perceived = {}
+	for _, e in pairs(nhv.mobs.mons) do
+		if e.id then
+			perceived[e.id] = true
+		end
+	end
+	for id, body in pairs(nhv.sim.mons) do
+		if not perceived[id] and nhv.sim.in_reach(id, pos) then
+			local a = angle_between(look, vector.subtract(body.pos, pos))
+			if a < ATTACK_CONE and (not best_a or a < best_a) then
+				best, best_a = {id = id}, a
+			end
+		end
+	end
 	return best
 end
 
