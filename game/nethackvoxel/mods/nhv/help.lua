@@ -12,7 +12,7 @@ local KEY_W = 21 -- (the key column's width, in characters)
 -- {section, {{keys, what}...}}
 help.SECTIONS = {
 	{"Look anything up: F2", {
-		{"F2", "Open NetHackWiki, the NetHack wiki, right in the game, on the page for whatever you're pointing at: a monster, an item, a fountain, a trap... (\"F2  Look up: ...\" shows under the crosshair when there's a page). F2 again closes it. Every item's menu has a Wiki button too."},
+		{"F2", "Open NetHackWiki, the NetHack wiki, right in the game, on the page for whatever you're pointing at: a monster, an item, a fountain, a trap... F2 again closes it. Every item's menu has a Wiki button too."},
 	}},
 	{"Moving and looking", {
 		{"W A S D", "Walk"},
