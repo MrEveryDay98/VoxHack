@@ -2,6 +2,12 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.3.0 (alpha) - 2026-10-18
+
+- **Pick up is now F** (it was R). When you're standing on items with nothing else there to use (no stairs, fountain, altar, box...), a right click tap picks them up too.
+- **Help in the pause menu.** Esc > Help explains every default key: moving, fighting, the right click and all its wheels (Shift, Alt, Ctrl, E), the other keys, and the function keys.
+- **A tip in the pause menu:** F2 opens NetHackWiki on whatever you're pointing at.
+
 ## v0.2.1 (alpha) - 2026-10-18
 
 - **Sleeping gas traps put you to sleep again.** NetHack said "A cloud of gas puts you to sleep!" but woke you at once; now you sleep it off (third-person view, Z's and fast-forward while you're out). The same fix covers other things that leave you helpless as you walk, like a sleep ray or a floating eye.
