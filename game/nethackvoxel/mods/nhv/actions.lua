@@ -961,6 +961,10 @@ function actions.item_context(o)
 	add("Drop", "d" .. inv)
 	add("Name type", {{key = "#"}, {text = "call"}, {menu = "o"}, {key = inv}})
 	add("Adjust letter", {{key = "#"}, {text = "adjust"}, {key = inv}})
+	-- (its NetHackWiki page: as far as you know what it is - wiki.lua)
+	list[#list + 1] = {label = "Wiki", func = function(_, obj)
+		nhv.wiki.open(nhv.wiki.title_for_object(obj))
+	end}
 	return list, primary
 end
 
@@ -970,6 +974,9 @@ function actions.item_actions(o)
 end
 
 function actions.do_item_action(player, o, a)
+	if a.func then
+		return a.func(player, o) -- (not a NetHack command: the wiki...)
+	end
 	actions.run(a, {kind = "item"})
 end
 

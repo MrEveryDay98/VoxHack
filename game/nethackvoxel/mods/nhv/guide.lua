@@ -42,6 +42,7 @@ Right click (hold): a wheel of actions for it; move the mouse toward one and let
 
 Shift + right click: actions on yourself (pray, rest, engrave...)
 R: pick up what is here
+F2: look up what you're pointing at on NetHackWiki (F2 again closes it)
 Alt + right click: use an item (quaff, read, apply, wear, drop...)
 Ctrl + right click: magic and abilities
 E: actions with your wielded weapon]]},

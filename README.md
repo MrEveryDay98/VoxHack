@@ -36,6 +36,7 @@ settings and high scores stay inside that folder.
 | I | Inventory and equipment |
 | Z | The big overhead map |
 | T | NetHack's command line (`#pray`, `20s`...) |
+| F2 | Look up what you're pointing at on NetHackWiki (F2 again closes it) |
 
 Look steeply down or up when zapping, digging or casting to aim down (`>`) or up (`<`).
 

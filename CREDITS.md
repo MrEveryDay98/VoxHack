@@ -29,6 +29,7 @@ licence. The licence texts are in the release's `licenses` folder
 | Test MIDI (`nhv_miditest.mid`) | Made for this project | Project's own | OK |
 | Sound effects `yh_*.ogg` | "You Hear A Clicking Sound - It Bites!" (YHACSIB), made by VoxHack's author | Project's own | OK |
 | Music (`nhv_music_*.ogg`), magic effect sounds (`nhv_sound_magiceffect`), footsteps (Freesound 268758) | Royalty-free / CC0 sources (per the author) | Free redistribution | OK |
+| NetHackWiki pages (the in-game viewer, F2) | Fetched live from nethackwiki.com and cached on the player's computer; not bundled | CC BY-SA 3.0 (credited on every page) | OK |
 | Voice lines (`sounds/voices`) | Generated with ElevenLabs | ElevenLabs terms | Not in the public release (voice work is on hold) |
 
 ## Before a Steam release
