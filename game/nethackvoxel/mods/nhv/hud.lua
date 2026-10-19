@@ -212,7 +212,7 @@ local function update_messages(player)
 end
 
 -- Inscriptions on the floor (engravings, graffiti, headstones...) are shown
--- in the middle of the screen in gold, not with the messages (NetHack's
+-- low in the middle of the screen in gold, not with the messages (NetHack's
 -- "Something is written here in the dust." line before them still is).
 -- They stay until you step off the square (or a while has passed), and
 -- still go to the message log (T).
@@ -436,12 +436,13 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "", z_index = 1000,
 	})
 	msg_shown = nil
-	-- an inscription you're standing on: in the middle of the screen, above
-	-- the crosshair, gold with a black shadow
+	-- an inscription you're standing on: centred, in the lower part of the
+	-- screen (under the crosshair, clear of the status line and hotbar),
+	-- gold with a black shadow
 	local function centre(shadow)
 		return player:hud_add({
-			type = "text", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = -1},
-			offset = {x = shadow and 2 or 0, y = shadow and -68 or -70},
+			type = "text", position = {x = 0.5, y = 0.66}, alignment = {x = 0, y = 1},
+			offset = {x = shadow and 2 or 0, y = shadow and 2 or 0},
 			number = shadow and 0x000000 or 0xFFD25A, text = "",
 			z_index = shadow and 20 or 21, size = {x = 2, y = 0},
 		})

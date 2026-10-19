@@ -5,7 +5,7 @@ Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) Â
 ## Unreleased
 
 - **The tutorial is back, rewritten for VoxHack.** New characters are asked "Do you want a tutorial?" (Options > NetHack options > Offer the tutorial turns the question off). Its engravings now teach the 3D game's controls: WASD and the mouse, left click to fight, the right click and its wheels, F to pick up, X to search, the 1-5 keys, the inventory, Z for the map, F2 for the wiki.
-- **Inscriptions show in the middle of the screen**, in gold: what's engraved, written or burned where you stand stays there until you step off. ("Something is engraved here" still goes with the messages, and everything is in the log, T.)
+- **Inscriptions show low in the middle of the screen**, in gold: what's engraved, written or burned where you stand stays there until you step off. ("Something is engraved here" still goes with the messages, and everything is in the log, T.)
 - **Iron bars face the right way**, running along the wall or line of bars they're part of, and their see-through sides now turn with them (they were drawn edge-on across north-south passages).
 - **Levitation floats you.** You hover a little above the ground (over pits, water and the way down too, as NetHack says you can't reach the floor), rise with the steps of a staircase up, and make no footsteps or weapon sway while floating.
 
