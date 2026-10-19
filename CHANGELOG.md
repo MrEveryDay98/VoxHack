@@ -2,13 +2,19 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
-## Unreleased
+## v0.4.0 (alpha) - 2026-10-18
 
 - **The tutorial is back, rewritten for VoxHack.** New characters are asked "Do you want a tutorial?" (Options > NetHack options > Offer the tutorial turns the question off). Its engravings now teach the 3D game's controls: WASD and the mouse, left click to fight, the right click and its wheels, F to pick up, X to search, the 1-5 keys, the inventory, Z for the map, F2 for the wiki.
 - **Inscriptions show low in the middle of the screen**, in gold: what's engraved, written or burned where you stand stays there until you step off. ("Something is engraved here" still goes with the messages, and everything is in the log, T.)
 - **Iron bars face the right way**, running along the wall or line of bars they're part of, and their see-through sides now turn with them (they were drawn edge-on across north-south passages).
 - **Shop signs.** A wooden sign over each shop's door shows the shop's name ("Abitibi's / General Store") once you've seen the door; Minetown's shops have them too. Options > NetHack options > Signs over shop doors turns them off.
 - **Levitation floats you.** You hover a little above the ground (over pits, water and the way down too, as NetHack says you can't reach the floor), rise with the steps of a staircase up, and make no footsteps or weapon sway while floating.
+- **Picking a place on the map** (teleport control, a detection scroll...) uses the fullscreen map itself, exactly as Z shows it: click a square (it lights up under the pointer), Esc cancels.
+- **The fullscreen map draws monsters, objects and features over their floor**, not on black squares: you, your pet, a dropped dagger, stairs, fountains and altars sit on the room or corridor floor under them.
+- **Fighting blind works.** Left click hits a monster you can't see (blind, invisible, in the dark) when it's where you swing, as in NetHack ("You hit it.").
+- **Telepathy while blind** (from eating a floating eye) shows the monsters it senses through the blindness, across the whole level.
+- **Loading a game while blind** shows the blind view, not a black screen.
+- **For prefab builders:** a world-building sprite sheet of block textures in the vanilla tile style (bricks, cobbles, planks, grass, roofs, carpet, a bookshelf...) and a World-building tab in the block editor to use them.
 
 ## v0.3.0 (alpha) - 2026-10-18
 
