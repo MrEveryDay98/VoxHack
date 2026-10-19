@@ -10,6 +10,7 @@ const Blocks = (() => {
   let data = { version: 1, blocks: [] };
   let textures = [];
   let sheet = { cols: 48, rows: 25, names: {} };
+  let wb = { cols: 16, rows: 1, names: [] }; // the world-building sheet
   let sel = 0;
   let dirty = false;
   let texTab = "sheet";
@@ -33,6 +34,7 @@ const Blocks = (() => {
     anims = res.anims || {};
     gameTex = res.gametex || [];
     sheet = res.sheet;
+    wb = res.wb || wb;
     game = res.game;
     overrides = res.overrides || {};
     // (a block given an animated picture without its frames - picked
@@ -48,7 +50,7 @@ const Blocks = (() => {
       }
     }
     const b = data.blocks[sel];
-    texTab = b && b.texture && b.texture.file ? "file" : "sheet";
+    texTab = b && b.texture && b.texture.file ? "file" : b && b.texture && b.texture.wb != null ? "wb" : "sheet";
     render();
     if (fixed) {
       touch();
@@ -91,6 +93,11 @@ const Blocks = (() => {
       if (t.frames > 1) d.style.animation = frameAnim(t);
     } else if (t && t.color) {
       d.style.background = t.color;
+    } else if (t && t.wb != null) {
+      const k = size / 16;
+      d.style.backgroundImage = "url(/wb.png)";
+      d.style.backgroundSize = `${wb.cols * 16 * k}px ${wb.rows * 16 * k}px`;
+      d.style.backgroundPosition = `-${(t.wb % wb.cols) * 16 * k}px -${Math.floor(t.wb / wb.cols) * 16 * k}px`;
     } else if (t && t.sheet != null) {
       const k = size / 16;
       d.style.backgroundImage = "url(/sheet.png)";
@@ -114,6 +121,12 @@ const Blocks = (() => {
       + (t.frames > 1 ? `animation:${frameAnim(t)};` : "");
     if (t && t.gamefile) return `background-image:url(/gametex/${t.gamefile});background-size:100% 100%;`;
     if (t && t.color) return `background:${t.color};`;
+    if (t && t.wb != null) {
+      const c = wb.cols, r = wb.rows;
+      const x = t.wb % c, y = Math.floor(t.wb / c);
+      return `background-image:url(/wb.png);background-size:${c * 100}% ${r * 100}%;`
+        + `background-position:${c > 1 ? (x / (c - 1)) * 100 : 0}% ${r > 1 ? (y / (r - 1)) * 100 : 0}%;`;
+    }
     if (t && t.sheet != null) {
       const c = sheet.cols, r = sheet.rows;
       const x = t.sheet % c, y = Math.floor(t.sheet / c);
@@ -178,7 +191,7 @@ const Blocks = (() => {
   function texturePicker(b, key = "texture") {
     const box = el("div", { class: "blk-texpick" });
     const tabs = el("div", { class: "chips" },
-      ...[["sheet", "Sprite sheet"], ["file", "Your pictures"], ["gen", "Generate"]].map(([k, l]) =>
+      ...[["sheet", "Sprite sheet"], ["wb", "World-building"], ["file", "Your pictures"], ["gen", "Generate"]].map(([k, l]) =>
         el("button", { class: "chip", "aria-pressed": String(texTab === k), onclick: () => { texTab = k; render(); } }, l)));
     box.append(tabs);
     if (texTab === "gen") {
@@ -189,6 +202,24 @@ const Blocks = (() => {
         else delete anims[t.file];
         b[key] = t; touch(); render();
       }));
+      return box;
+    }
+    if (texTab === "wb") {
+      // (every cell of the sheet: a sprite drawn but not named yet shows by
+      // its number)
+      const grid = el("div", { class: "blk-grid" });
+      for (let i = 0; i < wb.cols * wb.rows; i++) {
+        const name = wb.names[i] || `#${i}`;
+        const cell = texView({ wb: i }, 32);
+        cell.title = `${i}: ${name}`;
+        cell.tabIndex = 0;
+        cell.setAttribute("role", "button");
+        if (b[key] && b[key].wb === i) cell.classList.add("on");
+        cell.onclick = () => { b[key] = { wb: i }; touch(); render(); };
+        grid.append(cell);
+      }
+      box.append(el("p", { class: "muted" }, "mods/nhv_tiles/textures/nhv_worldbuilding.png: 16×16 sprites, 16 a row. "
+        + "Draw new ones into the next free cell (add rows as needed) and name them in mods/nhv_tiles/worldbuilding.json."), grid);
       return box;
     }
     if (texTab === "sheet") {

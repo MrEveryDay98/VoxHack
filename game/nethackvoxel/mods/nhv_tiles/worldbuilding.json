@@ -1,0 +1,29 @@
+{
+ "cols": 16,
+ "names": [
+  "stone_bricks",
+  "clay_bricks",
+  "dark_bricks",
+  "cobblestone",
+  "flagstone",
+  "cave_rock",
+  "mossy_bricks",
+  "marble",
+  "checker",
+  "planks",
+  "planks_vertical",
+  "log_end",
+  "dirt",
+  "grass",
+  "sand",
+  "gravel",
+  "leaves",
+  "roof_shingles",
+  "thatch",
+  "iron_plate",
+  "gold_tiles",
+  "carpet",
+  "ice",
+  "bookshelf"
+ ]
+}

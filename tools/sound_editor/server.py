@@ -292,6 +292,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(VG.work, "preview.ogg"), "audio/ogg")
         if url.path == "/sheet.png":
             return self.send_file(blocks_api.SHEET, "image/png")
+        if url.path == "/wb.png":
+            return self.send_file(blocks_api.WB_SHEET, "image/png")
         m = re.match(r"^/blocktex/([A-Za-z0-9_.-]+\.png)$", url.path)
         if m:
             # (the blocks' folder, else any of the game's texture folders)
@@ -323,7 +325,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/blocks":
             fresh_blocks_api()
             return self.send(200, {"data": blocks_api.load(), "textures": blocks_api.textures(),
-                                   "sheet": blocks_api.sheet_info(), "game": blocks_api.catalog(),
+                                   "sheet": blocks_api.sheet_info(), "wb": blocks_api.wb_info(),
+                                   "game": blocks_api.catalog(),
                                    "overrides": blocks_api.load_overrides(),
                                    "anims": blocks_api.anim_info(),
                                    "gametex": blocks_api.game_textures()})

@@ -18,6 +18,9 @@ DATA = os.path.join(BLOCKS, "blocks.json")
 TEXTURES = os.path.join(BLOCKS, "textures")
 SHEET = os.path.join(MODS, "nhv_tiles", "textures", "nhv_tiles.png")
 TILENAMES = os.path.join(MODS, "nhv_tiles", "tilenames.lua")
+# the world-building sheet: 16x16 sprites, 16 a row, as many rows as it has
+WB_SHEET = os.path.join(MODS, "nhv_tiles", "textures", "nhv_worldbuilding.png")
+WB_NAMES = os.path.join(MODS, "nhv_tiles", "worldbuilding.json")
 
 SHAPES = ("cube", "x", "floor", "slab", "pane", "object", "invisible")
 SIDES = ("top", "bottom", "east", "west", "north", "south")
@@ -39,6 +42,24 @@ def sheet_info():
         for i, name in re.findall(r'\[(\d+)\] = "((?:[^"\\]|\\.)*)"', names):
             info["names"][i] = name
     except (OSError, IndexError):
+        pass
+    return info
+
+
+def wb_info():
+    """The world-building sheet: cols, rows (from the picture's size) and
+    the sprites' names (worldbuilding.json; a sprite drawn but not named
+    yet still shows, by its number)."""
+    info = {"cols": 16, "rows": 1, "names": []}
+    try:
+        w, h = _png_size(WB_SHEET)
+        info["cols"], info["rows"] = max(1, w // 16), max(1, h // 16)
+    except (OSError, ValueError, TypeError):
+        pass
+    try:
+        with open(WB_NAMES, encoding="utf-8") as f:
+            info["names"] = [str(n) for n in json.load(f).get("names", [])]
+    except (OSError, ValueError):
         pass
     return info
 
@@ -125,6 +146,8 @@ def clean_texture(tex):
         tex = out
     elif tex.get("sheet") is not None:
         tex = {"sheet": int(tex["sheet"])}
+    elif tex.get("wb") is not None:
+        tex = {"wb": int(tex["wb"])}
     else:
         tex = {}
     return tex
@@ -141,7 +164,8 @@ def clean_block(b):
     tex = clean_texture(b.get("texture"))
     ends = {}
     for k in ("texture_top", "texture_bottom"):
-        if isinstance(b.get(k), dict) and (b[k].get("file") or b[k].get("sheet") is not None):
+        if isinstance(b.get(k), dict) and (b[k].get("file") or b[k].get("sheet") is not None
+                                          or b[k].get("wb") is not None):
             ends[k] = clean_texture(b[k])
     dmg = str(b.get("damage", "")).strip()
     if dmg and not re.match(r"^\d*d\d+\s*([+-]\s*\d+)?$|^\d+$", dmg):
@@ -225,6 +249,9 @@ def describe_texture(tex, cols):
     m = re.search(r"\[sheet:\d+x\d+:(\d+),(\d+)", tex)
     if m and "nhv_tiles.png" in tex:
         return {"sheet": int(m.group(2)) * cols + int(m.group(1))}
+    m = re.search(r"\[sheet:(\d+)x\d+:(\d+),(\d+)", tex)
+    if m and "nhv_worldbuilding.png" in tex:
+        return {"wb": int(m.group(3)) * int(m.group(1)) + int(m.group(2))}
     m = re.search(r"([A-Za-z0-9_.-]+\.png)", tex)
     if m:
         return {"gamefile": m.group(1)}
@@ -272,6 +299,8 @@ def save_overrides(data):
                 c["texture"] = {"file": t["file"]}
             elif t.get("sheet") is not None:
                 c["texture"] = {"sheet": int(t["sheet"])}
+            elif t.get("wb") is not None:
+                c["texture"] = {"wb": int(t["wb"])}
             else:
                 del c["texture"]
         if "light" in c:

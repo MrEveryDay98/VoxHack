@@ -7,7 +7,8 @@
 --   shape      cube | x (two crossed sprites, like grass) | floor (flat on
 --              the ground) | slab | pane | object (an extruded 3D sprite
 --              keeping the way it was placed) | invisible
---   texture    {"file": "name.png"} or {"sheet": <sprite number>}
+--   texture    {"file": "name.png"}, {"sheet": <sprite number>} or {"wb":
+--              <sprite number>} (the world-building sheet, below)
 --   scale      size of x / object sprites (1 = one block)
 --   solid      you can't walk through it
 --   climbable  like a ladder
@@ -44,6 +45,33 @@ local function animation_of(t)
 	end
 end
 
+-- the world-building sheet (nhv_tiles/textures/nhv_worldbuilding.png:
+-- 16x16 sprites, 16 a row, as many rows as it has - its size is read from
+-- the picture, so new rows need nothing else)
+local WB = "nhv_worldbuilding.png"
+local wb_size
+local function wb_texture(n)
+	if not wb_size then
+		wb_size = {cols = 16, rows = 1}
+		local f = io.open(core.get_modpath("nhv_tiles") .. DIR_DELIM .. "textures" .. DIR_DELIM .. WB, "rb")
+		local h = f and f:read(24)
+		if f then
+			f:close()
+		end
+		if h and #h == 24 then
+			local function u32(i)
+				local a, b, c, d = h:byte(i, i + 3)
+				return ((a * 256 + b) * 256 + c) * 256 + d
+			end
+			wb_size = {cols = math.max(1, math.floor(u32(17) / 16)), rows = math.max(1, math.floor(u32(21) / 16))}
+		end
+	end
+	n = math.max(0, math.floor(tonumber(n) or 0))
+	return ("%s^[sheet:%dx%d:%d,%d"):format(WB, wb_size.cols, wb_size.rows,
+		n % wb_size.cols, math.floor(n / wb_size.cols))
+end
+cblocks.wb_texture = wb_texture
+
 local function texture_of(t)
 	if type(t) ~= "table" then
 		return "blank.png"
@@ -51,6 +79,8 @@ local function texture_of(t)
 		return t.file
 	elseif t.sheet then
 		return nhv_tiles.sheet_texture(tonumber(t.sheet) or 0)
+	elseif t.wb then
+		return wb_texture(t.wb)
 	end
 	return "blank.png"
 end
@@ -255,7 +285,7 @@ local function apply_override(name, o)
 		ch.description = o.name
 	end
 	local tiles = def.tiles
-	if type(o.texture) == "table" and (o.texture.file or o.texture.sheet) then
+	if type(o.texture) == "table" and (o.texture.file or o.texture.sheet or o.texture.wb) then
 		local tex = texture_of(o.texture)
 		tiles = {}
 		for i, t in ipairs(def.tiles or {tex}) do
