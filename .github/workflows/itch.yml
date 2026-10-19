@@ -54,8 +54,10 @@ jobs:
           for i in $(seq 1 30); do
             OUT=$(./butler/butler status mreveryday/voxhack:windows)
             echo "$OUT"
-            if echo "$OUT" | grep -qi "failed"; then exit 1; fi
-            if ! echo "$OUT" | grep -qiE "processing|queued|uploading"; then exit 0; fi
+            # (butler marks a build being processed with a bullet, a failed
+            # one with a cross, a live one with a check mark)
+            if echo "$OUT" | grep -qE "✗|failed"; then exit 1; fi
+            if ! echo "$OUT" | grep -q "•"; then exit 0; fi
             sleep 20
           done
           echo "still processing after 10 minutes"
