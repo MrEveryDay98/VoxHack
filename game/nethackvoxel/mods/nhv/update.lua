@@ -1,14 +1,16 @@
 -- Update check: once a session, when the title screen first shows, the
 -- game asks GitHub for VoxHack's releases (pre-releases too) and, if one
 -- is newer than this copy (title.TAG), the title screen says so with a
--- link to the itch.io page. Off with the setting nhv_update_check = false.
+-- link to that release on GitHub, to download it (its notes link to
+-- itch.io too). Off with the setting nhv_update_check = false.
 
 local update = {}
 nhv.update = update
 
 local http = nhv.http -- (requested in init.lua)
 local RELEASES = "https://api.github.com/repos/MrEveryDay98/VoxHack/releases?per_page=20"
-update.PAGE = "https://mreveryday.itch.io/voxhack"
+-- (a release's page, if the answer has none)
+update.PAGE = "https://github.com/MrEveryDay98/VoxHack/releases/latest"
 local USER_AGENT = "VoxHack update check (+https://github.com/MrEveryDay98/VoxHack)"
 
 -- "v0.1.10" -> {0, 1, 10}; nil if it isn't a version
@@ -50,15 +52,16 @@ function update.check()
 		if type(list) ~= "table" then
 			return
 		end
-		local best, best_tag
+		local best, best_tag, best_url
 		for _, r in ipairs(list) do
 			local v = type(r) == "table" and not r.draft and parse(r.tag_name)
 			if v and (not best or newer(v, best)) then
 				best, best_tag = v, r.tag_name
+				best_url = type(r.html_url) == "string" and r.html_url:match("^https://github%.com/") and r.html_url
 			end
 		end
 		if best and newer(best, mine) then
-			update.available = {tag = best_tag}
+			update.available = {tag = best_tag, url = best_url or update.PAGE}
 			core.log("action", "[nhv] update check: " .. best_tag .. " is available")
 			-- (the title screen up: shown again, with the news)
 			local player = nhv.player.get()

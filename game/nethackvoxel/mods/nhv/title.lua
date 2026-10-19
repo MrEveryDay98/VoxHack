@@ -137,7 +137,7 @@ function title.formspec(player)
 		fs[#fs + 1] = ("hypertext[0.4,8.75;15.2,0.75;update;%s]"):format(E(
 			("<global valign=middle color=#FFD25A><tag name=action color=#78C8FF hovercolor=#FFFFFF>"
 			.. "A new version is available: <b>%s</b>   "
-			.. "<action name=get url=%s>Get it on itch.io</action>"):format(upd.tag, nhv.update.PAGE)))
+			.. "<action name=get url=%s>Download it from GitHub</action>"):format(upd.tag, upd.url)))
 	end
 	return table.concat(fs)
 end
