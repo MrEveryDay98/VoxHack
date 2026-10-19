@@ -717,9 +717,18 @@ local function update_features(snap)
 					tile = feature_tile(real)
 				end
 			end
+			-- a trap you know of under objects or a corpse: its picture still
+			-- lies there (NetHack shows only the top object; map.trap has the
+			-- trap - 128 and up is one not seen yet, a Sokoban hole...)
+			local trap_under = false
+			if not name and map.trap and map.trap[i] and map.trap[i] ~= 255 and map.trap[i] < 128 then
+				name = nhv.cmap_name(map.trap[i])
+				tile = name and feature_tile(name)
+				trap_under = name ~= nil
+			end
 			if name then
 				local flat = FEATURES[name]
-				if flat == nil and is_trap(name, gi) then
+				if flat == nil and (trap_under or is_trap(name, gi)) then
 					flat = true
 				end
 				-- a hand-built prefab replaces the sprite; so does a trap's

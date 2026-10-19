@@ -78,6 +78,16 @@ mon_by_id(unsigned id)
 
 /* ---------------------------------------------------------------- commands */
 
+/* What the host's commands (which take no time: the clock is the host's)
+   return. Unless they've left you helpless - a sleeping gas trap, a sleep
+   ray, a floating eye's gaze: then they took your turn, as in NetHack (a
+   command taking no time has helplessness undone afterwards, by rhack()). */
+static int
+nhv_ok(void)
+{
+    return (gm.multi < 0) ? ECMD_TIME : ECMD_OK;
+}
+
 /* Punished: the ball and chain are kept under the hero (in 3D the ball
    trails right behind you, drawn by the host), so walking never drags
    them a square behind nor is held back by them. */
@@ -111,7 +121,7 @@ donhvmove(void)
     struct monst *mtmp;
 
     if (!isok(x, y) || (!dx && !dy) || abs(dx) > 1 || abs(dy) > 1)
-        return ECMD_OK;
+        return nhv_ok();
     mtmp = m_at(x, y);
     if (mtmp && canspotmon(mtmp) && !M_AP_TYPE(mtmp)
         && (!mtmp->mtame || nhv_cmd_args[2])
@@ -122,7 +132,7 @@ donhvmove(void)
         teleds(x, y, TELEDS_ALLOW_DRAG);
         nhv_walking = FALSE;
         nhv_bc_follow();
-        return ECMD_OK;
+        return nhv_ok();
     }
     u.dx = dx, u.dy = dy, u.dz = 0;
     /* walking never fights (the no-fighting flag, as NetHack's 'm' prefix,
@@ -140,7 +150,7 @@ donhvmove(void)
     nhv_walking = FALSE;
     svc.context.nopick = 0;
     nhv_bc_follow();
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvtrap x y: the hero's body touched the trap on its square <x,y> (its
@@ -154,9 +164,9 @@ donhvtrap(void)
 
     if (!isok(x, y) || !u_at(x, y) || u.uswallow
         || !(trap = t_at(x, y)))
-        return ECMD_OK;
+        return nhv_ok();
     dotrap(trap, 0);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvpass x y: the hero's body walked past a monster (in NetHack two
@@ -190,7 +200,7 @@ donhvpass(void)
                 || (sx == px && sy == py)
                 || (last ? m_at(sx, sy) != 0 : m_at(sx, sy) == 0)
                 || !test_move(px, py, sx - px, sy - py, TEST_MOVE))
-                return ECMD_OK;
+                return nhv_ok();
             px = sx, py = sy;
         }
         if (n >= 2) {
@@ -199,11 +209,11 @@ donhvpass(void)
             nhv_walking = FALSE;
             nhv_bc_follow();
         }
-        return ECMD_OK;
+        return nhv_ok();
     }
     if (!isok(x, y) || max(abs(dx), abs(dy)) != 2 || m_at(x, y) || u.ustuck
         || u.utrap || u.uswallow)
-        return ECMD_OK;
+        return nhv_ok();
     for (mx = u.ux - 1; mx <= u.ux + 1; mx++)
         for (my = u.uy - 1; my <= u.uy + 1; my++) {
             if (!isok(mx, my) || u_at(mx, my) || abs(x - mx) > 1
@@ -215,10 +225,10 @@ donhvpass(void)
                 teleds(x, y, TELEDS_ALLOW_DRAG);
                 nhv_walking = FALSE;
                 nhv_bc_follow();
-                return ECMD_OK;
+                return nhv_ok();
             }
         }
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvpit 1|0: the hero's body is down in the pit on its square, or came
@@ -230,7 +240,7 @@ int
 donhvpit(void)
 {
     nhv_in_pit = nhv_cmd_args[0] != 0;
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvtick: one hero action's worth of time passes. */
@@ -251,7 +261,7 @@ donhvpole(void)
     struct monst *mtmp = mon_by_id((unsigned) nhv_cmd_args[0]);
 
     if (!mtmp || !uwep || !is_pole(uwep))
-        return ECMD_OK;
+        return nhv_ok();
     nhv_pole_x = mtmp->mx, nhv_pole_y = mtmp->my;
     return use_pole(uwep, TRUE);
 }
@@ -264,7 +274,7 @@ donhvattack(void)
     int dx, dy;
 
     if (!mtmp)
-        return ECMD_OK;
+        return nhv_ok();
     dx = sgn(mtmp->mx - u.ux), dy = sgn(mtmp->my - u.uy);
     if (!dx && !dy)
         dx = 1;
@@ -421,7 +431,7 @@ donhvmhit(void)
     int r;
 
     if (!f)
-        return ECMD_OK;
+        return nhv_ok();
     r = nhv_missile_hits_hero(mon_by_id(f->mon_id), f->obj, f->lx, f->ly);
     if (r == 0) {
         missile_event("miss", f->pid); /* dodged: it flies on */
@@ -429,7 +439,7 @@ donhvmhit(void)
         missile_event(r == 1 ? "hit" : "stop", f->pid);
         f->obj = 0;
     }
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvmhitm pid m_id: the missile reached a monster's body */
@@ -440,14 +450,14 @@ donhvmhitm(void)
     struct monst *m = mon_by_id((unsigned) nhv_cmd_args[1]);
 
     if (!f)
-        return ECMD_OK;
+        return nhv_ok();
     if (m && nhv_missile_hits_mon(m, f->obj, f->range)) {
         missile_event("stop", f->pid);
         f->obj = 0;
     } else {
         missile_event("pass", f->pid);
     }
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvmland pid x y: the missile came down on square <x,y> */
@@ -458,13 +468,13 @@ donhvmland(void)
     coordxy x = (coordxy) nhv_cmd_args[1], y = (coordxy) nhv_cmd_args[2];
 
     if (!f)
-        return ECMD_OK;
+        return nhv_ok();
     if (!isok(x, y))
         x = f->lx, y = f->ly;
     nhv_missile_lands(f->obj, x, y);
     f->obj = 0;
     missile_event("land", f->pid);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 NHV_API int
@@ -619,7 +629,7 @@ donhvrayhit(void)
     int res;
 
     if (!r)
-        return ECMD_OK;
+        return nhv_ok();
     if (mid == 0) {
         res = nhv_ray_hits_hero(r->type, r->nd, r->dx, r->dy, r->forcemiss);
     } else {
@@ -632,7 +642,7 @@ donhvrayhit(void)
     ray_event(res == 2 ? "reflect" : res == 3 ? "stop" : res == 1 ? "hit"
                                                                   : "miss",
               r->rid);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvraysq rid x y [x y ...]: the ray crossed these squares */
@@ -643,14 +653,14 @@ donhvraysq(void)
     int k;
 
     if (!r)
-        return ECMD_OK;
+        return nhv_ok();
     for (k = 1; k + 1 < NHV_MAXARGS; k += 2) {
         if (!nhv_cmd_args[k] && !nhv_cmd_args[k + 1])
             break;
         nhv_ray_square(r->type, (coordxy) nhv_cmd_args[k],
                        (coordxy) nhv_cmd_args[k + 1], &r->shopdamage);
     }
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvrayend rid x y: the ray is spent at <x,y> */
@@ -660,11 +670,11 @@ donhvrayend(void)
     struct nhv_rayrec *r = ray_by_rid((unsigned) nhv_cmd_args[0]);
 
     if (!r)
-        return ECMD_OK;
+        return nhv_ok();
     nhv_ray_end(r->type, (coordxy) nhv_cmd_args[1], (coordxy) nhv_cmd_args[2],
                 r->shopdamage);
     r->used = FALSE;
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 NHV_API int
@@ -717,7 +727,7 @@ donhvhurt(void)
         You("are hurt by %s!", why);
         losehp(Maybe_Half_Phys(dmg), why, KILLED_BY);
     }
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvopt <option>: set a NetHack option, as a config file line or the
@@ -732,7 +742,7 @@ donhvopt(void)
     /* (pickup_burden is only accepted the way the start-up options are) */
     if (*buf)
         (void) parseoptions(buf, !strncmpi(buf, "pickup_burden", 13), FALSE);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* #nhvspike <damage> [cause]: you stepped into iron spikes (a spike
@@ -748,10 +758,10 @@ donhvspike(void)
     Snprintf(why, sizeof why, "%s", (p && p[1]) ? p + 1 : "sharp iron spikes");
     if (wearing_iron_shoes(&gy.youmonst)) {
         pline("%s protects you from the sharp iron spikes.", Yname2(uarmf));
-        return ECMD_OK;
+        return nhv_ok();
     }
     if (dmg <= 0)
-        return ECMD_OK;
+        return nhv_ok();
     You("step on %s!", why);
     losehp(Maybe_Half_Phys(dmg), why, KILLED_BY);
     if (!rn2(6))
@@ -759,7 +769,7 @@ donhvspike(void)
                  /* if the damage triggered life-saving, poison is
                     limited to attribute loss (as in a spiked pit) */
                  (u.umortality > oldumort) ? 0 : 8, FALSE);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 void
@@ -897,10 +907,10 @@ donhvsplevdump(void)
     int v, nv, count = 0;
 
     if (!wizard)
-        return ECMD_OK;
+        return nhv_ok();
     if (!(splev_out = fopen("splev_templates.txt", "w"))) {
         pline("Can't write splev_templates.txt.");
-        return ECMD_OK;
+        return nhv_ok();
     }
     for (sp = svs.sp_levchn; sp; sp = sp->next) {
         /* (the Planes of Air and Water move around: nothing fixed) */
@@ -928,7 +938,7 @@ donhvsplevdump(void)
     mklev();
     makemap_prepost(FALSE, FALSE);
     pline("Wrote %d special levels to splev_templates.txt.", count);
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 /* ---------------------------------------------------------------- aim */
@@ -943,7 +953,7 @@ donhvaim(void)
 {
     aim.dx = nhv_cmd_args[0], aim.dy = nhv_cmd_args[1];
     aim.ttl = 2; /* (this command, then the one it's for) */
-    return ECMD_OK;
+    return nhv_ok();
 }
 
 void
