@@ -17,3 +17,7 @@ nhv_text_scale (Text size) float 1 0.5 4
 # Check for a newer VoxHack release when the game starts (it asks GitHub
 # once a session; the title screen says if there is one).
 nhv_update_check (Check for updates) bool true
+
+# Under the crosshair, "F2  Look up: ..." while it's on something
+# NetHackWiki has a page for.
+nhv_wiki_hint (NetHackWiki hint under the crosshair) bool true

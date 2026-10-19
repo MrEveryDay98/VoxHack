@@ -146,6 +146,28 @@ local msg_shown
 -- there (instead of NetHack's "Things that are here:" window, which ui.lua
 -- leaves out). Hidden under the inventory and other menus.
 local HERE_MAX = 12
+local wiki_hint_shown
+-- the F2 hint: what the crosshair is on, if the wiki has a page for it
+local function update_wiki_hint(player)
+	if not hud.ids.wiki_hint then
+		return
+	end
+	local text = ""
+	local busy = nhv.ui.open or nhv.ui.menu_open or nhv.ui.chat_open or hud.big_map
+		or (nhv.title and nhv.title.open) or not nhv.nh.snap
+	if not busy and nhv.wiki and core.settings:get_bool("nhv_wiki_hint", true) then
+		local ok, title = pcall(nhv.wiki.title_for_pointed, player)
+		if ok and title and title ~= "" then
+			text = "F2  Look up: " .. title
+		end
+	end
+	if text ~= wiki_hint_shown then
+		wiki_hint_shown = text
+		player:hud_change(hud.ids.wiki_hint, "text", text)
+		player:hud_change(hud.ids.wiki_hint_shadow, "text", text)
+	end
+end
+
 local here_shown
 local function update_here(player, snap)
 	if not hud.ids.here then
@@ -399,6 +421,17 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 20, y = 0}, number = 0xFFD040, text = "", z_index = 11,
 	})
 	here_shown = nil
+	-- "F2  Look up: newt": under the crosshair while it's on something
+	-- NetHackWiki has a page for (wiki.lua), with a shadow
+	hud.ids.wiki_hint_shadow = player:hud_add({
+		type = "text", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 1},
+		offset = {x = 2, y = 34}, number = 0x000000, text = "", z_index = 10,
+	})
+	hud.ids.wiki_hint = player:hud_add({
+		type = "text", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 32}, number = 0xFFD040, text = "", z_index = 11,
+	})
+	wiki_hint_shown = nil
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
@@ -663,6 +696,7 @@ core.register_globalstep(function(dtime)
 		update_messages(player)
 		-- (a menu opened or closed over it; the square's things changed)
 		update_here(player, nh.snap)
+		update_wiki_hint(player)
 	end
 end)
 

@@ -10,6 +10,7 @@ VoxHack is how you see it and move through it: walk the dungeon freely, look
 around in 3D, swing at what's in front of you, and watch the Mazes of Menace
 take shape around you.
 
+- **NetHackWiki built in:** point at any monster, item or feature and press **F2** to read its NetHackWiki page right in the game
 - Free movement in a 3D dungeon built from NetHack's own levels
 - Real-time-ish play: time crawls while you stand still and runs as you move
 - Monsters as sprites from NetHack's tile set, walking, fighting and fleeing in 3D
