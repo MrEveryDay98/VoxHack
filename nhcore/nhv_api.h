@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 13
+#define NHV_API_VERSION 14
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -445,6 +445,17 @@ typedef struct nhv_spell {
     int directional; /* 1: cast at something (a direction or yourself) */
 } nhv_spell;
 NHV_API int nhv_get_spells(nhv_spell *buf, int max);
+
+/* The level's shops (for signs over their doors): the door, the square
+ * just inside it, the kind of shop ("general store"...) and the
+ * shopkeeper's name ("" with no shopkeeper). */
+typedef struct nhv_shop {
+    int door_x, door_y;
+    int in_x, in_y;
+    char type[64];
+    char keeper[64];
+} nhv_shop;
+NHV_API int nhv_get_shops(nhv_shop *buf, int max);
 
 /* tells this game apart from others (when it was started) */
 NHV_API long nhv_game_id(void);

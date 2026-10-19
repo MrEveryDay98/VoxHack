@@ -81,6 +81,8 @@ nhopts.OPTIONS = {
 	{key = "autoquiver", kind = "bool", label = "Autoquiver", opt = "autoquiver", default = false},
 	{key = "autodig", kind = "bool", label = "Dig by walking into rock (wielded pick)", opt = "autodig", default = false},
 	{key = "verbose", kind = "bool", label = "Verbose messages", opt = "verbose", default = false},
+	-- (VoxHack's own: not given to NetHack; signs.lua reads it)
+	{key = "shop_signs", kind = "bool", label = "Signs over shop doors", default = true, vox = true},
 }
 local BY_KEY = {}
 for _, o in ipairs(nhopts.OPTIONS) do
@@ -117,6 +119,9 @@ nhopts.clean_name = function(s) return (tostring(s or ""):gsub("[^%w _%-]", ""):
 
 -- the NetHack option line for one option (nil = leave NetHack's default)
 local function option_text(o)
+	if o.vox then
+		return nil
+	end
 	local v = nhopts.get(o.key)
 	if o.on then
 		return v and o.on or o.off

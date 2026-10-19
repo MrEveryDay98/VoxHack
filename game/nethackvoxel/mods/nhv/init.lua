@@ -89,6 +89,7 @@ dofile(path .. "rays.lua")
 dofile(path .. "effects.lua")
 dofile(path .. "msgfx.lua")
 dofile(path .. "holds.lua")
+dofile(path .. "signs.lua")
 -- (internet access - for the NetHackWiki viewer - is only granted to a
 -- request made right here, in the mod's own init.lua)
 nhv.http = core.request_http_api and core.request_http_api()

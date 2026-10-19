@@ -519,6 +519,49 @@ nhv_get_monsters(nhv_mon *buf, int max)
     return n;
 }
 
+NHV_API int
+nhv_get_shops(nhv_shop *buf, int max)
+{
+    extern const struct shclass shtypes[]; /* shknam.c */
+    static const int dirs[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    int i, k, n = 0;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop)
+        return 0;
+    /* (the level's rooms, then the rooms inside rooms: Minetown's shops) */
+    for (i = 0; i < svn.nroom + gn.nsubroom && n < max; i++) {
+        struct mkroom *r = i < svn.nroom ? &svr.rooms[i]
+                                         : &gs.subrooms[i - svn.nroom];
+        struct monst *shk = r->resident;
+        nhv_shop *s;
+        coord d;
+
+        if (r->rtype < SHOPBASE || r->doorct < 1)
+            continue;
+        d = svd.doors[r->fdoor];
+        s = &buf[n];
+        memset(s, 0, sizeof *s);
+        s->door_x = d.x, s->door_y = d.y;
+        s->in_x = -1;
+        for (k = 0; k < 4; k++) {
+            int x = d.x + dirs[k][0], y = d.y + dirs[k][1];
+
+            if (x >= r->lx && x <= r->hx && y >= r->ly && y <= r->hy) {
+                s->in_x = x, s->in_y = y;
+                break;
+            }
+        }
+        if (s->in_x < 0)
+            continue;
+        Strcpy(s->type, shtypes[r->rtype - SHOPBASE].name);
+        if (shk && !DEADMONSTER(shk) && shk->isshk && has_eshk(shk))
+            Strcpy(s->keeper, shkname(shk));
+        n++;
+    }
+    return n;
+}
+
 NHV_API long
 nhv_game_id(void)
 {
