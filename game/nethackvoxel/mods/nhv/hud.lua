@@ -123,14 +123,18 @@ local function status_text(h)
 	if ENCUMBRANCE[h.encumbrance] and ENCUMBRANCE[h.encumbrance] ~= "" then
 		conds[#conds + 1] = ENCUMBRANCE[h.encumbrance]
 	end
-	local line1 = string.format("%s the %s   St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s",
-		h.name, h.rank, h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str),
-		h.dex, h.con, h.int, h.wis, h.cha, h.align)
-	-- (HP and Pw are on the meters, top left)
-	local line2 = string.format("%s  $:%d  AC:%d  XL:%d/%d  T:%d  %s",
-		h.level_desc, h.gold, h.ac, h.xlvl, h.xp, h.moves,
-		table.concat(conds, " "))
-	return line1 .. "\n" .. line2
+	-- (name and title, HP and Pw, level, gold, AC and experience are top
+	-- left, hud.info_text)
+	return (string.format("St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s   T:%d   %s",
+		h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str),
+		h.dex, h.con, h.int, h.wis, h.cha, h.align, h.moves,
+		table.concat(conds, " ")):gsub("%s+$", ""))
+end
+
+-- under the bars, top left: where you are and the numbers you check most
+function hud.info_text(h)
+	return string.format("%s   $:%d   AC:%d   XL:%d/%d", h.level_desc or "", h.gold or 0,
+		h.ac or 0, h.xlvl or 0, h.xp or 0)
 end
 
 local msg_shown
@@ -167,6 +171,10 @@ local function update_here(player, snap)
 		here_shown = text
 		player:hud_change(hud.ids.here, "text", text)
 		player:hud_change(hud.ids.here_shadow, "text", text)
+		-- (and the key to pick it up, under the list)
+		local key = text ~= "" and "R  Pick up" or ""
+		player:hud_change(hud.ids.here_key, "text", key)
+		player:hud_change(hud.ids.here_key_shadow, "text", key)
 	end
 end
 
@@ -367,14 +375,25 @@ core.register_on_joinplayer(function(player)
 	})
 	msg_shown = nil
 	-- what lies on your square, down the left side: no box, a black shadow
-	-- (the same text again, a little down and right, behind it)
+	-- (the same text again, a little down and right, behind it). "R  Pick up"
+	-- sits at a fixed place low on the left, the list above it, growing up
+	-- (clear of the messages coming down from the top)
+	local HERE_Y = 0.72
 	hud.ids.here_shadow = player:hud_add({
-		type = "text", position = {x = 0, y = 0.3}, alignment = {x = 1, y = 1},
-		offset = {x = 22, y = 2}, number = 0x000000, text = "", z_index = 10,
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 22, y = -28}, number = 0x000000, text = "", z_index = 10,
 	})
 	hud.ids.here = player:hud_add({
-		type = "text", position = {x = 0, y = 0.3}, alignment = {x = 1, y = 1},
-		offset = {x = 20, y = 0}, number = 0xFFFFFF, text = "", z_index = 11,
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 20, y = -30}, number = 0xFFFFFF, text = "", z_index = 11,
+	})
+	hud.ids.here_key_shadow = player:hud_add({
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 22, y = 2}, number = 0x000000, text = "", z_index = 10,
+	})
+	hud.ids.here_key = player:hud_add({
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 20, y = 0}, number = 0xFFD040, text = "", z_index = 11,
 	})
 	here_shown = nil
 	hud.ids.map = player:hud_add({
@@ -442,6 +461,7 @@ local function meter_size()
 end
 
 -- (row 0 is your name and title; the bars are rows 1 and 2)
+local info_shown -- (the level, gold, AC... line under the bars)
 local function meter_y(row)
 	local _, h = meter_size()
 	return 12 + row * (h + 6)
@@ -503,15 +523,27 @@ function hud.build_meters(player)
 			offset = {x = mx + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
 		})
 	end
-	-- (the message lines start below the meters: long ones don't run over them)
+	-- the level, gold, AC and experience line under them (from the
+	-- portrait's left edge)
+	meter_ids.info = player:hud_add({
+		type = "text", position = base.position, alignment = {x = 1, y = 0},
+		offset = {x = 14, y = meter_y(#METERS) + h + 6 + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+	})
+	info_shown = nil
+	-- (the message lines start below all that: long ones don't run over it)
 	if hud.ids.msg then
-		player:hud_change(hud.ids.msg, "offset", {x = 0, y = meter_y(#METERS) + h + 8})
+		player:hud_change(hud.ids.msg, "offset", {x = 0, y = meter_y(#METERS) + 2 * h + 14})
 	end
 end
 
 local function update_meters(player, h)
 	if not next(meter_ids) then
 		return
+	end
+	local info = hud.info_text(h)
+	if meter_ids.info and info ~= info_shown then
+		info_shown = info
+		player:hud_change(meter_ids.info, "text", info)
 	end
 	-- your sprite (polymorphed: what you've become) and "name the title"
 	local tex = h.tile and h.tile >= 0 and nhv_tiles.texture(h.tile) or "blank.png"
