@@ -153,6 +153,11 @@ local function register(b)
 		def.drawtype = "normal"
 		-- (a cube with an undrawn side has to let you see through it)
 		def.use_texture_alpha = any_hidden and "clip" or "opaque"
+		-- (and its sides turn with a prefab turned round, not stay the
+		-- world's; placed by hand it's facing the usual way)
+		if any_hidden or any_back then
+			def.paramtype2 = "facedir"
+		end
 	end
 	-- turning to face the way it's placed (as stairs do): the engine puts a
 	-- facedir block's south side toward you; "north" turns it round after
@@ -278,6 +283,12 @@ local function apply_override(name, o)
 		ch.tiles = out
 		if next(hide) then
 			ch.use_texture_alpha = "clip"
+		end
+		-- (its sides are the prefab's, not the world's: a block that can
+		-- turn, so a prefab turned round turns them too - iron bars' open
+		-- sides across a north-south passage)
+		if (def.paramtype2 or "none") == "none" then
+			ch.paramtype2 = "facedir"
 		end
 	end
 	if o.light ~= nil then

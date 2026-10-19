@@ -127,6 +127,11 @@ local function stuck(h)
 		or U.has(h.flags, U.HERO.HELD) or U.has(h.flags, U.HERO.HELPLESS)
 end
 
+-- levitating: you float a little over the ground (hover, below)
+local function levitating(h)
+	return h and U.has(h.flags, U.HERO.LEVITATE)
+end
+
 local function set_speed(player)
 	local h = player_mod.hero
 	-- NetHack speed, slowed by what you carry (see clock.move_speed)
@@ -144,7 +149,7 @@ local function set_speed(player)
 	-- stop you walking off ledges into pits)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
-		new_move = true, gravity = h and 1 or 0})
+		new_move = true, gravity = (h and not levitating(h)) and 1 or 0})
 end
 
 function player_mod.freeze(on)
@@ -283,6 +288,12 @@ end
 local step_dist, step_last = 0, nil
 local function footsteps(player)
 	local pos = player:get_pos()
+	-- (no feet on the ground: no steps)
+	local h = player_mod.hero
+	if h and (U.has(h.flags, U.HERO.LEVITATE) or U.has(h.flags, U.HERO.FLYING)) then
+		step_last, step_dist = pos, 0
+		return
+	end
 	if step_last then
 		local d = math.sqrt((pos.x - step_last.x) ^ 2 + (pos.z - step_last.z) ^ 2)
 		if d < 2 then
@@ -718,6 +729,57 @@ local function helpless_view(player)
 	end
 end
 
+-- Levitating: no gravity; you're held HOVER_H over the highest ground
+-- under you, never lower than the floor - over a pit, water or the way down
+-- you stay up at floor height (NetHack: you can't reach the stairs down),
+-- while a staircase up lifts you with its steps. Off the ground there are
+-- no footsteps and no view bobbing (the engine bobs only while you touch
+-- the ground). A slow bob up and down shows you're floating.
+local HOVER_H = 0.6
+local function solid_at(x, y, z)
+	local n = core.get_node(vector.new(x, y, z))
+	local def = core.registered_nodes[n.name]
+	return def and def.walkable and n.name ~= "nhv:squeeze_block"
+end
+
+-- the highest surface you could stand on (two free blocks over it: not a
+-- wall's side) under you or just ahead of where you're going, at most a
+-- step above your feet; never under the floor
+local function ground_below(pos, vel)
+	local best = U.STAND_Y
+	local pts = {{0, 0}}
+	local sp = math.sqrt(vel.x * vel.x + vel.z * vel.z)
+	if sp > 0.1 then
+		pts[2] = {vel.x / sp * 0.6, vel.z / sp * 0.6}
+	end
+	for _, d in ipairs(pts) do
+		local x, z = math.floor(pos.x + d[1] + 0.5), math.floor(pos.z + d[2] + 0.5)
+		for y = math.floor(pos.y + 1.2), math.floor(U.FLOOR_Y), -1 do
+			if solid_at(x, y, z) then
+				if not solid_at(x, y + 1, z) and not solid_at(x, y + 2, z) then
+					best = math.max(best, y + 0.5)
+				end
+				break
+			end
+		end
+	end
+	return best
+end
+
+local function hover(player)
+	if not levitating(player_mod.hero) or player_mod.frozen then
+		return
+	end
+	local pos = player:get_pos()
+	local t = core.get_us_time() / 1e6
+	local v = player:get_velocity()
+	local target = ground_below(pos, v) + HOVER_H + 0.06 * math.sin(t * 2.2)
+	local want = math.max(-4, math.min(4, (target - pos.y) * 6))
+	if math.abs(want - v.y) > 0.05 then
+		player:add_velocity(vector.new(0, want - v.y, 0))
+	end
+end
+
 local was_searching, was_dragging = false
 core.register_globalstep(function()
 	local player = player_mod.get()
@@ -734,6 +796,7 @@ core.register_globalstep(function()
 		if not hold_still(player) then
 			step(player)
 		end
+		hover(player)
 		check_gap(player)
 		check_trigger(player)
 		check_traps(player)
