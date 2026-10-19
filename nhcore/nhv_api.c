@@ -857,6 +857,16 @@ nhv_cmap_name(int symidx)
     return "";
 }
 
+NHV_API int
+nhv_cmap_tile(int symidx)
+{
+    if (symidx < 0 || symidx >= MAXPCHARS
+        || !(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop)
+        return -1;
+    return glyphmap[cmap_to_glyph(symidx)].tileidx;
+}
+
 NHV_API const char *
 nhv_mon_name(int mndx)
 {

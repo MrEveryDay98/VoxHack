@@ -308,21 +308,89 @@ local TILE_PX = 16
 local BACKDROP = "[fill:16x16:#000000^[opacity:200"
 local tiles = {ids = {}, shown = {}, scale = nil}
 
--- the picture for map square (x, y) as the big map shows it: you, a
--- monster (or pet, or a remembered unseen one) you know is there, else
--- what you remember of the square (objects, traps, terrain); nil unknown
+-- the picture for map square (x, y) as the big map shows it: what you
+-- remember there (terrain, a trap, objects) with you or a monster (or pet,
+-- or a remembered unseen one) you know is there on top; nil unknown.
+-- Sprites with see-through backgrounds (objects, monsters, traps, stairs,
+-- fountains, trees...) are drawn over the floor that's under them - the
+-- room's (lit or dark) or the corridor's - and over the square's terrain
+-- feature, not over black.
+local FLOORS = {S_room = true, S_darkroom = true, S_corr = true, S_litcorr = true,
+	S_engroom = true, S_engrcorr = true, S_pool = true, S_water = true, S_lava = true,
+	S_lavawall = true, S_ice = true, S_air = true, S_cloud = true, S_ndoor = true}
+local cmap_ids -- name -> index
+local function cmap_tile(name)
+	if not cmap_ids then
+		cmap_ids = {}
+		for k = 0, 255 do
+			local n = nhv.cmap_name(k)
+			if n ~= "" then
+				cmap_ids[n] = k
+			end
+		end
+	end
+	local k = cmap_ids[name]
+	local t = k and core.nh_cmap_tile and core.nh_cmap_tile(k)
+	return t and t >= 0 and t or nil
+end
+
+local function floor_under(map, i)
+	local typ = map.typ[i]
+	local lit = U.has(map.flags[i] or 0, U.LOC_LIT)
+	if typ == U.TYP.CORR then
+		return cmap_tile(lit and "S_litcorr" or "S_corr")
+	end
+	return cmap_tile(lit and "S_room" or "S_darkroom")
+end
+
 function hud.square_tex(map, h, x, y)
 	local i = U.idx(x, y)
+	local top -- (you or a monster)
 	if x == h.x and y == h.y then
-		return nhv_tiles.texture(h.tile)
+		top = h.tile
+	else
+		local c = color_for(map, i)
+		if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
+			top = map.tile[i]
+		end
 	end
-	local c = color_for(map, i)
-	if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
-		return nhv_tiles.texture(map.tile[i])
+	local mem = map.mem_tile[i] or -1
+	local mgi = nhv.glyph_info(map.mem[i])
+	local mname = mgi.kind == "cmap" and nhv.cmap_name(mgi.index) or nil
+	local known = mem >= 0 and mname ~= "S_stone" and mname ~= "S_unexplored"
+	if not known then
+		return top and nhv_tiles.texture(top) or nil
 	end
-	if c ~= COL.unknown and (map.mem_tile[i] or -1) >= 0 then
-		return nhv_tiles.texture(map.mem_tile[i])
+	local layers = {}
+	local typ = map.typ[i] or 0
+	local open = typ >= U.TYP.POOL or typ == U.TYP.TREE
+	if open and not (mname and FLOORS[mname]) then
+		-- (the ground, then the terrain feature that's really there)
+		local back = map.back and map.back[i]
+		local bname = back and back ~= 255 and nhv.cmap_name(back) or nil
+		if bname and FLOORS[bname] then
+			layers[#layers + 1] = bname == "S_room" and floor_under(map, i) or cmap_tile(bname)
+		else
+			layers[#layers + 1] = floor_under(map, i)
+			if bname and bname ~= "S_stone" then
+				layers[#layers + 1] = cmap_tile(bname)
+			end
+		end
 	end
+	if layers[#layers] ~= mem then
+		layers[#layers + 1] = mem
+	end
+	if top then
+		layers[#layers + 1] = top
+	end
+	local parts = {}
+	for _, t in ipairs(layers) do
+		parts[#parts + 1] = "(" .. nhv_tiles.texture(t) .. ")"
+	end
+	if #parts == 1 then
+		return nhv_tiles.texture(layers[1])
+	end
+	return table.concat(parts, "^")
 end
 
 local function clear_tiles(player)

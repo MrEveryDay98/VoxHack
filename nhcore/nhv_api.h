@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 14
+#define NHV_API_VERSION 15
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -317,6 +317,8 @@ NHV_API int nhv_max_glyph(void);
 NHV_API int nhv_tile_count(void);
 /* Name of the cmap symbol S_* index ("vwall", "room", "dnstair" ...). */
 NHV_API const char *nhv_cmap_name(int symidx);
+/* the tile of a map symbol (S_room...) as this level draws it (-1: none) */
+NHV_API int nhv_cmap_tile(int symidx);
 NHV_API const char *nhv_mon_name(int mndx);
 NHV_API const char *nhv_obj_name(int otyp); /* true (identified) name */
 
