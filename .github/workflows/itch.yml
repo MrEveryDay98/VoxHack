@@ -1,0 +1,43 @@
+# Keep itch.io up to date: when a GitHub release is published, its Windows
+# zip is pushed to https://mreveryday.itch.io/voxhack (channel "windows")
+# with butler, itch.io's upload tool. Needs the repository secret
+# BUTLER_API_KEY (an itch.io API key: itch.io > Settings > API keys).
+# Can also be run by hand (Actions > itch.io > Run workflow) for a tag.
+name: itch.io
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to push (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+    steps:
+      - name: Get butler (from itch.io)
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler -V
+
+      - name: Get the release's Windows zip
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "*windows.zip" --dir build
+          ls -l build
+
+      - name: Push to itch.io
+        run: |
+          ZIP=$(ls build/*windows.zip | head -n 1)
+          ./butler/butler push "$ZIP" mreveryday/voxhack:windows --userversion "${TAG#v}"
