@@ -853,6 +853,24 @@ local function build_bounds()
 	vm:write_to_map(true)
 end
 
+-- The whole level's map blocks stay active, however far you are: the
+-- monsters' entities (not saved) would be dropped out of inactive blocks,
+-- and the ones you sense from afar (telepathy while blind) must exist.
+-- About 160 blocks (16 across, 5 deep, 2 high), held while the game runs
+-- (transient: not saved with the world).
+core.after(0, function()
+	local B = core.MAP_BLOCKSIZE or 16
+	for x = -1, U.COLNO * U.TILE, B do
+		for z = -1, U.ROWNO * U.TILE, B do
+			for y = prefabs.Y0 - 1, prefabs.Y0 + prefabs.H, B do
+				core.forceload_block(vector.new(x, y, z), true, -1)
+			end
+			core.forceload_block(vector.new(x, prefabs.Y0 + prefabs.H, z), true, -1)
+		end
+		core.forceload_block(vector.new(x, prefabs.Y0, U.ROWNO * U.TILE), true, -1)
+	end
+end)
+
 -- Rebuild everything (level change, or prefabs changed).
 function terrain.build_all(map)
 	terrain.built = {}
