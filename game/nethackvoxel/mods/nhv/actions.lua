@@ -1059,6 +1059,10 @@ end
 
 -- keys without item callbacks
 local prev = {}
+-- holding the attack button repeats only once it's really held: a click
+-- that lasts a little longer than a quick attack mustn't attack twice
+local HOLD_REPEAT_US = 450000
+local attack_down_since = nil
 core.register_globalstep(function()
 	local player = nhv.player.get()
 	if not player then
@@ -1067,6 +1071,11 @@ core.register_globalstep(function()
 	local ctl = player:get_player_control()
 	local function pressed(k)
 		return ctl[k] and not prev[k]
+	end
+	if pressed("dig") then
+		attack_down_since = core.get_us_time()
+	elseif not ctl.dig then
+		attack_down_since = nil
 	end
 	if pressed("jump") and actions.climb_out(player) then -- luacheck: ignore 542
 		-- in a pit: Space climbs out at its edge
@@ -1078,7 +1087,9 @@ core.register_globalstep(function()
 	end
 	-- holding the attack button keeps attacking, as fast as your actions
 	-- play out (the press itself is the item's on_use; Shift is firing)
-	if ctl.dig and prev.dig and not ctl.sneak and not nhv.ui.open
+	if ctl.dig and prev.dig and attack_down_since
+			and core.get_us_time() - attack_down_since >= HOLD_REPEAT_US
+			and not ctl.sneak and not nhv.ui.open
 			and not (nhv.wheel and nhv.wheel.is_open())
 			and nh.ready() and not nhv.clock.busy() then
 		actions.attack(player)
