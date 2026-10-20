@@ -72,6 +72,23 @@ function areas.wall_style(t)
 	return "main"
 end
 
+-- how many fixed regions (parts) the level has; nearly always one
+function areas.parts(t)
+	local count = 0
+	for _, o in ipairs(areas.list) do
+		if o.proto == t.proto then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+-- the id to show: the level's file name, with "#n" only when the level has
+-- several parts (the id itself, in file names and storage, keeps it)
+function areas.shown_id(t)
+	return areas.parts(t) > 1 and t.id or t.proto
+end
+
 function areas.name(t)
 	local name = areas.NAMES[t.proto]
 	if not name then
@@ -85,13 +102,7 @@ function areas.name(t)
 	end
 	name = name or t.proto
 	-- (levels with several fixed regions: which one)
-	local count = 0
-	for _, o in ipairs(areas.list) do
-		if o.proto == t.proto then
-			count = count + 1
-		end
-	end
-	return count > 1 and ("%s, part %d"):format(name, t.n) or name
+	return areas.parts(t) > 1 and ("%s, part %d"):format(name, t.n) or name
 end
 
 -- ---------------------------------------------------------------- templates

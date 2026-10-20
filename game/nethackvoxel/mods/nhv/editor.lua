@@ -563,7 +563,7 @@ local function build_area(t, build, done)
 		local label = core.add_entity(vector.new(o.x + 1, BASE_Y + H + 0.5, o.z + t.h * W - 1),
 			"nhv:editor_label")
 		if label then
-			label:set_properties({nametag = areas.name(t) .. "\n" .. t.id})
+			label:set_properties({nametag = areas.name(t) .. "\n" .. areas.shown_id(t)})
 		end
 		if done then
 			done()
@@ -575,7 +575,7 @@ end
 local function find_areas(q)
 	q = q:lower()
 	for _, t in ipairs(areas.list) do
-		if t.id:lower() == q then
+		if t.id:lower() == q or areas.shown_id(t):lower() == q then
 			return {t}
 		end
 	end
@@ -591,7 +591,7 @@ end
 local function area_list(ts)
 	local lines = {}
 	for _, t in ipairs(ts) do
-		lines[#lines + 1] = ("%-14s %s (%dx%d)%s"):format(t.id, areas.name(t), t.w, t.h,
+		lines[#lines + 1] = ("%-14s %s (%dx%d)%s"):format(areas.shown_id(t), areas.name(t), t.w, t.h,
 			areas.built(t.id) and "  [built]" or "")
 	end
 	return table.concat(lines, "\n")
