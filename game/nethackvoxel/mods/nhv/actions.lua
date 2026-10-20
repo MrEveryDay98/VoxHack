@@ -720,16 +720,20 @@ function actions.kick_keys(player)
 		end
 		return math.acos(math.max(-1, math.min(1, vector.dot(fwd, to) / d))), d
 	end
-	local best, best_a
+	-- (a monster in the kick's arc is kicked before any objects: on its
+	-- square NetHack kicks it, not what's under it, and one a little off
+	-- the crosshair still wins over a pile of items right ahead)
+	local best, best_a, best_mon
 	for dx = -1, 1 do
 		for dy = -1, 1 do
 			local tx, ty = base.x + dx, base.y + dy
-			local target
+			local target, is_mon
 			if U.in_map(tx, ty) then
-				local mon = (dx ~= 0 or dy ~= 0) and nhv.mobs.monster_at(tx, ty)
+				-- (on your own square too: one sharing it with you)
+				local mon = nhv.mobs.monster_at(tx, ty)
 				local o = nhv.mobs.objs[U.idx(tx, ty)]
 				if mon and mon.obj:get_pos() then
-					target = mon.obj:get_pos()
+					target, is_mon = mon.obj:get_pos(), true
 				elseif o and o.obj:get_pos() then
 					target = o.obj:get_pos() -- (a chest... even on your own square)
 				elseif dx ~= 0 or dy ~= 0 then
@@ -743,8 +747,9 @@ function actions.kick_keys(player)
 				local a, d = angle_to(target)
 				-- (on your own square it must be right in front of you)
 				local ok = a and a <= KICK_CONE and (dx ~= 0 or dy ~= 0 or d < 2.2)
-				if ok and (not best_a or a < best_a) then
-					best, best_a = {dx, dy}, a
+				if ok and ((is_mon and not best_mon) or ((is_mon or not best_mon)
+						and (not best_a or a < best_a))) then
+					best, best_a, best_mon = {dx, dy}, a, best_mon or is_mon
 				end
 			end
 		end
