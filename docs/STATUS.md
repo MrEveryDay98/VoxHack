@@ -138,14 +138,17 @@ All sprites and tile textures come from one sprite sheet:
 - **Voices: SAM, live (Voice casting tab).** Speakers ticked "Speak live with SAM" are voiced in
   the game by SAM (Software Automatic Mouth, 1982), built into the engine. Nothing is recorded:
   `sound.lua` plays a sound named
-  `nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>|<text>` with the
+  `nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>,<effects>|<text>` with the
   line's real text (names, gods...), and the client synthesizes it (`sam_voice.cpp`).
   - `sam_speech.cpp` (shared by the engine and the editor's `build/sam/samtool.exe`, so
     previews match): the pronunciation dictionary (`mods/nhv_sounds/sam_dictionary.txt`,
     "word = respelling" or "word = {PHONEMES}", setting `nhv_sam_dict`), numbers and symbols as
     words, `{PHONEMES}` written into a text, pieces short enough for SAM's buffers, quicker and
     higher exclamations, 4 ms fades between pieces, optional smoothing (DC removed, highs above
-    ~3.5 kHz rolled off).
+    ~3.5 kHz rolled off), and each speaker's effects chain, applied live in order
+    ("echo:delay=250:decay=0.4/reverb:room=60:mix=35"): echo, reverb, chorus, vibrato, tremolo,
+    distortion, bitcrusher, robot (ring modulation), low-pass, high-pass, volume. The editor
+    lists them (samvoice.EFFECTS, with presets: Cave, Great hall, Radio, Ghost, Divine...).
   - Per speaker: a classic SAM voice or custom speed, pitch, throat and mouth; volume; sing
     mode; Authentic or Smoothed sound; Variation (each monster of the kind its own voice, steady
     per monster id); Female voice (how much higher); size (NetHack size class sets the playback

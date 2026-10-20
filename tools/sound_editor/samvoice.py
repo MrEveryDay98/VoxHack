@@ -10,7 +10,8 @@ sounds as the game will).
 
 voice_cast.json:
   speakers: {name: {"sam": {live, voice, speed, pitch, throat, mouth, sing,
-             volume, smooth, tone, variation, female, size}}}
+             volume, smooth, tone, variation, female, size,
+             effects: [{type, <param>: value, off}]}}}
   lines:    {id: {cast (voiced as another speaker), sam_voice (one of
              SAM's named voices), sam_text (what SAM reads instead of the
              game's text; may hold {PHONEMES})}}
@@ -35,6 +36,73 @@ SAM_VOICES = {
     "Extra-Terrestrial": {"speed": 100, "pitch": 64, "throat": 150, "mouth": 200},
 }
 KEYS = ("speed", "pitch", "throat", "mouth")
+
+
+def _p(key, label, lo, hi, step, default, unit=""):
+    return {"key": key, "label": label, "min": lo, "max": hi, "step": step, "default": default, "unit": unit}
+
+
+# Effects after SAM speaks, applied in order by the engine (sam_speech.cpp
+# has the same names, parameters, ranges and defaults).
+EFFECTS = {
+    "echo": {"name": "Echo", "tip": "Distinct repeats: a cave, a well, a voice from far off.",
+             "params": [_p("delay", "Delay", 20, 1500, 10, 250, " ms"), _p("decay", "Decay", 0.05, 0.95, 0.05, 0.4),
+                        _p("repeats", "Repeats", 1, 8, 1, 3)]},
+    "reverb": {"name": "Reverb", "tip": "A room around the voice, from a closet to a great hall.",
+               "params": [_p("room", "Room size", 0, 100, 1, 60, "%"), _p("mix", "Wet", 0, 100, 1, 35, "%")]},
+    "chorus": {"name": "Chorus", "tip": "Several voices at once, slightly apart.",
+               "params": [_p("depth", "Depth", 0.5, 15, 0.5, 3, " ms"), _p("rate", "Rate", 0.05, 8, 0.05, 0.8, " Hz"),
+                          _p("mix", "Wet", 0, 100, 1, 50, "%")]},
+    "vibrato": {"name": "Vibrato", "tip": "The pitch wobbles: old, unsteady, unearthly.",
+                "params": [_p("depth", "Depth", 0.2, 10, 0.1, 2, " ms"), _p("rate", "Rate", 0.5, 20, 0.5, 5, " Hz")]},
+    "tremolo": {"name": "Tremolo", "tip": "The volume wobbles.",
+                "params": [_p("rate", "Rate", 0.5, 30, 0.5, 6, " Hz"), _p("depth", "Depth", 0, 100, 1, 50, "%")]},
+    "distortion": {"name": "Distortion", "tip": "Overdriven and gritty.",
+                   "params": [_p("drive", "Drive", 0, 40, 1, 12, " dB")]},
+    "bitcrush": {"name": "Bitcrusher", "tip": "Even more lo-fi: fewer bits, a lower sample rate.",
+                 "params": [_p("bits", "Bits", 1, 16, 1, 6), _p("downsample", "Downsample", 1, 16, 1, 2, "x")]},
+    "robot": {"name": "Robot", "tip": "Ring modulation: the voice times a tone, a buzzing machine.",
+              "params": [_p("freq", "Tone", 10, 2000, 5, 60, " Hz"), _p("mix", "Wet", 0, 100, 1, 70, "%")]},
+    "lowpass": {"name": "Low-pass", "tip": "Muffled: behind a door, underwater.",
+                "params": [_p("freq", "Cutoff", 100, 10000, 50, 3000, " Hz")]},
+    "highpass": {"name": "High-pass", "tip": "Thin and small: a radio, a tiny creature.",
+                 "params": [_p("freq", "Cutoff", 20, 5000, 10, 300, " Hz")]},
+    "gain": {"name": "Volume", "tip": "Louder or quieter by a fixed amount.",
+             "params": [_p("db", "Gain", -30, 30, 0.5, 0, " dB")]},
+}
+
+# starting points for a speaker's effects
+EFFECT_PRESETS = {
+    "Cave": [{"type": "echo", "delay": 320, "decay": 0.45, "repeats": 4}, {"type": "reverb", "room": 55, "mix": 25}],
+    "Great hall": [{"type": "reverb", "room": 90, "mix": 45}],
+    "Distant voice": [{"type": "lowpass", "freq": 1800}, {"type": "echo", "delay": 500, "decay": 0.35, "repeats": 2},
+                      {"type": "gain", "db": -4}],
+    "Radio": [{"type": "highpass", "freq": 400}, {"type": "lowpass", "freq": 3000}, {"type": "distortion", "drive": 10}],
+    "Ghost": [{"type": "vibrato", "depth": 3, "rate": 3}, {"type": "reverb", "room": 80, "mix": 55},
+              {"type": "highpass", "freq": 250}],
+    "Robot": [{"type": "robot", "freq": 55, "mix": 80}],
+    "Divine": [{"type": "chorus", "depth": 4, "rate": 0.5, "mix": 50}, {"type": "reverb", "room": 95, "mix": 50}],
+    "Demonic": [{"type": "distortion", "drive": 14}, {"type": "lowpass", "freq": 2500},
+                {"type": "reverb", "room": 70, "mix": 30}],
+}
+
+
+def effect_chain(effects):
+    """[{type, param: value...}] -> "echo:delay=250:decay=0.4/reverb:room=60"
+    (switched-off effects and unknown ones left out; sound.lua does the same)"""
+    out = []
+    for fx in effects or []:
+        if not isinstance(fx, dict) or fx.get("off") or fx.get("type") not in EFFECTS:
+            continue
+        parts = [fx["type"]]
+        for p in EFFECTS[fx["type"]]["params"]:
+            try:
+                v = float(fx.get(p["key"], p["default"]))
+            except (TypeError, ValueError):
+                v = p["default"]
+            parts.append("%s=%g" % (p["key"], v))
+        out.append(":".join(parts))
+    return "/".join(out)
 
 
 def migrate_cast(cast):
@@ -97,7 +165,8 @@ def settings_for(sam, m_id=0, female=False):
     if female:
         st["pitch"] -= float(sam.get("female", 12) or 0)
     st = {k: _clamp(v) for k, v in st.items()}
-    st.update(sing=bool(sam.get("sing")), smooth=bool(sam.get("smooth")), tone=sam.get("tone") is not False)
+    st.update(sing=bool(sam.get("sing")), smooth=bool(sam.get("smooth")), tone=sam.get("tone") is not False,
+              effects=effect_chain(sam.get("effects")))
     return st
 
 
@@ -145,6 +214,7 @@ class Voices:
         args = [self.tool, "--dict", self.dict_path] + [x for k in KEYS for x in ("--" + k, str(st[k]))]
         args += (["--sing"] if st.get("sing") else []) + (["--smooth"] if st.get("smooth") else [])
         args += [] if st.get("tone", True) else ["--no-tone"]
+        args += ["--fx", st["effects"]] if st.get("effects") else []
         r = subprocess.run(args + extra, input=text.encode("utf-8"), capture_output=True,
                            creationflags=NO_WINDOW, timeout=60)
         return r

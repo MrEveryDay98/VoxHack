@@ -157,8 +157,8 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .spk-voice button { white-space: nowrap; }
 .spk-name .muted { font-size: 11px; }
 .spk-set summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-.spk-set[open] { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 6px 16px; }
-.spk-set[open] summary { grid-column: 1 / -1; }
+.spk-set[open] { grid-column: 1 / -1; }
+.spk-set-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 24px; margin-top: 8px; align-items: center; }
 .sl { display: grid; grid-template-columns: 80px 1fr 40px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .sl input { accent-color: var(--accent); }
 .mono { font-family: Consolas, monospace; font-size: 12px; }
@@ -198,6 +198,15 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .sam-row .jobnote { color: var(--muted); }
 .sam-row.live .jobnote { color: var(--ok); }
 .spk.sam { grid-template-columns: 170px auto minmax(260px, 1fr) minmax(150px, 1.2fr); }
+.fx-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.fx-list .inline select { width: auto; }
+.fx-title { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.fx { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.fx.off { opacity: .55; }
+.fx-head { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.fx-head b { margin-right: auto; cursor: help; }
+.fx-params { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; margin-top: 4px; }
+.fx-params .sl { grid-template-columns: 80px 1fr 64px; }
 .dict { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .dict-row { display: grid; grid-template-columns: minmax(120px, 200px) auto minmax(200px, 1fr) auto auto; gap: 6px; align-items: center; }
 .dict-row.new { grid-template-columns: minmax(120px, 200px) auto minmax(200px, 1fr) auto auto auto auto; }

@@ -9,7 +9,8 @@ const Voices = (() => {
   const KEYS = [["speed", "Speed", "Higher is slower"], ["pitch", "Pitch", "Lower is higher"],
     ["throat", "Throat", "Shapes the vowels"], ["mouth", "Mouth", "Shapes the vowels"]];
   let cast = { speakers: {}, lines: {} };
-  let sam = { installed: false, voices: {}, dictionary: "" };
+  let sam = { installed: false, voices: {}, effects: {}, presets: {}, dictionary: "" };
+  const openSettings = new Set(); // speakers whose SAM settings are open (kept across redraws)
   let dirty = false;
   const redraws = new Map(); // line id -> redraw its dialogue row
 
@@ -213,7 +214,10 @@ const Voices = (() => {
       const femaleBtn = el("button", { class: "small", title: "As a female monster says it (Female voice)",
         disabled: !sam.installed || null, onclick: () => hear(femaleBtn, samCfg(name), "", { female: true }) }, "▶ ♀");
       const base = sam.voices[ss.voice || "SAM"] || sam.voices.SAM || {};
-      const settings = el("details", { class: "spk-set" }, el("summary", {}, "SAM settings"),
+      const settings = el("details", { class: "spk-set", open: openSettings.has(name) || null,
+        ontoggle: (e) => { if (e.target.open) openSettings.add(name); else openSettings.delete(name); } },
+      el("summary", {}, "SAM settings" + ((ss.effects || []).some((f) => !f.off) ? " · effects" : "")),
+      el("div", { class: "spk-set-body" },
         ...KEYS.map(([k, l, tip]) => slider(l, ss[k] ?? base[k] ?? 128, 1, 255, 1, "", (v) => set(k, v), tip)),
         slider("Volume", ss.volume ?? 100, 0, 200, 5, "%", (v) => set("volume", v)),
         slider("Variation", ss.variation ?? 25, 0, 100, 5, "%", (v) => set("variation", v),
@@ -226,7 +230,8 @@ const Voices = (() => {
             el("option", { value: "1", selected: ss.smooth || null }, "Smoothed"))),
         check("Size changes the voice", ss.size !== false, (on) => set("size", on), "Big monsters deeper, small ones higher"),
         check("Exclamations quicker and higher", ss.tone !== false, (on) => set("tone", on)),
-        check("Sing mode", ss.sing, (on) => set("sing", on), "SAM's sing mode: the pitch follows the phonemes"));
+        check("Sing mode", ss.sing, (on) => set("sing", on), "SAM's sing mode: the pitch follows the phonemes"),
+        effectsEditor(name)));
       rows.push(el("div", { class: "spk sam" + (ss.live ? " cast" : "") },
         el("div", { class: "spk-name" }, el("b", {}, name), el("div", { class: "muted" }, `${lines.length} line(s)`)),
         live, el("div", { class: "spk-voice" }, voiceSel, hearBtn, varietyBtn, femaleBtn), settings));
@@ -234,6 +239,54 @@ const Voices = (() => {
     return el("section", { class: "cast-sec" }, el("h2", {}, "Speakers"),
       el("p", { class: "hint" }, "Tick the speakers SAM should voice in the game and pick each one's SAM voice, or shape your own in SAM settings. ▶ plays a sample, ▶ ×3 three monsters of the kind (Variation), ▶ ♀ a female one."),
       el("div", { class: "spk-list" }, ...rows));
+  }
+
+  // ------------------------------------------- effects
+  // a speaker's effects, applied in order after SAM speaks (in the game too)
+  function newEffect(type) {
+    const fx = { type };
+    for (const p of sam.effects[type].params) fx[p.key] = p.default;
+    return fx;
+  }
+
+  function effectsEditor(name) {
+    const ss = samOf(name);
+    const list = ss.effects || [];
+    const change = () => { touch(); render(); };
+    const mine = () => samCfg(name).effects || (samCfg(name).effects = []);
+    const types = Object.entries(sam.effects);
+    const rows = list.map((fx, i) => {
+      const def = sam.effects[fx.type];
+      if (!def) return null;
+      return el("div", { class: "fx" + (fx.off ? " off" : "") },
+        el("div", { class: "fx-head" },
+          el("input", { type: "checkbox", title: "On / off", "aria-label": def.name + " on", checked: !fx.off || null,
+            onchange: (e) => { if (e.target.checked) delete mine()[i].off; else mine()[i].off = true; change(); } }),
+          el("b", { title: def.tip }, def.name),
+          el("button", { class: "icon", "aria-label": "Move up", disabled: i === 0 || null,
+            onclick: () => { const l = mine(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; change(); } }, "↑"),
+          el("button", { class: "icon", "aria-label": "Move down", disabled: i === list.length - 1 || null,
+            onclick: () => { const l = mine(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; change(); } }, "↓"),
+          el("button", { class: "icon", "aria-label": "Remove " + def.name, onclick: () => { mine().splice(i, 1); change(); } }, "✕")),
+        el("div", { class: "fx-params" }, ...def.params.map((p) =>
+          slider(p.label, fx[p.key] ?? p.default, p.min, p.max, p.step, p.unit, (v) => { mine()[i][p.key] = v; touch(); }))));
+    });
+    const add = el("select", { "aria-label": "Add an effect", onchange: (e) => {
+      if (sam.effects[e.target.value]) { mine().push(newEffect(e.target.value)); change(); }
+    } }, el("option", { value: "" }, "+ Add an effect…"), ...types.map(([id, d]) => el("option", { value: id, title: d.tip }, d.name)));
+    const preset = el("select", { "aria-label": "Start from a preset", onchange: (e) => {
+      const p = sam.presets[e.target.value];
+      if (!p) return;
+      samCfg(name).effects = JSON.parse(JSON.stringify(p));
+      change();
+    } }, el("option", { value: "" }, "Start from…"), ...Object.keys(sam.presets).map((n) => el("option", { value: n }, n)));
+    const hearBtn = el("button", { class: "small", disabled: !sam.installed || null,
+      onclick: () => hear(hearBtn, samCfg(name)) }, "▶ Hear with effects");
+    return el("div", { class: "fx-list" },
+      el("div", { class: "fx-title" }, el("b", {}, "Effects"), el("span", { class: "muted" }, "applied in order, live in the game")),
+      ...(rows.filter(Boolean).length ? rows.filter(Boolean) : [el("p", { class: "muted" }, "None: SAM as it is.")]),
+      el("div", { class: "inline" }, add, preset, hearBtn,
+        list.length ? el("button", { class: "small", onclick: () => { samCfg(name).effects = []; change(); } }, "Clear") : null));
   }
 
   // ------------------------------------------- pronunciation dictionary

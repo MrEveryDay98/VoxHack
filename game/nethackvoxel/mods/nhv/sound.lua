@@ -346,7 +346,7 @@ end
 -- SAM, the 1982 speech synth built into the VoxHack engine: it reads the
 -- line's real text as it happens (your name, your god...), nothing is
 -- recorded. The engine speaks a sound named
--- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>|<text>"
+-- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>,<effects>|<text>"
 -- and reads its words through the pronunciation dictionary
 -- (mods/nhv_sounds/sam_dictionary.txt, edited in the editor).
 core.settings:set("nhv_sam_dict", MODPATH .. DIR_DELIM .. "sam_dictionary.txt")
@@ -362,6 +362,31 @@ local SAM_VOICES = {
 }
 -- playback pitch by NetHack size class (tiny .. gigantic): big ones deeper
 local SIZE_PITCH = {[0] = 1.2, 1.1, 1.0, 0.93, 0.86, 0.8}
+
+-- a speaker's effects as the engine's chain:
+-- {{type="echo", delay=250}, ...} -> "echo:delay=250/..." (sam_speech.cpp;
+-- what a parameter leaves out, the engine fills in)
+local function effect_chain(list)
+	local out = {}
+	for _, fx in ipairs(type(list) == "table" and list or {}) do
+		if type(fx) == "table" and not fx.off and type(fx.type) == "string" and fx.type:match("^%a+$") then
+			-- (keys sorted, so a line's sound name, and the engine's cache, stay the same)
+			local keys = {}
+			for k, v in pairs(fx) do
+				if type(k) == "string" and k:match("^%a+$") and type(v) == "number" then
+					keys[#keys + 1] = k
+				end
+			end
+			table.sort(keys)
+			local parts = {fx.type}
+			for _, k in ipairs(keys) do
+				parts[#parts + 1] = ("%s=%g"):format(k, fx[k])
+			end
+			out[#out + 1] = table.concat(parts, ":")
+		end
+	end
+	return table.concat(out, "/")
+end
 
 local function clamp255(v)
 	return math.max(1, math.min(255, math.floor(v + 0.5)))
@@ -394,6 +419,7 @@ local function sam_for(id, who)
 	end
 	local st = {sing = ss.sing and 1 or 0, volume = tonumber(ss.volume) or 100,
 		smooth = ss.smooth and 1 or 0, tone = ss.tone == false and 0 or 1, pitch_mul = 1,
+		effects = effect_chain(ss.effects),
 		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil}
 	-- a line can take another of SAM's named voices
 	local named = SAM_VOICES[ln.sam_voice or ""]
@@ -437,8 +463,8 @@ local function speak_sam(st, text, pos)
 	if sound.voice then
 		core.sound_stop(sound.voice)
 	end
-	local name = ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
-		st.sing, st.smooth, st.tone, text)
+	local name = ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
+		st.sing, st.smooth, st.tone, st.effects, text)
 	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100), pitch = st.pitch_mul}
 	if pos then
 		params.pos, params.max_hear_distance = pos, 64
