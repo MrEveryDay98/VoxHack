@@ -125,15 +125,18 @@ const VoiceGen = (() => {
     return sel;
   }
 
-  // hear a voice read a short sample through an effect preset, at the output rate
-  async function hear(btn, voice, speed, lang, preset, text) {
-    if (!voice) return toast("Choose a voice first");
+  // hear a voice (with its pitch and tone) read a short sample through an
+  // effect preset, at the output rate. p: a speaker's settings or a line's plan
+  async function hear(btn, p, text, effectsList) {
+    if (!p.voice) return toast("Choose a voice first");
     const label = btn.textContent;
     btn.disabled = true;
     btn.textContent = "…";
     try {
       const res = await api("/api/voice/sample", { method: "POST", json: {
-        voice, speed: speed || 1, lang: lang || "", text: text || "", effects: presetEffects(preset), rate: cast.output.rate } });
+        voice: p.voice, speed: p.speed || 1, lang: p.lang || "", pitch: p.pitch || 0,
+        delivery: p.delivery || "", delivery_mix: p.delivery ? (p.delivery_mix ?? 0.7) : 0,
+        text: text || "", effects: effectsList || presetEffects(p.preset), rate: cast.output.rate } });
       playUrl(res.url, "sample");
     } catch (e) { toast(e.message); }
     btn.disabled = false;
@@ -292,8 +295,16 @@ const VoiceGen = (() => {
     let preset = "preset" in ln ? ln.preset : (sc.preset || "");
     if (preset === NO_EFFECTS) preset = "";
     const voice = ln.voice || sc.voice || "";
-    return { voice, speed: ln.speed || sc.speed || 1, lang: ln.voice ? "" : (sc.lang || ""), preset };
+    let delivery = sc.delivery || "", mix = sc.delivery_mix ?? 0.7;
+    if ("delivery" in ln) {
+      delivery = ln.delivery === NO_EFFECTS ? "" : ln.delivery;
+      mix = ln.delivery_mix ?? mix;
+    }
+    return { voice, speed: ln.speed || sc.speed || 1, lang: ln.voice ? "" : (sc.lang || ""), preset,
+      pitch: ln.pitch ?? sc.pitch ?? 0, delivery, delivery_mix: mix };
   }
+  const toneLabel = (spec, mix) => (spec ? `like ${voiceLabel(spec)}` + (mix !== undefined && mix < 1 ? ` (${Math.round(mix * 100)}%)` : "") : "natural");
+  const stLabel = (st) => (st > 0 ? "+" : "") + st + " st";
 
   // Generate -> listen to the processed result -> Confirm (or Regenerate)
   function rowControls(d, redraw) {
@@ -314,9 +325,26 @@ const VoiceGen = (() => {
       sc.voice ? `${lineCast(d)}'s voice: ${voiceLabel(sc.voice)}` : (ready ? "— choose a voice —" : "Install Kokoro in Voice casting"),
       { "aria-label": "Voice for this line", disabled: busy || null },
       (v) => { setLine(d.id, "voice", v); redrawLine(d.id); });
-    const hearBtn = el("button", { class: "icon", "aria-label": "Hear this voice", title: "Hear this voice read the line, with its effect",
+    const hearBtn = el("button", { class: "icon", "aria-label": "Hear this voice", title: "Hear this voice read the line, with its tone, pitch and effect",
       disabled: !plan.voice || !ready || null,
-      onclick: () => hear(hearBtn, plan.voice, plan.speed, plan.lang, plan.preset, spoken(d)) }, "▶");
+      onclick: () => hear(hearBtn, plan, spoken(d)) }, "▶");
+    // tone: speak in the manner of another voice (needs a new take)
+    const toneSel = voiceSelect("delivery" in ln && ln.delivery !== NO_EFFECTS ? ln.delivery : "",
+      `${lineCast(d)}'s tone: ${toneLabel(sc.delivery, sc.delivery_mix ?? 0.7)}`,
+      { "aria-label": "Tone for this line", disabled: busy || null,
+        title: "Speak this line in the manner of another voice: its pitch level, pace and intonation (Regenerate to hear it)" },
+      (v) => { setLine(d.id, "delivery", v); redrawLine(d.id); });
+    toneSel.insertBefore(el("option", { value: NO_EFFECTS, selected: ln.delivery === NO_EFFECTS || null }, "Natural (the voice's own)"), toneSel.options[1]);
+    // pitch: applied when the take is processed, so it's quick to change
+    const pitchIn = el("input", { type: "number", min: -12, max: 12, step: 0.5, value: ln.pitch ?? "",
+      placeholder: String(sc.pitch || 0), "aria-label": "Pitch for this line (semitones)", disabled: busy || null,
+      title: "Semitones up or down for this line (empty: the speaker's pitch)",
+      onchange: (e) => {
+        const v = e.target.value === "" ? "" : Math.max(-12, Math.min(12, +e.target.value));
+        setLine(d.id, "pitch", v);
+        if (hasTake) queue([{ line: d.id, action: "process" }], true);
+        else redrawLine(d.id);
+      } });
     const effectSel = el("select", { "aria-label": "Effect for this line", disabled: busy || null, onchange: (e) => {
       setLine(d.id, "preset", e.target.value);
       // a new effect on the same take is quick: preview it straight away
@@ -327,7 +355,9 @@ const VoiceGen = (() => {
     ...Object.keys(cast.presets).map((p) => el("option", { value: p, selected: (ln.preset === p) || null }, p)));
     box.append(el("div", { class: "genpick" },
       el("label", {}, el("span", {}, "Voice"), el("div", { class: "with-play" }, voiceSel, hearBtn)),
-      el("label", {}, el("span", {}, "Effect"), effectSel)));
+      el("label", {}, el("span", {}, "Effect"), effectSel),
+      el("label", {}, el("span", {}, "Tone"), toneSel),
+      el("label", { class: "pitch" }, el("span", {}, "Pitch"), el("div", {}, pitchIn, el("span", { class: "muted" }, " semitones")))));
 
     // generate
     const words = /\p{L}/u.test(spoken(d));
@@ -352,7 +382,9 @@ const VoiceGen = (() => {
       box.append(el("div", { class: "review" },
         el("div", { class: "review-head" },
           el("button", { class: "primary small", onclick: () => playUrl(pending.url) }, "▶ Play result"),
-          el("span", { class: "muted" }, `${k.voice || pending.voice} · ${pending.preset || "no effects"} · ${(pending.rate / 1000).toLocaleString()} kHz`)),
+          el("span", { class: "muted" }, `${k.voice || pending.voice}` + (k.delivery ? ` · ${toneLabel(k.delivery, k.delivery_mix)}` : "") +
+            (pending.pitch ? ` · ${stLabel(pending.pitch)}` : "") +
+            ` · ${pending.preset || "no effects"} · ${(pending.rate / 1000).toLocaleString()} kHz`)),
         el("div", { class: "review-actions" },
           el("button", { class: "small ok", onclick: () => confirmLine(d) }, "✓ Confirm"),
           el("button", { class: "small", onclick: () => queue([{ line: d.id, action: "generate" }], true) }, "↻ Regenerate"),
@@ -499,15 +531,22 @@ const VoiceGen = (() => {
           setVoice([{ n: parts[0].n, w: 1 - mix }, { n: v, w: mix }]);
         });
       const hearBtn = el("button", { class: "icon", "aria-label": "Hear " + name, title: "Hear this voice, with the speaker's effect",
-        disabled: !sc.voice || !ready || null, onclick: () => hear(hearBtn, sc.voice, sc.speed, sc.lang, sc.preset) }, "▶");
+        disabled: !sc.voice || !ready || null, onclick: () => hear(hearBtn, sc) }, "▶");
+      const toneSel = voiceSelect(sc.delivery || "", "Natural (the voice's own)", { "aria-label": "Tone for " + name },
+        (v) => { sc.delivery = v || undefined; if (v && sc.delivery_mix === undefined) sc.delivery_mix = 0.7; touch(); render(); });
       const presetSel = el("select", { "aria-label": "Effect preset for " + name, onchange: (e) => { sc.preset = e.target.value; touch(); } },
         el("option", { value: "" }, "No effects"),
         ...Object.keys(cast.presets).map((p) => el("option", { value: p, selected: p === sc.preset || null }, p)));
       const settings = el("details", { class: "spk-set" }, el("summary", {}, "Voice settings"),
         slider("Speed", sc.speed || 1, 0.5, 2, 0.05, "×", (v) => { sc.speed = v === 1 ? undefined : v; touch(); }),
+        slider("Pitch", sc.pitch || 0, -12, 12, 0.5, " st", (v) => { sc.pitch = v === 0 ? undefined : v; touch(); }),
+        el("label", { class: "sl sel", title: "Speak in the manner of another voice: its pitch level, pace and intonation, with this voice's sound" },
+          el("span", {}, "Tone like"), toneSel),
+        sc.delivery ? slider("Tone strength", Math.round(100 * (sc.delivery_mix ?? 0.7)), 10, 100, 5, "%",
+          (v) => { sc.delivery_mix = v / 100; touch(); }) : null,
         parts.length > 1 ? slider("Blend", Math.round(100 * parts[1].w / (parts[0].w + parts[1].w)), 5, 95, 5, "%",
           (v) => { sc.voice = buildVoice([{ n: parts[0].n, w: (100 - v) / 100 }, { n: parts[1].n, w: v / 100 }]); touch(); }) : null,
-        el("label", { class: "sl" }, el("span", {}, "Accent"), el("select", { onchange: (e) => { sc.lang = e.target.value || undefined; touch(); } },
+        el("label", { class: "sl sel" }, el("span", {}, "Accent"), el("select", { onchange: (e) => { sc.lang = e.target.value || undefined; touch(); } },
           ...ACCENTS.map(([v, l]) => el("option", { value: v, selected: v === (sc.lang || "") || null }, l)))));
       const unvoiced = lines.length - voiced;
       rows.push(el("div", { class: "spk" + (sc.voice ? " cast" : "") },
@@ -518,7 +557,9 @@ const VoiceGen = (() => {
     }
     return el("section", { class: "cast-sec" }, el("h2", {}, "Speakers"),
       el("p", { class: "hint" }, "Choose a Kokoro voice for each speaker (optionally blended with a second one), and an effect preset. " +
-        "Voice settings has the speed and the blend's mix. ▶ plays a sample with the effect, at the output rate. " +
+        "Voice settings has the speed, pitch, the blend's mix, and the tone: the voice can speak in the manner of another " +
+        "(its pitch level, pace and intonation), e.g. a calm voice with a lively one's delivery. Kokoro has no emotion setting, " +
+        "but punctuation in the spoken text (! ? … ,) changes how a line is read. ▶ plays a sample with all of it, at the output rate. " +
         "A single line can be voiced as another speaker from its Spoken text panel."),
       el("div", { class: "spk-list" }, ...rows));
   }
@@ -608,15 +649,7 @@ const VoiceGen = (() => {
       ...sources.slice(0, 1500).map(([v, l]) => el("option", { value: v, selected: v === testSource || null }, l)));
     const test = el("button", { class: "primary small", disabled: !status.ffmpeg || null, onclick: async () => {
       if (testSource.startsWith("speaker:")) {
-        const sc = cast.speakers[testSource.slice(8)];
-        test.disabled = true;
-        try {
-          const res = await api("/api/voice/sample", { method: "POST", json: {
-            voice: sc.voice, speed: sc.speed || 1, lang: sc.lang || "", effects: list, rate: cast.output.rate } });
-          playUrl(res.url, "preview");
-        } catch (e) { toast(e.message); }
-        test.disabled = false;
-        return;
+        return hear(test, cast.speakers[testSource.slice(8)], "", list);
       }
       test.disabled = true; test.textContent = "Processing…";
       try {

@@ -569,10 +569,11 @@ class Handler(BaseHTTPRequestHandler):
             VG.preview(path_in, data.get("effects", []), {"rate": data.get("rate") or 11025, "quality": 5})
             return self.send(200, {"url": "/preview.ogg?v=%d" % int(time.time() * 1000)})
         if path == "/api/voice/sample":
-            # {voice, speed, lang, text, effects, rate}: hear a voice before casting it
+            # {voice, speed, lang, text, effects, rate, pitch, delivery, delivery_mix}: hear a voice before casting it
             VG.sample(str(data.get("voice", "")), data.get("speed") or 1, data.get("lang") or "",
                       str(data.get("text") or "")[:400], data.get("effects", []),
-                      {"rate": data.get("rate") or 11025, "quality": 5})
+                      {"rate": data.get("rate") or 11025, "quality": 5}, data.get("pitch") or 0,
+                      str(data.get("delivery") or ""), data.get("delivery_mix") or 0)
             return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
         if path == "/api/kokoro/setup":
             VG.kokoro.start_setup()

@@ -223,6 +223,16 @@ def effect_filter(fx):
     return "", 0
 
 
+def pitch_effects(semitones):
+    """A speaker's pitch: the same person, higher or lower (formants kept),
+    before the preset's effects."""
+    try:
+        st = max(-12.0, min(12.0, float(semitones or 0)))
+    except (TypeError, ValueError):
+        st = 0.0
+    return [{"type": "pitch", "semitones": st, "formants": 1}] if abs(st) >= 0.05 else []
+
+
 def migrate_cast(cast):
     """Casts from the ElevenLabs + Tenacity editor: Tenacity steps become
     effects; ElevenLabs voices are dropped (Kokoro has different ones)."""
@@ -381,8 +391,9 @@ class Kokoro:
             self.names = self.call({"cmd": "voices"})["voices"]
         return self.names
 
-    def say(self, text, voice, speed, lang, out):
-        return self.call({"cmd": "say", "text": text, "voice": voice, "speed": speed, "lang": lang, "out": out})
+    def say(self, text, voice, speed, lang, out, delivery="", delivery_mix=0.0):
+        return self.call({"cmd": "say", "text": text, "voice": voice, "speed": speed, "lang": lang, "out": out,
+                          "delivery": delivery, "delivery_mix": delivery_mix})
 
 
 # ---------------------------------------------------------------- jobs
@@ -467,10 +478,18 @@ class VoiceGen:
         speed = float(ln.get("speed") or sc.get("speed") or 1.0)
         lang = (ln.get("lang") if ln.get("voice") else None) or sc.get("lang") or voice_lang(voice)
         preset = ln["preset"] if "preset" in ln else sc.get("preset", "")
+        # delivery: another voice's manner (pitch level, pace, intonation);
+        # a line can choose its own, or none
+        delivery, mix = sc.get("delivery") or "", float(sc.get("delivery_mix") or 0.7)
+        if "delivery" in ln:
+            delivery = "" if ln["delivery"] == self.NO_EFFECTS else ln["delivery"]
+            mix = float(ln.get("delivery_mix") or mix)
         if preset == self.NO_EFFECTS:
             preset = ""
         return {"entry": entry, "speaker": speaker, "voice": voice, "voice_name": voice_label(voice) if voice else "",
                 "speed": speed, "lang": lang, "preset": preset,
+                "delivery": delivery, "delivery_mix": mix if delivery else 0.0,
+                "pitch": float(ln.get("pitch", sc.get("pitch", 0)) or 0),
                 "text": ln.get("spoken") or self.speakable(entry)[0]}
 
     def pending_path(self, line_id):
@@ -547,12 +566,14 @@ class VoiceGen:
             folder = os.path.join(self.work, "takes", sid)
             os.makedirs(folder, exist_ok=True)
             fname = time.strftime("%Y%m%d-%H%M%S") + ".wav"
-            self.kokoro.say(text, plan["voice"], plan["speed"], plan["lang"], os.path.join(folder, fname))
+            self.kokoro.say(text, plan["voice"], plan["speed"], plan["lang"], os.path.join(folder, fname),
+                            plan["delivery"], plan["delivery_mix"])
             with self.lock:
                 takes = self.load_takes()
                 t = takes.setdefault(line_id, {"takes": [], "current": 0})
                 t["takes"].append({"file": sid + "/" + fname, "voice": plan["voice_name"], "voice_spec": plan["voice"],
-                                   "speed": plan["speed"], "text": text, "chars": len(text),
+                                   "speed": plan["speed"], "delivery": plan["delivery"],
+                                   "delivery_mix": plan["delivery_mix"], "text": text, "chars": len(text),
                                    "time": int(time.time())})
                 t["current"] = len(t["takes"]) - 1
                 self._save_takes(takes)
@@ -567,8 +588,9 @@ class VoiceGen:
         preset = cast["presets"].get(plan["preset"] or "", {})
         dst = self.pending_path(line_id)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        self.render(self.take_path(take["file"]), preset.get("effects", []), cast.get("output", {}), dst)
-        pending = {"take": index, "preset": plan["preset"], "voice": take["voice"],
+        self.render(self.take_path(take["file"]), pitch_effects(plan["pitch"]) + preset.get("effects", []),
+                    cast.get("output", {}), dst)
+        pending = {"take": index, "preset": plan["preset"], "voice": take["voice"], "pitch": plan["pitch"],
                    "url": "/pending/%s.ogg?v=%d" % (safe_id(line_id), int(time.time() * 1000)),
                    "rate": int(cast.get("output", {}).get("rate") or 11025), "time": int(time.time())}
         with self.lock:
@@ -692,15 +714,16 @@ class VoiceGen:
         self.render(src, effects, out, dst)
         return dst
 
-    def sample(self, voice, speed, lang, text, effects, out):
-        """A voice reading a short sample, through effects, at the output rate:
-        voice_work/sample.ogg."""
+    def sample(self, voice, speed, lang, text, effects, out, pitch=0.0, delivery="", delivery_mix=0.0):
+        """A voice reading a short sample (with its pitch and delivery),
+        through effects, at the output rate: voice_work/sample.ogg."""
         if not voice:
             raise ValueError("Choose a voice first")
         with self.render_lock:
             wav = os.path.join(self.work, "tmp", "sample.wav")
             os.makedirs(os.path.dirname(wav), exist_ok=True)
-            self.kokoro.say(text or SAMPLE_TEXT, voice, float(speed or 1), lang or voice_lang(voice), wav)
+            self.kokoro.say(text or SAMPLE_TEXT, voice, float(speed or 1), lang or voice_lang(voice), wav,
+                            delivery, float(delivery_mix or 0) if delivery else 0.0)
             dst = os.path.join(self.work, "sample.ogg")
-            self._render(wav, effects, out, dst)
+            self._render(wav, pitch_effects(pitch) + list(effects or []), out, dst)
         return dst

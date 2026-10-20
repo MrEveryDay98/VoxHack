@@ -162,7 +162,7 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .spk-voice { display: flex; gap: 4px; }
 .spk-name .muted { font-size: 11px; }
 .spk-set summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-.spk-set[open] { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 16px; }
+.spk-set[open] { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 6px 16px; }
 .spk-set[open] summary { grid-column: 1 / -1; }
 .sl { display: grid; grid-template-columns: 80px 1fr 40px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .sl input { accent-color: var(--accent); }
@@ -191,6 +191,7 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .fx-tip { font-size: 12px; color: var(--muted); margin: 2px 0 0 28px; }
 .fx .params { margin: 4px 0 0 28px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .fx .params .sl, .spk-set .sl { display: grid; grid-template-columns: 90px 1fr 56px; flex-direction: row; }
+.spk-set .sl.sel { grid-template-columns: 90px 1fr; }
 .fx .params .check { flex-direction: row; align-items: center; font-size: 12px; }
 .setup-card progress { width: 100%; }
 
@@ -222,6 +223,7 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .genpick { display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .genpick label { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .genpick select { width: 100%; font-size: 12px; padding: 4px 6px; }
+.genpick input[type=number] { width: 72px; font-size: 12px; padding: 3px 6px; }
 .with-play { display: flex; gap: 4px; min-width: 0; }
 .with-play select { flex: 1; min-width: 0; }
 .review { width: 100%; border: 1px solid var(--accent); background: #2a2516; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }

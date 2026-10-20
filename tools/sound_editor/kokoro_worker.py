@@ -7,7 +7,8 @@ line on stdin, one JSON reply per line on stdout:
   {"cmd": "voices"}
       -> {"ok": true, "voices": ["af_heart", ...]}
   {"cmd": "say", "text": ..., "voice": "af_heart" | "af_heart*0.6+bf_emma*0.4",
-   "speed": 1.0, "lang": "en-us", "out": "C:/.../take.wav"}
+   "speed": 1.0, "lang": "en-us", "out": "C:/.../take.wav",
+   "delivery": "am_puck", "delivery_mix": 0.7}
       -> {"ok": true, "seconds": 3.2}
 Errors come back as {"ok": false, "error": "..."}.
 
@@ -27,7 +28,9 @@ def main():
     names = set(k.get_voices())
 
     def style(spec):
-        """"a" or "a*0.6+b*0.4": one voice, or a weighted blend of several"""
+        """"a" or "a*0.6+b*0.4": one voice, or a weighted blend of several
+        (as an array: the first 128 values shape the timbre, the last 128
+        the prosody: pitch level, pace and intonation)"""
         parts = []
         for part in str(spec).split("+"):
             name, _, w = part.strip().partition("*")
@@ -35,10 +38,18 @@ def main():
             if name not in names:
                 raise ValueError("Kokoro has no voice called %r" % name)
             parts.append((name, float(w) if w else 1.0))
-        if len(parts) == 1:
-            return parts[0][0]
         total = sum(w for _, w in parts) or 1.0
         return sum(k.get_voice_style(n) * (w / total) for n, w in parts)
+
+    def voice_for(req):
+        """the voice's timbre, with (some of) another voice's delivery"""
+        v = style(req["voice"])
+        mix = float(req.get("delivery_mix") or 0)
+        if req.get("delivery") and mix > 0:
+            d = style(req["delivery"])
+            v = v.copy()
+            v[..., 128:] = (1 - mix) * v[..., 128:] + mix * d[..., 128:]
+        return v.astype("float32")
 
     out.write(json.dumps({"ok": True, "ready": True}) + "\n")
     out.flush()
@@ -50,7 +61,7 @@ def main():
             if req.get("cmd") == "voices":
                 reply = {"ok": True, "voices": sorted(names)}
             elif req.get("cmd") == "say":
-                samples, rate = k.create(req["text"], voice=style(req["voice"]),
+                samples, rate = k.create(req["text"], voice=voice_for(req),
                                          speed=float(req.get("speed") or 1.0),
                                          lang=req.get("lang") or "en-us")
                 sf.write(req["out"], samples, rate, subtype="PCM_16")
