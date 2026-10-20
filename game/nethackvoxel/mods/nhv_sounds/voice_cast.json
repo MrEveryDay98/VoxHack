@@ -67,9 +67,13 @@
    "preset": "Plain"
   },
   "God": {
-   "preset": "Echoing hall",
-   "voice": "am_puck",
-   "lang": "en-gb"
+   "preset": "Ghostly",
+   "voice": "am_echo*0.4+am_onyx*0.6",
+   "lang": "en-us",
+   "delivery": "am_onyx",
+   "delivery_mix": 1,
+   "pitch": -3.5,
+   "speed": 0.75
   },
   "Priest": {
    "preset": "Plain"
@@ -187,6 +191,15 @@
     {
      "type": "normalize",
      "peak": -1
+    }
+   ]
+  },
+  "test": {
+   "effects": [
+    {
+     "type": "reverb",
+     "room": 100,
+     "mix": 100
     }
    ]
   }
