@@ -166,9 +166,40 @@ function sound.where(x, y, m_id)
 	return nil
 end
 
--- 0 (in plain sight) .. 1 (walls in the way): three lines of sight from
--- the hero's eyes to around the source, so a sound by a doorway is half
--- muffled
+-- Does this node stop sound? Walls, rock and closed doors do; the
+-- invisible nodes that fill open space (room and hero lights, level
+-- edges, tight gaps) don't. (core.line_of_sight counts anything but air
+-- as a wall, so lit rooms would muffle everything.)
+local blocks_sound = {}
+local function stops_sound(name)
+	local b = blocks_sound[name]
+	if b == nil then
+		local def = core.registered_nodes[name]
+		b = def ~= nil and def.walkable == true
+			and (def.drawtype ~= "airlike" or (def.groups and def.groups.nhv_door ~= nil)) or false
+		blocks_sound[name] = b
+	end
+	return b
+end
+
+local function clear_path(from, to)
+	local d = vector.subtract(to, from)
+	local steps = math.max(1, math.ceil(vector.length(d) * 4)) -- (quarter-node steps)
+	local last
+	for i = 1, steps - 1 do
+		local q = vector.round(vector.add(from, vector.multiply(d, i / steps)))
+		if not (last and vector.equals(q, last)) then
+			last = q
+			if stops_sound(core.get_node(q).name) then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- 0 (in plain sight) .. 1 (walls in the way): three lines from the hero's
+-- eyes to around the source, so a sound by a doorway is partly muffled
 local AROUND = {vector.new(0, 0, 0), vector.new(0, 0.7, 0), vector.new(0.35, -0.4, 0.35)}
 function sound.muffle(pos)
 	local p = player()
@@ -178,7 +209,7 @@ function sound.muffle(pos)
 	local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
 	local blocked = 0
 	for _, off in ipairs(AROUND) do
-		if not core.line_of_sight(eye, vector.add(pos, off)) then
+		if not clear_path(eye, vector.add(pos, off)) then
 			blocked = blocked + 1
 		end
 	end
