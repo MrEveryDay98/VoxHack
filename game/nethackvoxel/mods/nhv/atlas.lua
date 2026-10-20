@@ -17,6 +17,8 @@
 --
 --   /atlas            the levels and their numbers
 --   /atlas <number>   go to that level
+--   /atlas ceilings   take every ceiling off (again: put them back)
+--   /atlas ceilings   take every ceiling off (again: put them back)
 
 local U = nhv.util
 local nh = nhv.nh
@@ -339,12 +341,113 @@ core.register_chatcommand("nhvtitle", {
 	end,
 })
 
+-- ---------------------------------------------------------------- ceilings
+-- /atlas ceilings: every level's ceiling (the ceiling layer and anything
+-- left above it) taken off, to look down into the levels; again puts them
+-- back. What was taken off is kept in a file in the world
+-- (atlas_ceilings.dat), so they come back after a restart too.
+local CEIL_FILE = core.get_worldpath() .. DIR_DELIM .. "atlas_ceilings.dat"
+local CEIL_MIN = vector.new(0, prefabs.Y0 + prefabs.CEIL, 0)
+local CEIL_MAX = vector.new(LW - 1, prefabs.Y0 + prefabs.H - 1, LD - 1)
+
+local function ceilings_off()
+	local f = io.open(CEIL_FILE, "rb")
+	if f then
+		f:close()
+		return true
+	end
+	return false
+end
+
+local function each_level_region(fn)
+	for _, e in ipairs(atlas.list) do
+		local minp, maxp = vector.add(CEIL_MIN, e.shift), vector.add(CEIL_MAX, e.shift)
+		local vm = core.get_voxel_manip()
+		local e1, e2 = vm:read_from_map(minp, maxp)
+		local va = VoxelArea(e1, e2)
+		local ids, p2 = vm:get_data(), vm:get_param2_data()
+		-- (k: the node's place in minp..maxp, row by row)
+		local k = 0
+		local function each(visit)
+			k = 0
+			for z = minp.z, maxp.z do
+				for y = minp.y, maxp.y do
+					local i = va:index(minp.x, y, z)
+					for _ = minp.x, maxp.x do
+						k = k + 1
+						visit(i, k)
+						i = i + 1
+					end
+				end
+			end
+		end
+		if fn(e, ids, p2, each) then
+			vm:set_data(ids)
+			vm:set_param2_data(p2)
+			vm:write_to_map(true)
+		end
+	end
+end
+
+function atlas.toggle_ceilings()
+	if not ceilings_off() then
+		-- off: what's there is written down ("k name p2" per node), then air
+		local saved = {}
+		each_level_region(function(e, ids, p2, each)
+			local out = {}
+			each(function(i, k)
+				if ids[i] ~= AIR then
+					out[#out + 1] = ("%d %s %d"):format(k, core.get_name_from_content_id(ids[i]), p2[i])
+					ids[i], p2[i] = AIR, 0
+				end
+			end)
+			saved[#saved + 1] = e.n .. "\n" .. table.concat(out, "\n")
+			return #out > 0
+		end)
+		core.safe_file_write(CEIL_FILE, core.compress(table.concat(saved, "\n\n"), "deflate"))
+		return "Ceilings off (/atlas ceilings puts them back)."
+	end
+	-- back on
+	local f = io.open(CEIL_FILE, "rb")
+	local data = core.decompress(f:read("*a"), "deflate")
+	f:close()
+	local by_level = {}
+	for block in (data .. "\n\n"):gmatch("(.-)\n\n") do
+		local n, rest = block:match("^(%d+)\n?(.*)$")
+		if n then
+			by_level[tonumber(n)] = rest
+		end
+	end
+	each_level_region(function(e, ids, p2, each)
+		local rest = by_level[e.n]
+		if not rest or rest == "" then
+			return false
+		end
+		local put = {}
+		for k, name, pp in rest:gmatch("(%d+) (%S+) (%d+)") do
+			put[tonumber(k)] = {core.get_content_id(name), tonumber(pp)}
+		end
+		each(function(i, k)
+			local v = put[k]
+			if v then
+				ids[i], p2[i] = v[1], v[2]
+			end
+		end)
+		return true
+	end)
+	os.remove(CEIL_FILE)
+	return "Ceilings back on."
+end
+
 core.register_chatcommand("atlas", {
-	description = "(VoxHack level atlas) list the levels, or go to one",
-	params = "[number]",
+	description = "(VoxHack level atlas) list the levels, go to one, or take the ceilings off / put them back",
+	params = "[number | ceilings]",
 	func = function(name, param)
 		if not atlas.list then
 			return false, "The atlas isn't built yet."
+		end
+		if param:match("^%s*ceil") then
+			return true, atlas.toggle_ceilings()
 		end
 		local n = tonumber(param)
 		if n then
