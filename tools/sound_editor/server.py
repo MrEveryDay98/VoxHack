@@ -332,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                 "sounds": list_sounds(),
                 "folders": list_folders(),
                 "legend": speakable.legend(),
+                "acoustics": load_json(os.path.join(CATALOG, "acoustics.json"), {}),
             })
         if path == "/api/config":
             return self.send(200, load_config())

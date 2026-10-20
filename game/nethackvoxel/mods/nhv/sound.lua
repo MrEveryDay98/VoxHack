@@ -346,7 +346,7 @@ function sound.set_music(hook)
 	end
 	local gain = (entry.volume or 100) / 100 * ((sound.cfg.master.music or 60) / 100)
 	sound.music.handle = core.sound_play(name, {to_player = p:get_player_name(),
-		gain = gain, loop = entry.loop ~= false, fade = 0.5})
+		gain = gain, loop = entry.loop ~= false, fade = 0.5, nhv_reverb = 0})
 end
 
 local DUNGEON_MUSIC = {
@@ -681,6 +681,125 @@ nh.on_event(function(evs)
 	if sam_quest and not sam_quest.window then
 		finish_sam_quest()
 	end
+end)
+
+-- ---------------------------------------------------------------- acoustics
+-- The reverb of the place the hero is in (the engine's nhv_acoustics:
+-- every sound but music goes through it). The kind of place is the first
+-- that applies in catalog/acoustics.json (engulfed, underwater, temple,
+-- shop, the branch, then a corridor, open sky or a room, measured); with
+-- "follow" the reverb rings longer the bigger the space measured around
+-- the hero. The editor's Acoustics tab saves changes in config.json.
+local ACOUSTICS = {kinds = {}}
+do
+	local f = io.open(MODPATH .. DIR_DELIM .. "catalog" .. DIR_DELIM .. "acoustics.json", "rb")
+	if f then
+		ACOUSTICS = core.parse_json(f:read("*a")) or ACOUSTICS
+		f:close()
+	end
+end
+local BRANCH_KIND = {
+	["The Gnomish Mines"] = "mines", ["Sokoban"] = "sokoban", ["The Quest"] = "quest",
+	["Fort Ludios"] = "ludios", ["Gehennom"] = "gehennom", ["Vlad's Tower"] = "vlad",
+	["The Elemental Planes"] = "planes",
+}
+
+-- a kind's settings: the defaults, with the editor's changes over them
+local function kind_settings(key)
+	for _, k in ipairs(ACOUSTICS.kinds or {}) do
+		if k.key == key then
+			local own = (sound.cfg.acoustics or {})[key] or {}
+			local function pick(field)
+				if own[field] ~= nil then
+					return own[field]
+				end
+				return k[field]
+			end
+			return {preset = pick("preset") or "", wet = tonumber(pick("wet")) or 0, follow = pick("follow")}
+		end
+	end
+end
+
+-- how far it is to a wall along a direction (nodes, up to max)
+local function reach(from, dir, max)
+	for d = 0.5, max, 0.5 do
+		if stops_sound(core.get_node(vector.round(vector.add(from, vector.multiply(dir, d)))).name) then
+			return d
+		end
+	end
+	return max
+end
+
+local DIRS = {}
+for i = 0, 7 do
+	local a = i * math.pi / 4
+	DIRS[#DIRS + 1] = vector.new(math.cos(a), 0, math.sin(a))
+end
+local UP = vector.new(0, 1, 0)
+
+-- the space around the hero: average distance to the walls and the
+-- narrowest width (in squares), and whether there's a ceiling
+local function measure(p)
+	local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
+	local d = {}
+	local sum = 0
+	for i, dir in ipairs(DIRS) do
+		d[i] = reach(eye, dir, 30)
+		sum = sum + d[i]
+	end
+	local narrow = math.huge
+	for i = 1, 4 do
+		narrow = math.min(narrow, d[i] + d[i + 4])
+	end
+	return sum / #DIRS / U.TILE, narrow / U.TILE, reach(eye, UP, 18) < 18
+end
+
+local last_acoustics = nil
+local acoustics_t = 0
+local function update_acoustics(dtime)
+	acoustics_t = acoustics_t + dtime
+	if acoustics_t < 0.5 then
+		return
+	end
+	acoustics_t = 0
+	local p = player()
+	local h = nh.snap and nh.snap.hero
+	local setting = "preset=NONE"
+	if p and h then
+		local radius, narrow, roofed = measure(p)
+		local chosen
+		local function try(key, when)
+			if chosen or not when then
+				return
+			end
+			local k = kind_settings(key)
+			if k and k.preset ~= "" then
+				chosen = k
+			end
+		end
+		try("swallowed", U.has(h.flags, U.HERO.SWALLOWED))
+		try("underwater", U.has(h.flags, U.HERO.UNDERWATER))
+		try("temple", U.has(h.flags, U.HERO.INTEMPLE))
+		try("shop", U.has(h.flags, U.HERO.INSHOP))
+		local branch = BRANCH_KIND[h.dungeon_name or ""]
+		try(branch or "", branch ~= nil)
+		try("corridor", narrow <= 1.7)
+		try("open", not roofed)
+		try("room", true)
+		if chosen then
+			-- bigger spaces ring longer: about 4 squares across is the preset's own
+			local decay = chosen.follow and math.max(0.5, math.min(2.2, radius / 4)) or 1
+			setting = ("preset=%s;decay=%.2f;wet=%.2f"):format(chosen.preset, decay, chosen.wet)
+		end
+	end
+	if setting ~= last_acoustics then
+		last_acoustics = setting
+		core.settings:set("nhv_acoustics", setting)
+	end
+end
+core.register_globalstep(update_acoustics)
+core.register_on_shutdown(function()
+	core.settings:set("nhv_acoustics", "preset=NONE")
 end)
 
 -- ---------------------------------------------------------------- state hooks

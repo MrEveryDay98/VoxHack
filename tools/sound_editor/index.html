@@ -25,6 +25,7 @@
 <nav class="tabs" role="tablist">
   <button role="tab" data-tab="hooks" aria-selected="true">Sound hooks</button>
   <button role="tab" data-tab="music">Music</button>
+  <button role="tab" data-tab="acoustics">Acoustics</button>
   <button role="tab" data-tab="voices">Voices &amp; dialogue</button>
   <button role="tab" data-tab="casting">Voice casting</button>
   <button role="tab" data-tab="library">Sound library</button>
@@ -82,6 +83,11 @@
       <button id="blkSave" class="primary" disabled>Save blocks</button>
     </div>
     <div id="blocksBody"></div>
+  </section>
+
+  <section id="tab-acoustics" class="tab" hidden>
+    <p class="hint">The reverb of each kind of place. The game uses the first kind in the list that applies where you stand; “Follows the space” makes bigger rooms and caverns ring longer and closets stay dry. Every sound but music goes through it. Changes reach a running game when you Save.</p>
+    <div id="acousticsBody" class="acoustics"></div>
   </section>
 
   <section id="tab-effects" class="tab" hidden>

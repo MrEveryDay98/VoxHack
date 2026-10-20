@@ -1,0 +1,32 @@
+{
+ "about": "Acoustics: the reverb of each kind of place. The game picks the first kind that applies (top to bottom) and, when 'follow' is on, scales the reverb by the space it measures around the hero. The sound editor's Acoustics tab saves changes in config.json (acoustics); these are the defaults.",
+ "kinds": [
+  {"key": "swallowed", "label": "Engulfed", "help": "Inside a monster that swallowed you.", "preset": "SEWERPIPE", "wet": 0.6, "follow": false},
+  {"key": "underwater", "label": "Underwater", "help": "Under the water.", "preset": "UNDERWATER", "wet": 0.7, "follow": false},
+  {"key": "temple", "label": "Temple", "help": "In a temple.", "preset": "CHAPEL", "wet": 0.5, "follow": false},
+  {"key": "shop", "label": "Shop", "help": "In a shop.", "preset": "LIVINGROOM", "wet": 0.25, "follow": false},
+  {"key": "mines", "label": "Gnomish Mines", "help": "Anywhere in the Mines.", "preset": "CAVE", "wet": 0.45, "follow": true},
+  {"key": "sokoban", "label": "Sokoban", "help": "Anywhere in Sokoban.", "preset": "STONEROOM", "wet": 0.35, "follow": true},
+  {"key": "quest", "label": "The Quest", "help": "Anywhere in the Quest.", "preset": "", "wet": 0.35, "follow": true},
+  {"key": "ludios", "label": "Fort Ludios", "help": "Anywhere in Fort Ludios.", "preset": "CASTLE_LARGEROOM", "wet": 0.4, "follow": true},
+  {"key": "gehennom", "label": "Gehennom", "help": "Anywhere in Gehennom.", "preset": "MOOD_HELL", "wet": 0.4, "follow": true},
+  {"key": "vlad", "label": "Vlad's Tower", "help": "Anywhere in Vlad's Tower.", "preset": "CASTLE_HALL", "wet": 0.4, "follow": true},
+  {"key": "planes", "label": "Elemental Planes", "help": "The endgame.", "preset": "MOOD_HEAVEN", "wet": 0.4, "follow": true},
+  {"key": "corridor", "label": "Corridor", "help": "A narrow passage (measured).", "preset": "STONECORRIDOR", "wet": 0.35, "follow": true},
+  {"key": "open", "label": "Open sky", "help": "No ceiling overhead (measured).", "preset": "PLAIN", "wet": 0.15, "follow": false},
+  {"key": "room", "label": "Room", "help": "Anywhere else: rooms and caverns, bigger ones ringing longer.", "preset": "STONEROOM", "wet": 0.35, "follow": true}
+ ],
+ "presets": [
+  ["", "Same as the space (corridor / room)"], ["NONE", "None (dry)"],
+  ["ROOM", "Room"], ["STONEROOM", "Stone room"], ["LIVINGROOM", "Living room"], ["DUSTYROOM", "Dusty room"],
+  ["WOODEN_SMALLROOM", "Wooden room"], ["SMALLWATERROOM", "Small wet room"], ["PREFAB_WORKSHOP", "Workshop"],
+  ["HALLWAY", "Hallway"], ["STONECORRIDOR", "Stone corridor"], ["ALLEY", "Alley"], ["SEWERPIPE", "Sewer pipe"],
+  ["PIPE_LARGE", "Large pipe"], ["CAVE", "Cave"], ["QUARRY", "Quarry"], ["MOUNTAINS", "Mountains"],
+  ["CASTLE_CUPBOARD", "Castle cupboard"], ["CASTLE_ALCOVE", "Castle alcove"], ["CASTLE_LARGEROOM", "Castle room"],
+  ["CASTLE_HALL", "Castle hall"], ["CHAPEL", "Chapel"], ["DOME_TOMB", "Tomb"], ["AUDITORIUM", "Auditorium"],
+  ["CONCERTHALL", "Concert hall"], ["ARENA", "Arena"], ["HANGAR", "Hangar"], ["PARKINGLOT", "Parking lot"],
+  ["CITY", "City"], ["FOREST", "Forest"], ["PLAIN", "Plain"], ["UNDERWATER", "Underwater"],
+  ["MOOD_HELL", "Hellish"], ["MOOD_HEAVEN", "Heavenly"], ["DRUGGED", "Drugged"], ["DIZZY", "Dizzy"],
+  ["PSYCHOTIC", "Psychotic"], ["GENERIC", "Generic"]
+ ]
+}

@@ -166,6 +166,13 @@ All sprites and tile textures come from one sprite sheet:
   (the hero's own sounds stay centred). Sounds behind walls are muffled: three lines of sight
   from the hero's eyes give `nhv_muffle` 0..1, a sound_play parameter the engine applies as
   an OpenAL EFX low-pass and a lower volume (`playing_sound.cpp`). Spoken lines too.
+- **Acoustics:** every sound but music feeds one OpenAL EFX (EAX) reverb (`nhv_acoustics.cpp`;
+  sound_play's `nhv_reverb` 0..1, music 0). `sound.lua` picks the place every 0.5 s: the first kind
+  in `catalog/acoustics.json` that applies (engulfed, underwater, temple, shop, branch, then
+  corridor / open sky / room, measured by rays from the hero's eyes), scales the decay by the
+  space measured when the kind "follows the space", and sets `nhv_acoustics`
+  ("preset=CAVE;decay=1.3;wet=0.45"); the engine glides to it. The editor's Acoustics tab saves
+  changes in config.json (`acoustics`).
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

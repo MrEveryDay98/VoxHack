@@ -272,3 +272,12 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .tg-controls { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 6px 14px; }
 @media (max-width: 860px) { .tg, .tg-controls { grid-template-columns: 1fr; } }
 @keyframes nhvframes { from { background-position-y: 0%; } to { background-position-y: 100%; } }
+
+/* acoustics tab */
+.acoustics { display: flex; flex-direction: column; gap: 6px; }
+.ac-row { display: grid; grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) minmax(260px, 1.2fr) 160px 80px; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; }
+.ac-row.changed { border-left: 3px solid var(--accent); }
+.ac-name b { margin-left: 6px; }
+.ac-name .muted { font-size: 12px; }
+.ac-row select { width: 100%; }
+.ac-row .sl { grid-template-columns: 60px minmax(80px, 1fr) 48px; min-width: 0; }

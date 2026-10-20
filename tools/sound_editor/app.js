@@ -368,6 +368,39 @@ function voiceRow(d) {
   return row;
 }
 
+// ------------------------------------------------------------ acoustics
+// config.acoustics holds only what differs from catalog/acoustics.json
+function renderAcoustics() {
+  const box = $("#acousticsBody");
+  const ac = catalog.acoustics || {};
+  config.acoustics = config.acoustics || {};
+  const own = (key) => config.acoustics[key] || {};
+  const setOwn = (key, field, value, def) => {
+    const o = config.acoustics[key] || (config.acoustics[key] = {});
+    if (value === def) delete o[field]; else o[field] = value;
+    if (!Object.keys(o).length) delete config.acoustics[key];
+    markDirty();
+  };
+  box.replaceChildren(...(ac.kinds || []).map((k, i) => {
+    const o = own(k.key);
+    const preset = o.preset ?? k.preset, wet = o.wet ?? k.wet, follow = o.follow ?? k.follow;
+    const presets = (ac.presets || []).filter(([v]) => v !== "" || k.key !== "room");
+    const out = el("span", {}, Math.round(wet * 100) + "%");
+    return el("div", { class: "ac-row" + (Object.keys(o).length ? " changed" : "") },
+      el("div", { class: "ac-name" }, el("span", { class: "muted" }, String(i + 1) + "."), el("b", {}, k.label),
+        el("div", { class: "muted" }, k.help)),
+      el("select", { "aria-label": "Reverb for " + k.label, onchange: (e) => { setOwn(k.key, "preset", e.target.value, k.preset); renderAcoustics(); } },
+        ...presets.map(([v, l]) => el("option", { value: v, selected: v === preset || null }, l))),
+      el("label", { class: "sl", title: "How loud the reverb is" }, el("span", {}, "Amount"),
+        el("input", { type: "range", min: 0, max: 100, step: 5, value: Math.round(wet * 100), disabled: preset === "" || preset === "NONE" || null,
+          oninput: (e) => { out.textContent = e.target.value + "%"; setOwn(k.key, "wet", +e.target.value / 100, k.wet); } }), out),
+      el("label", { class: "check", title: "Bigger spaces ring longer, small ones less" },
+        el("input", { type: "checkbox", checked: follow || null, disabled: preset === "" || preset === "NONE" || null,
+          onchange: (e) => setOwn(k.key, "follow", e.target.checked, k.follow) }), " Follows the space"),
+      Object.keys(o).length ? el("button", { class: "small", onclick: () => { delete config.acoustics[k.key]; markDirty(); renderAcoustics(); } }, "Default") : el("span"));
+  }));
+}
+
 function renderVoices() {
   const items = filteredDialogue();
   const pages = Math.max(1, Math.ceil(items.length / PAGE));
@@ -578,6 +611,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
   document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + b.dataset.tab));
   if (b.dataset.tab === "library") renderLibrary();
+  if (b.dataset.tab === "acoustics") renderAcoustics();
   if (b.dataset.tab === "casting") Voices.render();
   if (b.dataset.tab === "blocks") Blocks.render();
   if (b.dataset.tab === "effects") Effects.render();
