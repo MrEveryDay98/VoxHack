@@ -159,6 +159,13 @@ All sprites and tile textures come from one sprite sheet:
   - SAM's C source (Sebastian Macke's port, no licence; included knowingly) is in
     `external/luanti/lib/sam`; `sam_unity.c` builds it in with its globals renamed.
   - Recordings uploaded onto lines (`config.json` voices) still play for speakers SAM doesn't voice.
+- **Positional sound:** NetHack's sound calls that know where they happen use `SoundeffectAt` /
+  `SoundeffectMon` / `NHV_HOOK_AT` / `NHV_HOOK_MON` (nhvhooks.h; 136 call sites: monster noises,
+  eating, spells, zaps, doors, deaths, hits, drawbridges, boulders, explosions...). The effect
+  event then ends `|x|y|m_id`; `sound.lua` plays it at the monster's model or the square
+  (the hero's own sounds stay centred). Sounds behind walls are muffled: three lines of sight
+  from the hero's eyes give `nhv_muffle` 0..1, a sound_play parameter the engine applies as
+  an OpenAL EFX low-pass and a lower volume (`playing_sound.cpp`). Spoken lines too.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

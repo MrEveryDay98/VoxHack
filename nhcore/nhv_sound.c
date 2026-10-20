@@ -6,7 +6,7 @@
  * play, using the sound/voice configuration made in the sound editor.
  *
  * Event text formats (fields separated by '|'):
- *   effect|<name>|<volume>
+ *   effect|<name>|<volume>[|<x>|<y>|<m_id or 0>]   (where it happens, if known)
  *   verbal|<speaker m_id or 0>|<speaker monster name>|<gender>|<tone>|<volume>|<text>
  *   achievement|<a>|<b>|<c>
  *   ambience|<action>|<id>|<proximity>
@@ -28,6 +28,8 @@ static const struct {
 #include "seffects.h"
 };
 #undef SEFFECTS_AUTOMAP
+
+static const char *sound_place(void);
 
 static const char *
 se_name(int32_t seid)
@@ -71,7 +73,7 @@ nhv_snd_achievement(schar a, schar b, int32_t c)
 static void
 nhv_snd_effect(char *desc UNUSED, int32_t seid, int32_t volume)
 {
-    sound_event("effect|%s|%d", se_name(seid), (int) volume);
+    sound_event("effect|%s|%d%s", se_name(seid), (int) volume, sound_place());
 }
 
 static void
@@ -126,11 +128,44 @@ struct sound_procs vissound_procs = {
     nhv_snd_verbal,
 };
 
+/* where the next sound happens (NHV_SNDAT, NHV_HOOK_AT/MON,
+   SoundeffectAt/Mon in nhvhooks.h): used by one sound, this turn only */
+static struct {
+    coordxy x, y;
+    unsigned m_id;
+    long moves;
+    boolean set;
+} snd_at;
+
+void
+nhv_sound_at(coordxy x, coordxy y, unsigned m_id)
+{
+    snd_at.x = x, snd_at.y = y, snd_at.m_id = m_id;
+    snd_at.moves = svm.moves;
+    snd_at.set = TRUE;
+}
+
+/* "|x|y|m_id" for the sound being made, or "" if it has no place of its
+   own (none was given, or it's the hero's own square) */
+static const char *
+sound_place(void)
+{
+    static char buf[48];
+
+    buf[0] = '\0';
+    if (snd_at.set && snd_at.moves == svm.moves && isok(snd_at.x, snd_at.y)
+        && !(u_at(snd_at.x, snd_at.y) && !snd_at.m_id))
+        Snprintf(buf, sizeof buf, "|%d|%d|%u", (int) snd_at.x,
+                 (int) snd_at.y, snd_at.m_id);
+    snd_at.set = FALSE;
+    return buf;
+}
+
 /* a sound hook placed in NetHack's code (NHV_HOOK) */
 void
 nhv_sound_hook(const char *id)
 {
-    sound_event("effect|%s|100", id);
+    sound_event("effect|%s|100%s", id, sound_place());
 }
 
 /* trap.c: the hero set off a trap: "trap_<name>" */

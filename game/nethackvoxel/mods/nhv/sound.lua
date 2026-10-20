@@ -147,6 +147,44 @@ end
 
 sound.FEMALE_PITCH = 1.35
 
+-- ---------------------------------------------------------------- where
+-- Sounds with a place come from it: NetHack tells where a sound happens
+-- (a square, or a monster: "effect|<hook>|<volume>|<x>|<y>|<m_id>"), and
+-- the engine pans it and lets it fade with distance. One behind a wall
+-- is muffled: quieter, its highs filtered out (the engine's nhv_muffle).
+
+-- a monster's model if it has one (it may be mid-step), else the square
+function sound.where(x, y, m_id)
+	local e = m_id and m_id > 0 and nhv.mobs and nhv.mobs.mons["id" .. m_id]
+	local pos = e and e.obj and e.obj:get_pos()
+	if pos then
+		return pos
+	end
+	if x and y and x > 0 then
+		return U.tile_center(x, y, nhv.terrain.stand_y(x, y) + 1.0)
+	end
+	return nil
+end
+
+-- 0 (in plain sight) .. 1 (walls in the way): three lines of sight from
+-- the hero's eyes to around the source, so a sound by a doorway is half
+-- muffled
+local AROUND = {vector.new(0, 0, 0), vector.new(0, 0.7, 0), vector.new(0.35, -0.4, 0.35)}
+function sound.muffle(pos)
+	local p = player()
+	if not p or not pos then
+		return 0
+	end
+	local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
+	local blocked = 0
+	for _, off in ipairs(AROUND) do
+		if not core.line_of_sight(eye, vector.add(pos, off)) then
+			blocked = blocked + 1
+		end
+	end
+	return blocked / #AROUND
+end
+
 -- Play whatever is attached to a hook. opts: volume (0-100), pos.
 function sound.hook(id, opts)
 	-- (particle effects attach to the same hooks: effects.lua)
@@ -173,6 +211,7 @@ function sound.hook(id, opts)
 	if opts.pos then
 		params.pos = opts.pos
 		params.max_hear_distance = 48
+		params.nhv_muffle = sound.muffle(opts.pos)
 	else
 		params.to_player = p:get_player_name()
 	end
@@ -191,7 +230,7 @@ local BOARD_PROGRAM = 80 -- (ocarina: see make_note_midis.py)
 local SEMITONE = {C = 0, D = 2, E = 4, F = 5, G = 7, A = 9, B = 11}
 local NOTE_GAP = 0.32 -- seconds between the notes of a tune
 
-function sound.note(program, semi, gain)
+function sound.note(program, semi, gain, pos)
 	local p = player()
 	local name = ("nhv_note_%d_%d"):format(program, semi % 12)
 	if not known[name] then
@@ -200,8 +239,13 @@ function sound.note(program, semi, gain)
 	if not p or not known[name] then
 		return
 	end
-	core.sound_play(name, {to_player = p:get_player_name(),
-		gain = gain * ((sound.cfg.master.effects or 100) / 100)})
+	local params = {gain = gain * ((sound.cfg.master.effects or 100) / 100)}
+	if pos then
+		params.pos, params.max_hear_distance, params.nhv_muffle = pos, 48, sound.muffle(pos)
+	else
+		params.to_player = p:get_player_name()
+	end
+	core.sound_play(name, params)
 end
 
 -- "squeak_D_flat" -> 1, "squeak_F_sharp" -> 6, "squeak_C" -> 0
@@ -467,7 +511,7 @@ local function speak_sam(st, text, pos)
 		st.sing, st.smooth, st.tone, st.effects, text)
 	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100), pitch = st.pitch_mul}
 	if pos then
-		params.pos, params.max_hear_distance = pos, 64
+		params.pos, params.max_hear_distance, params.nhv_muffle = pos, 64, sound.muffle(pos)
 	else
 		params.to_player = p:get_player_name()
 	end
@@ -493,7 +537,7 @@ local function play_voice(id, pos, text, who)
 	local gain = (v.volume or 100) / 100 * ((sound.cfg.master.voices or 100) / 100)
 	local params = {gain = gain}
 	if pos then
-		params.pos, params.max_hear_distance = pos, 64
+		params.pos, params.max_hear_distance, params.nhv_muffle = pos, 64, sound.muffle(pos)
 	else
 		params.to_player = p:get_player_name()
 	end
@@ -543,17 +587,19 @@ nh.on_event(function(evs)
 			local kind = parts[1]
 			if kind == "effect" then
 				local id, vol = parts[2], tonumber(parts[3]) or 100
+				-- where it happens, if NetHack knows (else centred on the hero)
+				local pos = sound.where(tonumber(parts[4]), tonumber(parts[5]), tonumber(parts[6]))
 				local semi = squeak_semitone(id or "")
 				local entry = sound.cfg.hooks[id]
 				if semi and not (entry and entry.sounds and #entry.sounds > 0) then
 					-- a squeaky board's own note (unless the editor gives the
 					-- hook a sound of its own)
 					if nhv.effects then
-						nhv.effects.hook(id, {volume = vol})
+						nhv.effects.hook(id, {volume = vol, pos = pos})
 					end
-					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100)
+					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100, pos)
 				else
-					sound.hook(id, {volume = vol})
+					sound.hook(id, {volume = vol, pos = pos})
 				end
 			elseif kind == "notes" then
 				-- an instrument played: its notes (improvised or a tune)
