@@ -1,336 +1,190 @@
 {
- "version": 1,
+ "version": 2,
  "output": {
   "rate": 11025,
   "quality": 4
  },
  "speakers": {
   "Text": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Narrator": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Shopkeeper": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Rog)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Arc)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Kni)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Mon)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Pri)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Ran)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Tou)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Val)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Wiz)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Bar)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Cav)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (common)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Monster": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Sam)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest (Hea)": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "The Oracle": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Vault guard": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "God": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Priest": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Mail daemon": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Voice": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Demon / angel": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Djinni / ghost": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Level": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Quest leader": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Throne voice": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
    "preset": "Plain"
   },
   "Wizard of Yendor": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
-   "preset": "Echoing hall",
-   "voice_id": "3SF4rB1fGBMXU9xRM7pz",
-   "voice_name": "Oxley - Eccentric, Distorted and Evil"
+   "preset": "Echoing hall"
   },
   "Water demon / nymph": {
-   "settings": {
-    "stability": 0.5,
-    "similarity_boost": 0.75,
-    "style": 0,
-    "speed": 1,
-    "use_speaker_boost": true
-   },
-   "preset": "Echoing hall",
-   "voice_id": "EXAVITQu4vr4xnSDxMaL",
-   "voice_name": "Sarah - Mature, Reassuring, Confident"
+   "preset": "Echoing hall"
   }
  },
  "presets": {
   "Plain": {
-   "steps": [
-    "Normalize: PeakLevel=-1 ApplyGain=1 RemoveDcOffset=1 StereoIndependent=0"
+   "effects": [
+    {
+     "type": "normalize",
+     "peak": -1.0
+    }
    ]
   },
   "Echoing hall": {
-   "steps": [
-    "Normalize: PeakLevel=-3 ApplyGain=1 RemoveDcOffset=1 StereoIndependent=0",
-    "Reverb: RoomSize=85 Reverberance=60 WetGain=-4 DryGain=-1",
-    "Normalize: PeakLevel=-1 ApplyGain=1 RemoveDcOffset=0 StereoIndependent=0"
+   "effects": [
+    {
+     "type": "reverb",
+     "room": 85.0,
+     "mix": 40
+    },
+    {
+     "type": "normalize",
+     "peak": -1.0
+    }
+   ]
+  },
+  "Monster": {
+   "effects": [
+    {
+     "type": "pitch",
+     "semitones": -5,
+     "formants": 0
+    },
+    {
+     "type": "distortion",
+     "drive": 6
+    },
+    {
+     "type": "normalize",
+     "peak": -1
+    }
+   ]
+  },
+  "Ghostly": {
+   "effects": [
+    {
+     "type": "whisper",
+     "size": 512
+    },
+    {
+     "type": "reverb",
+     "room": 70,
+     "mix": 50
+    },
+    {
+     "type": "normalize",
+     "peak": -1
+    }
+   ]
+  },
+  "Radio": {
+   "effects": [
+    {
+     "type": "highpass",
+     "freq": 300
+    },
+    {
+     "type": "lowpass",
+     "freq": 3400
+    },
+    {
+     "type": "distortion",
+     "drive": 10
+    },
+    {
+     "type": "normalize",
+     "peak": -1
+    }
+   ]
+  },
+  "Robot": {
+   "effects": [
+    {
+     "type": "robot",
+     "size": 512
+    },
+    {
+     "type": "normalize",
+     "peak": -1
+    }
    ]
   }
  },

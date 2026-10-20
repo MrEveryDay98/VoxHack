@@ -3,17 +3,17 @@
 Serves the editor page and reads/writes the game's sound data in
 game/nethackvoxel/mods/nhv_sounds:
   config.json        hook -> sounds, music, voices, master volumes
-  voice_cast.json    voice casting: ElevenLabs voice per speaker, effect
+  voice_cast.json    voice casting: Kokoro voice per speaker, effect
                      presets, output rate, spoken-text overrides
   sounds/**.ogg      sound effects, music and voice lines (folders allowed;
                      names must be unique across folders, as in Luanti)
   catalog/*.json     hooks.json (every hook) and dialogue.json (every line)
 
-Voice generation (ElevenLabs + Tenacity) lives in voicegen.py.
+Voice generation (Kokoro, run locally, + ffmpeg effects) lives in voicegen.py.
 
 Shuts itself down when the editor page is closed (and no voices are still
 being generated). Only listens on 127.0.0.1, and only answers API calls made by its own page
-(other websites can't use it to spend ElevenLabs credits). Uploaded audio is
+(other websites can't use it to change your files). Uploaded audio is
 converted to Ogg Vorbis with ffmpeg. The game picks up changes to
 config.json within a couple of seconds.
 
@@ -285,11 +285,12 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/pending/([a-z0-9_]+)\.ogg$", url.path)
         if m:
             return self.send_file(os.path.join(VG.work, "pending", m.group(1) + ".ogg"), "audio/ogg")
-        m = re.match(r"^/takes/(.+\.mp3)$", url.path)
+        m = re.match(r"^/takes/(.+\.(mp3|wav))$", url.path)
         if m:
-            return self.send_file(VG.take_path(unquote(m.group(1))), "audio/mpeg")
-        if url.path == "/preview.ogg":
-            return self.send_file(os.path.join(VG.work, "preview.ogg"), "audio/ogg")
+            return self.send_file(VG.take_path(unquote(m.group(1))),
+                                  "audio/mpeg" if m.group(2) == "mp3" else "audio/wav")
+        if url.path in ("/preview.ogg", "/sample.ogg"):
+            return self.send_file(os.path.join(VG.work, url.path[1:]), "audio/ogg")
         if url.path == "/sheet.png":
             return self.send_file(blocks_api.SHEET, "image/png")
         if url.path == "/wb.png":
@@ -314,8 +315,6 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(403, {"error": "forbidden"})
         try:
             return self.api_get(url.path, q)
-        except voicegen.ApiError as e:
-            return self.send(502 if e.status == 0 else 400, {"error": str(e), "code": e.code})
         except (RuntimeError, ValueError) as e:
             return self.send(400, {"error": str(e)})
 
@@ -352,37 +351,13 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/takes":
             return self.send(200, VG.load_takes())
         if path == "/api/voice/status":
-            key, source = voicegen.key_info()
-            return self.send(200, {
-                "key": bool(key), "key_source": source,
-                "key_hint": ("…" + key[-4:]) if len(key) > 8 else "",
-                "tenacity": VG.tenacity.connected(),
-                "tenacity_installed": os.path.exists(r"C:\Program Files\Tenacity\tenacity.exe"),
-                "ffmpeg": bool(shutil.which("ffmpeg")),
-            })
+            return self.send(200, {"kokoro": VG.kokoro.status(), "ffmpeg": bool(shutil.which("ffmpeg"))})
         if path == "/api/voice/jobs":
             return self.send(200, VG.state(int((q.get("since") or ["0"])[0])))
-        if path == "/api/eleven/voices":
-            res = voicegen.eleven("GET", "/v1/voices")
-            return self.send(200, [{"voice_id": v["voice_id"], "name": v.get("name", ""),
-                                    "category": v.get("category", ""), "labels": v.get("labels") or {},
-                                    "preview_url": v.get("preview_url") or ""}
-                                   for v in res.get("voices", [])])
-        if path == "/api/eleven/models":
-            res = voicegen.eleven("GET", "/v1/models")
-            return self.send(200, [{"model_id": m["model_id"], "name": m.get("name", m["model_id"]),
-                                    "cost": m.get("token_cost_factor", 1)}
-                                   for m in res if m.get("can_do_text_to_speech", True)])
-        if path == "/api/eleven/subscription":
-            res = voicegen.eleven("GET", "/v1/user/subscription")
-            return self.send(200, {k: res.get(k) for k in ("tier", "character_count", "character_limit",
-                                                            "next_character_count_reset_unix")})
-        if path == "/api/tenacity/commands":
-            cmds = VG.tenacity.get_commands()
-            return self.send(200, [{"id": c.get("id"), "name": c.get("name"), "params": c.get("params", []),
-                                    "tip": c.get("tip", "")} for c in cmds])
-        if path == "/api/tenacity/macros":
-            return self.send(200, voicegen.list_macros())
+        if path == "/api/voice/effects":
+            return self.send(200, voicegen.EFFECTS)
+        if path == "/api/kokoro/voices":
+            return self.send(200, [voicegen.voice_info(n) for n in VG.kokoro.voices()])
         return self.send(404, {"error": "not found"})
 
     # -------------------------------------------------------------- PUT
@@ -424,12 +399,6 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/cast":
             write_json(VG.cast_path, data, backup=True)
             return self.send(200, {"ok": True})
-        if path == "/api/voice/key":
-            try:
-                voicegen.set_key(str(data.get("key", "")))
-            except OSError as e:
-                return self.send(400, {"error": str(e)})
-            return self.send(200, {"ok": True})
         return self.send(404, {"error": "not found"})
 
     # -------------------------------------------------------------- POST
@@ -462,8 +431,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {"file": blocks_api.upload_texture(name, self.read_body(), frames, length)})
             data = self.body_json() or {}
             return self.api_post(url.path, data)
-        except voicegen.ApiError as e:
-            return self.send(400, {"error": str(e), "code": e.code})
         except (ValueError, RuntimeError, OSError, subprocess.CalledProcessError) as e:
             return self.send(400, {"error": str(e)})
 
@@ -581,12 +548,12 @@ class Handler(BaseHTTPRequestHandler):
                     p = VG.line_plan(line, cast)
                     words = speakable.has_words(p["text"])
                     out.append({"line": line, "speaker": p["speaker"], "chars": len(p["text"]) if words else 0,
-                                "voice": bool(p["voice_id"]), "model": p["model_id"]})
+                                "voice": bool(p["voice"])})
                 except ValueError:
                     pass
             return self.send(200, out)
         if path == "/api/voice/preview":
-            # {steps, rate, source: "take:<line id>" | "sound:<name>"}
+            # {effects, rate, source: "take:<line id>" | "sound:<name>"}
             src = data.get("source", "")
             if src.startswith("take:"):
                 t = VG.load_takes().get(src[5:])
@@ -599,11 +566,17 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Choose something to test the preset on")
             if not path_in or not os.path.exists(path_in):
                 raise ValueError("Source audio not found")
-            VG.preview(path_in, data.get("steps", []), {"rate": data.get("rate") or 11025, "quality": 5})
-            return self.send(200, {"url": "/preview.ogg"})
-        if path == "/api/tenacity/macros":
-            name = voicegen.save_macro(str(data.get("name", "")), data.get("steps", []))
-            return self.send(200, {"name": name})
+            VG.preview(path_in, data.get("effects", []), {"rate": data.get("rate") or 11025, "quality": 5})
+            return self.send(200, {"url": "/preview.ogg?v=%d" % int(time.time() * 1000)})
+        if path == "/api/voice/sample":
+            # {voice, speed, lang, text, effects, rate}: hear a voice before casting it
+            VG.sample(str(data.get("voice", "")), data.get("speed") or 1, data.get("lang") or "",
+                      str(data.get("text") or "")[:400], data.get("effects", []),
+                      {"rate": data.get("rate") or 11025, "quality": 5})
+            return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
+        if path == "/api/kokoro/setup":
+            VG.kokoro.start_setup()
+            return self.send(200, VG.kokoro.status())
         return self.send(404, {"error": "not found"})
 
 

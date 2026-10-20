@@ -183,6 +183,16 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .params label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); }
 .params input[type=number], .params input[type=text], .params select { width: 100%; }
 .test select { max-width: 360px; }
+.fx { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.fx.off { opacity: .55; }
+.fx-head { display: flex; gap: 6px; align-items: center; }
+.fx-head .num { width: 22px; text-align: center; color: var(--muted); font-size: 12px; }
+.fx-head select { flex: 1; }
+.fx-tip { font-size: 12px; color: var(--muted); margin: 2px 0 0 28px; }
+.fx .params { margin: 4px 0 0 28px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.fx .params .sl, .spk-set .sl { display: grid; grid-template-columns: 90px 1fr 56px; flex-direction: row; }
+.fx .params .check { flex-direction: row; align-items: center; font-size: 12px; }
+.setup-card progress { width: 100%; }
 
 @media (max-width: 860px) {
   .lib, .presets { grid-template-columns: 1fr; }

@@ -135,15 +135,17 @@ All sprites and tile textures come from one sprite sheet:
   (`catalog/dialogue.json`), ready for voice acting.
 - **Sound library folders:** sounds can sit in folders under `sounds/` (the game loads them all).
   Whole folders can be imported. Names stay unique across folders because Luanti needs that.
-- **Voice generation (Voice casting tab):** choose an ElevenLabs voice, model, settings and effect
-  preset per speaker, then generate lines singly or in bulk (credit estimate shown first).
-  - The API key is saved encrypted for your Windows account, outside the project.
+- **Voice generation (Voice casting tab):** Kokoro text-to-speech, run locally (no account or
+  credits). Choose a Kokoro voice per speaker (optionally a blend of two), its speed and accent,
+  and an effect preset, then generate lines singly or in bulk.
+  - "Install Kokoro" makes `voice_work/kokoro/` (a venv with kokoro-onnx, plus the ~120 MB model);
+    `kokoro_worker.py` runs in it, so the editor itself still needs only Python and ffmpeg.
   - Quest placeholders are filled with each role's real names; parts that change per game (your
     name, god, gender) are read generically and flagged. Each line's spoken text can be edited.
-  - Takes are kept in `voice_work/` (not in git). Tenacity applies the preset's effects, then
-    resamples to 11025 Hz (configurable), and the result goes to `sounds/voices/`.
-  - Presets are Tenacity macro lines; they can be imported from or saved as Tenacity macros.
-  - Tenacity needs `mod-script-pipe` enabled (Edit > Preferences > Modules) and must be open.
+  - Takes are kept in `voice_work/` (not in git). The preset's effects (pitch, filters, EQ, echo,
+    reverb, chorus, distortion, bitcrush, robot, whisper...) are applied with ffmpeg, then every
+    line is resampled to the global rate (11025 Hz by default), and the result goes to
+    `sounds/voices/` once confirmed.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

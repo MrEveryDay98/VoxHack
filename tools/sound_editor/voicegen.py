@@ -1,50 +1,66 @@
-"""Voice generation for the sound editor: ElevenLabs text-to-speech, then
-Tenacity for effects and the final sample rate.
+"""Voice generation for the sound editor: Kokoro text-to-speech, run locally,
+then an effect chain (ffmpeg filters) and the global sample rate.
 
-  ElevenLabs   one take per "Generate": the line's speakable text, read by
-               the voice cast for its speaker. Takes are kept (they cost
-               credits) in voice_work/takes/, listed in voice_work/takes.json.
-  Tenacity     driven through its scripting pipe (mod-script-pipe). A take
-               is imported, the chosen preset (a list of Tenacity macro
-               commands) is applied, the project rate is set (11025 Hz by
-               default) and it is exported; ffmpeg makes an Ogg preview
-               (voice_work/pending/). Once confirmed, the preview becomes the
-               line's voice in sounds/voices/.
-
-The API key is kept out of the project, encrypted for the current Windows
-user (DPAPI), in %APPDATA%/NetHackVoxel/elevenlabs.key. The environment
-variable ELEVENLABS_API_KEY is used when no key was saved.
+  Kokoro    one take per "Generate": the line's speakable text, read by the
+            voice cast for its speaker (one Kokoro voice, or a blend of
+            several, at a chosen speed). Takes are kept in voice_work/takes/,
+            listed in voice_work/takes.json. Kokoro runs in its own Python
+            environment (voice_work/kokoro/, made by "Install Kokoro" in the
+            Voice casting tab) through kokoro_worker.py, so the editor itself
+            still needs nothing but Python and ffmpeg.
+  Effects   a preset is a list of effects (pitch, filters, echo, reverb,
+            robot...), applied in order with ffmpeg; every result is then
+            resampled to the global output rate (11025 Hz by default) and
+            saved as Ogg. A preview waits in voice_work/pending/ until it is
+            confirmed; then it becomes the line's voice in sounds/voices/.
 """
-import contextlib
-import ctypes
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
-import urllib.error
 import urllib.request
 
-API = os.environ.get("NHV_ELEVENLABS_URL", "https://api.elevenlabs.io")
-KEY_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "NetHackVoxel")
-KEY_FILE = os.path.join(KEY_DIR, "elevenlabs.key")
-TENACITY_MACROS = os.path.join(os.environ.get("APPDATA", ""), "tenacity", "Macros")
-TO_PIPE = r"\\.\pipe\ToSrvPipe"
-FROM_PIPE = r"\\.\pipe\FromSrvPipe"
+HERE = os.path.dirname(os.path.abspath(__file__))
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+KOKORO_PACKAGES = ["kokoro-onnx==0.4.7", "soundfile"]
+MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+MODEL_FILES = {"kokoro-v1.0.int8.onnx": 92361271, "voices-v1.0.bin": 28214398}
+SAMPLE_TEXT = "Hello, adventurer! Welcome to the Dungeons of Doom. Mind the floating eye."
+
+# a Kokoro voice's first letter is its language, the second its gender
+LANGS = {"a": ("en-us", "American English"), "b": ("en-gb", "British English"),
+         "e": ("es", "Spanish"), "f": ("fr-fr", "French"), "h": ("hi", "Hindi"),
+         "i": ("it", "Italian"), "j": ("ja", "Japanese"), "p": ("pt-br", "Brazilian Portuguese"),
+         "z": ("cmn", "Mandarin")}
 
 DEFAULT_CAST = {
-    "version": 1,
+    "version": 2,
     "output": {"rate": 11025, "quality": 4},
     "speakers": {},
     "presets": {
-        "Plain": {"steps": [
-            "Normalize: PeakLevel=-1 ApplyGain=1 RemoveDcOffset=1 StereoIndependent=0"]},
-        "Echoing hall": {"steps": [
-            "Normalize: PeakLevel=-3 ApplyGain=1 RemoveDcOffset=1 StereoIndependent=0",
-            "Reverb: RoomSize=85 Reverberance=60 WetGain=-4 DryGain=-1",
-            "Normalize: PeakLevel=-1 ApplyGain=1 RemoveDcOffset=0 StereoIndependent=0"]},
+        "Plain": {"effects": [{"type": "normalize", "peak": -1}]},
+        "Echoing hall": {"effects": [
+            {"type": "reverb", "room": 85, "mix": 40},
+            {"type": "normalize", "peak": -1}]},
+        "Monster": {"effects": [
+            {"type": "pitch", "semitones": -5, "formants": 0},
+            {"type": "distortion", "drive": 6},
+            {"type": "normalize", "peak": -1}]},
+        "Ghostly": {"effects": [
+            {"type": "whisper", "size": 512},
+            {"type": "reverb", "room": 70, "mix": 50},
+            {"type": "normalize", "peak": -1}]},
+        "Radio": {"effects": [
+            {"type": "highpass", "freq": 300}, {"type": "lowpass", "freq": 3400},
+            {"type": "distortion", "drive": 10}, {"type": "normalize", "peak": -1}]},
+        "Robot": {"effects": [
+            {"type": "robot", "size": 512}, {"type": "normalize", "peak": -1}]},
     },
     "lines": {},
 }
@@ -54,228 +70,319 @@ def safe_id(line_id):
     return re.sub(r"[^a-z0-9_]+", "_", line_id.lower()).strip("_")[:60]
 
 
-# ---------------------------------------------------------------- API key
-class _Blob(ctypes.Structure):
-    _fields_ = [("cbData", ctypes.c_uint32), ("pbData", ctypes.POINTER(ctypes.c_char))]
+def voice_info(name):
+    lang, label = LANGS.get(name[:1], ("en-us", "Other"))
+    return {"id": name, "name": name[3:].replace("_", " ").title() if "_" in name else name,
+            "lang": lang, "language": label,
+            "gender": {"f": "female", "m": "male"}.get(name[1:2], "")}
 
 
-def _dpapi(data, protect):
-    buf = ctypes.create_string_buffer(data, len(data))
-    blob_in = _Blob(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
-    blob_out = _Blob()
-    crypt32 = ctypes.windll.crypt32
-    fn = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
-    if not fn(ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out)):
-        raise OSError("Windows could not %s the key" % ("encrypt" if protect else "decrypt"))
+def voice_lang(spec):
+    """The language a voice spec is read in: its first (or only) voice's."""
+    first = str(spec or "").split("+")[0].split("*")[0].strip()
+    return LANGS.get(first[:1], ("en-us", ""))[0]
+
+
+def voice_label(spec):
+    """'af_heart*0.6+bf_emma*0.4' -> 'Heart 60% + Emma 40%'"""
+    parts = [p.strip().partition("*") for p in str(spec or "").split("+") if p.strip()]
+    if len(parts) == 1:
+        return voice_info(parts[0][0])["name"]
+    total = sum(float(w or 1) for _, _, w in parts) or 1
+    return " + ".join("%s %d%%" % (voice_info(n)["name"], round(100 * float(w or 1) / total)) for n, _, w in parts)
+
+
+# ---------------------------------------------------------------- effects
+def _p(key, label, lo, hi, step, default, unit="", kind="number", choices=None):
+    d = {"key": key, "label": label, "min": lo, "max": hi, "step": step, "default": default, "unit": unit,
+         "type": kind}
+    if choices:
+        d["choices"] = choices
+    return d
+
+
+EFFECTS = {
+    "normalize": {"name": "Normalize", "tip": "Turn the whole line up or down so its loudest peak is at this level.",
+                  "params": [_p("peak", "Peak", -24, 0, 0.5, -1, "dB")]},
+    "gain": {"name": "Volume", "tip": "Louder or quieter by a fixed amount.",
+             "params": [_p("db", "Gain", -24, 24, 0.5, 0, "dB")]},
+    "pitch": {"name": "Pitch", "tip": "Higher or lower without changing the speed. Keeping the formants sounds "
+              "like the same person singing higher or lower; shifting them sounds like a bigger or smaller creature.",
+              "params": [_p("semitones", "Semitones", -12, 12, 0.5, -3, "st"),
+                         _p("formants", "Keep formants", 0, 1, 1, 0, kind="bool")]},
+    "tempo": {"name": "Tempo", "tip": "Faster or slower without changing the pitch.",
+              "params": [_p("factor", "Speed", 0.5, 2, 0.05, 1, "×")]},
+    "highpass": {"name": "High-pass filter", "tip": "Cuts the bass below this frequency (thin, small, tinny).",
+                 "params": [_p("freq", "Cutoff", 20, 4000, 10, 200, "Hz")]},
+    "lowpass": {"name": "Low-pass filter", "tip": "Cuts the treble above this frequency (muffled, behind a door).",
+                "params": [_p("freq", "Cutoff", 200, 20000, 50, 3500, "Hz")]},
+    "eq": {"name": "EQ band", "tip": "Boost or cut one band of frequencies.",
+           "params": [_p("freq", "Centre", 40, 16000, 10, 1000, "Hz"), _p("q", "Width (Q)", 0.1, 10, 0.1, 1),
+                      _p("db", "Gain", -24, 24, 0.5, 6, "dB")]},
+    "compressor": {"name": "Compressor", "tip": "Evens out loud and quiet parts.",
+                   "params": [_p("threshold", "Threshold", -40, 0, 1, -18, "dB"), _p("ratio", "Ratio", 1, 20, 0.5, 4, ":1")]},
+    "echo": {"name": "Echo", "tip": "Distinct repeats of the voice.",
+             "params": [_p("delay", "Delay", 20, 1500, 10, 250, "ms"), _p("decay", "Decay", 0.05, 0.95, 0.05, 0.4),
+                        _p("repeats", "Repeats", 1, 8, 1, 3)]},
+    "reverb": {"name": "Reverb", "tip": "A room around the voice: small rooms to great halls.",
+               "params": [_p("room", "Room size", 0, 100, 1, 60, "%"), _p("mix", "Wet", 0, 100, 1, 35, "%")]},
+    "chorus": {"name": "Chorus", "tip": "Several voices at once, slightly apart.",
+               "params": [_p("mix", "Wet", 0, 100, 1, 50, "%"), _p("rate", "Rate", 0.1, 5, 0.1, 0.6, "Hz"),
+                          _p("depth", "Depth", 0.5, 10, 0.5, 2.5, "ms")]},
+    "flanger": {"name": "Flanger", "tip": "A sweeping, metallic whoosh.",
+                "params": [_p("depth", "Depth", 0, 10, 0.5, 3, "ms"), _p("speed", "Speed", 0.1, 10, 0.1, 0.5, "Hz"),
+                           _p("regen", "Feedback", -95, 95, 1, 40, "%")]},
+    "tremolo": {"name": "Tremolo", "tip": "The volume wobbles.",
+                "params": [_p("freq", "Rate", 0.5, 20, 0.5, 6, "Hz"), _p("depth", "Depth", 0, 1, 0.05, 0.5)]},
+    "vibrato": {"name": "Vibrato", "tip": "The pitch wobbles.",
+                "params": [_p("freq", "Rate", 0.5, 20, 0.5, 5, "Hz"), _p("depth", "Depth", 0, 1, 0.05, 0.3)]},
+    "distortion": {"name": "Distortion", "tip": "Overdriven and gritty.",
+                   "params": [_p("drive", "Drive", 0, 40, 1, 12, "dB")]},
+    "bitcrush": {"name": "Bitcrusher", "tip": "Lo-fi digital grit: fewer bits, a lower sample rate.",
+                 "params": [_p("bits", "Bits", 2, 16, 1, 8), _p("downsample", "Downsample", 1, 16, 1, 1, "×")]},
+    "robot": {"name": "Robot", "tip": "A flat, buzzing machine voice. Smaller sizes buzz higher.",
+              "params": [_p("size", "Size", 128, 2048, 0, 512, kind="choice", choices=[128, 256, 512, 1024, 2048])]},
+    "whisper": {"name": "Whisper", "tip": "Breathy and voiceless: ghosts and secrets.",
+                "params": [_p("size", "Size", 128, 2048, 0, 512, kind="choice", choices=[128, 256, 512, 1024, 2048])]},
+}
+
+
+def _num(fx, key):
+    spec = next(p for p in EFFECTS[fx["type"]]["params"] if p["key"] == key)
     try:
-        return ctypes.string_at(blob_out.pbData, blob_out.cbData)
-    finally:
-        ctypes.windll.kernel32.LocalFree(ctypes.cast(blob_out.pbData, ctypes.c_void_p))
+        v = float(fx.get(key, spec["default"]))
+    except (TypeError, ValueError):
+        v = float(spec["default"])
+    if not math.isfinite(v):
+        v = float(spec["default"])
+    return min(max(v, spec["min"]), spec["max"])
 
 
-def get_key():
-    return key_info()[0]
+def _taps(delays, decays, gain_in=1.0, gain_out=1.0):
+    return "aecho=%g:%g:%s:%s" % (gain_in, gain_out, "|".join("%g" % round(d, 1) for d in delays),
+                                  "|".join("%g" % round(d, 3) for d in decays))
 
 
-def key_info():
-    """(key, where it came from: "saved" | "environment" | "")"""
-    try:
-        with open(KEY_FILE, "rb") as f:
-            return _dpapi(f.read(), False).decode("utf-8"), "saved"
-    except OSError:
-        key = os.environ.get("ELEVENLABS_API_KEY", "")
-        return key, "environment" if key else ""
+def effect_filter(fx):
+    """One effect -> (ffmpeg filter text, seconds of tail it needs)."""
+    t = fx.get("type")
+    n = lambda k: _num(fx, k)  # noqa: E731
+    if t == "gain":
+        return "volume=%gdB" % n("db"), 0
+    if t == "pitch":
+        return "rubberband=pitch=%.6f:formant=%s" % (2 ** (n("semitones") / 12),
+                                                     "preserved" if n("formants") else "shifted"), 0
+    if t == "tempo":
+        return "atempo=%g" % n("factor"), 0
+    if t == "highpass":
+        return "highpass=f=%g" % n("freq"), 0
+    if t == "lowpass":
+        return "lowpass=f=%g" % n("freq"), 0
+    if t == "eq":
+        return "equalizer=f=%g:t=q:w=%g:g=%g" % (n("freq"), n("q"), n("db")), 0
+    if t == "compressor":
+        return "acompressor=threshold=%gdB:ratio=%g:attack=5:release=80:makeup=2" % (n("threshold"), n("ratio")), 0
+    if t == "echo":
+        reps, delay, decay = int(n("repeats")), n("delay"), n("decay")
+        tail = delay * reps / 1000 + 0.3
+        return "apad=pad_dur=%g,%s" % (tail, _taps([delay * (i + 1) for i in range(reps)],
+                                                   [decay ** (i + 1) for i in range(reps)], 1, 0.8)), tail
+    if t == "reverb":
+        # reflections spread over the room's decay time, fading by 60 dB
+        # across it, then smeared by a few short prime-length echoes
+        room, mix = n("room") / 100, n("mix") / 100
+        rt = 0.25 + 2.75 * room
+        count = 16
+        delays = [11 + 1000 * rt * 0.5 * ((i + 1) / count) ** 1.6 + (i * 7919 % 13) for i in range(count)]
+        decays = [mix * 0.8 * 10 ** (-3 * d / (1000 * rt)) for d in delays]
+        tail = rt + 0.2
+        return "apad=pad_dur=%g,%s,%s" % (
+            tail, _taps(delays, decays, 1, 0.8), _taps([7, 13, 19, 29], [0.35, 0.28, 0.22, 0.16], 1, 0.7)), tail
+    if t == "chorus":
+        mix, rate, depth = n("mix") / 100, n("rate"), n("depth")
+        return "chorus=%g:%g:45|60:%g|%g:%g|%g:%g|%g" % (1 - mix * 0.4, 0.9, mix * 0.6, mix * 0.5,
+                                                         rate, rate * 1.3, depth, depth * 0.8), 0.1
+    if t == "flanger":
+        return "flanger=depth=%g:speed=%g:regen=%g" % (n("depth"), n("speed"), n("regen")), 0
+    if t == "tremolo":
+        return "tremolo=f=%g:d=%g" % (n("freq"), max(n("depth"), 0.01)), 0
+    if t == "vibrato":
+        return "vibrato=f=%g:d=%g" % (n("freq"), max(n("depth"), 0.01)), 0
+    if t == "distortion":
+        d = n("drive")
+        return "volume=%gdB,asoftclip=type=tanh,volume=-3dB" % d, 0
+    if t == "bitcrush":
+        return "acrusher=bits=%d:samples=%d:mode=lin:aa=0" % (n("bits"), n("downsample")), 0
+    if t == "robot":
+        size = int(n("size"))
+        return "afftfilt=real='hypot(re,im)':imag='0':win_size=%d:overlap=0.75" % size, 0
+    if t == "whisper":
+        size = int(n("size"))
+        return ("afftfilt=real='hypot(re,im)*cos((random(0)*2-1)*2*3.14)'"
+                ":imag='hypot(re,im)*sin((random(1)*2-1)*2*3.14)':win_size=%d:overlap=0.6" % size), 0
+    return "", 0
 
 
-def set_key(key):
-    key = key.strip()
-    if not key:
-        if os.path.exists(KEY_FILE):
-            os.remove(KEY_FILE)
-        return
-    os.makedirs(KEY_DIR, exist_ok=True)
-    with open(KEY_FILE, "wb") as f:
-        f.write(_dpapi(key.encode("utf-8"), True))
-
-
-class ApiError(Exception):
-    def __init__(self, status, message, code=""):
-        super().__init__(message)
-        self.status, self.code = status, code
-
-
-def eleven(method, path, body=None, accept="application/json", timeout=120):
-    key = get_key()
-    if not key:
-        raise ApiError(401, "No ElevenLabs API key saved yet", "no_key")
-    data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(API + path, data=data, method=method, headers={
-        "xi-api-key": key, "Accept": accept, "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            raw = r.read()
-            return raw if accept != "application/json" else json.loads(raw.decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        msg, code = e.reason, ""
-        try:
-            detail = json.loads(e.read().decode("utf-8")).get("detail")
-            if isinstance(detail, dict):
-                msg, code = detail.get("message", msg), detail.get("status", "")
-            elif isinstance(detail, str):
-                msg = detail
-            elif isinstance(detail, list) and detail:
-                msg = "; ".join(str(d.get("msg", d)) for d in detail)
-        except (ValueError, AttributeError):
-            pass
-        raise ApiError(e.code, "ElevenLabs: %s" % msg, code)
-    except urllib.error.URLError as e:
-        raise ApiError(0, "Could not reach ElevenLabs: %s" % e.reason, "network")
-
-
-def tts(voice_id, text, model_id, settings):
-    vs = {k: settings[k] for k in ("stability", "similarity_boost", "style", "use_speaker_boost", "speed")
-          if k in settings}
-    return eleven("POST", "/v1/text-to-speech/%s?output_format=mp3_44100_128" % voice_id,
-                  {"text": text, "model_id": model_id, "voice_settings": vs}, accept="audio/mpeg")
-
-
-# ---------------------------------------------------------------- Tenacity
-def fix_json_escapes(text):
-    """Double any backslash that doesn't start a valid JSON escape."""
-    def one(m):
-        return m.group(0) if m.group(1) in '"\\/bfnrtu' else "\\\\" + m.group(1)
-    return re.sub(r"\\(.)", one, text, flags=re.S)
-
-
-class Tenacity:
-    """Talks to Tenacity through mod-script-pipe.
-
-    Tenacity serves one connected program at a time, so the pipe is only
-    held for one piece of work (a session) and then let go."""
-
-    def __init__(self):
-        self.lock = threading.RLock()
-        self.to = self.frm = None
-        self.depth = 0
-        self.commands = None
-
-    def _open(self):
-        deadline = time.time() + 6
-        while True:
+def migrate_cast(cast):
+    """Casts from the ElevenLabs + Tenacity editor: Tenacity steps become
+    effects; ElevenLabs voices are dropped (Kokoro has different ones)."""
+    for preset in cast.get("presets", {}).values():
+        if "effects" in preset:
+            preset.pop("steps", None)
+            continue
+        effects = []
+        for step in preset.pop("steps", []):
+            name, _, rest = step.partition(":")
+            args = dict(re.findall(r"(\w+)=(\S+)", rest))
             try:
-                self.to = open(TO_PIPE, "w", encoding="utf-8")
-                self.frm = open(FROM_PIPE, "r", encoding="utf-8")
-                return
-            except OSError as e:
-                self._close()
-                # "all pipe instances are busy": someone else is talking to it
-                if getattr(e, "winerror", None) == 231:
-                    if time.time() < deadline:
-                        time.sleep(0.3)
-                        continue
-                    raise RuntimeError(
-                        "Tenacity is busy with another program (an older copy of this editor "
-                        "may still be running: close its window or tab and try again).")
-                raise RuntimeError(
-                    "Tenacity isn't reachable. Start Tenacity, and make sure mod-script-pipe is "
-                    "Enabled in Edit > Preferences > Modules (then restart Tenacity once).")
-
-    def _close(self):
-        for f in (self.to, self.frm):
-            try:
-                if f:
-                    f.close()
-            except OSError:
+                if name.strip() == "Normalize":
+                    effects.append({"type": "normalize", "peak": float(args.get("PeakLevel", -1))})
+                elif name.strip() == "Reverb":
+                    effects.append({"type": "reverb", "room": float(args.get("RoomSize", 75)), "mix": 40})
+                elif name.strip() == "Amplify":
+                    effects.append({"type": "gain", "db": float(args.get("Ratio", 0))})
+                elif name.strip() == "Echo":
+                    effects.append({"type": "echo", "delay": 1000 * float(args.get("Delay", 0.25)),
+                                    "decay": float(args.get("Decay", 0.4)), "repeats": 3})
+            except ValueError:
                 pass
-        self.to = self.frm = None
+        # Tenacity's double normalize around a reverb is one at the end here
+        while len(effects) > 1 and effects[0]["type"] == "normalize" and \
+                any(e["type"] == "normalize" for e in effects[1:]):
+            effects.pop(0)
+        preset["effects"] = effects
+    for entry in list(cast.get("speakers", {}).values()) + list(cast.get("lines", {}).values()):
+        for k in ("voice_id", "voice_name", "model_id", "settings"):
+            entry.pop(k, None)
+    # and the newer example presets
+    for name, preset in DEFAULT_CAST["presets"].items():
+        cast["presets"].setdefault(name, json.loads(json.dumps(preset)))
+    cast["version"] = 2
+    return cast
 
-    @contextlib.contextmanager
-    def session(self):
-        with self.lock:
-            if self.depth == 0:
-                self._open()
-            self.depth += 1
-            try:
-                yield self
-            finally:
-                self.depth -= 1
-                if self.depth == 0:
-                    self._close()
 
-    def connected(self):
+# ---------------------------------------------------------------- Kokoro
+class Kokoro:
+    """Kokoro's own Python environment, and the worker process that speaks."""
+
+    def __init__(self, work):
+        self.dir = os.path.join(work, "kokoro")
+        self.python = os.path.join(self.dir, "venv", "Scripts", "python.exe")
+        self.models = os.path.join(self.dir, "models")
+        self.lock = threading.Lock()
+        self.proc = None
+        self.names = None
+        self.setup_state = {"running": False, "step": "", "error": "", "progress": 0}
+
+    def model_path(self, name):
+        return os.path.join(self.models, name)
+
+    def installed(self):
+        return os.path.exists(self.python) and all(
+            os.path.exists(self.model_path(n)) and os.path.getsize(self.model_path(n)) == size
+            for n, size in MODEL_FILES.items())
+
+    def status(self):
+        return {"installed": self.installed(), "running": bool(self.proc and self.proc.poll() is None),
+                "setup": dict(self.setup_state)}
+
+    # -- one-time setup: a virtual environment with kokoro-onnx, and the model files
+    def start_setup(self):
+        if self.setup_state["running"]:
+            return
+        self.setup_state.update(running=True, step="Starting", error="", progress=0)
+        threading.Thread(target=self._setup, daemon=True).start()
+
+    def _setup(self):
+        st = self.setup_state
         try:
-            with self.session():
-                return True
-        except RuntimeError:
-            return False
+            os.makedirs(self.models, exist_ok=True)
+            if not os.path.exists(self.python):
+                st["step"] = "Making a Python environment for Kokoro"
+                subprocess.run([sys.executable, "-m", "venv", os.path.join(self.dir, "venv")],
+                               check=True, capture_output=True, creationflags=NO_WINDOW)
+            st["step"] = "Installing kokoro-onnx (a few minutes the first time)"
+            r = subprocess.run([self.python, "-m", "pip", "install", "--disable-pip-version-check",
+                                "--no-input", *KOKORO_PACKAGES],
+                               capture_output=True, text=True, creationflags=NO_WINDOW)
+            if r.returncode:
+                raise RuntimeError("pip couldn't install Kokoro: " + (r.stderr or r.stdout).strip()[-600:])
+            for name, size in MODEL_FILES.items():
+                path = self.model_path(name)
+                if os.path.exists(path) and os.path.getsize(path) == size:
+                    continue
+                st["step"] = "Downloading %s (%d MB)" % (name, size // 1000000)
+                part = path + ".part"
+                with urllib.request.urlopen(MODEL_URL + name, timeout=60) as resp, open(part, "wb") as f:
+                    got = 0
+                    while True:
+                        chunk = resp.read(1 << 16)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        got += len(chunk)
+                        st["progress"] = round(got / size, 3)
+                if os.path.getsize(part) != size:
+                    os.remove(part)
+                    raise RuntimeError("The download of %s was incomplete; try again" % name)
+                os.replace(part, path)
+            st["step"] = "Starting Kokoro"
+            self.voices()
+            st["step"] = "Ready"
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as e:
+            st["error"] = str(e)
+        finally:
+            st["running"] = False
 
-    def cmd(self, line):
-        """Run one scripting command; returns its output, raises on failure."""
-        with self.session():
+    # -- the worker
+    def _start(self):
+        if self.proc and self.proc.poll() is None:
+            return
+        if not self.installed():
+            raise RuntimeError("Kokoro isn't installed yet: press Install Kokoro in the Voice casting tab")
+        log = open(os.path.join(self.dir, "worker.log"), "w", encoding="utf-8")
+        self.proc = subprocess.Popen(
+            [self.python, os.path.join(HERE, "kokoro_worker.py"),
+             self.model_path("kokoro-v1.0.int8.onnx"), self.model_path("voices-v1.0.bin")],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8",
+            creationflags=NO_WINDOW, cwd=self.dir)
+        log.close()
+        if not self._read().get("ready"):
+            raise RuntimeError("Kokoro didn't start")
+
+    def _read(self):
+        line = self.proc.stdout.readline()
+        if not line:
+            self.proc = None
             try:
-                self.to.write(line + "\r\n\0")
-                self.to.flush()
-                out = []
-                while True:
-                    s = self.frm.readline()
-                    if s == "":
-                        raise OSError("pipe closed")
-                    if s == "\n" and out and out[-1].startswith("BatchCommand finished"):
-                        break
-                    out.append(s.rstrip("\n"))
+                with open(os.path.join(self.dir, "worker.log"), encoding="utf-8", errors="replace") as f:
+                    tail = f.read().strip().splitlines()[-1:]
             except OSError:
-                self._close()
-                self.depth = 0
-                raise RuntimeError("Lost the connection to Tenacity (was it closed?)")
-        status = out[-1] if out else ""
-        body = "\n".join(out[:-1])
-        if not status.endswith("OK"):
-            raise RuntimeError("Tenacity: '%s' failed. %s" % (line.split(":")[0], body.strip()[:300]))
-        return body
+                tail = []
+            raise RuntimeError("Kokoro stopped unexpectedly" + (": " + tail[0] if tail else ""))
+        return json.loads(line)
 
-    def get_commands(self):
-        if self.commands is None:
-            text = self.cmd("GetInfo: Type=Commands Format=JSON")
-            text = text[text.index("["):]
-            # Tenacity doesn't escape backslashes (e.g. in Windows paths)
-            text = fix_json_escapes(text)
-            self.commands = json.loads(text, strict=False)
-        return self.commands
+    def call(self, req):
+        with self.lock:
+            self._start()
+            try:
+                self.proc.stdin.write(json.dumps(req) + "\n")
+                self.proc.stdin.flush()
+            except OSError:
+                self.proc = None
+                raise RuntimeError("Lost contact with Kokoro; try again")
+            reply = self._read()
+        if not reply.get("ok"):
+            raise RuntimeError("Kokoro: " + reply.get("error", "failed"))
+        return reply
 
-    def process(self, src_wav, steps, rate, dst_wav):
-        q = lambda p: '"%s"' % p.replace("\\", "/")
-        with self.session():
-            self.cmd("SelectAll:")
-            self.cmd("RemoveTracks:")
-            self.cmd("Import2: Filename=%s" % q(src_wav))
-            for step in steps:
-                step = step.strip()
-                if step and not step.startswith("#"):
-                    self.cmd("SelectAll:")
-                    self.cmd(step if ":" in step else step + ":")
-            self.cmd("SetProject: Rate=%d" % int(rate))
-            self.cmd("SelectAll:")
-            self.cmd("Export2: Filename=%s NumChannels=1" % q(dst_wav))
-            self.cmd("SelectAll:")
-            self.cmd("RemoveTracks:")
+    def voices(self):
+        if self.names is None:
+            self.names = self.call({"cmd": "voices"})["voices"]
+        return self.names
 
-
-def list_macros():
-    out = {}
-    if os.path.isdir(TENACITY_MACROS):
-        for f in sorted(os.listdir(TENACITY_MACROS)):
-            if f.lower().endswith(".txt"):
-                with open(os.path.join(TENACITY_MACROS, f), encoding="utf-8", errors="replace") as fh:
-                    out[f[:-4]] = [s.rstrip("\r\n") for s in fh if s.strip()]
-    return out
-
-
-def save_macro(name, steps):
-    name = re.sub(r'[\\/:*?"<>|]+', "_", name).strip() or "VoxHack preset"
-    os.makedirs(TENACITY_MACROS, exist_ok=True)
-    with open(os.path.join(TENACITY_MACROS, name + ".txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(s for s in steps if s.strip()) + "\n")
-    return name
+    def say(self, text, voice, speed, lang, out):
+        return self.call({"cmd": "say", "text": text, "voice": voice, "speed": speed, "lang": lang, "out": out})
 
 
 # ---------------------------------------------------------------- jobs
@@ -288,9 +395,9 @@ class VoiceGen:
         self.catalog = catalog              # () -> {line id: entry}
         self.load_config, self.save_config = load_config, save_config
         self.speakable = speakable
-        self.tenacity = Tenacity()
+        self.kokoro = Kokoro(self.work)
         self.lock = threading.Lock()          # jobs and takes.json
-        self.render_lock = threading.RLock()  # one Tenacity render at a time
+        self.render_lock = threading.RLock()  # one render at a time (shared temp files)
         self.jobs = []
         self.next_job = 1
         self.wake = threading.Event()
@@ -306,6 +413,8 @@ class VoiceGen:
             cast = json.loads(json.dumps(DEFAULT_CAST))
         for k, v in DEFAULT_CAST.items():
             cast.setdefault(k, json.loads(json.dumps(v)))
+        if cast.get("version", 1) < 2:
+            migrate_cast(cast)
         return cast
 
     def save_cast(self, cast):
@@ -354,18 +463,15 @@ class VoiceGen:
         ln = cast["lines"].get(line_id, {})
         speaker = ln.get("cast") or entry["speaker"]
         sc = cast["speakers"].get(speaker, {})
-        if ln.get("voice_id"):
-            voice_id, voice_name = ln["voice_id"], ln.get("voice_name", ln["voice_id"])
-            model = ln.get("model_id") or sc.get("model_id")
-        else:
-            voice_id, voice_name = sc.get("voice_id"), sc.get("voice_name", sc.get("voice_id"))
-            model = sc.get("model_id")
+        voice = ln.get("voice") or sc.get("voice") or ""
+        speed = float(ln.get("speed") or sc.get("speed") or 1.0)
+        lang = (ln.get("lang") if ln.get("voice") else None) or sc.get("lang") or voice_lang(voice)
         preset = ln["preset"] if "preset" in ln else sc.get("preset", "")
         if preset == self.NO_EFFECTS:
             preset = ""
-        return {"entry": entry, "speaker": speaker, "voice_id": voice_id, "voice_name": voice_name,
-                "model_id": model or "eleven_multilingual_v2", "settings": sc.get("settings", {}),
-                "preset": preset, "text": ln.get("spoken") or self.speakable(entry)[0]}
+        return {"entry": entry, "speaker": speaker, "voice": voice, "voice_name": voice_label(voice) if voice else "",
+                "speed": speed, "lang": lang, "preset": preset,
+                "text": ln.get("spoken") or self.speakable(entry)[0]}
 
     def pending_path(self, line_id):
         return os.path.join(self.work, "pending", safe_id(line_id) + ".ogg")
@@ -417,52 +523,37 @@ class VoiceGen:
                 try:
                     job["result"] = self.run(job["line"], job["action"])
                     job["status"], job["message"] = "done", ""
-                except ApiError as e:
-                    job["status"], job["message"] = "error", str(e)
-                    if e.code in ("no_key", "quota_exceeded") or e.status in (401, 402):
-                        self.stop_reason = str(e)
-                        self.cancel()
                 except (RuntimeError, ValueError, OSError, subprocess.CalledProcessError) as e:
                     job["status"], job["message"] = "error", str(e)
-                    if isinstance(e, RuntimeError) and "Tenacity" in str(e) and "reach" in str(e):
+                    if isinstance(e, RuntimeError) and "Kokoro isn't installed" in str(e):
                         self.stop_reason = str(e)
                         self.cancel()
 
     # -- the work itself
     def run(self, line_id, action):
-        """generate: a new ElevenLabs take, then a preview of it;
+        """generate: a new Kokoro take, then a preview of it;
         process: a new preview of the current take (e.g. another effect).
         Previews wait for confirm() before the game gets them."""
         cast = self.load_cast()
         plan = self.line_plan(line_id, cast)
         if action == "generate":
-            if not plan["voice_id"]:
+            if not plan["voice"]:
                 raise ValueError('Choose a voice for this line (or for "%s" in Voice casting)' % plan["speaker"])
             text = plan["text"]
             if not re.search(r"[^\W\d_]", text):
                 raise ValueError("There are no words to read: this line is only placeholders. "
                                  "Write what should be said in its Spoken text first.")
-            audio = None
-            for attempt in range(4):
-                try:
-                    audio = tts(plan["voice_id"], text, plan["model_id"], plan["settings"])
-                    break
-                except ApiError as e:
-                    if e.status != 429 or attempt == 3:
-                        raise
-                    time.sleep(2 + attempt * 3)  # busy: wait and retry
             sid = safe_id(line_id)
             folder = os.path.join(self.work, "takes", sid)
             os.makedirs(folder, exist_ok=True)
-            fname = time.strftime("%Y%m%d-%H%M%S") + ".mp3"
-            with open(os.path.join(folder, fname), "wb") as f:
-                f.write(audio)
+            fname = time.strftime("%Y%m%d-%H%M%S") + ".wav"
+            self.kokoro.say(text, plan["voice"], plan["speed"], plan["lang"], os.path.join(folder, fname))
             with self.lock:
                 takes = self.load_takes()
                 t = takes.setdefault(line_id, {"takes": [], "current": 0})
-                t["takes"].append({"file": sid + "/" + fname, "voice": plan["voice_name"],
-                                   "voice_id": plan["voice_id"], "model": plan["model_id"], "text": text,
-                                   "chars": len(text), "time": int(time.time())})
+                t["takes"].append({"file": sid + "/" + fname, "voice": plan["voice_name"], "voice_spec": plan["voice"],
+                                   "speed": plan["speed"], "text": text, "chars": len(text),
+                                   "time": int(time.time())})
                 t["current"] = len(t["takes"]) - 1
                 self._save_takes(takes)
         return self.make_preview(line_id, cast, plan)
@@ -473,10 +564,10 @@ class VoiceGen:
             raise ValueError("This line has no generated take yet")
         index = t.get("current", 0)
         take = t["takes"][index]
-        preset = cast["presets"].get(plan["preset"] or "", {"steps": []})
+        preset = cast["presets"].get(plan["preset"] or "", {})
         dst = self.pending_path(line_id)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        self.render(self.take_path(take["file"]), preset.get("steps", []), cast.get("output", {}), dst)
+        self.render(self.take_path(take["file"]), preset.get("effects", []), cast.get("output", {}), dst)
         pending = {"take": index, "preset": plan["preset"], "voice": take["voice"],
                    "url": "/pending/%s.ogg?v=%d" % (safe_id(line_id), int(time.time() * 1000)),
                    "rate": int(cast.get("output", {}).get("rate") or 11025), "time": int(time.time())}
@@ -517,35 +608,71 @@ class VoiceGen:
         if os.path.exists(self.pending_path(line_id)):
             os.remove(self.pending_path(line_id))
 
-    def render(self, src, steps, out, dst):
-        """src audio -> Tenacity (preset steps, then the output rate) -> Ogg at dst"""
+    def render(self, src, effects, out, dst):
+        """src audio -> the effects, in order -> the output rate -> Ogg at dst"""
         with self.render_lock:
-            self._render(src, steps, out, dst)
+            self._render(src, effects, out, dst)
 
-    def _render(self, src, steps, out, dst):
+    @staticmethod
+    def _ffmpeg():
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
             raise RuntimeError("ffmpeg was not found on PATH")
+        return ffmpeg
+
+    def _peak(self, path):
+        r = subprocess.run([self._ffmpeg(), "-hide_banner", "-nostats", "-i", path, "-af", "volumedetect",
+                            "-f", "null", "-"], capture_output=True, text=True, creationflags=NO_WINDOW)
+        m = re.search(r"max_volume:\s*(-?[\d.]+|-inf) dB", r.stderr)
+        return float(m.group(1)) if m and m.group(1) != "-inf" else None
+
+    def _render(self, src, effects, out, dst):
+        ffmpeg = self._ffmpeg()
         tmp = os.path.join(self.work, "tmp")
         os.makedirs(tmp, exist_ok=True)
-        wav_in = os.path.join(tmp, "in.wav")
-        wav_out = os.path.join(tmp, "out.wav")
-        for p in (wav_in, wav_out):
-            if os.path.exists(p):
-                os.remove(p)
-        subprocess.run([ffmpeg, "-loglevel", "error", "-y", "-i", src, "-ac", "1", "-ar", "44100",
-                        wav_in], check=True)
+        files = [os.path.join(tmp, "a.wav"), os.path.join(tmp, "b.wav")]
+        cur = 0
+
+        def run(args):
+            r = subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y", *args],
+                               capture_output=True, text=True, creationflags=NO_WINDOW)
+            if r.returncode:
+                raise RuntimeError("ffmpeg: " + (r.stderr.strip().splitlines() or ["failed"])[-1])
+
+        # 32-bit float in between, so nothing clips until the very end
+        run(["-i", src, "-ac", "1", "-ar", "44100", "-c:a", "pcm_f32le", files[cur]])
+        chain, padded = [], False
+
+        def flush():
+            nonlocal cur, chain
+            if chain:
+                run(["-i", files[cur], "-af", ",".join(chain), "-ac", "1", "-ar", "44100",
+                     "-c:a", "pcm_f32le", files[1 - cur]])
+                cur, chain = 1 - cur, []
+
+        for fx in effects or []:
+            if fx.get("type") not in EFFECTS or fx.get("off"):
+                continue
+            if fx["type"] == "normalize":
+                flush()
+                peak = self._peak(files[cur])
+                if peak is not None:
+                    chain.append("volume=%gdB" % (_num(fx, "peak") - peak))
+                continue
+            text, tail = effect_filter(fx)
+            if text:
+                chain.append(text)
+                padded = padded or tail > 0
+        if padded:
+            # echo and reverb pad the end for their tails: trim what stayed silent
+            chain.append("areverse,silenceremove=start_periods=1:start_threshold=-60dB:start_silence=0.08,areverse")
+        flush()
+        # never clip: anything over full scale comes down to -1 dB
+        peak = self._peak(files[cur])
+        final = ["volume=%gdB" % (-1 - peak)] if peak is not None and peak > -0.05 else []
         rate = int(out.get("rate") or 11025)
-        self.tenacity.process(wav_in, steps, rate, wav_out)
-        for _ in range(50):  # the export can land a moment after the reply
-            if os.path.exists(wav_out) and os.path.getsize(wav_out) > 44:
-                break
-            time.sleep(0.1)
-        else:
-            raise RuntimeError("Tenacity did not export the file")
-        subprocess.run([ffmpeg, "-loglevel", "error", "-y", "-i", wav_out, "-ac", "1",
-                        "-ar", str(rate), "-c:a", "libvorbis", "-q:a", str(out.get("quality", 4)),
-                        dst], check=True)
+        run(["-i", files[cur], *(["-af", ",".join(final)] if final else []), "-ac", "1", "-ar", str(rate),
+             "-c:a", "libvorbis", "-q:a", str(out.get("quality", 4)), dst])
 
     def _drop_old(self, old, new):
         if not old or old == new or not old.startswith("voice_"):
@@ -559,8 +686,21 @@ class VoiceGen:
         if os.path.exists(path):
             os.remove(path)
 
-    def preview(self, src, steps, out):
-        """Process src with steps into voice_work/preview.ogg (for listening)."""
+    def preview(self, src, effects, out):
+        """Process src with effects into voice_work/preview.ogg (for listening)."""
         dst = os.path.join(self.work, "preview.ogg")
-        self.render(src, steps, out, dst)
+        self.render(src, effects, out, dst)
+        return dst
+
+    def sample(self, voice, speed, lang, text, effects, out):
+        """A voice reading a short sample, through effects, at the output rate:
+        voice_work/sample.ogg."""
+        if not voice:
+            raise ValueError("Choose a voice first")
+        with self.render_lock:
+            wav = os.path.join(self.work, "tmp", "sample.wav")
+            os.makedirs(os.path.dirname(wav), exist_ok=True)
+            self.kokoro.say(text or SAMPLE_TEXT, voice, float(speed or 1), lang or voice_lang(voice), wav)
+            dst = os.path.join(self.work, "sample.ogg")
+            self._render(wav, effects, out, dst)
         return dst

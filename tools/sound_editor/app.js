@@ -26,7 +26,7 @@ const el = (tag, attrs = {}, ...kids) => {
 };
 
 // every API call carries this header: the server refuses calls without it,
-// so other web pages can't use the editor (or your ElevenLabs credits)
+// so other web pages can't use the editor (or change your files)
 async function api(path, opts = {}) {
   opts.headers = Object.assign({ "X-NHV": "1" }, opts.headers || {});
   if (opts.json !== undefined) {
