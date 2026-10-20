@@ -1,221 +1,68 @@
 {
- "version": 2,
- "output": {
-  "rate": 8000,
-  "quality": 4
- },
+ "version": 3,
  "speakers": {
-  "Text": {
-   "preset": "Plain"
-  },
-  "Narrator": {
-   "preset": "Plain",
-   "voice": "bm_george"
-  },
   "Shopkeeper": {
-   "preset": "Plain",
-   "voice": "bm_daniel*0.7+am_liam*0.3",
-   "lang": "en-gb"
+   "sam": {
+    "voice": "Stuffy Guy",
+    "sing": false,
+    "volume": 100,
+    "speed": 56,
+    "pitch": 42,
+    "throat": 112,
+    "mouth": 191,
+    "live": true
+   }
   },
   "Quest (Rog)": {
-   "preset": "Plain"
-  },
-  "Quest (Arc)": {
-   "preset": "Plain"
-  },
-  "Quest (Kni)": {
-   "preset": "Plain"
-  },
-  "Quest (Mon)": {
-   "preset": "Plain"
+   "sam": {
+    "voice": "SAM",
+    "sing": false,
+    "volume": 100,
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128
+   }
   },
   "Quest (Pri)": {
-   "preset": "Plain"
-  },
-  "Quest (Ran)": {
-   "preset": "Plain"
-  },
-  "Quest (Tou)": {
-   "preset": "Plain"
-  },
-  "Quest (Val)": {
-   "preset": "Plain"
-  },
-  "Quest (Wiz)": {
-   "preset": "Plain"
-  },
-  "Quest (Bar)": {
-   "preset": "Plain"
-  },
-  "Quest (Cav)": {
-   "preset": "Plain"
-  },
-  "Quest (common)": {
-   "preset": "Plain"
-  },
-  "Monster": {
-   "preset": "Plain"
-  },
-  "Quest (Sam)": {
-   "preset": "Plain"
-  },
-  "Quest (Hea)": {
-   "preset": "Plain"
-  },
-  "The Oracle": {
-   "preset": "Plain",
-   "voice": "bf_isabella"
-  },
-  "Vault guard": {
-   "preset": "Plain"
+   "sam": {
+    "voice": "SAM",
+    "sing": false,
+    "volume": 100,
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128
+   }
   },
   "God": {
-   "preset": "Ghostly",
-   "voice": "am_echo*0.4+am_onyx*0.6",
-   "lang": "en-us",
-   "delivery": "am_onyx",
-   "delivery_mix": 1,
-   "pitch": -3.5,
-   "speed": 0.75
-  },
-  "Priest": {
-   "preset": "Plain"
-  },
-  "Mail daemon": {
-   "preset": "Plain"
-  },
-  "Voice": {
-   "preset": "Echoing hall",
-   "voice": "af_nova*0.7+am_michael*0.3"
-  },
-  "Demon / angel": {
-   "preset": "Echoing hall",
-   "voice": "am_adam",
-   "delivery_mix": 0.7,
-   "pitch": -2.5
-  },
-  "Djinni / ghost": {
-   "preset": "Plain"
-  },
-  "Level": {
-   "preset": "Plain"
-  },
-  "Quest leader": {
-   "preset": "Plain"
-  },
-  "Throne voice": {
-   "preset": "Plain"
+   "sam": {
+    "voice": "Extra-Terrestrial",
+    "sing": false,
+    "volume": 100,
+    "speed": 100,
+    "pitch": 142,
+    "throat": 209,
+    "mouth": 196,
+    "live": true
+   }
   },
   "Wizard of Yendor": {
-   "preset": "test",
-   "voice": "bm_lewis",
-   "pitch": -3.5
-  },
-  "Water demon / nymph": {
-   "preset": "Echoing hall"
-  }
- },
- "presets": {
-  "Plain": {
-   "effects": [
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "Echoing hall": {
-   "effects": [
-    {
-     "type": "reverb",
-     "room": 85,
-     "mix": 40
-    },
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "Monster": {
-   "effects": [
-    {
-     "type": "pitch",
-     "semitones": -5,
-     "formants": 0
-    },
-    {
-     "type": "distortion",
-     "drive": 6
-    },
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "Ghostly": {
-   "effects": [
-    {
-     "type": "whisper",
-     "size": 512
-    },
-    {
-     "type": "reverb",
-     "room": 70,
-     "mix": 50
-    },
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "Radio": {
-   "effects": [
-    {
-     "type": "highpass",
-     "freq": 300
-    },
-    {
-     "type": "lowpass",
-     "freq": 3400
-    },
-    {
-     "type": "distortion",
-     "drive": 10
-    },
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "Robot": {
-   "effects": [
-    {
-     "type": "robot",
-     "size": 512
-    },
-    {
-     "type": "normalize",
-     "peak": -1
-    }
-   ]
-  },
-  "test": {
-   "effects": [
-    {
-     "type": "reverb",
-     "room": 21,
-     "mix": 100
-    }
-   ]
+   "sam": {
+    "voice": "SAM",
+    "sing": false,
+    "volume": 100,
+    "speed": 72,
+    "pitch": 169,
+    "throat": 49,
+    "mouth": 169,
+    "live": true
+   }
   }
  },
  "lines": {
   "spoken.6e500ce192": {
-   "spoken": "So thou thought thou couldst kill me?? fool!"
+   "sam_text": "So thou thought thou couldst kill me?? fool!"
   }
  }
 }
