@@ -334,7 +334,8 @@ const VoiceGen = (() => {
       { "aria-label": "Tone for this line", disabled: busy || null,
         title: "Speak this line in the manner of another voice: its pitch level, pace and intonation (Regenerate to hear it)" },
       (v) => { setLine(d.id, "delivery", v); redrawLine(d.id); });
-    toneSel.insertBefore(el("option", { value: NO_EFFECTS, selected: ln.delivery === NO_EFFECTS || null }, "Natural (the voice's own)"), toneSel.options[1]);
+    // (after the first option: the voices themselves are inside language groups)
+    toneSel.options[0].after(el("option", { value: NO_EFFECTS, selected: ln.delivery === NO_EFFECTS || null }, "Natural (the voice's own)"));
     // pitch: applied when the take is processed, so it's quick to change
     const pitchIn = el("input", { type: "number", min: -12, max: 12, step: 0.5, value: ln.pitch ?? "",
       placeholder: String(sc.pitch || 0), "aria-label": "Pitch for this line (semitones)", disabled: busy || null,
