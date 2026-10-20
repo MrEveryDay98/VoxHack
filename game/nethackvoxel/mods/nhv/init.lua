@@ -18,6 +18,24 @@ dofile(path .. "blocks.lua")
 dofile(path .. "props.lua")
 dofile(path .. "custom_blocks.lua")
 dofile(path .. "prefabs.lua")
+-- A world with a file named "nhv_atlas" (holding a seed) is the level
+-- atlas: every level of a game with that seed, built side by side.
+do
+	local f = io.open(core.get_worldpath() .. DIR_DELIM .. "nhv_atlas", "r")
+	nhv.ATLAS = f and (f:read("*l") or "") or nil
+	if f then
+		f:close()
+	end
+end
+if nhv.ATLAS and not nhv.EDITOR then
+	dofile(path .. "nh.lua")
+	dofile(path .. "scale.lua")
+	dofile(path .. "terrain.lua")
+	dofile(path .. "areas.lua")
+	dofile(path .. "doors.lua")
+	dofile(path .. "atlas.lua")
+	return
+end
 if nhv.EDITOR then
 	dofile(path .. "nh.lua") -- glyph helpers only; no game is started
 	dofile(path .. "terrain.lua")

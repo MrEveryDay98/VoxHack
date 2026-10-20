@@ -58,6 +58,25 @@ nhv_start(const char *datadir, const char *userdir, const char *options,
     InitializeConditionVariable(&cv_state);
     nhv_set_dirs(datadir, userdir);
 
+    /* a seeded game: a file "nhv_seed" in the user dir with the seed in it
+       (the level atlas) */
+    {
+        char seedfile[BUFSZ];
+        FILE *sf;
+
+        Snprintf(seedfile, sizeof seedfile, "%s%snhv_seed", userdir,
+                 (userdir[strlen(userdir) - 1] == '\\'
+                  || userdir[strlen(userdir) - 1] == '/') ? "" : "\\");
+        nhv_fixed_seed = 0;
+        if ((sf = fopen(seedfile, "r")) != 0) {
+            unsigned long seed = 0;
+
+            if (fscanf(sf, "%lu", &seed) == 1)
+                nhv_fixed_seed = seed;
+            fclose(sf);
+        }
+    }
+
     /* options go to a generated rc file in the user dir */
     start_rcfile[0] = '\0';
     if (options && *options) {
@@ -560,6 +579,38 @@ nhv_get_shops(nhv_shop *buf, int max)
         n++;
     }
     return n;
+}
+
+NHV_API int
+nhv_get_dungeons(nhv_dungeon *buf, int max)
+{
+    int i, n = 0;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop)
+        return 0;
+    for (i = 0; i < svn.n_dgns && n < max; i++, n++) {
+        memset(&buf[n], 0, sizeof buf[n]);
+        Strcpy(buf[n].name, svd.dungeons[i].dname);
+        buf[n].levels = svd.dungeons[i].num_dunlevs;
+        buf[n].depth_start = svd.dungeons[i].depth_start;
+        buf[n].entry = svd.dungeons[i].entry_lev;
+    }
+    return n;
+}
+
+NHV_API const char *
+nhv_level_proto(int dnum, int dlevel)
+{
+    d_level lev;
+    s_level *sp;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop || dnum < 0 || dnum >= svn.n_dgns)
+        return "";
+    lev.dnum = (xint16) dnum, lev.dlevel = (xint16) dlevel;
+    sp = Is_special(&lev);
+    return sp ? sp->proto : "";
 }
 
 NHV_API long

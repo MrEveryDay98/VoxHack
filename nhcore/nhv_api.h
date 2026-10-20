@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 15
+#define NHV_API_VERSION 17
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -458,6 +458,19 @@ typedef struct nhv_shop {
     char keeper[64];
 } nhv_shop;
 NHV_API int nhv_get_shops(nhv_shop *buf, int max);
+
+/* The dungeons (the level atlas): name, how many levels, the depth of
+ * the first; nhv_level_proto: a special level's name ("minetn",
+ * "medusa"...), "" for an ordinary one. Levels are 1..levels. */
+typedef struct nhv_dungeon {
+    char name[32];
+    int levels;
+    int depth_start;
+    int entry;      /* the level you come in at (the last one: a dungeon you
+                       climb, as Sokoban and Vlad's Tower) */
+} nhv_dungeon;
+NHV_API int nhv_get_dungeons(nhv_dungeon *buf, int max);
+NHV_API const char *nhv_level_proto(int dnum, int dlevel);
 
 /* tells this game apart from others (when it was started) */
 NHV_API long nhv_game_id(void);

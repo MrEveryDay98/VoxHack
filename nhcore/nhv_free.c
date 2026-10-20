@@ -243,6 +243,25 @@ donhvpit(void)
     return nhv_ok();
 }
 
+/* #nhvgoto dnum dlevel: straight to that level (debug mode only; the
+   level atlas visits every level this way). No time passes. */
+int
+donhvgoto(void)
+{
+    d_level lev;
+
+    if (!wizard)
+        return nhv_ok();
+    lev.dnum = (xint16) nhv_cmd_args[0];
+    lev.dlevel = (xint16) nhv_cmd_args[1];
+    if (lev.dnum < 0 || lev.dnum >= svn.n_dgns || lev.dlevel < 1
+        || lev.dlevel > svd.dungeons[lev.dnum].num_dunlevs)
+        return nhv_ok();
+    schedule_goto(&lev, UTOTYPE_NONE, (char *) 0, (char *) 0);
+    deferred_goto();
+    return nhv_ok();
+}
+
 /* #nhvtick: one hero action's worth of time passes. */
 int
 donhvtick(void)

@@ -65,7 +65,8 @@ nh.OPTIONS = table.concat({
 	"OPTIONS=time,showexp,!mention_walls,suppress_alert:3.4.3,voices",
 }, "\n")
 
-function nh.start(name)
+-- (more_options: extra option lines for this game - the level atlas's)
+function nh.start(name, more_options)
 	if nh.state ~= "not_started" and nh.state ~= "ended" then
 		return true
 	end
@@ -83,6 +84,9 @@ function nh.start(name)
 		extra = extra .. "\nOPTIONS=playmode:debug"
 	end
 	local own = nhv.nhopts and nhv.nhopts.start_options() or ""
+	if more_options then
+		extra = extra .. "\n" .. more_options
+	end
 	local ok, err = core.nh_start(datadir(), userdir(), nh.OPTIONS .. "\n" .. own .. "\n" .. extra, name)
 	if not ok then
 		core.log("error", "[nhv] could not start NetHack: " .. tostring(err))
