@@ -52,6 +52,26 @@ local PREFIX_NAMES = {
 	{"^(%a%a%a)%-goal$", "Quest goal (%s)"}, {"^tut%-(%d+)$", "Tutorial %s"},
 }
 
+-- The wall set a special level is drawn with in the game (NetHack's wall
+-- sprites go by dungeon: the Gnomish Mines, Gehennom, Fort Ludios and
+-- Sokoban have their own; Vlad's Tower, the Planes and the rest use the
+-- main dungeon's). The prefab editor builds the area plates with it.
+local GEHENNOM = {valley = true, sanctum = true, juiblex = true, orcus = true, asmodeus = true,
+	baalz = true, wizard1 = true, wizard2 = true, wizard3 = true, fakewiz1 = true, fakewiz2 = true}
+function areas.wall_style(t)
+	local p = t.proto or ""
+	if p:match("^minetn%-") or p:match("^minend%-") then
+		return "mines"
+	elseif GEHENNOM[p] then
+		return "gehennom"
+	elseif p == "knox" then
+		return "knox"
+	elseif p:match("^soko%d") then
+		return "sokoban"
+	end
+	return "main"
+end
+
 function areas.name(t)
 	local name = areas.NAMES[t.proto]
 	if not name then

@@ -511,6 +511,10 @@ local function build_area(t, build, done)
 		end
 		local map = template_map(t)
 		local d = areas.get(t.id)
+		-- (the usual prefabs with the level's own walls - the Mines' in
+		-- Minetown, Gehennom's in Orcus Town... - as the game builds them;
+		-- squares you built are as you built them, there too)
+		local styled = nhv.terrain.styled_cid_for(areas.wall_style(t))
 		for cy = 0, t.h - 1 do
 			for cx = 0, t.w - 1 do
 				local so = square_origin(t, cx, cy)
@@ -521,14 +525,18 @@ local function build_area(t, build, done)
 						data.ids[va:index(so.x + x, BASE_Y - 1, so.z + z)] = cid(plate)
 					end
 				end
-				if build then
-					local k = cy * t.w + cx + 1
+				-- (squares you built: the first time and after a reset only;
+				-- the others, the usual prefabs, are built again every time,
+				-- so they always show what the game builds - its current
+				-- prefabs, with the level's walls)
+				local k = cy * t.w + cx + 1
+				if build or not d.cells[k] then
 					local tx, ty = t.x + cx, t.y + cy
 					if d.cells[k] then
 						prefabs.write_at(data, va, so, d.cells[k].nodes, 0, true, cid)
 					else
 						local slot, rot = nhv.terrain.base_slot(map, U.idx(tx, ty), tx, ty, nil)
-						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, cid)
+						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, styled)
 					end
 				end
 				-- a light under the ceiling of open squares, as the game puts

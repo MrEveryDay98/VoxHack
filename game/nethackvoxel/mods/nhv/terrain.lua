@@ -347,6 +347,19 @@ local function styled_cid(name)
 	return cid(name)
 end
 
+-- the same for a given wall set (the prefab editor's area plates)
+function terrain.styled_cid_for(style)
+	if not style or style == "main" then
+		return cid
+	end
+	return function(name)
+		if WALL_NODES[name] then
+			name = "nhv:wall_" .. style
+		end
+		return cid(name)
+	end
+end
+
 -- Squeezing past a corner: NetHack lets you step diagonally between two
 -- open squares that touch only at a corner (both squares in between solid),
 -- but in 3D they'd meet along a single edge you can't fit through. Such
