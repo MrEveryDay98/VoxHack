@@ -612,12 +612,14 @@ nh.on_event(function(evs)
 					any = true
 				end
 			end
-			-- "Things that are here:" (stepping onto a pile, or ':'): the
+			-- "Things that are here:" (stepping onto a pile, or ':'), or
+			-- "Other things that are here:" (what autopickup left): the
 			-- list down the left side shows them (hud.lua) - no window;
 			-- what comes before it ("There is a doorway here.") is said
 			local here
 			for k, l in ipairs(t.lines) do
-				if l:find("^%s*Things that .*here:%s*$") then
+				local low = l:lower()
+				if low:find("^%s*things that .*here:%s*$") or low:find("^%s*other things that .*here:%s*$") then
 					here = k
 					break
 				end

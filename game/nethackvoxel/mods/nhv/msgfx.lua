@@ -367,7 +367,7 @@ local RULES = {
 }
 
 local NOT_SEEN = {"^you hear", "^you smell", "^you feel", "^you see here", "^you see no",
-	"^there is .* here", "^things that are here", "^you read", "\"", "^you sense",
+	"^there is .* here", "^things that are here", "^other things that are here", "^you read", "\"", "^you sense",
 	"^you have a ", "^you are carrying", "^%a %- ", "^%a%a? %- "}
 
 function msgfx.message(text)
