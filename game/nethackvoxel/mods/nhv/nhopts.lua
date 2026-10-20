@@ -83,6 +83,10 @@ nhopts.OPTIONS = {
 	{key = "verbose", kind = "bool", label = "Verbose messages", opt = "verbose", default = false},
 	-- (VoxHack's own: not given to NetHack; signs.lua reads it)
 	{key = "shop_signs", kind = "bool", label = "Signs over shop doors", default = true, vox = true},
+	-- (player.lua reads it: off, hallucinating doesn't wave the screen or
+	-- drift its colours; monsters still look wavy)
+	{key = "hallu_effects", kind = "bool", label = "Hallucination screen waves and colours",
+		default = true, vox = true},
 }
 local BY_KEY = {}
 for _, o in ipairs(nhopts.OPTIONS) do
@@ -241,20 +245,34 @@ local function field_for(o, x, y)
 	return table.concat(fs)
 end
 
+-- the options sit in a scrolling area between the headings and the buttons
+local VIEW_Y, VIEW_H = 1.7, 8.2
+
 function nhopts.formspec()
 	local fs = {theme.head(20, 11.6),
 		"label[0.5,0.6;", theme.title("NetHack options"), "]",
 		"label[0.5,1.3;", theme.dim("New characters"), "]",
 		"label[10.5,1.3;", theme.dim("Any time (your current game too)"), "]"}
-	local yl, yr = 1.7, 1.7
+	local body = {}
+	local yl, yr = 0, 0
 	for _, o in ipairs(nhopts.OPTIONS) do
 		if o.new then
-			fs[#fs + 1] = field_for(o, 0.5, yl)
+			body[#body + 1] = field_for(o, 0.5, yl)
 			yl = yl + 0.9
 		else
-			fs[#fs + 1] = field_for(o, 10.5, yr)
+			body[#body + 1] = field_for(o, 10.5, yr)
 			yr = yr + (o.kind == "bool" and 0.62 or 0.9)
 		end
+	end
+	local content_h = math.max(yl, yr) + 0.3
+	local max = math.max(0, math.ceil((content_h - VIEW_H) * 10))
+	fs[#fs + 1] = ("scroll_container[0,%s;19.5,%s;nhopts_scroll;vertical;0.1]"):format(VIEW_Y, VIEW_H)
+	fs[#fs + 1] = table.concat(body)
+	fs[#fs + 1] = "scroll_container_end[]"
+	if max > 0 then
+		fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=6;largestep=40;thumbsize=%d]"):format(max,
+			math.max(4, math.floor(max * VIEW_H / content_h)))
+		fs[#fs + 1] = ("scrollbar[19.55,%s;0.3,%s;vertical;nhopts_scroll;0]"):format(VIEW_Y, VIEW_H)
 	end
 	fs[#fs + 1] = "label[0.5,10.1;" .. theme.dim(E("A game in progress keeps its character; these apply to the next new one.")) .. "]"
 	fs[#fs + 1] = "button[11.5,10.5;3.6,0.8;save;Save]button[15.4,10.5;3.6,0.8;back;Back]"

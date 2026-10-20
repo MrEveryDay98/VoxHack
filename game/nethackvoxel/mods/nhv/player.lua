@@ -491,7 +491,8 @@ nh.on_snapshot(function(snap, action)
 	-- controls (rotated / reversed walking, inverted looking up and down)
 	-- (and the screen waves; hallucinating, it waves and its colours drift)
 	local conf, stun = U.has(h.flags, U.HERO.CONF), U.has(h.flags, U.HERO.STUN)
-	local hallu = U.has(h.flags, U.HERO.HALLU)
+	-- (NetHack options > Hallucination effects off: no waves or colours)
+	local hallu = U.has(h.flags, U.HERO.HALLU) and nhv.nhopts.get("hallu_effects")
 	if conf ~= player_mod.confused or stun ~= player_mod.stunned or hallu ~= player_mod.hallu then
 		player_mod.confused, player_mod.stunned, player_mod.hallu = conf, stun, hallu
 		player:hud_set_flags({nhv_confused = conf, nhv_stunned = stun, nhv_hallu = hallu})
