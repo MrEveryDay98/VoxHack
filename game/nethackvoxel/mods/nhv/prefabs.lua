@@ -382,6 +382,8 @@ local function rot_p2(name, p2, r)
 	return p2
 end
 
+prefabs.rot_p2 = rot_p2 -- (the editor's /paste turns blocks with it too)
+
 -- ---------------------------------------------------------------- placing
 -- Write a slot into VoxelManip data for square (tx, ty).
 -- cid(name) -> content id. base=true replaces everything (missing = air);

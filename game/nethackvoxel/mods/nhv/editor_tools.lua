@@ -11,6 +11,12 @@
 --   /cutaway ceiling        the ceiling (and everything above it) off every
 --                           square of the area you're on - or, with a box
 --                           selected there, of the squares in the box
+--   /copy                   remember the box's blocks (from corner 1)
+--   /paste [rotate 90|180|270] [flip x|z] [noair]
+--                           put them down with corner 1 on the block you're
+--                           looking at, turned (clockwise, seen from above)
+--                           and/or mirrored; noair: the copy's air doesn't
+--                           clear what's there
 --   /undo                   put back what the last tool changed
 --   /desel                  forget the box
 -- Block names can be short: "stone" finds "nhv:stone" etc. Everything the
@@ -335,6 +341,144 @@ cmd("cutaway", "ceiling", "Take the ceiling off the area you're on (or the selec
 		end
 		return apply(pname, minp, maxp, function()
 			return AIR, 0
+		end)
+	end)
+
+-- ---------------------------------------------------------------- copy, paste
+-- The clipboard: each block of the copied box as an offset from corner 1
+-- (where you left-clicked), its name and param2. Pasting puts corner 1 on the
+-- block you're looking at; turned and mirrored blocks that face a way
+-- (stairs, doors...) are turned and mirrored to match.
+tools.clip = {}
+
+-- the block the player is looking at: its position
+local function looked_at_pos(player)
+	local eye = vector.add(player:get_pos(), vector.new(0, player:get_properties().eye_height or 1.625, 0))
+	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 20))
+	for pt in core.raycast(eye, to, false, false) do
+		if pt.type == "node" then
+			return pt.under
+		end
+	end
+end
+
+cmd("copy", "", "Remember the selected box's blocks (from corner 1)", function(pname)
+	local minp, maxp, err = need_box(pname)
+	if not minp then
+		return false, err
+	end
+	local s = vector.add(vector.subtract(maxp, minp), 1)
+	if s.x * s.y * s.z > MAX_NODES then
+		return false, ("That's %d blocks; up to %d at a time."):format(s.x * s.y * s.z, MAX_NODES)
+	end
+	local p1 = tools.sel[pname].p1
+	local vm = core.get_voxel_manip()
+	local e1, e2 = vm:read_from_map(minp, maxp)
+	local va = VoxelArea(e1, e2)
+	local ids, p2s = vm:get_data(), vm:get_param2_data()
+	local list, solid = {}, 0
+	for z = minp.z, maxp.z do
+		for y = minp.y, maxp.y do
+			local vi = va:index(minp.x, y, z)
+			for x = minp.x, maxp.x do
+				-- (the editor's own plates aren't copied)
+				if not PROTECTED[ids[vi]] then
+					list[#list + 1] = {x - p1.x, y - p1.y, z - p1.z,
+						core.get_name_from_content_id(ids[vi]), p2s[vi]}
+					if ids[vi] ~= AIR then
+						solid = solid + 1
+					end
+				end
+				vi = vi + 1
+			end
+		end
+	end
+	tools.clip[pname] = list
+	return true, ("Copied %dx%dx%d (%d blocks, %d of them air). /paste puts it down "
+		.. "with corner 1 on the block you're looking at."):format(s.x, s.y, s.z, #list, #list - solid)
+end)
+
+-- mirroring a block that faces a way (as areas.lua flips cells): facedir /
+-- 4dir turns 0<->2 across z, 1<->3 across x; wallmounted 4<->5, 2<->3
+local MIRROR_ROT = {z = {[0] = 2, [2] = 0}, x = {[1] = 3, [3] = 1}}
+local MIRROR_WALL = {z = {[4] = 5, [5] = 4}, x = {[2] = 3, [3] = 2}}
+local function mirror_p2(name, p2, axis)
+	local def = core.registered_nodes[name]
+	local pt = def and def.paramtype2 or ""
+	if pt == "facedir" or pt == "colorfacedir" or pt == "4dir" or pt == "color4dir" then
+		local r = p2 % 4
+		return p2 - r + (MIRROR_ROT[axis][r] or r)
+	elseif pt == "wallmounted" or pt == "colorwallmounted" then
+		local w = p2 % 8
+		return p2 - w + (MIRROR_WALL[axis][w] or w)
+	end
+	return p2
+end
+
+cmd("paste", "[rotate 90|180|270] [flip x|z] [noair]",
+	"Put down what /copy remembered, corner 1 on the block you're looking at "
+	.. "(turned clockwise seen from above, mirrored; noair: its air doesn't clear anything)",
+	function(pname, param)
+		local list = tools.clip[pname]
+		if not list then
+			return false, "Nothing copied yet: select a box and /copy."
+		end
+		local player = core.get_player_by_name(pname)
+		local at = player and looked_at_pos(player)
+		if not at then
+			return false, "Look at the block where corner 1 should go."
+		end
+		local turns = 0
+		local deg = param:match("rotate%s+(%d+)")
+		if deg then
+			if deg ~= "90" and deg ~= "180" and deg ~= "270" then
+				return false, "Rotate by 90, 180 or 270."
+			end
+			turns = tonumber(deg) / 90
+		end
+		local flip = param:match("flip%s+([xz])")
+		if param:match("flip") and not flip then
+			return false, "Flip x (east-west) or z (north-south)."
+		end
+		local noair = param:match("noair") ~= nil
+		-- where each block goes: mirrored, then turned (a quarter turn
+		-- clockwise from above: x, z -> z, -x, as prefabs turn)
+		local put, minp, maxp = {}, nil, nil
+		for _, b in ipairs(list) do
+			local dx, dy, dz, name, p2 = b[1], b[2], b[3], b[4], b[5]
+			if flip == "x" then
+				dx = -dx
+			elseif flip == "z" then
+				dz = -dz
+			end
+			for _ = 1, turns do
+				dx, dz = dz, -dx
+			end
+			if flip and name ~= "air" then
+				p2 = mirror_p2(name, p2, flip)
+			end
+			if turns > 0 and name ~= "air" then
+				p2 = prefabs.rot_p2(name, p2, turns)
+			end
+			if not (noair and name == "air") then
+				local pos = vector.new(at.x + dx, at.y + dy, at.z + dz)
+				put[core.hash_node_position(pos)] = {core.get_content_id(name), p2}
+				if not minp then
+					minp, maxp = vector.copy(pos), vector.copy(pos)
+				else
+					minp = vector.new(math.min(minp.x, pos.x), math.min(minp.y, pos.y), math.min(minp.z, pos.z))
+					maxp = vector.new(math.max(maxp.x, pos.x), math.max(maxp.y, pos.y), math.max(maxp.z, pos.z))
+				end
+			end
+		end
+		if not minp then
+			return true, "Nothing to put down (it's all air, and noair)."
+		end
+		return apply(pname, minp, maxp, function(x, y, z)
+			local v = put[core.hash_node_position(vector.new(x, y, z))]
+			if v then
+				return v[1], v[2]
+			end
 		end)
 	end)
 
