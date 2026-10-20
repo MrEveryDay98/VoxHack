@@ -135,28 +135,27 @@ All sprites and tile textures come from one sprite sheet:
   (`catalog/dialogue.json`), ready for voice acting.
 - **Sound library folders:** sounds can sit in folders under `sounds/` (the game loads them all).
   Whole folders can be imported. Names stay unique across folders because Luanti needs that.
-- **Voice generation (Voice casting tab):** Kokoro text-to-speech, run locally (no account or
-  credits). Choose a Kokoro voice per speaker (optionally a blend of two), its speed and accent,
-  and an effect preset, then generate lines singly or in bulk.
-  - "Install Kokoro" makes `voice_work/kokoro/` (a venv with kokoro-onnx, plus the ~120 MB model);
-    `kokoro_worker.py` runs in it, so the editor itself still needs only Python and ffmpeg.
-  - Quest placeholders are filled with each role's real names; parts that change per game (your
-    name, god, gender) are read generically and flagged. Each line's spoken text can be edited.
-  - Takes are kept in `voice_work/` (not in git). The preset's effects (pitch, filters, EQ, echo,
-    reverb, chorus, distortion, bitcrush, robot, whisper...) are applied with ffmpeg, then every
-    line is resampled to the global rate (11025 Hz by default), and the result goes to
-    `sounds/voices/` once confirmed.
-- **SAM, live (Voice casting > SAM view):** speakers ticked "Speak live with SAM" are voiced
-  in the game by SAM (Software Automatic Mouth, 1982), built into the engine: `sound.lua`
-  plays a sound named `nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>|<text>`
-  with the line's real text, and the client's sound manager synthesizes it
-  (`src/client/sound/sam_voice.cpp`). Per speaker: a classic SAM voice or custom speed,
-  pitch, throat and mouth, sing mode, volume; a line can pick another SAM voice.
+- **Voices: SAM, live (Voice casting tab).** Speakers ticked "Speak live with SAM" are voiced in
+  the game by SAM (Software Automatic Mouth, 1982), built into the engine. Nothing is recorded:
+  `sound.lua` plays a sound named
+  `nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>|<text>` with the
+  line's real text (names, gods...), and the client synthesizes it (`sam_voice.cpp`).
+  - `sam_speech.cpp` (shared by the engine and the editor's `build/sam/samtool.exe`, so
+    previews match): the pronunciation dictionary (`mods/nhv_sounds/sam_dictionary.txt`,
+    "word = respelling" or "word = {PHONEMES}", setting `nhv_sam_dict`), numbers and symbols as
+    words, `{PHONEMES}` written into a text, pieces short enough for SAM's buffers, quicker and
+    higher exclamations, 4 ms fades between pieces, optional smoothing (DC removed, highs above
+    ~3.5 kHz rolled off).
+  - Per speaker: a classic SAM voice or custom speed, pitch, throat and mouth; volume; sing
+    mode; Authentic or Smoothed sound; Variation (each monster of the kind its own voice, steady
+    per monster id); Female voice (how much higher); size (NetHack size class sets the playback
+    pitch: big monsters deeper). Per line: another SAM voice, or its own SAM text.
+  - Quest messages are collected and read whole. Spoken lines are matched to the dialogue
+    catalog by the most specific pattern; lines that are nearly all placeholders are never
+    matched.
   - SAM's C source (Sebastian Macke's port, no licence; included knowingly) is in
-    `external/luanti/lib/sam`; `sam_unity.c` builds it into the engine with its globals
-    renamed. `tools/deploy.sh` also builds `build/sam/sam.exe`, which the editor previews with.
-  - Spoken lines are matched to the dialogue catalog by the most specific pattern; lines that
-    are nearly all placeholders ("%s") are never matched.
+    `external/luanti/lib/sam`; `sam_unity.c` builds it in with its globals renamed.
+  - Recordings uploaded onto lines (`config.json` voices) still play for speakers SAM doesn't voice.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

@@ -14,13 +14,15 @@ ninja -C "$ROOT/build/nhcore"
 [ -f "$LUANTI/build/build.ninja" ] || cmake -S "$LUANTI" -B "$LUANTI/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=TRUE -DBUILD_UNITTESTS=FALSE
 ninja -C "$LUANTI/build"
 
-# 2b. sam.exe for the sound editor's SAM previews (the engine has SAM built
-# in from the same source, external/luanti/lib/sam)
-SAM_SRC="$LUANTI/lib/sam"
-if [ ! -f "$ROOT/build/sam/sam.exe" ] || [ -n "$(find "$SAM_SRC" -newer "$ROOT/build/sam/sam.exe" -name '*.[ch]')" ]; then
+# 2b. samtool.exe for the sound editor's SAM previews: the engine's own SAM
+# code (lib/sam through sam_unity.c, and sam_speech.cpp), so they match
+SND="$LUANTI/src/client/sound"
+TOOL="$ROOT/build/sam/samtool.exe"
+if [ ! -f "$TOOL" ] || [ -n "$(find "$LUANTI/lib/sam" "$SND"/sam_* "$ROOT/tools/samtool.cpp" -newer "$TOOL" -name '*.[ch]*')" ]; then
 	mkdir -p "$ROOT/build/sam"
-	clang -Os -w -fcommon -static -o "$ROOT/build/sam/sam.exe" "$SAM_SRC/reciter.c" "$SAM_SRC/sam.c" \
-		"$SAM_SRC/render.c" "$SAM_SRC/main.c" "$SAM_SRC/debug.c"
+	clang -Os -w -I"$LUANTI/lib/sam" -c -o "$ROOT/build/sam/sam_unity.o" "$SND/sam_unity.c"
+	clang++ -O2 -std=c++17 -static -I"$SND" -o "$TOOL" "$ROOT/tools/samtool.cpp" "$SND/sam_speech.cpp" \
+		"$ROOT/build/sam/sam_unity.o"
 fi
 
 # 3. tiles

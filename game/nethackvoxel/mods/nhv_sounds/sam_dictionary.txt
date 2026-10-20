@@ -1,0 +1,9 @@
+# SAM's pronunciation dictionary: how SAM says words it gets wrong.
+# Edited in the sound editor (Voice casting > Pronunciation); the game reads
+# it again whenever it changes.
+#
+#   word = what SAM says instead
+#
+# The replacement is either a respelling (Asidonhopo = ah see don hoe poe)
+# or SAM phonemes in braces (Croesus = {KRIY4SAHS}); both can be mixed.
+# Words are matched whole and ignoring case; "Croesus's" uses "Croesus".

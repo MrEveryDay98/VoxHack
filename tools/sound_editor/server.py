@@ -3,16 +3,17 @@
 Serves the editor page and reads/writes the game's sound data in
 game/nethackvoxel/mods/nhv_sounds:
   config.json        hook -> sounds, music, voices, master volumes
-  voice_cast.json    voice casting: Kokoro voice per speaker, effect
-                     presets, output rate, spoken-text overrides
+  voice_cast.json    voice casting: each speaker's SAM voice, and per-line
+                     SAM voices and texts
+  sam_dictionary.txt how SAM pronounces words it gets wrong
   sounds/**.ogg      sound effects, music and voice lines (folders allowed;
                      names must be unique across folders, as in Luanti)
   catalog/*.json     hooks.json (every hook) and dialogue.json (every line)
 
-Voice generation (Kokoro, run locally, + ffmpeg effects) lives in voicegen.py.
+Voices are SAM's, spoken live by the game; samvoice.py holds the casting,
+the pronunciation dictionary and the previews.
 
-Shuts itself down when the editor page is closed (and no voices are still
-being generated). Only listens on 127.0.0.1, and only answers API calls made by its own page
+Shuts itself down when the editor page is closed. Only listens on 127.0.0.1, and only answers API calls made by its own page
 (other websites can't use it to change your files). Uploaded audio is
 converted to Ogg Vorbis with ffmpeg. The game picks up changes to
 config.json within a couple of seconds.
@@ -30,7 +31,7 @@ import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -38,7 +39,7 @@ import blocks_api  # noqa: E402
 import effects_api  # noqa: E402
 import sky_api  # noqa: E402
 import speakable  # noqa: E402
-import voicegen  # noqa: E402
+import samvoice  # noqa: E402
 
 
 _blocks_mtime = os.path.getmtime(blocks_api.__file__)
@@ -125,10 +126,6 @@ def dialogue():
     return _dialogue
 
 
-def dialogue_by_id():
-    return {e["id"]: e for e in dialogue()}
-
-
 # ---------------------------------------------------------------- library
 def clean_folder(folder):
     """'Monsters/Dragons' -> 'monsters/dragons' (or raises ValueError)"""
@@ -209,9 +206,8 @@ def convert(src, dst):
                     "-c:a", "libvorbis", "-q:a", "5", dst], check=True)
 
 
-# ---------------------------------------------------------------- voice gen
-VG = voicegen.VoiceGen(ROOT, MOD, SOUNDS, dialogue_by_id, load_config, save_config,
-                       speakable.speakable)
+# ---------------------------------------------------------------- voices
+VOICES = samvoice.Voices(ROOT, MOD)
 
 
 class Server(ThreadingHTTPServer):
@@ -282,15 +278,8 @@ class Handler(BaseHTTPRequestHandler):
         m = re.match(r"^/sounds/([a-z0-9_]+)\.ogg$", url.path)
         if m:
             return self.send_file(sound_path(m.group(1)), "audio/ogg")
-        m = re.match(r"^/pending/([a-z0-9_]+)\.ogg$", url.path)
-        if m:
-            return self.send_file(os.path.join(VG.work, "pending", m.group(1) + ".ogg"), "audio/ogg")
-        m = re.match(r"^/takes/(.+\.(mp3|wav))$", url.path)
-        if m:
-            return self.send_file(VG.take_path(unquote(m.group(1))),
-                                  "audio/mpeg" if m.group(2) == "mp3" else "audio/wav")
-        if url.path in ("/preview.ogg", "/sample.ogg"):
-            return self.send_file(os.path.join(VG.work, url.path[1:]), "audio/ogg")
+        if url.path == "/sam_sample.wav":
+            return self.send_file(VOICES.sample_path, "audio/wav")
         if url.path == "/sheet.png":
             return self.send_file(blocks_api.SHEET, "image/png")
         if url.path == "/wb.png":
@@ -347,22 +336,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/config":
             return self.send(200, load_config())
         if path == "/api/cast":
-            return self.send(200, VG.load_cast())
-        if path == "/api/takes":
-            return self.send(200, VG.load_takes())
-        if path == "/api/voice/status":
-            return self.send(200, {"kokoro": VG.kokoro.status(), "sam": {"installed": VG.sam.installed()},
-                                   "ffmpeg": bool(shutil.which("ffmpeg"))})
-        if path == "/api/voice/recordings":
-            return self.send(200, VG.recordings())
-        if path == "/api/voice/jobs":
-            return self.send(200, VG.state(int((q.get("since") or ["0"])[0])))
-        if path == "/api/voice/effects":
-            return self.send(200, voicegen.EFFECTS)
-        if path == "/api/sam/voices":
-            return self.send(200, voicegen.SAM_VOICES)
-        if path == "/api/kokoro/voices":
-            return self.send(200, [voicegen.voice_info(n) for n in VG.kokoro.voices()])
+            return self.send(200, VOICES.load_cast())
+        if path == "/api/sam":
+            return self.send(200, {"installed": VOICES.installed(), "voices": samvoice.SAM_VOICES,
+                                   "dictionary": VOICES.load_dict()})
         return self.send(404, {"error": "not found"})
 
     # -------------------------------------------------------------- PUT
@@ -402,7 +379,10 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, TypeError) as e:
                 return self.send(400, {"error": str(e)})
         if path == "/api/cast":
-            write_json(VG.cast_path, data, backup=True)
+            write_json(VOICES.cast_path, data, backup=True)
+            return self.send(200, {"ok": True})
+        if path == "/api/sam/dictionary":
+            VOICES.save_dict(str(data.get("text", "")))
             return self.send(200, {"ok": True})
         return self.send(404, {"error": "not found"})
 
@@ -527,69 +507,13 @@ class Handler(BaseHTTPRequestHandler):
                     shutil.move(src, os.path.join(dst_dir, name + os.path.splitext(src)[1]))
                     moved.append(name)
             return self.send(200, {"moved": moved})
-        if path == "/api/voice/queue":
-            items = []
-            known = dialogue_by_id()
-            for it in data.get("items", []):
-                if it.get("line") in known and it.get("action") in ("generate", "process"):
-                    items.append({"line": it["line"], "action": it["action"]})
-            return self.send(200, {"jobs": VG.enqueue(items)})
-        if path == "/api/voice/cancel":
-            VG.cancel()
-            return self.send(200, {"ok": True})
-        if path == "/api/voice/take":
-            VG.set_take(data.get("line", ""), int(data.get("index", 0)))
-            return self.send(200, {"ok": True})
-        if path == "/api/voice/confirm":
-            return self.send(200, VG.confirm(data.get("line", "")))
-        if path == "/api/voice/discard":
-            VG.discard(data.get("line", ""))
-            return self.send(200, {"ok": True})
-        if path == "/api/voice/clear":
-            # {game: bool}: every take and preview (and the game's voice lines) to editor_trash
-            return self.send(200, VG.clear_all(os.path.join(ROOT, "editor_trash"), bool(data.get("game", True))))
-        if path == "/api/voice/plan":
-            cast = VG.load_cast()
-            out = []
-            for line in data.get("lines", [])[:5000]:
-                try:
-                    p = VG.line_plan(line, cast)
-                    words = speakable.has_words(p["text"])
-                    out.append({"line": line, "speaker": p["speaker"], "chars": len(p["text"]) if words else 0,
-                                "voice": bool(p["voice"])})
-                except ValueError:
-                    pass
-            return self.send(200, out)
-        if path == "/api/voice/preview":
-            # {effects, rate, source: "take:<line id>" | "sound:<name>"}
-            src = data.get("source", "")
-            if src.startswith("take:"):
-                t = VG.load_takes().get(src[5:])
-                if not t or not t["takes"]:
-                    raise ValueError("That line has no take yet")
-                path_in = VG.take_path(t["takes"][t.get("current", 0)]["file"])
-            elif src.startswith("sound:"):
-                path_in = sound_path(src[6:])
-            else:
-                raise ValueError("Choose something to test the preset on")
-            if not path_in or not os.path.exists(path_in):
-                raise ValueError("Source audio not found")
-            VG.preview(path_in, data.get("effects", []), {"rate": data.get("rate") or 11025, "quality": 5})
-            return self.send(200, {"url": "/preview.ogg?v=%d" % int(time.time() * 1000)})
-        if path == "/api/voice/sample":
-            # {voice, speed, lang, text, effects, rate, pitch, delivery, delivery_mix}: hear a voice before casting it
-            VG.sample(str(data.get("voice", "")), data.get("speed") or 1, data.get("lang") or "",
-                      str(data.get("text") or "")[:400], data.get("effects", []),
-                      {"rate": data.get("rate") or 11025, "quality": 5}, data.get("pitch") or 0,
-                      str(data.get("delivery") or ""), data.get("delivery_mix") or 0)
-            return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
-        if path == "/api/voice/sam_sample":
-            # {sam: {voice, speed, pitch, throat, mouth, sing}, text}: hear SAM as the game will
-            VG.sample_sam(data.get("sam") or {}, str(data.get("text") or "")[:1000], [])
-            return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
-        if path == "/api/kokoro/setup":
-            VG.kokoro.start_setup()
-            return self.send(200, VG.kokoro.status())
+        if path == "/api/sam/sample":
+            # {sam: speaker settings, text, variety, female}: hear SAM as the game will
+            VOICES.sample(data.get("sam") or {}, str(data.get("text") or "")[:2000],
+                          bool(data.get("variety")), bool(data.get("female")))
+            return self.send(200, {"url": "/sam_sample.wav?v=%d" % int(time.time() * 1000)})
+        if path == "/api/sam/phonemes":
+            return self.send(200, {"pieces": VOICES.phonemes(data.get("sam") or {}, str(data.get("text") or "")[:2000])})
         return self.send(404, {"error": "not found"})
 
 
@@ -612,8 +536,6 @@ def main():
 def watchdog(srv):
     while True:
         time.sleep(1)
-        if VG.busy():
-            continue  # let queued voice lines finish first
         now = time.time()
         if (bye_at and now > bye_at) or now - last_seen > SILENCE_LIMIT:
             srv.shutdown()

@@ -123,11 +123,7 @@ main { padding: 16px 24px 60px; max-width: 1400px; margin: 0 auto; }
 /* dialogue rows: generation */
 button.small { font-size: 12px; padding: 4px 9px; }
 .gen { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%; }
-.gen .takes { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
-.gen .takes select { max-width: 210px; font-size: 12px; padding: 3px 5px; }
 .jobnote { font-size: 12px; color: var(--accent); }
-.jobnote.error { color: var(--warn); }
-.jobnote.cancelled { color: var(--muted); }
 .spoken { margin-top: 8px; font-size: 12px; white-space: normal; }
 .spoken summary { cursor: pointer; color: var(--muted); }
 .spoken summary span { margin-left: 8px; }
@@ -137,8 +133,6 @@ button.small { font-size: 12px; padding: 4px 9px; }
 .spoken-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .muted { color: var(--muted); }
 .err, .warnline { color: var(--warn); }
-.jobs { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 12px; }
-.jobs progress { flex: 1; accent-color: var(--accent); }
 .modal-foot { display: flex; justify-content: flex-end; gap: 8px; }
 #confirmBody p { margin: 4px 0; }
 
@@ -160,43 +154,16 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .spk.cast { border-left: 3px solid var(--ok); }
 .spk select { width: 100%; }
 .spk-voice { display: flex; gap: 4px; }
+.spk-voice button { white-space: nowrap; }
 .spk-name .muted { font-size: 11px; }
 .spk-set summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .spk-set[open] { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 6px 16px; }
 .spk-set[open] summary { grid-column: 1 / -1; }
 .sl { display: grid; grid-template-columns: 80px 1fr 40px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .sl input { accent-color: var(--accent); }
-.presets { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; }
-.preset-list { display: flex; flex-direction: column; gap: 2px; }
-.preset-ed { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-.preset-head { display: flex; gap: 8px; align-items: center; }
-.preset-head h3 { margin: 0 auto 0 0; font-size: 14px; }
-.steps { display: flex; flex-direction: column; gap: 4px; }
-.step { display: flex; gap: 6px; align-items: center; }
-.step .num { width: 22px; text-align: center; color: var(--muted); font-size: 12px; }
 .mono { font-family: Consolas, monospace; font-size: 12px; }
-.step input.mono { flex: 1; }
-.step.final { opacity: .8; }
-.step-params { margin: 2px 0 6px 28px; font-size: 12px; }
-.step-params summary { cursor: pointer; color: var(--muted); }
-.params { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 12px; margin-top: 6px; }
-.params label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); }
-.params input[type=number], .params input[type=text], .params select { width: 100%; }
-.test select { max-width: 360px; }
-.fx { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-.fx.off { opacity: .55; }
-.fx-head { display: flex; gap: 6px; align-items: center; }
-.fx-head .num { width: 22px; text-align: center; color: var(--muted); font-size: 12px; }
-.fx-head select { flex: 1; }
-.fx-tip { font-size: 12px; color: var(--muted); margin: 2px 0 0 28px; }
-.fx .params { margin: 4px 0 0 28px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-.fx .params .sl, .spk-set .sl { display: grid; grid-template-columns: 90px 1fr 56px; flex-direction: row; }
+.spk-set .sl { display: grid; grid-template-columns: 90px 1fr 56px; flex-direction: row; }
 .spk-set .sl.sel { grid-template-columns: 90px 1fr; }
-.fx .params .check { flex-direction: row; align-items: center; font-size: 12px; }
-.setup-card progress { width: 100%; }
-.viewswitch { display: flex; gap: 6px; margin: 0 0 14px; }
-.spk.sam { grid-template-columns: 170px auto minmax(200px, 1fr) minmax(150px, 1.4fr); }
-.sam-live .jobnote { color: var(--muted); }
 
 @media (max-width: 860px) {
   .lib, .presets { grid-template-columns: 1fr; }
@@ -226,16 +193,17 @@ input[type=password], input[type=text], input[type=number] { font: inherit; colo
 .genpick { display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .genpick label { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .genpick select { width: 100%; font-size: 12px; padding: 4px 6px; }
-.genpick input[type=number] { width: 72px; font-size: 12px; padding: 3px 6px; }
 .with-play { display: flex; gap: 4px; min-width: 0; }
 .with-play select { flex: 1; min-width: 0; }
-.review { width: 100%; border: 1px solid var(--accent); background: #2a2516; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-.review-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 11px; }
-.review-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sam-row .jobnote { color: var(--muted); }
+.sam-row.live .jobnote { color: var(--ok); }
+.spk.sam { grid-template-columns: 170px auto minmax(260px, 1fr) minmax(150px, 1.2fr); }
+.dict { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.dict-row { display: grid; grid-template-columns: minmax(120px, 200px) auto minmax(200px, 1fr) auto auto; gap: 6px; align-items: center; }
+.dict-row.new { grid-template-columns: minmax(120px, 200px) auto minmax(200px, 1fr) auto auto auto auto; }
+.phonemes { margin-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.phonemes code.phon { font-family: Consolas, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; user-select: all; }
 button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font-weight: 600; }
-.older { font-size: 12px; width: 100%; }
-.older summary { cursor: pointer; color: var(--muted); }
-.older .takes { margin-top: 4px; }
 .vrow { grid-template-columns: 170px 1fr 270px; }
 
 /* blocks */

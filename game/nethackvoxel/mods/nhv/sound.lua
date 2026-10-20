@@ -346,7 +346,11 @@ end
 -- SAM, the 1982 speech synth built into the VoxHack engine: it reads the
 -- line's real text as it happens (your name, your god...), nothing is
 -- recorded. The engine speaks a sound named
--- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>|<text>".
+-- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>|<text>"
+-- and reads its words through the pronunciation dictionary
+-- (mods/nhv_sounds/sam_dictionary.txt, edited in the editor).
+core.settings:set("nhv_sam_dict", MODPATH .. DIR_DELIM .. "sam_dictionary.txt")
+
 -- (the classic voices from SAM's manual; the same list as the editor's)
 local SAM_VOICES = {
 	["SAM"] = {speed = 72, pitch = 64, throat = 128, mouth = 128},
@@ -356,9 +360,28 @@ local SAM_VOICES = {
 	["Little Old Lady"] = {speed = 82, pitch = 32, throat = 145, mouth = 145},
 	["Extra-Terrestrial"] = {speed = 100, pitch = 64, throat = 150, mouth = 200},
 }
+-- playback pitch by NetHack size class (tiny .. gigantic): big ones deeper
+local SIZE_PITCH = {[0] = 1.2, 1.1, 1.0, 0.93, 0.86, 0.8}
 
--- the SAM settings for a line, or nil if its speaker isn't voiced by SAM
-local function sam_for(id)
+local function clamp255(v)
+	return math.max(1, math.min(255, math.floor(v + 0.5)))
+end
+
+-- three steady numbers in [-1, 1] for a monster, so each sounds a little
+-- different from its kind, but always the same itself
+local function monster_dice(m_id)
+	local h = (m_id * 2654435761) % 4294967296
+	local function die()
+		local d = h % 1000
+		h = math.floor(h / 1000) + d * 7919
+		return d / 999 * 2 - 1
+	end
+	return die(), die(), die(), die()
+end
+
+-- The SAM settings for a line, or nil if its speaker isn't voiced by SAM.
+-- who (optional): {m_id=, female=} of the monster saying it
+local function sam_for(id, who)
 	local e = dialogue[id]
 	if not e then
 		return nil
@@ -369,13 +392,35 @@ local function sam_for(id)
 	if type(ss) ~= "table" or not ss.live then
 		return nil
 	end
-	local st = {sing = ss.sing and 1 or 0, volume = tonumber(ss.volume) or 100}
+	local st = {sing = ss.sing and 1 or 0, volume = tonumber(ss.volume) or 100,
+		smooth = ss.smooth and 1 or 0, tone = ss.tone == false and 0 or 1, pitch_mul = 1,
+		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil}
 	-- a line can take another of SAM's named voices
 	local named = SAM_VOICES[ln.sam_voice or ""]
 	local base = named or SAM_VOICES[ss.voice or ""] or SAM_VOICES.SAM
 	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
-		local v = named and base[k] or tonumber(ss[k]) or base[k]
-		st[k] = math.max(1, math.min(255, math.floor(v)))
+		st[k] = named and base[k] or tonumber(ss[k]) or base[k]
+	end
+	local mon = who and who.m_id and who.m_id > 0
+		and nhv.mobs and nhv.mobs.mons["id" .. who.m_id]
+	if who and who.m_id and who.m_id > 0 then
+		-- every monster its own voice (Variation, 0-100)
+		local var = (tonumber(ss.variation) or 25) / 100
+		local d1, d2, d3, d4 = monster_dice(who.m_id)
+		st.pitch = st.pitch + d1 * var * 14
+		st.speed = st.speed + d2 * var * 10
+		st.throat = st.throat + d3 * var * 24
+		st.mouth = st.mouth + d4 * var * 24
+	end
+	if who and who.female then
+		-- females higher (SAM: a lower pitch number is a higher voice)
+		st.pitch = st.pitch - (tonumber(ss.female) or 12)
+	end
+	if mon and mon.mon and ss.size ~= false then
+		st.pitch_mul = SIZE_PITCH[mon.mon.size or 2] or 1
+	end
+	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
+		st[k] = clamp255(st[k])
 	end
 	return st
 end
@@ -385,15 +430,16 @@ local function speak_sam(st, text, pos)
 	if not p then
 		return false
 	end
-	text = text:gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
+	text = (st.text or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
 	if not text:find("%w") then
 		return false
 	end
 	if sound.voice then
 		core.sound_stop(sound.voice)
 	end
-	local name = ("nhv_sam:%d,%d,%d,%d,%d,0|%s"):format(st.speed, st.pitch, st.throat, st.mouth, st.sing, text)
-	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100)}
+	local name = ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
+		st.sing, st.smooth, st.tone, text)
+	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100), pitch = st.pitch_mul}
 	if pos then
 		params.pos, params.max_hear_distance = pos, 64
 	else
@@ -404,8 +450,8 @@ local function speak_sam(st, text, pos)
 end
 
 -- text: what the game actually said (SAM reads it; a recording ignores it)
-local function play_voice(id, pos, text)
-	local st = text and sam_for(id)
+local function play_voice(id, pos, text, who)
+	local st = text and sam_for(id, who)
 	if st then
 		return speak_sam(st, text, pos)
 	end
@@ -495,7 +541,8 @@ nh.on_event(function(evs)
 					body = mon.obj:get_pos()
 				end
 				if id then
-					play_voice(id, body, text)
+					play_voice(id, body, text,
+						{m_id = tonumber(parts[2]) or 0, female = parts[4] == "1"})
 				end
 			elseif kind == "quest" then
 				local ids = quest_ids[(parts[2] or "") .. "/" .. (parts[3] or "")]

@@ -57,21 +57,16 @@
       <select id="voiceState">
         <option value="">All lines</option>
         <option value="unvoiced">Not voiced yet</option>
-        <option value="voiced">Voiced</option>
-        <option value="review">Awaiting review</option>
+        <option value="voiced">Voiced (SAM or a recording)</option>
       </select>
       <button id="exportScript">Export script (CSV)</button>
-      <button id="genShown" class="primary">Generate shown unvoiced…</button>
-      <button id="reprocShown">Re-process shown…</button>
-      <button id="clearVoices" title="Remove every generated take and preview (and, if you choose, every voice line in the game)">Clear all recordings…</button>
       <span class="count" id="voiceCount"></span>
     </div>
-    <div id="voiceJobs" class="jobs" hidden></div>
     <details class="legend" id="legend">
       <summary>Placeholder legend — what <code>%s</code>, <code>%n</code>, <code>%d</code>… mean</summary>
       <div id="legendBody" class="legend-body"></div>
     </details>
-    <p class="hint">Placeholders like <code>%s</code> or <code>%n</code> are filled in during play: hover one in a line to see what it means there (the legend above lists them all). Drop a recording on a line (or use Upload) to attach it, or generate it with Kokoro (set voices up in Voice casting). Open “Spoken text” on a line to see or edit exactly what will be read.</p>
+    <p class="hint">Placeholders like <code>%s</code> or <code>%n</code> are filled in during play: hover one in a line to see what it means there (the legend above lists them all). Lines are spoken live by SAM for the speakers ticked in Voice casting (▶ hears one); open “SAM text” on a line to have SAM say something else. A recording dropped on a line (or Upload) plays for speakers SAM doesn't voice.</p>
     <div class="list" id="voiceList"></div>
     <div class="pager" id="voicePager"></div>
   </section>

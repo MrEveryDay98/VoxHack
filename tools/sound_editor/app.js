@@ -72,7 +72,7 @@ function playUrl(url, label) {
 
 // ------------------------------------------------------------ loading/saving
 async function load() {
-  const [cat, cfg] = await Promise.all([api("/api/catalog"), api("/api/config"), VoiceGen.load()]);
+  const [cat, cfg] = await Promise.all([api("/api/catalog"), api("/api/config"), Voices.load()]);
   catalog = cat;
   config = cfg;
   config.hooks = config.hooks || {};
@@ -86,13 +86,13 @@ async function load() {
   renderLegend();
   renderVoices();
   renderLibrary();
-  VoiceGen.render();
+  Voices.render();
 }
 
 async function save() {
   try {
     await api("/api/config", { method: "PUT", json: config });
-    await VoiceGen.save();
+    await Voices.save();
   } catch (e) {
     return toast("Saving failed: " + e.message);
   }
@@ -272,10 +272,9 @@ function filteredDialogue() {
   return catalog.dialogue.filter((d) => {
     if (cat && d.category !== cat) return false;
     if (who && d.speaker !== who) return false;
-    const voiced = !!config.voices[d.id];
+    const voiced = !!config.voices[d.id] || Voices.isLive(d);
     if (st === "voiced" && !voiced) return false;
     if (st === "unvoiced" && voiced) return false;
-    if (st === "review" && !VoiceGen.awaitingReview(d.id)) return false;
     if (q && !(d.text.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || d.speaker.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -351,7 +350,7 @@ function voiceRow(d) {
       el("button", { "aria-label": "Play", onclick: () => play(v.sound) }, "▶"),
       el("button", { "aria-label": "Remove voice", onclick: () => { delete config.voices[d.id]; markDirty(); row.replaceWith(voiceRow(d)); } }, "✕")));
   }
-  voice.append(VoiceGen.rowControls(d, () => row.replaceWith(voiceRow(d))));
+  voice.append(Voices.rowControls(d, () => row.replaceWith(voiceRow(d))));
   voice.append(el("label", { class: "button" }, v ? "Replace recording…" : "Upload recording…", fileInput),
     el("button", { class: "add", onclick: () => openPicker("Existing sound for this line", (name) => {
       config.voices[d.id] = { sound: name, volume: 100 }; markDirty(); row.replaceWith(voiceRow(d)); }) }, "Use a library sound"));
@@ -365,7 +364,7 @@ function voiceRow(d) {
     el("div", { class: "meta" }, el("div", { class: "who" }, d.speaker),
       el("div", {}, d.category + " · " + d.context), el("div", { class: "vid" }, d.id),
       el("div", {}, d.source)),
-    el("div", { class: "text" }, highlight(d), VoiceGen.spokenEditor(d)), voice);
+    el("div", { class: "text" }, highlight(d), Voices.spokenEditor(d)), voice);
   return row;
 }
 
@@ -376,7 +375,7 @@ function renderVoices() {
   const list = $("#voiceList");
   list.textContent = "";
   for (const d of items.slice(voicePage * PAGE, voicePage * PAGE + PAGE)) list.append(voiceRow(d));
-  const voiced = catalog.dialogue.filter((d) => config.voices[d.id]).length;
+  const voiced = catalog.dialogue.filter((d) => config.voices[d.id] || Voices.isLive(d)).length;
   $("#voiceCount").textContent = `${items.length} lines shown · ${voiced} of ${catalog.dialogue.length} voiced`;
   const pager = $("#voicePager");
   pager.textContent = "";
@@ -579,7 +578,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
   document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + b.dataset.tab));
   if (b.dataset.tab === "library") renderLibrary();
-  if (b.dataset.tab === "casting") VoiceGen.render();
+  if (b.dataset.tab === "casting") Voices.render();
   if (b.dataset.tab === "blocks") Blocks.render();
   if (b.dataset.tab === "effects") Effects.render();
   if (b.dataset.tab === "sky") Sky.render();
@@ -592,9 +591,6 @@ for (const id of ["#voiceSearch", "#voiceCategory", "#voiceSpeaker", "#voiceStat
   $(id).addEventListener("input", () => { voicePage = 0; renderVoices(); });
 }
 $("#exportScript").addEventListener("click", exportScript);
-$("#genShown").addEventListener("click", () => VoiceGen.bulk("generate", filteredDialogue()));
-$("#reprocShown").addEventListener("click", () => VoiceGen.bulk("process", filteredDialogue()));
-$("#clearVoices").addEventListener("click", () => VoiceGen.clearAll());
 $("#libSearch").addEventListener("input", renderLibrary);
 $("#libUpload").addEventListener("change", (e) => { addFiles([...e.target.files].map((f) => ({ file: f, path: "" }))); e.target.value = ""; });
 $("#libFolderUpload").addEventListener("change", (e) => {
