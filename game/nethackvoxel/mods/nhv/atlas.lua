@@ -13,7 +13,7 @@
 -- the other by depth, the deepest at the bottom. The dungeons you climb
 -- (Sokoban, Vlad's Tower) go off to the side instead: side by side at the
 -- height of their entrance, the way in first. Then you fly about freely
--- (K: fly, H: noclip, full brightness).
+-- (K: fly, H: noclip; always midday).
 --
 --   /atlas            the levels and their numbers
 --   /atlas <number>   go to that level
@@ -277,6 +277,17 @@ core.register_globalstep(function()
 end)
 
 -- ---------------------------------------------------------------- player
+-- always noon: the sun overhead (the clock put back now and then, rather
+-- than a time_speed setting, which would end up in your settings)
+local noon_t = 0
+core.register_globalstep(function(dtime)
+	noon_t = noon_t - dtime
+	if noon_t <= 0 then
+		noon_t = 5
+		core.set_timeofday(0.5)
+	end
+end)
+
 function atlas.go(player, n)
 	local e = atlas.list and atlas.list[n]
 	if not e then
@@ -293,9 +304,15 @@ core.register_on_joinplayer(function(player)
 	local privs = core.get_player_privs(name)
 	privs.fly, privs.fast, privs.noclip = true, true, true
 	core.set_player_privs(name, privs)
-	player:set_sky({type = "plain", base_color = "#202830", clouds = false})
+	-- the world's own light and shading (room lights, the sun where there's
+	-- no ceiling, shadows), always at midday
+	player:set_sky({type = "regular", clouds = false})
+	player:set_sun({visible = true, sunrise_visible = false})
+	player:set_moon({visible = false})
+	player:set_stars({visible = false})
 	player:override_day_night_ratio(1)
-	player:hud_set_flags({nhv_fullbright = true, minimap = false, minimap_radar = false})
+	player:set_lighting({shadows = {intensity = 0.33}})
+	player:hud_set_flags({nhv_fullbright = false, minimap = false, minimap_radar = false})
 	player:set_physics_override({speed = 2, gravity = 0})
 	player:set_properties({eye_height = 1.6, visual_size = {x = 0, y = 0}})
 	local list = core.deserialize(storage:get_string(DONE_KEY))
