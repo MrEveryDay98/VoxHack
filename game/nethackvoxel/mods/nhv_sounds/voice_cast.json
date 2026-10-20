@@ -48,7 +48,15 @@
     "throat": 145,
     "mouth": 145,
     "live": true,
-    "smooth": true
+    "smooth": true,
+    "effects": [
+     {
+      "type": "echo",
+      "delay": 220,
+      "decay": 0.45,
+      "repeats": 5
+     }
+    ]
    }
   },
   "Wizard of Yendor": {
@@ -60,7 +68,23 @@
     "pitch": 169,
     "throat": 49,
     "mouth": 169,
-    "live": true
+    "live": true,
+    "effects": [
+     {
+      "type": "distortion",
+      "drive": 14
+     },
+     {
+      "type": "lowpass",
+      "freq": 2500
+     },
+     {
+      "type": "reverb",
+      "room": 46,
+      "mix": 30
+     }
+    ],
+    "smooth": true
    }
   },
   "Text": {
@@ -70,7 +94,8 @@
     "pitch": 64,
     "throat": 128,
     "mouth": 128,
-    "smooth": true
+    "smooth": true,
+    "live": true
    }
   },
   "The Oracle": {
@@ -80,6 +105,96 @@
     "pitch": 32,
     "throat": 145,
     "mouth": 145,
+    "smooth": true
+   }
+  },
+  "Priest": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 96,
+    "mouth": 83,
+    "smooth": true,
+    "live": true
+   }
+  },
+  "Mail daemon": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 117,
+    "throat": 39,
+    "mouth": 128,
+    "effects": [
+     {
+      "type": "distortion",
+      "drive": 14
+     },
+     {
+      "type": "lowpass",
+      "freq": 2500
+     },
+     {
+      "type": "reverb",
+      "room": 39,
+      "mix": 30
+     }
+    ],
+    "sing": true,
+    "tone": true,
+    "smooth": true
+   }
+  },
+  "Voice": {
+   "sam": {
+    "voice": "Little Robot",
+    "speed": 92,
+    "pitch": 109,
+    "throat": 190,
+    "mouth": 190,
+    "live": false,
+    "effects": [
+     {
+      "type": "chorus",
+      "depth": 4,
+      "rate": 0.5,
+      "mix": 50
+     },
+     {
+      "type": "reverb",
+      "room": 95,
+      "mix": 50
+     }
+    ]
+   }
+  },
+  "Demon / angel": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 92,
+    "pitch": 121,
+    "throat": 128,
+    "mouth": 128,
+    "effects": [
+     {
+      "type": "chorus",
+      "depth": 11,
+      "rate": 2.35,
+      "mix": 50
+     },
+     {
+      "type": "reverb",
+      "room": 48,
+      "mix": 15
+     },
+     {
+      "type": "echo",
+      "delay": 250,
+      "decay": 0.4,
+      "repeats": 3
+     }
+    ],
     "smooth": true
    }
   }
