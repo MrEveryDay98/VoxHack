@@ -90,6 +90,7 @@ end)
 
 dofile(path .. "clock.lua")
 dofile(path .. "player.lua")
+dofile(path .. "wizard.lua")
 dofile(path .. "hud.lua")
 dofile(path .. "ui.lua")
 dofile(path .. "graphics.lua")

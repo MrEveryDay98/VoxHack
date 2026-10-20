@@ -858,6 +858,21 @@ core.register_globalstep(function()
 		player_mod.level_hold = nil
 		nhv.hud.fade(0, FADE_IN_S)
 	end
+	-- wizard mode, flying free (wizard.lua): the hero stays where it is;
+	-- coming back down, you're back with it
+	if player and nhv.wizard then
+		local free = nhv.wizard.detached(player)
+		if free then
+			player_mod.detached = true
+			return
+		elseif player_mod.detached then
+			player_mod.detached = nil
+			local h = player_mod.hero
+			if h then
+				teleport(player, U.tile_center(h.x, h.y))
+			end
+		end
+	end
 	if player and nh.snap then
 		try_escape(player)
 		if not hold_still(player) then
