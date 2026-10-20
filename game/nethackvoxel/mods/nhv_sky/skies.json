@@ -205,6 +205,7 @@
  "levels": {
   "default": "dusk",
   "fire": "sky1",
-  "water": "sky2"
+  "water": "sky2",
+  "astral": "sky3"
  }
 }
