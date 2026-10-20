@@ -9,8 +9,11 @@
     "speed": 56,
     "pitch": 42,
     "throat": 112,
-    "mouth": 191,
-    "live": true
+    "mouth": 187,
+    "live": true,
+    "variation": 0,
+    "smooth": true,
+    "female": 40
    }
   },
   "Quest (Rog)": {
@@ -37,14 +40,15 @@
   },
   "God": {
    "sam": {
-    "voice": "Extra-Terrestrial",
+    "voice": "Little Old Lady",
     "sing": false,
     "volume": 100,
-    "speed": 100,
+    "speed": 97,
     "pitch": 142,
-    "throat": 209,
-    "mouth": 196,
-    "live": true
+    "throat": 145,
+    "mouth": 145,
+    "live": true,
+    "smooth": true
    }
   },
   "Wizard of Yendor": {
@@ -57,6 +61,26 @@
     "throat": 49,
     "mouth": 169,
     "live": true
+   }
+  },
+  "Text": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": true
+   }
+  },
+  "The Oracle": {
+   "sam": {
+    "voice": "Little Old Lady",
+    "speed": 61,
+    "pitch": 32,
+    "throat": 145,
+    "mouth": 145,
+    "smooth": true
    }
   }
  },
