@@ -440,12 +440,17 @@ local function level_open_sky()
 	return false
 end
 
--- the doors' prefabs (in a hand-built area they keep their lintel - the
--- row over the opening - but nothing above it)
+-- the doors' prefabs: in a hand-built area, a door's own prefab gives the
+-- floor and the doorway's opening; from the lintel (the row over the
+-- opening) up it's what you built there - or, built nothing, the door's
+-- lintel and nothing above it
 terrain.DOOR_SLOTS = {door_closed = true, door_open = true, door_broken = true, doorway = true}
-function terrain.clear_over_lintel(data, area, o)
+local LINTEL = prefabs.FLOOR + U.WALL_H
+
+-- layers from..H-1 of the cell at origin o: air
+local function clear_from(data, area, o, from)
 	local air = cid("air")
-	for ly = prefabs.CEIL, prefabs.H - 1 do
+	for ly = from, prefabs.H - 1 do
 		for lx = 0, U.TILE - 1 do
 			for lz = 0, U.TILE - 1 do
 				local vi = area:index(o.x + lx, o.y + ly, o.z + lz)
@@ -453,6 +458,26 @@ function terrain.clear_over_lintel(data, area, o)
 			end
 		end
 	end
+end
+function terrain.clear_over_lintel(data, area, o)
+	clear_from(data, area, o, prefabs.CEIL)
+end
+
+-- a built cell's nodes from the lintel up
+local tops = setmetatable({}, {__mode = "k"})
+local function top_part(cell)
+	local part = tops[cell]
+	if not part then
+		part = {}
+		for i, nd in pairs(cell.nodes) do
+			local _, ly = prefabs.unindex(i)
+			if ly >= LINTEL then
+				part[i] = nd
+			end
+		end
+		tops[cell] = part
+	end
+	return part
 end
 
 local function write_square(data, area, sq)
@@ -463,9 +488,15 @@ local function write_square(data, area, sq)
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		carve_corners(data, area, sq)
-		if sq.no_ceiling then
+		if sq.door_top ~= nil then
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
-			terrain.clear_over_lintel(data, area, vector.new(ox, prefabs.Y0, oz))
+			local o = vector.new(ox, prefabs.Y0, oz)
+			if sq.door_top then
+				clear_from(data, area, o, LINTEL)
+				prefabs.write_at(data, area, o, top_part(sq.door_top), 0, false, cid)
+			else
+				terrain.clear_over_lintel(data, area, o)
+			end
 		end
 	end
 	if sq.overlay then
@@ -719,13 +750,18 @@ local function describe(map, tx, ty)
 	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ, map)
 	if cell then
 		sq.area_cell = cell
-	elseif terrain.DOOR_SLOTS[sq.slot] and nhv.areas.in_area(tx, ty, map) then
-		-- a door in a hand-built area: its lintel, not its ceiling
-		sq.no_ceiling = true
+	elseif terrain.DOOR_SLOTS[sq.slot] then
+		-- a door in a hand-built area: from the lintel up, what you built at
+		-- that spot; nothing built there - the door's lintel only
+		local inside, top, top_id = nhv.areas.door_top(tx, ty, map)
+		if inside then
+			sq.door_top = top or false
+			cell_id = "top:" .. (top_id or "none")
+		end
 	end
 	-- (seeing a square for the first time doesn't change what's built)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or "", cell_id or "", sq.no_ceiling and 1 or 0}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or ""}, ":")
 	return i, sq
 end
 

@@ -408,10 +408,19 @@ local function built_at(r, f, cx, cy)
 	return cell, cell and (r.t.id .. "@" .. k .. "~" .. f)
 end
 
--- Is square (tx, ty) in a hand-built area? (a door there keeps its lintel
--- but not the door prefab's ceiling: terrain.lua)
-function areas.in_area(tx, ty, map)
-	return not nhv.EDITOR and region_at(tx, ty, map) ~= nil
+-- For a door at (tx, ty): is it in a hand-built area, and the square you
+-- built at that very spot (a door, or wall where the door is elsewhere
+-- this game) with an id - terrain.lua builds the door with what you built
+-- from the lintel up. (true, nil: in an area, nothing built there.)
+function areas.door_top(tx, ty, map)
+	if nhv.EDITOR then
+		return false
+	end
+	local r, f, cx, cy = region_at(tx, ty, map)
+	if not r then
+		return false
+	end
+	return true, built_at(r, f, cx, cy)
 end
 
 -- The hand-built cell for square (tx, ty) with terrain typ (map: the
