@@ -48,6 +48,13 @@ reg("bounds", {description = "Edge of the level", drawtype = "airlike", walkable
 	pointable = false, diggable = false, sunlight_propagates = true, buildable_to = false,
 	groups = {not_in_creative_inventory = 1}})
 
+-- the sky: invisible, and nothing behind it is drawn either - the sky shows
+-- there instead (a hole onto the sky: the VoxHack build of Luanti draws a
+-- tile named nhv_sky.png into the depth buffer only, before everything
+-- else). Solid, like a wall.
+reg("sky", {description = "Sky (shows the sky, hides what's behind it)", tiles = {"nhv_sky.png"},
+	paramtype = "none", sunlight_propagates = true})
+
 -- solid, opaque
 reg("void", {description = "Unexplored", tiles = {BLACK}, paramtype = "none"})
 reg("rock", {description = "Stone", tiles = {tile_tex(1272)}, paramtype = "none"})
