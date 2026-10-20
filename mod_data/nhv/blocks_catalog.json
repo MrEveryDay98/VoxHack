@@ -56,7 +56,7 @@
 	{
 		"climbable" : false,
 		"description" : "Invisible barrier",
-		"drawtype" : "glasslike",
+		"drawtype" : "airlike",
 		"light" : 0,
 		"name" : "nhv:b_barrier",
 		"solid" : true,
@@ -1172,7 +1172,7 @@
 	{
 		"climbable" : false,
 		"description" : "Carve (overlays: force air)",
-		"drawtype" : "glasslike",
+		"drawtype" : "airlike",
 		"light" : 0,
 		"name" : "nhv:carve",
 		"solid" : false,
@@ -1280,7 +1280,7 @@
 	{
 		"climbable" : false,
 		"description" : "Monster path (to the trigger)",
-		"drawtype" : "glasslike",
+		"drawtype" : "airlike",
 		"light" : 0,
 		"name" : "nhv:mpath",
 		"solid" : false,
@@ -1304,6 +1304,15 @@
 		"name" : "nhv:rock",
 		"solid" : true,
 		"texture" : "[fill:16x16:#000000^(nhv_tiles.png^[sheet:48x25:3,19)"
+	},
+	{
+		"climbable" : false,
+		"description" : "Sky (shows the sky, hides what's behind it)",
+		"drawtype" : "normal",
+		"light" : 0,
+		"name" : "nhv:sky",
+		"solid" : true,
+		"texture" : "nhv_sky.png"
 	},
 	{
 		"climbable" : false,
@@ -1344,7 +1353,7 @@
 	{
 		"climbable" : false,
 		"description" : "Stairs trigger (touch to change level)",
-		"drawtype" : "glasslike",
+		"drawtype" : "airlike",
 		"light" : 0,
 		"name" : "nhv:trigger",
 		"solid" : false,
