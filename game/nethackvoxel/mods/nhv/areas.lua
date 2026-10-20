@@ -379,13 +379,9 @@ local function flip_cell(cell, f)
 	return by[f]
 end
 
--- The hand-built cell for square (tx, ty) with terrain typ (map: the
--- level's map, to see which way round it is), and an id for it; nil if the
--- usual prefab is used there.
-function areas.cell(tx, ty, typ, map)
-	if nhv.EDITOR or OWN[typ] then
-		return nil
-	end
+-- the hand-built region square (tx, ty) is in: the region, its flip (as
+-- the level is laid out) and the template square there
+local function region_at(tx, ty, map)
 	for _, r in ipairs(regions()) do
 		local ax, ay = tx - r.x, ty - r.y
 		if ax >= 0 and ay >= 0 and ax < r.t.w and ay < r.t.h then
@@ -395,18 +391,63 @@ function areas.cell(tx, ty, typ, map)
 			local f = r.flip or 0
 			local cx = f >= 2 and r.t.w - 1 - ax or ax
 			local cy = f % 2 == 1 and r.t.h - 1 - ay or ay
-			-- (changed since the level was made: the usual prefab)
-			if areas.template_typ(r.t, cx, cy) ~= typ then
-				return nil
-			end
-			local k = cy * r.t.w + cx + 1
-			local cell = areas.get(r.t.id).cells[k]
-			if cell and f ~= 0 then
-				cell = flip_cell(cell, f)
-			end
-			return cell, cell and (r.t.id .. "@" .. k .. "~" .. f)
+			return r, f, cx, cy
 		end
 	end
+	return nil
+end
+
+-- the built cell at template square (cx, cy) of region r, flipped as the
+-- level is, and an id for it
+local function built_at(r, f, cx, cy)
+	local k = cy * r.t.w + cx + 1
+	local cell = areas.get(r.t.id).cells[k]
+	if cell and f ~= 0 then
+		cell = flip_cell(cell, f)
+	end
+	return cell, cell and (r.t.id .. "@" .. k .. "~" .. f)
+end
+
+-- Is square (tx, ty) in a hand-built area? (a door there keeps its lintel
+-- but not the door prefab's ceiling: terrain.lua)
+function areas.in_area(tx, ty, map)
+	return not nhv.EDITOR and region_at(tx, ty, map) ~= nil
+end
+
+-- The hand-built cell for square (tx, ty) with terrain typ (map: the
+-- level's map, to see which way round it is), and an id for it; nil if the
+-- usual prefab is used there.
+--
+-- Some special levels put a door in a different place each game (the
+-- Oracle's centre room has its door on any side): where the template has a
+-- door and this game has wall, the wall you built beside it on the same
+-- wall line is used.
+function areas.cell(tx, ty, typ, map)
+	if nhv.EDITOR or OWN[typ] then
+		return nil
+	end
+	local r, f, cx, cy = region_at(tx, ty, map)
+	if not r then
+		return nil
+	end
+	local ttyp = areas.template_typ(r.t, cx, cy)
+	if ttyp == typ then
+		return built_at(r, f, cx, cy)
+	end
+	if ttyp == T.DOOR and typ >= T.VWALL and typ <= T.TRWALL then
+		-- (along the wall line: a north-south wall's squares above and
+		-- below it, an east-west wall's either side)
+		local line = typ == T.VWALL and {{0, -1}, {0, 1}} or {{-1, 0}, {1, 0}}
+		for _, d in ipairs(line) do
+			local nx, ny = cx + d[1], cy + d[2]
+			if nx >= 0 and ny >= 0 and nx < r.t.w and ny < r.t.h
+					and areas.template_typ(r.t, nx, ny) == typ
+					and areas.get(r.t.id).cells[ny * r.t.w + nx + 1] then
+				return built_at(r, f, nx, ny)
+			end
+		end
+	end
+	-- (changed since the level was made: the usual prefab)
 	return nil
 end
 

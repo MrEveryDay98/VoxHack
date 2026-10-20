@@ -537,6 +537,10 @@ local function build_area(t, build, done)
 					else
 						local slot, rot = nhv.terrain.base_slot(map, U.idx(tx, ty), tx, ty, nil)
 						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, styled)
+						-- (a door: its lintel, not its ceiling, as in the game)
+						if nhv.terrain.DOOR_SLOTS[slot] then
+							nhv.terrain.clear_over_lintel(data, va, so)
+						end
 					end
 				end
 				-- a light under the ceiling of open squares, as the game puts

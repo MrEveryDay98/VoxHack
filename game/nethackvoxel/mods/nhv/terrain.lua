@@ -440,6 +440,21 @@ local function level_open_sky()
 	return false
 end
 
+-- the doors' prefabs (in a hand-built area they keep their lintel - the
+-- row over the opening - but nothing above it)
+terrain.DOOR_SLOTS = {door_closed = true, door_open = true, door_broken = true, doorway = true}
+function terrain.clear_over_lintel(data, area, o)
+	local air = cid("air")
+	for ly = prefabs.CEIL, prefabs.H - 1 do
+		for lx = 0, U.TILE - 1 do
+			for lz = 0, U.TILE - 1 do
+				local vi = area:index(o.x + lx, o.y + ly, o.z + lz)
+				data.ids[vi], data.p2[vi] = air, 0
+			end
+		end
+	end
+end
+
 local function write_square(data, area, sq)
 	if sq.area_cell then
 		-- part of a hand-built area (a special level's fixed part; areas.lua)
@@ -448,6 +463,10 @@ local function write_square(data, area, sq)
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		carve_corners(data, area, sq)
+		if sq.no_ceiling then
+			local ox, oz = U.tile_origin(sq.tx, sq.ty)
+			terrain.clear_over_lintel(data, area, vector.new(ox, prefabs.Y0, oz))
+		end
 	end
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
@@ -700,10 +719,13 @@ local function describe(map, tx, ty)
 	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ, map)
 	if cell then
 		sq.area_cell = cell
+	elseif terrain.DOOR_SLOTS[sq.slot] and nhv.areas.in_area(tx, ty, map) then
+		-- a door in a hand-built area: its lintel, not its ceiling
+		sq.no_ceiling = true
 	end
 	-- (seeing a square for the first time doesn't change what's built)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or "", cell_id or ""}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or "", sq.no_ceiling and 1 or 0}, ":")
 	return i, sq
 end
 
