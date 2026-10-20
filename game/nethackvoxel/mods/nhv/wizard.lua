@@ -1,14 +1,14 @@
 -- Wizard mode (a world with a file named "nhv_debug" in it: NetHack's debug
 -- mode) gets VoxHack's own debugging tools too:
 --   K / H          fly and noclip (the fly, fast and noclip privileges).
---                  Flying, the body is a free camera: off the ground or
---                  inside a wall, it leaves the hero where it stands (nothing
---                  you pass moves it); landing takes you back to the hero.
+--                  Flying, the body is a free camera: the hero stays where
+--                  it stands (nothing you pass moves it, and it never pulls
+--                  you back); stop flying to go back to the hero. Noclipping,
+--                  the hero is invulnerable.
 --   /brightness N  the level's brightness, 0 (as lit) .. 100 (everything at
 --                  full brightness); kept for the world.
 -- Outside wizard mode none of this is there.
 
-local U = nhv.util
 local wizard = {}
 nhv.wizard = wizard
 
@@ -69,18 +69,46 @@ core.register_chatcommand("brightness", {
 	end,
 })
 
--- Is the body flying free of the hero (wizard mode): off the ground, or
--- inside something solid (noclip)? Then nothing it does moves the hero.
-function wizard.detached(player)
-	if not wizard.on then
-		return false
-	end
-	local pos = player:get_pos()
-	if pos.y > U.STAND_Y + 1.6 then
-		return true
-	end
-	local def = core.registered_nodes[core.get_node(vector.offset(pos, 0, 0.5, 0)).name]
-	return def ~= nil and def.walkable == true and def.drawtype ~= "airlike"
+-- K and H are the client's own toggles, the settings free_move and noclip;
+-- the game and its window are one process, so they can be read here.
+-- (Luanti's noclip only works while flying.)
+local function flying()
+	return core.settings:get_bool("free_move", false)
 end
+local function noclipping()
+	return flying() and core.settings:get_bool("noclip", false)
+end
+
+-- Is the body flying free of the hero (wizard mode, K)? Then nothing it
+-- does moves the hero, and the hero's position never pulls it back.
+function wizard.detached()
+	return wizard.on and flying()
+end
+
+-- Noclipping (wizard mode, H), the hero is invulnerable: NetHack's
+-- #nhvgod (no attacks, no damage, death turned away). Told again whenever
+-- it changes, and after a game starts or loads.
+local god_told = nil
+local nh = nhv.nh
+core.register_globalstep(function()
+	if not wizard.on then
+		return
+	end
+	local want = noclipping()
+	if want ~= god_told and nh.ready() then
+		local was = god_told
+		god_told = want
+		nh.act({{key = "#"}, {text = "nhvgod " .. (want and 1 or 0)}}, {kind = "info"})
+		-- (said only when it changes: not "vulnerable" on every game start)
+		if nhv.hud and (want or was) then
+			nhv.hud.message(want and "Noclip: invulnerable." or "Noclip off: vulnerable again.")
+		end
+	end
+end)
+nh.on_snapshot(function(snap)
+	if not snap then
+		god_told = nil -- (a new game: tell it again)
+	end
+end)
 
 return wizard

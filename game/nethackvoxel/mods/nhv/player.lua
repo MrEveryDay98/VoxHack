@@ -861,7 +861,7 @@ core.register_globalstep(function()
 	-- wizard mode, flying free (wizard.lua): the hero stays where it is;
 	-- coming back down, you're back with it
 	if player and nhv.wizard then
-		local free = nhv.wizard.detached(player)
+		local free = nhv.wizard.detached()
 		if free then
 			player_mod.detached = true
 			return

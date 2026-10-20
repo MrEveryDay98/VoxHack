@@ -236,6 +236,18 @@ donhvpass(void)
    without being trapped; climbing out is the host's. No time passes. */
 boolean nhv_in_pit = FALSE;
 
+/* #nhvgod 0|1: wizard mode's invulnerability, on while the host's noclip
+   is: monsters don't attack, hit points aren't lost, and death is turned
+   away (as answering no to wizard mode's "Die?") */
+boolean nhv_godmode = FALSE;
+
+int
+donhvgod(void)
+{
+    nhv_godmode = wizard && nhv_cmd_args[0] != 0;
+    return nhv_ok();
+}
+
 int
 donhvpit(void)
 {
