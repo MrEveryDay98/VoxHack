@@ -119,6 +119,38 @@ nh.on_event(function(evs)
 	end
 end)
 
+-- Falling through isn't instant: NetHack has already moved you to the level
+-- below, but its snapshot is held back (nh.lua) for half a second while you
+-- drop into the hole on this level - a trap door's hatch opening under you
+-- first. Then the new level is built and you drop in from above (below).
+local FALL_S = 0.5
+nh.hold_level_change = function(old)
+	if core.get_us_time() >= (player_mod.falling_until or 0) then
+		return 0
+	end
+	local p = player_mod.get()
+	local h = old and old.hero
+	if not (p and h) then
+		return 0
+	end
+	-- the floor of the square gives way (the new level replaces it all anyway)
+	local c = U.tile_center(h.x, h.y)
+	local half = math.floor(U.TILE / 2)
+	for dx = -half, half do
+		for dz = -half, half do
+			for y = U.FLOOR_Y - 6, U.FLOOR_Y do
+				local pos = vector.new(c.x + dx, y, c.z + dz)
+				local def = core.registered_nodes[core.get_node(pos).name]
+				if def and def.walkable then
+					core.set_node(pos, {name = "air"})
+				end
+			end
+		end
+	end
+	p:add_velocity(vector.new(0, -5, 0))
+	return FALL_S
+end
+
 -- pet id -> time until which it counts as in the way (it wouldn't swap)
 player_mod.unswappable = {}
 

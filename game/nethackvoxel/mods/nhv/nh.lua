@@ -104,7 +104,34 @@ function nh.helpless_wait()
 end
 
 function nh.ready()
-	return nh.state == "waiting" and nh.req and nh.req.kind == "key" and nh.req.for_command
+	return nh.state == "waiting" and not nh.held and nh.req and nh.req.kind == "key" and nh.req.for_command
+end
+
+-- A new level's snapshot can be held back for a moment, so the change
+-- isn't instant: player.lua sets nh.hold_level_change(old, new) -> seconds
+-- to hold (falling through a hole: you drop into it first). Until then the
+-- game shows the old level and takes no commands.
+nh.held = nil -- {snap=, action=, at=}
+nh.hold_level_change = nil
+
+local function deliver(snap, action)
+	nh.snap = snap
+	for _, fn in ipairs(nh.listeners) do
+		fn(snap, action)
+	end
+end
+
+local function release_held()
+	local h = nh.held
+	nh.held = nil
+	deliver(h.snap, h.action)
+	if nh.state == "waiting" and nh.req then
+		for _, fn in ipairs(nh.req_listeners) do
+			if fn(nh.req) then
+				break
+			end
+		end
+	end
 end
 
 local function take_snapshot()
@@ -127,7 +154,7 @@ end
 -- Re-read the game state while NetHack is waiting (e.g. after monsters
 -- changed squares) and notify listeners.
 function nh.refresh()
-	if nh.state ~= "waiting" then
+	if nh.state ~= "waiting" or nh.held then
 		return
 	end
 	local snap = take_snapshot()
@@ -238,10 +265,15 @@ function nh.pump(wait_ms)
 		if snap then
 			local action = nh.pending_action
 			nh.pending_action = nil
-			nh.snap = snap
-			for _, fn in ipairs(nh.listeners) do
-				fn(snap, action)
+			local old = nh.snap and nh.snap.hero
+			local hold = old and snap.hero and old.ledger ~= snap.hero.ledger and nh.hold_level_change
+				and nh.hold_level_change(nh.snap, snap)
+			if hold and hold > 0 then
+				-- (the requests wait too: release_held() gives them)
+				nh.held = {snap = snap, action = action, at = core.get_us_time() + hold * 1e6}
+				return
 			end
+			deliver(snap, action)
 		end
 		for _, fn in ipairs(nh.req_listeners) do
 			if fn(nh.req) then
@@ -261,6 +293,9 @@ function nh.pump(wait_ms)
 end
 
 core.register_globalstep(function()
+	if nh.held and core.get_us_time() >= nh.held.at then
+		release_held()
+	end
 	nh.pump(0)
 end)
 
