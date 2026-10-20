@@ -630,6 +630,46 @@ class VoiceGen:
         if os.path.exists(self.pending_path(line_id)):
             os.remove(self.pending_path(line_id))
 
+    def recordings(self):
+        """How many takes, previews and game voice lines there are."""
+        takes = self.load_takes()
+        cfg = self.load_config()
+        return {"takes": sum(len(t.get("takes", [])) for t in takes.values()),
+                "pending": sum(1 for t in takes.values() if t.get("pending")),
+                "game": len(cfg.get("voices", {}))}
+
+    def clear_all(self, trash, game=True):
+        """Every take and preview (and, with game, every voice line the game
+        plays) moves to trash (editor_trash/voices_<time>), so nothing is
+        lost for good. Returns what was cleared."""
+        if self.busy():
+            raise ValueError("Voices are still being generated: wait for them, or cancel the rest, first")
+        counts = self.recordings()
+        dst = os.path.join(trash, "voices_" + time.strftime("%Y%m%d-%H%M%S"))
+        with self.lock, self.render_lock:
+            os.makedirs(dst, exist_ok=True)
+            for name in ("takes", "pending", "takes.json"):
+                src = os.path.join(self.work, name)
+                if os.path.exists(src):
+                    shutil.move(src, os.path.join(dst, name))
+        cleared = {"takes": counts["takes"], "pending": counts["pending"], "game": 0, "trash": dst}
+        if game:
+            cfg = self.load_config()
+            voices = cfg.get("voices", {})
+            used_by_hooks = {n for h in cfg.get("hooks", {}).values() for n in (h.get("sounds") or [])}
+            os.makedirs(os.path.join(dst, "game_voices"), exist_ok=True)
+            for v in voices.values():
+                sound = v.get("sound", "")
+                path = os.path.join(self.sounds, "voices", sound + ".ogg")
+                if sound.startswith("voice_") and sound not in used_by_hooks and os.path.exists(path):
+                    shutil.move(path, os.path.join(dst, "game_voices", sound + ".ogg"))
+            with open(os.path.join(dst, "game_voices", "voices.json"), "w", encoding="utf-8") as f:
+                json.dump(voices, f, indent=1)  # which line had which sound, to put back by hand
+            cleared["game"] = len(voices)
+            cfg["voices"] = {}
+            self.save_config(cfg)
+        return cleared
+
     def render(self, src, effects, out, dst):
         """src audio -> the effects, in order -> the output rate -> Ogg at dst"""
         with self.render_lock:

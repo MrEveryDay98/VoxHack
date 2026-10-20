@@ -352,6 +352,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, VG.load_takes())
         if path == "/api/voice/status":
             return self.send(200, {"kokoro": VG.kokoro.status(), "ffmpeg": bool(shutil.which("ffmpeg"))})
+        if path == "/api/voice/recordings":
+            return self.send(200, VG.recordings())
         if path == "/api/voice/jobs":
             return self.send(200, VG.state(int((q.get("since") or ["0"])[0])))
         if path == "/api/voice/effects":
@@ -540,6 +542,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/voice/discard":
             VG.discard(data.get("line", ""))
             return self.send(200, {"ok": True})
+        if path == "/api/voice/clear":
+            # {game: bool}: every take and preview (and the game's voice lines) to editor_trash
+            return self.send(200, VG.clear_all(os.path.join(ROOT, "editor_trash"), bool(data.get("game", True))))
         if path == "/api/voice/plan":
             cast = VG.load_cast()
             out = []

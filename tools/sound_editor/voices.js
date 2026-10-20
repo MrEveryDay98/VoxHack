@@ -286,6 +286,29 @@ const VoiceGen = (() => {
     }
   }
 
+  // every take and preview, and (if ticked) the game's voice lines, to editor_trash
+  async function clearAll() {
+    let n;
+    try { n = await api("/api/voice/recordings"); } catch (e) { return toast(e.message); }
+    if (!n.takes && !n.pending && !n.game) return toast("There are no recordings to clear");
+    const game = el("input", { type: "checkbox", checked: n.game ? true : null, disabled: !n.game || null });
+    const body = [
+      el("p", {}, `${fmt(n.takes)} take(s) and ${fmt(n.pending)} preview(s) awaiting review will be cleared.`),
+      el("label", { class: "check" }, game, ` Also remove the ${fmt(n.game)} voice line(s) the game plays now`),
+      el("p", { class: "muted" }, "Your voice casting, presets and spoken-text edits stay. The files move to editor_trash/voices_… (not deleted), so they can be put back by hand."),
+    ];
+    if (!await confirmBox("Clear all recordings", body, "Clear")) return;
+    try {
+      const res = await api("/api/voice/clear", { method: "POST", json: { game: game.checked } });
+      takes = {};
+      if (res.game) config.voices = {};
+      for (const k of Object.keys(jobs)) delete jobs[k];
+      if (typeof renderVoices === "function") renderVoices();
+      render();
+      toast(`Cleared ${res.takes} take(s)` + (res.game ? ` and ${res.game} game voice line(s)` : ""));
+    } catch (e) { toast(e.message); }
+  }
+
   // ---------------------------------------------------------- dialogue rows
   // what this line will be read with: its own choices, else its speaker's
   const NO_EFFECTS = "__none__";
@@ -691,6 +714,6 @@ const VoiceGen = (() => {
     return box;
   }
 
-  return { load, save, render, rowControls, spokenEditor, bulk, isDirty: () => dirty,
+  return { load, save, render, rowControls, spokenEditor, bulk, clearAll, isDirty: () => dirty,
     awaitingReview: (id) => !!(takes[id] && takes[id].pending) };
 })();

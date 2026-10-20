@@ -594,6 +594,7 @@ for (const id of ["#voiceSearch", "#voiceCategory", "#voiceSpeaker", "#voiceStat
 $("#exportScript").addEventListener("click", exportScript);
 $("#genShown").addEventListener("click", () => VoiceGen.bulk("generate", filteredDialogue()));
 $("#reprocShown").addEventListener("click", () => VoiceGen.bulk("process", filteredDialogue()));
+$("#clearVoices").addEventListener("click", () => VoiceGen.clearAll());
 $("#libSearch").addEventListener("input", renderLibrary);
 $("#libUpload").addEventListener("change", (e) => { addFiles([...e.target.files].map((f) => ({ file: f, path: "" }))); e.target.value = ""; });
 $("#libFolderUpload").addEventListener("change", (e) => {
