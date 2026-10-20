@@ -2,6 +2,20 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.6.0 (alpha) - 2026-10-20
+
+- **Spoken lines, live.** Shopkeepers, priests, your god, the Wizard of Yendor and some of the game's own texts are read aloud with SAM, the 1982 speech synthesizer, built into the game: it reads the real line as it happens, names and all ("Hello, Ron! Welcome to Asidonhopo's general store!"), from where the speaker stands. Each monster of a kind sounds a little different, female ones higher, big ones deeper. (NetHack options > Spoken lines turns them off.)
+- **Sounds come from where they happen.** Monsters' noises, attacks, spells and deaths, doors, drawbridges, boulders, explosions, splashes and breaking potions come from their place, panning and fading with distance. Behind a wall or a closed door they're muffled. (Your own actions stay with you.)
+- **Acoustics.** Every place has its own echo: the Mines ring like caves, temples like chapels, corridors are close and dry, big halls ring long, Gehennom sounds hellish, and underwater is muffled. Music stays clear.
+- **Monsters killing monsters** (your pet's kills too) make the monster-killed sound.
+- **Locked chests offer your lock pick** (or key, or credit card): "Unlock it with your lock pick?", as NetHack options > Locked doors / boxes says.
+- **Hallucination's screen waves and colours can be turned off** (NetHack options > Hallucination screen waves and colours; monsters still look wavy). The NetHack options page scrolls.
+- Fixes:
+  - A click attacks once: a slightly long click could attack (and swing and sound) twice.
+  - No "Other things that are here:" window after autopickup; the list down the left shows them.
+  - Open holes and pits catch you anywhere in their square, not only at its middle.
+- **For modders, in the sound editor:** voices are SAM's (Voice casting: per-speaker SAM voice, variation, effects like echo, reverb, chorus, robot...; a pronunciation dictionary; previews as the game says them), and a new Acoustics tab tunes each kind of place's reverb.
+
 ## v0.5.0 (alpha) - 2026-10-19
 
 - **Kicks hit the monster before the items.** A monster in your kick's arc is kicked before any objects, including one sharing your own square.
