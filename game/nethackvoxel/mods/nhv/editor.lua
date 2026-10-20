@@ -537,6 +537,21 @@ local function build_area(t, build, done)
 					else
 						local slot, rot = nhv.terrain.base_slot(map, U.idx(tx, ty), tx, ty, nil)
 						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, styled)
+						-- (a door in a wall you built: nothing over it, as in the game)
+						if nhv.terrain.DOOR_SLOTS[slot] then
+							local dx, dy = 1, 0
+							if rot == 1 then
+								dx, dy = 0, 1
+							end
+							for _, s in ipairs({-1, 1}) do
+								local fx, fy = cx + s * dx, cy + s * dy
+								if fx >= 0 and fy >= 0 and fx < t.w and fy < t.h
+										and d.cells[fy * t.w + fx + 1] then
+									nhv.terrain.clear_door_top(data, va, so)
+									break
+								end
+							end
+						end
 					end
 				end
 				-- a light under the ceiling of open squares, as the game puts
