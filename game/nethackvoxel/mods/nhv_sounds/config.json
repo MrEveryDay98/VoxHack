@@ -885,20 +885,7 @@
    "loop": true
   }
  },
- "voices": {
-  "spoken.6e500ce192": {
-   "sound": "voice_spoken_6e500ce192_1399786",
-   "volume": 100
-  },
-  "spoken.67073d053d": {
-   "sound": "voice_spoken_67073d053d_1396d0d",
-   "volume": 100
-  },
-  "spoken.f01677ab19": {
-   "sound": "voice_spoken_f01677ab19_1396d1c",
-   "volume": 100
-  }
- },
+ "voices": {},
  "master": {
   "effects": 100,
   "music": 60,

@@ -1,7 +1,7 @@
 {
  "version": 2,
  "output": {
-  "rate": 11025,
+  "rate": 8000,
   "quality": 4
  },
  "speakers": {
@@ -10,10 +10,12 @@
   },
   "Narrator": {
    "preset": "Plain",
-   "voice": "am_eric"
+   "voice": "bm_george"
   },
   "Shopkeeper": {
-   "preset": "Plain"
+   "preset": "Plain",
+   "voice": "bm_daniel*0.7+am_liam*0.3",
+   "lang": "en-gb"
   },
   "Quest (Rog)": {
    "preset": "Plain"
@@ -61,7 +63,8 @@
    "preset": "Plain"
   },
   "The Oracle": {
-   "preset": "Plain"
+   "preset": "Plain",
+   "voice": "bf_isabella"
   },
   "Vault guard": {
    "preset": "Plain"
@@ -82,10 +85,14 @@
    "preset": "Plain"
   },
   "Voice": {
-   "preset": "Plain"
+   "preset": "Echoing hall",
+   "voice": "af_nova*0.7+am_michael*0.3"
   },
   "Demon / angel": {
-   "preset": "Plain"
+   "preset": "Echoing hall",
+   "voice": "am_adam",
+   "delivery_mix": 0.7,
+   "pitch": -2.5
   },
   "Djinni / ghost": {
    "preset": "Plain"
@@ -100,7 +107,9 @@
    "preset": "Plain"
   },
   "Wizard of Yendor": {
-   "preset": "Echoing hall"
+   "preset": "test",
+   "voice": "bm_lewis",
+   "pitch": -3.5
   },
   "Water demon / nymph": {
    "preset": "Echoing hall"
@@ -198,7 +207,7 @@
    "effects": [
     {
      "type": "reverb",
-     "room": 100,
+     "room": 21,
      "mix": 100
     }
    ]
