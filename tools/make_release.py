@@ -6,7 +6,7 @@ no editors and no developer tools. Inside the zip:
     VoxHack/
         Create Play Shortcut.bat    makes a "Play VoxHack" shortcut
         README.txt
-        Launchers/                  Play VoxHack, Reset NetHack Save
+        Launchers/                  Play VoxHack, Reset NetHack Save, Level Atlas
         engine/                     Luanti, NetHack and the game
         licenses/
 
@@ -34,7 +34,7 @@ GAME_SKIP = ["*.bak", "*.before-*", "voice_cast*.json", "__pycache__",
 	"voices"]  # (the ElevenLabs lines: not in public releases)
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
-LAUNCHERS = ["Play VoxHack.bat", "make_shortcut.ps1"]
+LAUNCHERS = ["Play VoxHack.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
 # (renamed: in a release it's for starting over, not just testing)
 RESET = ("Reset NetHack Save (testing).bat", "Reset NetHack Save.bat")
 
@@ -72,6 +72,13 @@ Run "Create Play Shortcut.bat" again if you move this folder.
 Your saved game, high scores and settings are kept in this folder:
   engine\\worlds\\nethack    the game and its save
   engine\\minetest.conf      settings
+
+The level atlas
+---------------
+Launchers\\VoxHack Level Atlas.bat asks for a seed (any whole number) and
+builds every level of that game side by side, terrain only - to look at how
+the dungeon's pieces fit together. K: fly, H: noclip; /atlas lists the
+levels, /atlas <number> goes to one, /atlas ceilings takes the ceilings off.
 
 Starting over
 -------------

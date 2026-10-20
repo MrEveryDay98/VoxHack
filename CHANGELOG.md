@@ -2,6 +2,18 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.5.0 (alpha) - 2026-10-19
+
+- **Kicks hit the monster before the items.** A monster in your kick's arc is kicked before any objects, including one sharing your own square.
+- **Wavy sprites** (invisible, detected and hallucinated monsters, and those sensed by telepathy) no longer show stray pixels at their edges.
+- **The Oracle's centre** is built as designed: doors in hand-built areas keep the blocks built above them, and when the door is on another side the wall built beside it fills its old spot.
+- **Map blocks no longer go missing** in the prefab editor (each block is meshed on its own).
+- **For prefab builders:**
+  - **The level atlas:** `Launchers\VoxHack Level Atlas.bat` asks for a seed and builds every level of that game side by side (terrain only), to see how the prefabs fit together. Fly about with K and H; `/atlas` lists the levels, `/atlas <number>` goes to one, `/atlas ceilings` takes the ceilings off.
+  - **`/copy` and `/paste`** in the prefab editor, with `rotate 90|180|270`, `flip x|z` and `noair`.
+  - **A Sky block:** invisible, and nothing behind it is drawn; the sky shows there instead.
+  - Area plates in the editor use the level's own walls (the Mines' in Minetown, Gehennom's in Orcus Town...), as the game builds them.
+
 ## v0.4.0 (alpha) - 2026-10-18
 
 - **The tutorial is back, rewritten for VoxHack.** New characters are asked "Do you want a tutorial?" (Options > NetHack options > Offer the tutorial turns the question off). Its engravings now teach the 3D game's controls: WASD and the mouse, left click to fight, the right click and its wheels, F to pick up, X to search, the 1-5 keys, the inventory, Z for the map, F2 for the wiki.
