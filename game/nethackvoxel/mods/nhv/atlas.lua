@@ -147,7 +147,10 @@ local function copy_level(shift, done)
 		end
 		dv:set_data(dids)
 		dv:set_param2_data(dp2)
-		dv:write_to_map(true)
+		-- (lit as if open to the sky above it: the levels over it don't
+		-- shade it)
+		dv:calc_lighting(dmin, dmax, false)
+		dv:write_to_map(false)
 		done()
 	end)
 end
@@ -311,8 +314,12 @@ core.register_on_joinplayer(function(player)
 	player:set_moon({visible = false})
 	player:set_stars({visible = false})
 	player:override_day_night_ratio(1)
-	player:set_lighting({shadows = {intensity = 0.33}})
-	player:hud_set_flags({nhv_fullbright = false, minimap = false, minimap_radar = false})
+	-- (no cast shadows - the levels would shade each other - but the
+	-- blocks' faces shaded; and the 3D view at full resolution, whatever
+	-- the undersampling setting is)
+	player:set_lighting({shadows = {intensity = 0}})
+	player:hud_set_flags({nhv_fullbright = false, nhv_full_res = true, minimap = false,
+		minimap_radar = false})
 	player:set_physics_override({speed = 2, gravity = 0})
 	player:set_properties({eye_height = 1.6, visual_size = {x = 0, y = 0}})
 	local list = core.deserialize(storage:get_string(DONE_KEY))
@@ -401,7 +408,14 @@ local function each_level_region(fn)
 		if fn(e, ids, p2, each) then
 			vm:set_data(ids)
 			vm:set_param2_data(p2)
-			vm:write_to_map(true)
+			-- (the level lit on its own, as when it was built)
+			local lmin = vector.add(SRC_MIN, e.shift)
+			local lmax = vector.add(SRC_MAX, e.shift)
+			vm:write_to_map(false)
+			local lv = core.get_voxel_manip()
+			lv:read_from_map(lmin, lmax)
+			lv:calc_lighting(lmin, lmax, false)
+			lv:write_to_map(false)
 		end
 	end
 end
