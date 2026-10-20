@@ -618,13 +618,11 @@ end)
 -- trap is a pad TRAP_PAD x TRAP_PAD in the middle of its square, found or
 -- not, and the middle of your body coming onto it sets it off - once, until
 -- you've been off it again. So cutting the corner of a trap's square,
--- stepping diagonally past it, doesn't. (A pit is a real hole: going into
--- its square is falling in, as before. An open hole - its floor gone across
--- the whole square, seen or a Sokoban one - is the whole square: being
--- over it at all is falling through, not just its middle.)
+-- stepping diagonally past it, doesn't. An open pit or hole - its floor
+-- gone across the whole square, seen or a Sokoban one - is the whole
+-- square: being over it at all is falling in, not just its middle.
 local TRAP_PAD = 1.0
-local PIT_NAMES = {pit = true, spiked_pit = true}
-local OPEN_HOLE_NAMES = {S_hole = true}
+local OPEN_HOLE_NAMES = {S_hole = true, S_pit = true, S_spiked_pit = true}
 local on_trap = nil -- "x,y" of the trap pad the body is on
 local function check_traps(player)
 	local h = player_mod.hero
@@ -634,8 +632,7 @@ local function check_traps(player)
 	end
 	local i = U.idx(h.x, h.y)
 	local known = map.trap and map.trap[i]
-	if not U.has(map.flags[i] or 0, U.LOC_TRAP)
-			or (known and known ~= 255 and PIT_NAMES[nhv.cmap_name(known % 128)]) then
+	if not U.has(map.flags[i] or 0, U.LOC_TRAP) then
 		on_trap = nil
 		return
 	end
