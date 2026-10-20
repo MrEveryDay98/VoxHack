@@ -487,7 +487,8 @@ end
 -- who (optional): {m_id=, female=} of the monster saying it
 local function sam_for(id, who)
 	local e = dialogue[id]
-	if not e then
+	-- (NetHack options > Spoken lines off: SAM says nothing)
+	if not e or not nhv.nhopts.get("sam_voices") then
 		return nil
 	end
 	local ln = sound.cast.lines[id] or {}

@@ -85,6 +85,8 @@ nhopts.OPTIONS = {
 	{key = "shop_signs", kind = "bool", label = "Signs over shop doors", default = true, vox = true},
 	-- (player.lua reads it: off, hallucinating doesn't wave the screen or
 	-- drift its colours; monsters still look wavy)
+	-- (sound.lua reads it: off, no line is spoken by SAM)
+	{key = "sam_voices", kind = "bool", label = "Spoken lines (SAM voices)", default = true, vox = true},
 	{key = "hallu_effects", kind = "bool", label = "Hallucination screen waves and colours",
 		default = true, vox = true},
 }
