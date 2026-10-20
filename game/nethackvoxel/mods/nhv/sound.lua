@@ -185,12 +185,16 @@ end
 local function clear_path(from, to)
 	local d = vector.subtract(to, from)
 	local steps = math.max(1, math.ceil(vector.length(d) * 4)) -- (quarter-node steps)
+	-- (the sound's own square never muffles it: a door being opened, still
+	-- closed for a moment, or anything in a wall)
+	local own_x, own_y = U.pos_to_tile(to)
 	local last
 	for i = 1, steps - 1 do
 		local q = vector.round(vector.add(from, vector.multiply(d, i / steps)))
 		if not (last and vector.equals(q, last)) then
 			last = q
-			if stops_sound(core.get_node(q).name) then
+			local qx, qy = U.pos_to_tile(q)
+			if not (qx == own_x and qy == own_y) and stops_sound(core.get_node(q).name) then
 				return false
 			end
 		end
