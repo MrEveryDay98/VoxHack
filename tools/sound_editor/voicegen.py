@@ -17,9 +17,9 @@ then an effect chain (ffmpeg filters) and the global sample rate.
             Speakers set to SAM are voiced live by the game (the engine has
             SAM built in and reads each line's real text as it happens), so
             nothing is generated here: the editor only sets their SAM voices
-            and previews them with the same C port (Sebastian Macke's),
-            built as voice_work/sam/sam.exe. Neither is in git: SAM has no
-            licence (abandonware).
+            and previews them with the same C port (Sebastian Macke's, in
+            external/luanti/lib/sam), built by tools/deploy.sh as
+            build/sam/sam.exe.
 """
 import wave
 import json
@@ -340,9 +340,9 @@ def sam_chunks(text, limit=70):
 
 
 class Sam:
-    def __init__(self, work):
-        self.dir = os.path.join(work, "sam")
-        self.exe = os.path.join(self.dir, "sam.exe")
+    def __init__(self, root):
+        # built by tools/deploy.sh from external/luanti/lib/sam (the engine's SAM)
+        self.exe = os.path.join(root, "build", "sam", "sam.exe")
 
     def installed(self):
         return os.path.exists(self.exe)
@@ -350,7 +350,7 @@ class Sam:
     def say(self, text, settings, out, phonetic=False):
         """text -> SAM -> one wav (8-bit, 22050 Hz) at out"""
         if not self.installed():
-            raise RuntimeError("SAM isn't set up: voice_work/sam/sam.exe is missing")
+            raise RuntimeError("SAM isn't built: run tools/deploy.sh (it makes build/sam/sam.exe)")
         st = sam_settings(settings)
         pieces = [text.strip()] if phonetic else sam_chunks(text)
         if not pieces:
@@ -516,7 +516,7 @@ class VoiceGen:
         self.load_config, self.save_config = load_config, save_config
         self.speakable = speakable
         self.kokoro = Kokoro(self.work)
-        self.sam = Sam(self.work)
+        self.sam = Sam(root)
         self.lock = threading.Lock()          # jobs and takes.json
         self.render_lock = threading.RLock()  # one render at a time (shared temp files)
         self.jobs = []

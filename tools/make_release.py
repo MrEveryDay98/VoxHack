@@ -259,12 +259,6 @@ def libraries(engine, lic):
 
 def main():
 	check_built()
-	# SAM (the live voice) has no licence: an engine built while its source
-	# was in voice_work/sam has it inside (see CREDITS.md)
-	if os.path.exists(os.path.join(ROOT, "voice_work", "sam", "src", "src", "sam.c")) and "--with-sam" not in sys.argv:
-		sys.exit("SAM's source is in voice_work/sam, so the engine was built with SAM in it, and SAM has no "
-			"licence. Move voice_work/sam/src out, rebuild (cmake . in external/luanti/build, then tools/deploy.sh), then make the release - "
-			"or pass --with-sam if shipping it has been decided.")
 	keep = "--keep" in sys.argv
 	name = "VoxHack-%s-%s" % (datetime.date.today().isoformat(), commit())
 	stage_dir = os.path.join(DIST, name)

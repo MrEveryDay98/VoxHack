@@ -591,7 +591,7 @@ const VoiceGen = (() => {
         el("p", {}, "SAM, the 1982 Commodore 64 speech synth, is built into the game: a speaker set to ",
           el("b", {}, "Speak live with SAM"), " has every line read by SAM as it happens, with the real text (your name, your god, the shopkeeper's name...). Nothing is recorded, and the output rate and effects don't apply: it's SAM's own 22,050 Hz sound."),
         el("p", { class: "muted" }, "A live SAM speaker takes the place of any recordings for its lines. Changes reach a running game within a couple of seconds."),
-        ok ? null : el("p", { class: "err" }, "The preview needs voice_work/sam/sam.exe (SAM's C port, built from voice_work/sam/src)."))));
+        ok ? null : el("p", { class: "err" }, "The preview needs build/sam/sam.exe: run tools/deploy.sh to build it."))));
   }
 
   function samSpeakersSection() {

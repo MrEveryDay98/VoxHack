@@ -14,6 +14,15 @@ ninja -C "$ROOT/build/nhcore"
 [ -f "$LUANTI/build/build.ninja" ] || cmake -S "$LUANTI" -B "$LUANTI/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=TRUE -DBUILD_UNITTESTS=FALSE
 ninja -C "$LUANTI/build"
 
+# 2b. sam.exe for the sound editor's SAM previews (the engine has SAM built
+# in from the same source, external/luanti/lib/sam)
+SAM_SRC="$LUANTI/lib/sam"
+if [ ! -f "$ROOT/build/sam/sam.exe" ] || [ -n "$(find "$SAM_SRC" -newer "$ROOT/build/sam/sam.exe" -name '*.[ch]')" ]; then
+	mkdir -p "$ROOT/build/sam"
+	clang -Os -w -fcommon -static -o "$ROOT/build/sam/sam.exe" "$SAM_SRC/reciter.c" "$SAM_SRC/sam.c" \
+		"$SAM_SRC/render.c" "$SAM_SRC/main.c" "$SAM_SRC/debug.c"
+fi
+
 # 3. tiles
 if [ ! -f "$GAME/mods/nhv_tiles/textures/nhv_tiles.png" ]; then
 	python -I "$ROOT/tools/tiles2png.py" "$ROOT/external/nethack" "$GAME/mods/nhv_tiles/textures" "$GAME/mods/nhv_tiles/tilenames.lua"

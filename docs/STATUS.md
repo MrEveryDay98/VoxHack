@@ -152,9 +152,9 @@ All sprites and tile textures come from one sprite sheet:
   with the line's real text, and the client's sound manager synthesizes it
   (`src/client/sound/sam_voice.cpp`). Per speaker: a classic SAM voice or custom speed,
   pitch, throat and mouth, sing mode, volume; a line can pick another SAM voice.
-  - SAM's C source (Sebastian Macke's port) is not in either repo, as it has no licence: the
-    engine builds it in from `voice_work/sam/src/src` when present (CMake `NHV_SAM_SRC`);
-    without it SAM lines are silent. The editor previews with `voice_work/sam/sam.exe`.
+  - SAM's C source (Sebastian Macke's port, no licence; included knowingly) is in
+    `external/luanti/lib/sam`; `sam_unity.c` builds it into the engine with its globals
+    renamed. `tools/deploy.sh` also builds `build/sam/sam.exe`, which the editor previews with.
   - Spoken lines are matched to the dialogue catalog by the most specific pattern; lines that
     are nearly all placeholders ("%s") are never matched.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
