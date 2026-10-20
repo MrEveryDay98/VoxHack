@@ -145,6 +145,7 @@ local DATA_DIR = core.get_mod_data_path() .. DIR_DELIM .. "areas"
 local function file_of(id)
 	return DATA_DIR .. DIR_DELIM .. id:gsub("[^%w%-]", "_") .. ".dat"
 end
+areas.file_of = file_of
 
 -- The file: "NHVAREA 2", a palette line ("palette<TAB>name<TAB>name..."),
 -- then a line per built square: "<k><TAB><node> <node> ...", each node

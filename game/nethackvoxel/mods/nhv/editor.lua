@@ -11,6 +11,7 @@
 --   /area                   list the special level areas
 --   /area <name>            go to an area's build plate (see areas.lua)
 --   /area reset <name>      start an area over from the usual prefabs
+--   /area revert            undo this session's changes to the area you're on
 --   /fullbright             see everything at full brightness (toggle)
 -- I opens the block palette. Placing never uses up blocks; digging is
 -- instant.
@@ -598,10 +599,31 @@ local function area_list(ts)
 end
 
 core.register_chatcommand("area", {
-	params = "[reset] [<name>]",
-	description = "Special level areas: list them, go to one, or start one over",
+	params = "[reset] [<name>] | revert",
+	description = "Special level areas: list them, go to one, start one over, or undo this session's changes to the one you're on",
 	func = function(pname, param)
 		local player = core.get_player_by_name(pname)
+		if param:match("^%s*revert%s*$") then
+			-- (on the plate, or just beside it - /area <name> puts you at its edge)
+			local t
+			if player then
+				local p = player:get_pos()
+				t = area_at(p, true)
+				for _, d in ipairs({{0, 4}, {0, -4}, {4, 0}, {-4, 0}}) do
+					t = t or area_at(vector.offset(p, d[1], 0, d[2]), true)
+				end
+			end
+			if not t then
+				return false, "Stand on (or next to) an area's plate to revert it."
+			end
+			if not editor.revert_area(t) then
+				return true, "No changes to " .. areas.name(t) .. " since the editor opened."
+			end
+			build_area(t, true, function()
+				storage:set_string("area_laid_" .. t.id, "1")
+			end)
+			return true, "Reverted " .. areas.name(t) .. " to how it was when the editor opened."
+		end
 		local reset = param:match("^%s*reset%s+(.-)%s*$")
 		local q = reset or param:match("^%s*(.-)%s*$")
 		if q == "" then
@@ -725,6 +747,40 @@ function editor.area_box(pos)
 	end
 	local o = area_origin[t.id]
 	return t, o, vector.new(o.x + t.w * W - 1, o.y + H - 1, o.z + t.h * W - 1)
+end
+
+-- each area's file as it was when the editor opened, for /area revert
+-- (false: there was none - the area hadn't been built yet)
+local area_at_start = {}
+for _, t in ipairs(areas.list) do
+	local f = io.open(areas.file_of(t.id), "rb")
+	area_at_start[t.id] = f and f:read("*a") or false
+	if f then
+		f:close()
+	end
+end
+
+-- Put an area back as it was when the editor opened (its file, and what's
+-- loaded); the caller rebuilds the plate. False if nothing had changed.
+function editor.revert_area(t)
+	local path = areas.file_of(t.id)
+	local f = io.open(path, "rb")
+	local now = f and f:read("*a") or false
+	if f then
+		f:close()
+	end
+	local before = area_at_start[t.id]
+	if now == before and not dirty_areas[t.id] then
+		return false
+	end
+	dirty_areas[t.id] = nil -- (changes not saved yet: dropped)
+	if before then
+		core.safe_file_write(path, before)
+	else
+		os.remove(path)
+	end
+	areas.data[t.id] = nil -- (read again from the file)
+	return true
 end
 
 -- the area squares that were changed, as they're built now
