@@ -147,6 +147,7 @@ local msg_shown
 -- leaves out). Hidden under the inventory and other menus.
 local HERE_MAX = 12
 local here_shown
+local fade_shown = nil -- (the fade layer's texture now)
 local function update_here(player, snap)
 	if not hud.ids.here then
 		return
@@ -582,6 +583,12 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png",
 	})
+	-- the fade to black (level changes: hud.fade), over everything else
+	hud.ids.fade = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+		scale = {x = -100, y = -100}, text = "blank.png", z_index = 1000,
+	})
+	fade_shown = nil
 	-- the compass at the top middle (Skyrim style): a strip of directions
 	-- that slides as you turn - the engine moves it every frame, from the
 	-- camera (textures from tools/make_compass.py; NetHack's north is +z)
@@ -802,6 +809,18 @@ end
 local FLASH_S = 0.6
 local flash = nil -- {color=, t0=, strength=, full=}
 local flash_shown = nil
+-- Fading the whole screen to black and back (level changes, player.lua):
+-- hud.fade(1, s) to black over s seconds, hud.fade(0, s) back.
+local fade = {from = 0, to = 0, t0 = 0, dur = 0}
+function hud.fade_level()
+	local t = fade.dur > 0 and (core.get_us_time() - fade.t0) / 1e6 / fade.dur or 1
+	t = math.max(0, math.min(1, t))
+	return fade.from + (fade.to - fade.from) * t
+end
+function hud.fade(to, seconds)
+	fade = {from = hud.fade_level(), to = to, t0 = core.get_us_time(), dur = seconds or 0}
+end
+
 function hud.flash(color, strength, full)
 	flash = {color = color or "#FF2020", t0 = core.get_us_time(),
 		strength = math.max(0.2, math.min(1, strength or 1)), full = full}
@@ -813,6 +832,15 @@ core.register_globalstep(function(dtime)
 	local player = nhv.player.get()
 	if not player or not hud.ids.msg then
 		return
+	end
+	if hud.ids.fade then
+		-- (steps of 8 keep the number of different textures small)
+		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
+		local tex = a <= 0 and "blank.png" or ("[fill:16x16:#000000^[opacity:%d"):format(math.min(255, a))
+		if tex ~= fade_shown then
+			fade_shown = tex
+			player:hud_change(hud.ids.fade, "text", tex)
+		end
 	end
 	if flash then
 		local t = (core.get_us_time() - flash.t0) / 1e6 / FLASH_S

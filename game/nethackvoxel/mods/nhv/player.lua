@@ -119,20 +119,31 @@ nh.on_event(function(evs)
 	end
 end)
 
--- Falling through isn't instant: NetHack has already moved you to the level
--- below, but its snapshot is held back (nh.lua) for half a second while you
--- drop into the hole on this level - a trap door's hatch opening under you
--- first. Then the new level is built and you drop in from above (below).
+-- A level change isn't instant. NetHack has already moved you, but its
+-- snapshot is held back (nh.lua) while the view freezes and fades to black;
+-- the new level is built under the black, you're held still a moment while
+-- its blocks reach the screen, and it fades back in. Falling through a hole
+-- or trap door, you first drop into it on this level for half a second (a
+-- trap door's hatch opening under you), fading as you fall; on the new level
+-- you then drop in from above as it fades in.
 local FALL_S = 0.5
+local FADE_OUT_S, BLACK_S, FADE_IN_S = 0.3, 0.7, 0.4
 nh.hold_level_change = function(old)
-	if core.get_us_time() >= (player_mod.falling_until or 0) then
-		return 0
-	end
+	local falling = core.get_us_time() < (player_mod.falling_until or 0)
 	local p = player_mod.get()
 	local h = old and old.hero
 	if not (p and h) then
 		return 0
 	end
+	if not falling then
+		-- (still while the view fades: the new level, when it comes,
+		-- freezes you again where you arrive)
+		local now = core.get_us_time()
+		player_mod.level_hold = {t0 = now, t_end = now + (FADE_OUT_S + 1) * 1e6, pos = p:get_pos()}
+		nhv.hud.fade(1, FADE_OUT_S)
+		return FADE_OUT_S
+	end
+	nhv.hud.fade(1, FALL_S)
 	-- the floor of the square gives way (the new level replaces it all anyway)
 	local c = U.tile_center(h.x, h.y)
 	local half = math.floor(U.TILE / 2)
@@ -532,11 +543,15 @@ nh.on_snapshot(function(snap, action)
 	local level_changed = player_mod.ledger ~= h.ledger
 	player_mod.ledger = h.ledger
 
+	if level_changed or not prev then
+		-- (the new level is built now: black, held still, then fade in)
+		nhv.hud.fade(1, 0)
+		player_mod.level_hold = {t0 = core.get_us_time(), t_end = core.get_us_time() + BLACK_S * 1e6}
+	end
 	if level_changed and prev and core.get_us_time() < (player_mod.falling_until or 0) then
-		-- fell through a hole or a trap door: a blink, and you drop in from
-		-- above (just under the ceiling) onto the new level
+		-- fell through a hole or a trap door: you drop in from above (just
+		-- under the ceiling) onto the new level as it fades in
 		player_mod.falling_until = nil
-		nhv.hud.flash("#000000", 1, true)
 		teleport(player, U.tile_center(h.x, h.y, U.CEIL_Y - 2.4))
 	elseif level_changed or not prev then
 		teleport(player, U.tile_center(h.x, h.y))
@@ -824,6 +839,24 @@ core.register_globalstep(function()
 	if player and (searching ~= was_searching or dragging ~= was_dragging) then
 		was_searching, was_dragging = searching, dragging
 		set_speed(player)
+	end
+	-- a new level is reaching the screen under the black: hold still (once
+	-- the arrival spot is settled), then fade in
+	local fz = player and player_mod.level_hold
+	if fz then
+		local now = core.get_us_time()
+		if now < fz.t_end then
+			if not fz.pos and now - fz.t0 > 150000 then
+				fz.pos = player:get_pos()
+			end
+			if fz.pos then
+				player:set_pos(fz.pos)
+			end
+			player:add_velocity(vector.multiply(player:get_velocity(), -1))
+			return
+		end
+		player_mod.level_hold = nil
+		nhv.hud.fade(0, FADE_IN_S)
 	end
 	if player and nh.snap then
 		try_escape(player)
