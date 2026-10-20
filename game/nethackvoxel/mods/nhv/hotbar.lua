@@ -468,7 +468,10 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
-		if param == "search" then
+		if param == "search" and nh.repeating then
+			nh.answer_key(27) -- (searching for a number of turns: X stops it)
+			return true
+		elseif param == "search" then
 			nhv.clock.search_held = true -- (searches on until let go)
 		elseif param == "searchup" then
 			nhv.clock.search_held = false
@@ -530,7 +533,8 @@ core.register_globalstep(function()
 end)
 
 -- Ctrl+X: search for a number of turns (NetHack's count, "20s"); it
--- plays out fast, and stops early if something turns up, as in NetHack
+-- plays out turn by turn, fast forward, seen from behind you (as when
+-- helpless), and stops early whenever NetHack would stop it, or on X
 local COUNT_FORM = "nhv:searchcount"
 hotbar.search_count = 20
 function hotbar.ask_search_count(player)

@@ -739,15 +739,16 @@ local function hold_still(player)
 	return true
 end
 
--- Helpless (asleep, frozen, fainted...): the camera goes behind you, so you
--- see what's happening to you, and straight back to first person when you
--- can act again (then it's yours to change again). Asleep, you breathe out
--- Z's, as sleeping monsters do (mobs.lua).
+-- Helpless (asleep, frozen, fainted...), or searching for a number of
+-- turns (Ctrl+X): the camera goes behind you, so you see what's happening
+-- to you, and straight back to first person when you can act again (then
+-- it's yours to change again). Asleep, you breathe out Z's, as sleeping
+-- monsters do (mobs.lua).
 local camera_out = false
 local z_next = 0
 local function helpless_view(player)
 	local h = player_mod.hero
-	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or false
+	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or nh.repeating or false
 	if helpless ~= camera_out then
 		camera_out = helpless
 		player:set_camera({mode = helpless and "third" or "first"})

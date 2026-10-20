@@ -41,11 +41,12 @@ clock.FAST = 6              -- searching, or helpless: time runs this x the full
 -- another; hotbar.lua) and while a counted search (Ctrl+X) plays out, time
 -- runs FAST x the full rate - the world (monsters walking...) keeps up
 -- with NetHack - and you stand still. It drops back to the usual rate the
--- moment it ends. Getting hurt stops a held search (until pressed again).
+-- moment it ends. Getting hurt stops a held search (until pressed again);
+-- a counted one NetHack stops itself, as it would (each search waits for
+-- the clock: nh.repeating).
 clock.search_held = false
-clock.fast_debt = false -- (paying a counted search's turns)
 function clock.searching()
-	return clock.search_held or (clock.fast_debt and clock.debt > 0)
+	return clock.search_held or nh.repeating
 end
 
 function clock.realtime()
@@ -152,9 +153,6 @@ function clock.update(dtime, player)
 			clock.acc = clock.acc - clock.debt
 			clock.debt = 0
 		end
-		if clock.debt <= 0 then
-			clock.fast_debt = false
-		end
 	else
 		clock.acc = clock.acc + dtg
 	end
@@ -215,9 +213,6 @@ nh.on_snapshot(function(snap, action)
 			local paid = math.min(clock.acc, owed)
 			clock.acc = clock.acc - paid
 			clock.add_debt(owed - paid)
-			if action.kind == "search_count" and clock.debt > 0 then
-				clock.fast_debt = true
-			end
 		end
 	end
 end)

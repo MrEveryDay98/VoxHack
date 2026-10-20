@@ -480,6 +480,19 @@ nhv_helpless_turn(void)
     wait_for(NHV_REQ_TURN, "", "", 0, &in);
 }
 
+/* a counted search or wait (20s): each turn of it waits until the host's
+   clock says a turn has passed (a NHV_REQ_TURN with the prompt "repeat"),
+   so it plays out in the world turn by turn, and whatever interrupts it in
+   NetHack meanwhile does; FALSE: the player stopped it (Esc) */
+boolean
+nhv_repeat_turn(void)
+{
+    nhv_qitem in;
+
+    wait_for(NHV_REQ_TURN, "repeat", "", 0, &in);
+    return !(in.type == NHV_Q_KEY && in.key == '\033');
+}
+
 static int
 nhv_nhgetch(void)
 {

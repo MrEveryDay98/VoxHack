@@ -73,7 +73,10 @@ enum nhv_req_kind {
                        or a key (Esc: cancel) */
     NHV_REQ_TURN    /* the hero is helpless (asleep, paralysed, fainted...):
                        answer (any key) when a turn of time has passed - the
-                       host's clock, so it lasts as long as it should */
+                       host's clock, so it lasts as long as it should;
+                       prompt "repeat": a counted search or wait (20s)
+                       waiting for its next turn, the same way (Esc stops
+                       it) */
 };
 
 enum nhv_menu_how { NHV_PICK_NONE = 0, NHV_PICK_ONE = 1, NHV_PICK_ANY = 2 };

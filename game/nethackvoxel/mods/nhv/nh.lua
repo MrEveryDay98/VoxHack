@@ -97,8 +97,9 @@ function nh.start(name, more_options)
 	return true
 end
 
--- NetHack is waiting for a helpless turn to pass (asleep, paralysed...):
--- the clock answers it when a turn's time has passed (loop.lua)
+-- NetHack is waiting for a helpless turn to pass (asleep, paralysed...),
+-- or for a counted command's next repeat (nh.repeating): the clock answers
+-- it when a turn's time has passed (loop.lua)
 function nh.helpless_wait()
 	return nh.state == "waiting" and nh.req and nh.req.kind == "turn"
 end
@@ -261,6 +262,9 @@ function nh.pump(wait_ms)
 			return
 		end
 		nh.req = core.nh_request()
+		-- (a counted search - Ctrl+X - waiting for its next turn: until
+		-- something else is asked, it's still going)
+		nh.repeating = nh.req and nh.req.kind == "turn" and nh.req.prompt == "repeat" or false
 		local snap = take_snapshot()
 		if snap then
 			local action = nh.pending_action
@@ -282,7 +286,7 @@ function nh.pump(wait_ms)
 		end
 	elseif st == "ended" then
 		nh.state = "ended"
-		nh.req = nil
+		nh.req, nh.repeating = nil, false
 		dispatch_events()
 		for _, fn in ipairs(nh.listeners) do
 			fn(nil, {ended = true, exit_code = core.nh_exit_code()})
