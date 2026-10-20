@@ -96,12 +96,38 @@ local function load_config()
 end
 load_config()
 
+-- the voice casting (voice_cast.json, from the editor's Voice casting tab):
+-- which speakers SAM voices live, and how
+local CAST_PATH = MODPATH .. DIR_DELIM .. "voice_cast.json"
+local cast_text = nil
+sound.cast = {speakers = {}, lines = {}}
+local function load_cast()
+	local f = io.open(CAST_PATH, "rb")
+	if not f then
+		return
+	end
+	local text = f:read("*a")
+	f:close()
+	if text == cast_text then
+		return
+	end
+	cast_text = text
+	local cast = core.parse_json(text)
+	if type(cast) == "table" then
+		cast.speakers = type(cast.speakers) == "table" and cast.speakers or {}
+		cast.lines = type(cast.lines) == "table" and cast.lines or {}
+		sound.cast = cast
+	end
+end
+load_cast()
+
 local reload_t = 0
 core.register_globalstep(function(dtime)
 	reload_t = reload_t + dtime
 	if reload_t > 2 then
 		reload_t = 0
 		load_config()
+		load_cast()
 	end
 end)
 
@@ -295,13 +321,94 @@ do
 				quest_ids[k] = quest_ids[k] or {}
 				table.insert(quest_ids[k], e.id)
 			elseif e.category ~= "written" and #e.text < 300 then
-				table.insert(spoken_pats, {to_pattern(e.text:gsub('^"', ""):gsub('"$', "")), e.id})
+				-- (lines that are nearly all placeholders, like "%s" or
+				-- "%s!", would match anything: they're left out, and the
+				-- most specific line wins, so "Who left that %s in here?"
+				-- beats a catch-all)
+				local literal = e.text:gsub("%%[%-0-9%.]*l?[sdcuix]", ""):gsub("%%%a%a?", "")
+				local _, letters = literal:gsub("%a", "")
+				if letters >= 3 then
+					table.insert(spoken_pats, {to_pattern(e.text:gsub('^"', ""):gsub('"$', "")), e.id, #literal})
+				end
 			end
 		end
+		table.sort(spoken_pats, function(a, b)
+			if a[3] ~= b[3] then
+				return a[3] > b[3]
+			end
+			return a[2] < b[2]
+		end)
 	end
 end
 
-local function play_voice(id, pos)
+-- ---------------------------------------------------------------- SAM
+-- Speakers cast to SAM in the editor ("Speak live with SAM") are voiced by
+-- SAM, the 1982 speech synth built into the VoxHack engine: it reads the
+-- line's real text as it happens (your name, your god...), nothing is
+-- recorded. The engine speaks a sound named
+-- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>|<text>".
+-- (the classic voices from SAM's manual; the same list as the editor's)
+local SAM_VOICES = {
+	["SAM"] = {speed = 72, pitch = 64, throat = 128, mouth = 128},
+	["Elf"] = {speed = 72, pitch = 64, throat = 110, mouth = 160},
+	["Little Robot"] = {speed = 92, pitch = 60, throat = 190, mouth = 190},
+	["Stuffy Guy"] = {speed = 82, pitch = 72, throat = 110, mouth = 105},
+	["Little Old Lady"] = {speed = 82, pitch = 32, throat = 145, mouth = 145},
+	["Extra-Terrestrial"] = {speed = 100, pitch = 64, throat = 150, mouth = 200},
+}
+
+-- the SAM settings for a line, or nil if its speaker isn't voiced by SAM
+local function sam_for(id)
+	local e = dialogue[id]
+	if not e then
+		return nil
+	end
+	local ln = sound.cast.lines[id] or {}
+	local sc = sound.cast.speakers[ln.cast or e.speaker]
+	local ss = type(sc) == "table" and sc.sam
+	if type(ss) ~= "table" or not ss.live then
+		return nil
+	end
+	local st = {sing = ss.sing and 1 or 0, volume = tonumber(ss.volume) or 100}
+	-- a line can take another of SAM's named voices
+	local named = SAM_VOICES[ln.sam_voice or ""]
+	local base = named or SAM_VOICES[ss.voice or ""] or SAM_VOICES.SAM
+	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
+		local v = named and base[k] or tonumber(ss[k]) or base[k]
+		st[k] = math.max(1, math.min(255, math.floor(v)))
+	end
+	return st
+end
+
+local function speak_sam(st, text, pos)
+	local p = player()
+	if not p then
+		return false
+	end
+	text = text:gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
+	if not text:find("%w") then
+		return false
+	end
+	if sound.voice then
+		core.sound_stop(sound.voice)
+	end
+	local name = ("nhv_sam:%d,%d,%d,%d,%d,0|%s"):format(st.speed, st.pitch, st.throat, st.mouth, st.sing, text)
+	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100)}
+	if pos then
+		params.pos, params.max_hear_distance = pos, 64
+	else
+		params.to_player = p:get_player_name()
+	end
+	sound.voice = core.sound_play(name, params)
+	return true
+end
+
+-- text: what the game actually said (SAM reads it; a recording ignores it)
+local function play_voice(id, pos, text)
+	local st = text and sam_for(id)
+	if st then
+		return speak_sam(st, text, pos)
+	end
 	local v = sound.cfg.voices[id]
 	local name = v and v.sound
 	local p = player()
@@ -332,9 +439,30 @@ local function voice_for_text(text)
 end
 
 local pending_quest = nil -- quest message whose text arrives next
+-- a quest message SAM will read: its lines are collected as they arrive
+-- (a text window, or messages in the same batch), then read as one
+local sam_quest = nil -- {st=, lines={}, window=bool}
+
+local function finish_sam_quest()
+	if sam_quest and #sam_quest.lines > 0 then
+		speak_sam(sam_quest.st, table.concat(sam_quest.lines, " "))
+	end
+	sam_quest = nil
+end
 
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
+		if sam_quest then
+			if ev.kind == "text_begin" then
+				sam_quest.window = true
+			elseif ev.kind == "text_line" and sam_quest.window then
+				table.insert(sam_quest.lines, ev.text)
+			elseif ev.kind == "text_end" and sam_quest.window then
+				finish_sam_quest()
+			elseif ev.kind == "message" and not sam_quest.window then
+				table.insert(sam_quest.lines, ev.text)
+			end
+		end
 		if ev.kind == "sound" then
 			local parts = {}
 			for part in (ev.text .. "|"):gmatch("([^|]*)|") do
@@ -367,11 +495,15 @@ nh.on_event(function(evs)
 					body = mon.obj:get_pos()
 				end
 				if id then
-					play_voice(id, body)
+					play_voice(id, body, text)
 				end
 			elseif kind == "quest" then
 				local ids = quest_ids[(parts[2] or "") .. "/" .. (parts[3] or "")]
-				if ids and #ids == 1 then
+				local st = ids and sam_for(ids[1])
+				if st then
+					finish_sam_quest()
+					sam_quest = {st = st, lines = {}, window = false}
+				elseif ids and #ids == 1 then
 					play_voice(ids[1])
 				elseif ids then
 					pending_quest = ids
@@ -390,10 +522,14 @@ nh.on_event(function(evs)
 		elseif ev.kind == "message" then
 			-- arrival narration and ambient lines have no speaker hook
 			local id = voice_for_text(ev.text)
-			if id and dialogue[id] and dialogue[id].category ~= "spoken" then
-				play_voice(id)
+			if id and dialogue[id] and dialogue[id].category ~= "spoken" and not sam_quest then
+				play_voice(id, nil, ev.text)
 			end
 		end
+	end
+	-- a quest message given as plain messages ends with its batch
+	if sam_quest and not sam_quest.window then
+		finish_sam_quest()
 	end
 end)
 

@@ -146,6 +146,17 @@ All sprites and tile textures come from one sprite sheet:
     reverb, chorus, distortion, bitcrush, robot, whisper...) are applied with ffmpeg, then every
     line is resampled to the global rate (11025 Hz by default), and the result goes to
     `sounds/voices/` once confirmed.
+- **SAM, live (Voice casting > SAM view):** speakers ticked "Speak live with SAM" are voiced
+  in the game by SAM (Software Automatic Mouth, 1982), built into the engine: `sound.lua`
+  plays a sound named `nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>|<text>`
+  with the line's real text, and the client's sound manager synthesizes it
+  (`src/client/sound/sam_voice.cpp`). Per speaker: a classic SAM voice or custom speed,
+  pitch, throat and mouth, sing mode, volume; a line can pick another SAM voice.
+  - SAM's C source (Sebastian Macke's port) is not in either repo, as it has no licence: the
+    engine builds it in from `voice_work/sam/src/src` when present (CMake `NHV_SAM_SRC`);
+    without it SAM lines are silent. The editor previews with `voice_work/sam/sam.exe`.
+  - Spoken lines are matched to the dialogue catalog by the most specific pattern; lines that
+    are nearly all placeholders ("%s") are never matched.
 - **Starting sounds:** imported from the YHACSIB sound bank as Ogg files (`tools/import_soundbank.py`).
 
 ## Architecture

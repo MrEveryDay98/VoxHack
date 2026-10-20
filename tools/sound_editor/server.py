@@ -351,13 +351,16 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/takes":
             return self.send(200, VG.load_takes())
         if path == "/api/voice/status":
-            return self.send(200, {"kokoro": VG.kokoro.status(), "ffmpeg": bool(shutil.which("ffmpeg"))})
+            return self.send(200, {"kokoro": VG.kokoro.status(), "sam": {"installed": VG.sam.installed()},
+                                   "ffmpeg": bool(shutil.which("ffmpeg"))})
         if path == "/api/voice/recordings":
             return self.send(200, VG.recordings())
         if path == "/api/voice/jobs":
             return self.send(200, VG.state(int((q.get("since") or ["0"])[0])))
         if path == "/api/voice/effects":
             return self.send(200, voicegen.EFFECTS)
+        if path == "/api/sam/voices":
+            return self.send(200, voicegen.SAM_VOICES)
         if path == "/api/kokoro/voices":
             return self.send(200, [voicegen.voice_info(n) for n in VG.kokoro.voices()])
         return self.send(404, {"error": "not found"})
@@ -579,6 +582,10 @@ class Handler(BaseHTTPRequestHandler):
                       str(data.get("text") or "")[:400], data.get("effects", []),
                       {"rate": data.get("rate") or 11025, "quality": 5}, data.get("pitch") or 0,
                       str(data.get("delivery") or ""), data.get("delivery_mix") or 0)
+            return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
+        if path == "/api/voice/sam_sample":
+            # {sam: {voice, speed, pitch, throat, mouth, sing}, text}: hear SAM as the game will
+            VG.sample_sam(data.get("sam") or {}, str(data.get("text") or "")[:1000], [])
             return self.send(200, {"url": "/sample.ogg?v=%d" % int(time.time() * 1000)})
         if path == "/api/kokoro/setup":
             VG.kokoro.start_setup()

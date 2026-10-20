@@ -31,16 +31,19 @@ licence. The licence texts are in the release's `licenses` folder
 | Music (`nhv_music_*.ogg`), magic effect sounds (`nhv_sound_magiceffect`), footsteps (Freesound 268758) | Royalty-free / CC0 sources (per the author) | Free redistribution | OK |
 | NetHackWiki pages (the in-game viewer, F2) | Fetched live from nethackwiki.com and cached on the player's computer; not bundled | CC BY-SA 3.0 (credited on every page) | OK |
 | Voice lines (`sounds/voices`) | Generated with Kokoro-82M (hexgrad) through kokoro-onnx, in the editor | Kokoro: Apache 2.0; kokoro-onnx: MIT | Not in the public release yet |
+| SAM live voice (built into the engine when `voice_work/sam` has its source) | SAM (Software Automatic Mouth, Don't Ask Software, 1982), C port by Sebastian Macke (github.com/s-macke/SAM) | No licence: reverse-engineered abandonware, owner unreachable | **Not cleared for release**: a build made with SAM's source present contains it |
 
 ## Before a Steam release
 
-1. **Voice lines.** Kokoro's model is Apache 2.0, so its lines can ship;
+1. **SAM.** Its code has no licence. Build the release without it (move
+   `voice_work/sam/src` away before building) unless that's been decided.
+2. **Voice lines.** Kokoro's model is Apache 2.0, so its lines can ship;
    credit Kokoro-82M if they do. (Earlier ElevenLabs takes, if any are used,
    fall under the ElevenLabs plan's terms.)
-2. **The name.** NetHack's licence covers the code, not the name. The game
+3. **The name.** NetHack's licence covers the code, not the name. The game
    says "based on NetHack" in its description; ask the NetHack DevTeam if
    unsure.
-3. **Steamworks.** Don't link the Steamworks SDK into the game without
+4. **Steamworks.** Don't link the Steamworks SDK into the game without
    checking its compatibility with the copyleft licences first.
 
 The source is published with each release (this repository, with its

@@ -1,6 +1,8 @@
 // Voice generation: Kokoro voices per speaker (run on this computer), effect
 // presets, the global output rate, and the per-line Generate / Re-process
-// controls in "Voices & dialogue".
+// controls in "Voices & dialogue". Voice casting has a second view, SAM:
+// speakers set to "Speak live with SAM" aren't recorded at all; the game's
+// built-in SAM reads their lines as they happen (this page only previews).
 // (Loaded before app.js; uses its helpers at run time.)
 "use strict";
 
@@ -12,6 +14,9 @@ const VoiceGen = (() => {
   let status = { kokoro: {} };
   let voices = [], voicesError = "";
   let effects = {};
+  let samVoices = {};
+  let view = "kokoro"; // Voice casting's view: "kokoro" or "sam"
+  try { view = localStorage.getItem("nhv_voice_view") === "sam" ? "sam" : "kokoro"; } catch (e) { /* (private window) */ }
   let dirty = false;
   let currentPreset = null;
   let testSource = "";
@@ -34,8 +39,8 @@ const VoiceGen = (() => {
 
   // ---------------------------------------------------------- loading
   async function load() {
-    [cast, takes, status, effects] = await Promise.all([api("/api/cast"), api("/api/takes"),
-      api("/api/voice/status"), api("/api/voice/effects")]);
+    [cast, takes, status, effects, samVoices] = await Promise.all([api("/api/cast"), api("/api/takes"),
+      api("/api/voice/status"), api("/api/voice/effects"), api("/api/sam/voices")]);
     cast.output = Object.assign({ rate: 11025, quality: 4 }, cast.output || {});
     cast.speakers = cast.speakers || {};
     cast.presets = cast.presets || {};
@@ -255,7 +260,7 @@ const VoiceGen = (() => {
   }
 
   async function bulk(action, lines) {
-    if (action === "generate") lines = lines.filter((d) => !config.voices[d.id]);
+    if (action === "generate") lines = lines.filter((d) => !config.voices[d.id] && !samLive(d));
     else lines = lines.filter((d) => takes[d.id] && takes[d.id].takes.length);
     if (!lines.length) return toast(action === "generate" ? "Every shown line is voiced already" : "None of the shown lines has a take yet");
     if (action === "process") {
@@ -309,6 +314,49 @@ const VoiceGen = (() => {
     } catch (e) { toast(e.message); }
   }
 
+  // ---------------------------------------------------------- SAM
+  const SAM_KEYS = [["speed", "Speed"], ["pitch", "Pitch"], ["throat", "Throat"], ["mouth", "Mouth"]];
+  function samCfg(name) {
+    const sc = speakerCfg(name);
+    if (!sc.sam) sc.sam = Object.assign({ voice: "SAM", sing: false, volume: 100 }, samVoices.SAM || {});
+    return sc.sam;
+  }
+  // is this line spoken live by SAM in the game?
+  const samLive = (d) => { const sc = cast.speakers[lineCast(d)]; return !!(sc && sc.sam && sc.sam.live); };
+  // a line's SAM settings: its own named voice, else its speaker's
+  function samFor(d) {
+    const ss = (cast.speakers[lineCast(d)] || {}).sam || {};
+    const ln = cast.lines[d.id] || {};
+    return ln.sam_voice && samVoices[ln.sam_voice] ? Object.assign({ voice: ln.sam_voice, sing: ss.sing }, samVoices[ln.sam_voice]) : ss;
+  }
+  const samCustom = (ss) => { const v = samVoices[ss.voice]; return !v || SAM_KEYS.some(([k]) => +ss[k] !== v[k]); };
+  async function hearSam(btn, ss, text) {
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "…";
+    try {
+      const res = await api("/api/voice/sam_sample", { method: "POST", json: { sam: ss, text: text || "" } });
+      playUrl(res.url, "SAM");
+    } catch (e) { toast(e.message); }
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+
+  // the row of a line SAM speaks live: no recording, just its voice and a preview
+  function samRowControls(d) {
+    const ln = cast.lines[d.id] || {};
+    const ss = samFor(d);
+    const box = el("div", { class: "gen sam-live" });
+    const sel = el("select", { "aria-label": "SAM voice for this line", onchange: (e) => { setLine(d.id, "sam_voice", e.target.value); redrawLine(d.id); } },
+      el("option", { value: "" }, `${lineCast(d)}'s SAM voice: ${(cast.speakers[lineCast(d)].sam.voice || "SAM")}${samCustom(cast.speakers[lineCast(d)].sam) ? " (custom)" : ""}`),
+      ...Object.keys(samVoices).map((v) => el("option", { value: v, selected: v === ln.sam_voice || null }, v)));
+    const hearBtn = el("button", { class: "icon", "aria-label": "Hear SAM read this line", title: "Hear SAM read this line (the game reads the real text, with your name and so on)",
+      disabled: !status.sam.installed || null, onclick: () => hearSam(hearBtn, ss, spoken(d)) }, "▶");
+    box.append(el("div", { class: "genpick" }, el("label", {}, el("span", {}, "SAM"), el("div", { class: "with-play" }, sel, hearBtn))),
+      el("div", { class: "jobnote" }, "Spoken live by SAM in the game: nothing to record."));
+    return box;
+  }
+
   // ---------------------------------------------------------- dialogue rows
   // what this line will be read with: its own choices, else its speaker's
   const NO_EFFECTS = "__none__";
@@ -332,6 +380,7 @@ const VoiceGen = (() => {
   // Generate -> listen to the processed result -> Confirm (or Regenerate)
   function rowControls(d, redraw) {
     redraws.set(d.id, redraw);
+    if (samLive(d)) return samRowControls(d);
     const box = el("div", { class: "gen" });
     const t = takes[d.id];
     const job = jobs[d.id];
@@ -485,7 +534,15 @@ const VoiceGen = (() => {
   function render() {
     const root = $("#castingBody");
     if (!root) return;
-    root.replaceChildren(setupSection(), speakersSection(), presetsSection());
+    const sw = el("div", { class: "viewswitch", role: "tablist", "aria-label": "Voice engine" },
+      ...[["kokoro", "Kokoro (recorded)"], ["sam", "SAM (live in game)"]].map(([v, l]) => el("button", {
+        class: "chip", role: "tab", "aria-pressed": String(view === v), onclick: () => {
+          view = v;
+          try { localStorage.setItem("nhv_voice_view", v); } catch (e) { /* (private window) */ }
+          render();
+        } }, l)));
+    if (view === "sam") root.replaceChildren(sw, samSetupSection(), samSpeakersSection());
+    else root.replaceChildren(sw, setupSection(), speakersSection(), presetsSection());
   }
 
   function card(title, ok, ...kids) {
@@ -525,6 +582,50 @@ const VoiceGen = (() => {
       el("div", { class: "inline" }, el("label", {}, "Sample rate ", rate), el("label", {}, "Ogg quality ", q, qv)),
       status.ffmpeg ? null : el("p", { class: "err" }, "ffmpeg wasn't found on PATH; it's needed for effects and to convert files."));
     return el("section", { class: "cast-sec" }, el("h2", {}, "Setup"), el("div", { class: "setup" }, kokoro, out));
+  }
+
+  function samSetupSection() {
+    const ok = status.sam && status.sam.installed;
+    return el("section", { class: "cast-sec" }, el("h2", {}, "SAM"), el("div", { class: "setup" },
+      card("Software Automatic Mouth", ok,
+        el("p", {}, "SAM, the 1982 Commodore 64 speech synth, is built into the game: a speaker set to ",
+          el("b", {}, "Speak live with SAM"), " has every line read by SAM as it happens, with the real text (your name, your god, the shopkeeper's name...). Nothing is recorded, and the output rate and effects don't apply: it's SAM's own 22,050 Hz sound."),
+        el("p", { class: "muted" }, "A live SAM speaker takes the place of any recordings for its lines. Changes reach a running game within a couple of seconds."),
+        ok ? null : el("p", { class: "err" }, "The preview needs voice_work/sam/sam.exe (SAM's C port, built from voice_work/sam/src)."))));
+  }
+
+  function samSpeakersSection() {
+    const rows = [];
+    for (const [name] of speakers()) {
+      const sc = cast.speakers[name] || {};
+      const ss = sc.sam || {};
+      const lines = catalog.dialogue.filter((d) => lineCast(d) === name);
+      const live = el("label", { class: "check", title: "The game's SAM reads this speaker's lines as they happen" },
+        el("input", { type: "checkbox", checked: ss.live || null, onchange: (e) => {
+          samCfg(name).live = e.target.checked; touch(); render(); redraws.forEach((f) => f());
+        } }), " Speak live with SAM");
+      const voiceSel = el("select", { "aria-label": "SAM voice for " + name, onchange: (e) => {
+        const s2 = samCfg(name);
+        s2.voice = e.target.value;
+        Object.assign(s2, samVoices[e.target.value] || {});
+        touch(); render();
+      } }, ...Object.keys(samVoices).map((v) => el("option", { value: v, selected: v === (ss.voice || "SAM") || null }, v)),
+      ss.voice && samCustom(ss) ? el("option", { value: ss.voice, selected: true, disabled: true }, ss.voice + " (custom)") : null);
+      const hearBtn = el("button", { class: "icon", "aria-label": "Hear " + name, title: "Hear this SAM voice",
+        disabled: !status.sam.installed || null, onclick: () => hearSam(hearBtn, samCfg(name)) }, "▶");
+      const settings = el("details", { class: "spk-set" }, el("summary", {}, "SAM settings"),
+        ...SAM_KEYS.map(([k, l]) => slider(l, ss[k] ?? (samVoices.SAM || {})[k] ?? 128, 1, 255, 1, "", (v) => { samCfg(name)[k] = v; touch(); })),
+        slider("Volume", ss.volume ?? 100, 0, 200, 5, "%", (v) => { samCfg(name).volume = v; touch(); }),
+        el("label", { class: "check" }, el("input", { type: "checkbox", checked: ss.sing || null,
+          onchange: (e) => { samCfg(name).sing = e.target.checked; touch(); } }), " Sing mode (pitch follows the phonemes)"),
+        el("p", { class: "muted" }, "Lower pitch values are higher voices. Throat and mouth shape the vowels; speed is slower as it goes up."));
+      rows.push(el("div", { class: "spk sam" + (ss.live ? " cast" : "") },
+        el("div", { class: "spk-name" }, el("b", {}, name), el("div", { class: "muted" }, `${lines.length} line(s)`)),
+        live, el("div", { class: "spk-voice" }, voiceSel, hearBtn), settings));
+    }
+    return el("section", { class: "cast-sec" }, el("h2", {}, "Speakers"),
+      el("p", { class: "hint" }, "Tick the speakers SAM should voice in the game, and pick each one's SAM voice (or shape your own in SAM settings). ▶ plays a sample; in Voices & dialogue, ▶ on a line plays SAM reading it."),
+      el("div", { class: "spk-list" }, ...rows));
   }
 
   function slider(label, value, min, max, step, unit, onInput) {

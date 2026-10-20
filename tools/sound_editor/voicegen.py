@@ -13,7 +13,15 @@ then an effect chain (ffmpeg filters) and the global sample rate.
             resampled to the global output rate (11025 Hz by default) and
             saved as Ogg. A preview waits in voice_work/pending/ until it is
             confirmed; then it becomes the line's voice in sounds/voices/.
+  SAM       Software Automatic Mouth, the 1982 Commodore 64 speech synth.
+            Speakers set to SAM are voiced live by the game (the engine has
+            SAM built in and reads each line's real text as it happens), so
+            nothing is generated here: the editor only sets their SAM voices
+            and previews them with the same C port (Sebastian Macke's),
+            built as voice_work/sam/sam.exe. Neither is in git: SAM has no
+            licence (abandonware).
 """
+import wave
 import json
 import math
 import os
@@ -271,6 +279,107 @@ def migrate_cast(cast):
     return cast
 
 
+# ---------------------------------------------------------------- SAM
+SAM_RATE = 22050
+SAM_OUTPUT = {"rate": SAM_RATE, "quality": 8}  # SAM's own rate (previews only)
+# the classic voices from SAM's manual
+SAM_VOICES = {
+    "SAM": {"speed": 72, "pitch": 64, "throat": 128, "mouth": 128},
+    "Elf": {"speed": 72, "pitch": 64, "throat": 110, "mouth": 160},
+    "Little Robot": {"speed": 92, "pitch": 60, "throat": 190, "mouth": 190},
+    "Stuffy Guy": {"speed": 82, "pitch": 72, "throat": 110, "mouth": 105},
+    "Little Old Lady": {"speed": 82, "pitch": 32, "throat": 145, "mouth": 145},
+    "Extra-Terrestrial": {"speed": 100, "pitch": 64, "throat": 150, "mouth": 200},
+}
+SAM_KEYS = ("speed", "pitch", "throat", "mouth")
+
+
+def sam_settings(cfg):
+    """A speaker's (or line's) SAM settings, filled in from its named voice."""
+    cfg = cfg or {}
+    base = SAM_VOICES.get(cfg.get("voice") or "SAM", SAM_VOICES["SAM"])
+    out = {"voice": cfg.get("voice") or "SAM", "sing": bool(cfg.get("sing"))}
+    for k in SAM_KEYS:
+        try:
+            out[k] = max(1, min(255, int(cfg.get(k, base[k]))))
+        except (TypeError, ValueError):
+            out[k] = base[k]
+    return out
+
+
+def sam_label(st):
+    named = SAM_VOICES.get(st["voice"])
+    custom = not named or any(named[k] != st[k] for k in SAM_KEYS)
+    return "SAM: " + (st["voice"] + (" (custom)" if custom else "")) + (", singing" if st["sing"] else "")
+
+
+def sam_chunks(text, limit=70):
+    """SAM reads at most ~255 characters (after spelling them out as
+    phonemes), so text goes in short pieces: sentences, then clauses, then
+    words."""
+    text = text.replace("\u2019", "'").replace("\u2018", "'").replace("\u201c", '"').replace("\u201d", '"')
+    text = text.replace("\u2014", ", ").replace("\u2013", ", ").replace("\u2026", "...")
+    text = re.sub(r"[^A-Za-z0-9 .,!?'\-:;\n]", " ", text)
+    text = re.sub(r"\s+([,.!?])", r"\1", text)
+    out = []
+    for sentence in re.findall(r"[^.!?\n]+[.!?]*", text):
+        sentence = sentence.strip(" -:;")
+        if not re.search(r"[A-Za-z0-9]", sentence):
+            continue
+        parts = [sentence] if len(sentence) <= limit else re.findall(r"[^,;:]+[,;:]?", sentence)
+        for part in parts:
+            part = part.strip(" -")
+            while len(part) > limit:
+                cut = part.rfind(" ", 0, limit)
+                cut = cut if cut > 0 else limit
+                out.append(part[:cut].strip())
+                part = part[cut:].strip()
+            if re.search(r"[A-Za-z0-9]", part):
+                out.append(part)
+    return out
+
+
+class Sam:
+    def __init__(self, work):
+        self.dir = os.path.join(work, "sam")
+        self.exe = os.path.join(self.dir, "sam.exe")
+
+    def installed(self):
+        return os.path.exists(self.exe)
+
+    def say(self, text, settings, out, phonetic=False):
+        """text -> SAM -> one wav (8-bit, 22050 Hz) at out"""
+        if not self.installed():
+            raise RuntimeError("SAM isn't set up: voice_work/sam/sam.exe is missing")
+        st = sam_settings(settings)
+        pieces = [text.strip()] if phonetic else sam_chunks(text)
+        if not pieces:
+            raise ValueError("There are no words SAM can read in this line")
+        tmp = out + ".part.wav"
+        frames = []
+        gap = bytes([128]) * int(SAM_RATE * 0.08)  # 8-bit silence between pieces
+        for i, piece in enumerate(pieces):
+            args = [self.exe] + [x for k in SAM_KEYS for x in ("-" + k, str(st[k]))]
+            if st["sing"]:
+                args.append("-sing")
+            if phonetic:
+                args.append("-phonetic")
+            r = subprocess.run(args + ["-wav", tmp, piece.lstrip("-")], capture_output=True, text=True,
+                               creationflags=NO_WINDOW, timeout=60)
+            if r.returncode or not os.path.exists(tmp):
+                raise RuntimeError("SAM couldn't read %r%s" % (piece, " (check the phonemes)" if phonetic else ""))
+            with wave.open(tmp, "rb") as w:
+                frames.append(w.readframes(w.getnframes()))
+            os.remove(tmp)
+            if i < len(pieces) - 1:
+                frames.append(gap)
+        with wave.open(out, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(1)
+            w.setframerate(SAM_RATE)
+            w.writeframes(b"".join(frames))
+
+
 # ---------------------------------------------------------------- Kokoro
 class Kokoro:
     """Kokoro's own Python environment, and the worker process that speaks."""
@@ -407,6 +516,7 @@ class VoiceGen:
         self.load_config, self.save_config = load_config, save_config
         self.speakable = speakable
         self.kokoro = Kokoro(self.work)
+        self.sam = Sam(self.work)
         self.lock = threading.Lock()          # jobs and takes.json
         self.render_lock = threading.RLock()  # one render at a time (shared temp files)
         self.jobs = []
@@ -474,6 +584,7 @@ class VoiceGen:
         ln = cast["lines"].get(line_id, {})
         speaker = ln.get("cast") or entry["speaker"]
         sc = cast["speakers"].get(speaker, {})
+        text = ln.get("spoken") or self.speakable(entry)[0]
         voice = ln.get("voice") or sc.get("voice") or ""
         speed = float(ln.get("speed") or sc.get("speed") or 1.0)
         lang = (ln.get("lang") if ln.get("voice") else None) or sc.get("lang") or voice_lang(voice)
@@ -486,11 +597,12 @@ class VoiceGen:
             mix = float(ln.get("delivery_mix") or mix)
         if preset == self.NO_EFFECTS:
             preset = ""
-        return {"entry": entry, "speaker": speaker, "voice": voice, "voice_name": voice_label(voice) if voice else "",
+        return {"entry": entry, "speaker": speaker, "voice": voice,
+                "voice_name": voice_label(voice) if voice else "",
                 "speed": speed, "lang": lang, "preset": preset,
                 "delivery": delivery, "delivery_mix": mix if delivery else 0.0,
                 "pitch": float(ln.get("pitch", sc.get("pitch", 0)) or 0),
-                "text": ln.get("spoken") or self.speakable(entry)[0]}
+                "text": text}
 
     def pending_path(self, line_id):
         return os.path.join(self.work, "pending", safe_id(line_id) + ".ogg")
@@ -568,13 +680,13 @@ class VoiceGen:
             fname = time.strftime("%Y%m%d-%H%M%S") + ".wav"
             self.kokoro.say(text, plan["voice"], plan["speed"], plan["lang"], os.path.join(folder, fname),
                             plan["delivery"], plan["delivery_mix"])
+            info = {"voice_spec": plan["voice"], "speed": plan["speed"], "delivery": plan["delivery"],
+                    "delivery_mix": plan["delivery_mix"]}
             with self.lock:
                 takes = self.load_takes()
                 t = takes.setdefault(line_id, {"takes": [], "current": 0})
-                t["takes"].append({"file": sid + "/" + fname, "voice": plan["voice_name"], "voice_spec": plan["voice"],
-                                   "speed": plan["speed"], "delivery": plan["delivery"],
-                                   "delivery_mix": plan["delivery_mix"], "text": text, "chars": len(text),
-                                   "time": int(time.time())})
+                t["takes"].append(dict(info, file=sid + "/" + fname, voice=plan["voice_name"], text=text,
+                                       chars=len(text), time=int(time.time())))
                 t["current"] = len(t["takes"]) - 1
                 self._save_takes(takes)
         return self.make_preview(line_id, cast, plan)
@@ -585,14 +697,14 @@ class VoiceGen:
             raise ValueError("This line has no generated take yet")
         index = t.get("current", 0)
         take = t["takes"][index]
+        out = cast.get("output", {})
         preset = cast["presets"].get(plan["preset"] or "", {})
         dst = self.pending_path(line_id)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        self.render(self.take_path(take["file"]), pitch_effects(plan["pitch"]) + preset.get("effects", []),
-                    cast.get("output", {}), dst)
+        self.render(self.take_path(take["file"]), pitch_effects(plan["pitch"]) + preset.get("effects", []), out, dst)
         pending = {"take": index, "preset": plan["preset"], "voice": take["voice"], "pitch": plan["pitch"],
                    "url": "/pending/%s.ogg?v=%d" % (safe_id(line_id), int(time.time() * 1000)),
-                   "rate": int(cast.get("output", {}).get("rate") or 11025), "time": int(time.time())}
+                   "rate": int(out.get("rate") or 11025), "time": int(time.time())}
         with self.lock:
             takes = self.load_takes()
             takes[line_id]["pending"] = pending
@@ -752,6 +864,16 @@ class VoiceGen:
         """Process src with effects into voice_work/preview.ogg (for listening)."""
         dst = os.path.join(self.work, "preview.ogg")
         self.render(src, effects, out, dst)
+        return dst
+
+    def sample_sam(self, settings, text, effects, phonetic=False):
+        """SAM reading a short sample, through effects: voice_work/sample.ogg"""
+        with self.render_lock:
+            wav = os.path.join(self.work, "tmp", "sample_sam.wav")
+            os.makedirs(os.path.dirname(wav), exist_ok=True)
+            self.sam.say(text or SAMPLE_TEXT, settings, wav, phonetic)
+            dst = os.path.join(self.work, "sample.ogg")
+            self._render(wav, list(effects or []), SAM_OUTPUT, dst)
         return dst
 
     def sample(self, voice, speed, lang, text, effects, out, pitch=0.0, delivery="", delivery_mix=0.0):
