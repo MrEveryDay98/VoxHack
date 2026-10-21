@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.1 (alpha) - 2026-10-21
+
+- **F3: NetHack's commands.** A scrollable list of every command, with its #name, its key and what it does (NetHack's own descriptions). Type any of them in the command line (T). F3 again or Esc closes it. (F3 no longer toggles the fog.)
+- **The pause menu's tips** (F2: NetHackWiki, F3: NetHack's commands) sit to the left of the menu.
+
 ## v0.7.0 (alpha) - 2026-10-20
 
 - **Level changes fade.** Going up or down stairs, falling or teleporting to another level fades to black, holds still while the new level is built, and fades back in.
