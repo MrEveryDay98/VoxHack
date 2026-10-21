@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.2 (alpha) - 2026-10-21
+
+- **Chatting is reliable.** Right-clicking a peaceful monster always chats with it, and holding right click always offers Chat. Before, a monster right in front of you could be two squares away on NetHack's map, or on your own square, and the right click acted on your own square instead; or it had just stepped aside, and you talked to empty air.
+- **The pause menu's tips** sit just left of the menu at any screen size; they could overlap it.
+
 ## v0.7.1 (alpha) - 2026-10-21
 
 - **F3: NetHack's commands.** A scrollable list of every command, with its #name, its key and what it does (NetHack's own descriptions). Type any of them in the command line (T). F3 again or Esc closes it. (F3 no longer toggles the fog.)
