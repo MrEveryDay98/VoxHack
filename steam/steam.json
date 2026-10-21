@@ -1,0 +1,5 @@
+{
+	"_comment": "VoxHack's Steam ids, from the Steamworks partner site (App Admin > SteamPipe > Depots). Placeholders until the app exists.",
+	"app_id": "0000000",
+	"depot_id": "0000001"
+}
