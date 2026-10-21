@@ -2,6 +2,18 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.0 (alpha) - 2026-10-20
+
+- **Level changes fade.** Going up or down stairs, falling or teleporting to another level fades to black, holds still while the new level is built, and fades back in.
+- **Falling through a hole or trap door takes half a second:** you drop into it before you land on the level below.
+- **Searching for a number of turns (Ctrl+X) plays out like being helpless:** time runs fast forward, you're seen from behind and stand still, a turn at a time, and it stops whenever NetHack would stop it (a monster comes near, you get hurt...), or when you press X.
+- **Objects lying on stairs and ladders never hide them:** stairs first seen with something on them were built as plain floor.
+- **Wizard mode** (a world with a file named `nhv_debug` in it): K flies and H noclips. Flying, your body is a free camera and the hero stays where it stands; land to go back to it. Noclipping, the hero is invulnerable. `/brightness 0-100` lights the level.
+- **For prefab builders:**
+  - Area ids are shown without a "#1" on every one.
+  - `/area revert` starts the area you're standing in over, undoing every change made to it (in this session and earlier ones).
+  - The Wizard's Tower is built from its own areas (part 3); the astral plane has its own sky.
+
 ## v0.6.0 (alpha) - 2026-10-20
 
 - **Spoken lines, live.** Shopkeepers, priests, your god, the Wizard of Yendor and some of the game's own texts are read aloud with SAM, the 1982 speech synthesizer, built into the game: it reads the real line as it happens, names and all ("Hello, Ron! Welcome to Asidonhopo's general store!"), from where the speaker stands. Each monster of a kind sounds a little different, female ones higher, big ones deeper. (NetHack options > Spoken lines turns them off.)
