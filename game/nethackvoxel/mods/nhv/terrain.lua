@@ -715,16 +715,19 @@ end
 local function describe(map, tx, ty)
 	local i = U.idx(tx, ty)
 	local memcmap = memcmap_of(map, i)
-	local prev = terrain.built[i]
-	if not memcmap and prev and prev.memcmap and map.typ[i] == prev.typ then
-		memcmap = prev.memcmap -- an object lying on the stairs etc.
-	end
 	local seen = map.flags[i] % 2 == 1
-	-- never seen: what's really there (stairs up or down, fountain...;
-	-- NetHack leaves traps out of this)
+	-- never seen, or stairs and ladders under objects (NetHack shows the
+	-- top object there): what's really there (stairs up or down,
+	-- fountain...; NetHack leaves traps out of this) - objects never hide
+	-- the way up or down
 	local back = map.back and map.back[i]
-	if not memcmap and not seen and back and back ~= 255 then
+	local typ = map.typ[i]
+	if not memcmap and back and back ~= 255 and (not seen or typ == T.STAIRS or typ == T.LADDER) then
 		memcmap = nhv.cmap_name(back)
+	end
+	local prev = terrain.built[i]
+	if not memcmap and prev and prev.memcmap and typ == prev.typ then
+		memcmap = prev.memcmap -- an object lying on an altar etc.
 	end
 	local lit = has_bit(map.flags[i], U.LOC_LIT)
 	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap,
