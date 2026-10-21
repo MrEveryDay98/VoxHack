@@ -798,6 +798,17 @@ function actions.context(player)
 			return {a}, a
 		end
 	end
+	-- a monster you point at (within reach: actions.pointed) is the one you
+	-- act on, wherever NetHack has its square: in free movement it can stand
+	-- right in front of you two squares away, or share your own square.
+	-- Chat goes to it by id, not by a direction it may have left.
+	local pm = p.kind == "mon" and p.mon
+	if pm and pm.id and pm.id > 0 then
+		local peaceful = pm.mon and U.has(pm.mon.flags, U.MON_PEACEFUL)
+		local list = {act("Chat", ext("nhvchat " .. pm.id)), act("Fight", ext("nhvattack " .. pm.id)),
+			act("Throw at it", "t"), act("Apply at it", "a")}
+		return list, peaceful and list[1] or nil
+	end
 	-- far away squares: act on your own square
 	if math.abs(tx - h.x) > 1 or math.abs(ty - h.y) > 1 then
 		if p.kind == "door" then
@@ -818,7 +829,8 @@ function actions.context(player)
 
 	if mon and (tx ~= h.x or ty ~= h.y) then
 		local peaceful = mon.mon and U.has(mon.mon.flags, U.MON_PEACEFUL)
-		add(act("Chat", ext("chat", {key = key})), peaceful)
+		add(act("Chat", mon.id and mon.id > 0 and ext("nhvchat " .. mon.id) or ext("chat", {key = key})),
+			peaceful)
 		add(act("Fight", ext("nhvattack " .. (mon.id or 0))))
 		add(act("Throw at it", "t"))
 		add(act("Apply at it", "a"))

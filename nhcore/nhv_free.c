@@ -316,6 +316,26 @@ donhvattack(void)
     return ECMD_TIME;
 }
 
+/* #nhvchat id: chat with that monster - the one the player points at - as
+   #chat would, without asking for a direction: in free movement its square
+   isn't always next to yours, though it's in front of you (the host only
+   offers it within talking distance) */
+struct monst *nhv_chat_mon = (struct monst *) 0;
+
+int
+donhvchat(void)
+{
+    struct monst *mtmp = mon_by_id((unsigned) nhv_cmd_args[0]);
+    int res;
+
+    if (!mtmp)
+        return nhv_ok();
+    nhv_chat_mon = mtmp;
+    res = dotalk();
+    nhv_chat_mon = (struct monst *) 0;
+    return res;
+}
+
 /* ---------------------------------------------------------------- API */
 NHV_API void
 nhv_set_freemove(int on)
