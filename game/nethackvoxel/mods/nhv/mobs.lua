@@ -547,6 +547,19 @@ local function update_objects(snap)
 					if fresh then
 						fade_in(e)
 					end
+					-- a boulder (solid) is always exactly on its square once
+					-- it's done gliding: one left behind where NetHack has
+					-- none blocks your way (a pushed one, seen still in front
+					-- of you while NetHack had it a square further on). Set
+					-- again each time, which also sends it to the game window
+					if e.boulder and not e.glide then
+						local at = e.obj:get_pos()
+						if at and vector.distance(at, pos) > 0.3 then
+							core.log("action", ("[nhv] boulder at %d,%d was off its square (%.1f,%.1f,%.1f): put back"):format(
+								tx, ty, at.x, at.y, at.z))
+						end
+						e.obj:set_pos(pos)
+					end
 				end
 			end
 			::next_square::
