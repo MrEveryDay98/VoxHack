@@ -459,6 +459,15 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
+		if param == "commands" then
+			-- (F3: NetHack's commands; F3 again closes them - the engine
+			-- does that while they're open)
+			local player = core.get_player_by_name(pname)
+			if player and not nhv.ui.open then
+				nhv.commands.toggle(player)
+			end
+			return true
+		end
 		if param == "enhance" then
 			-- (NetHack's #enhance: the skills you could advance are
 			-- selectable in its list; takes no time)

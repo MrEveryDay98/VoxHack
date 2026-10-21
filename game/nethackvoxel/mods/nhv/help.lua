@@ -51,7 +51,7 @@ help.SECTIONS = {
 	{"Function keys", {
 		{"F1", "Hide or show the HUD (for clean screenshots)"},
 		{"F2", "NetHackWiki: the page for what you're pointing at, or the last page you read (F2 again closes it)"},
-		{"F3", "Fog on or off"},
+		{"F3", "NetHack's commands: every one, with what it does (F3 again closes it)"},
 		{"F5", "Debug info: position, frame rate..."},
 		{"F6", "The profiler (performance graphs)"},
 		{"F10", "The console (the message log)"},
