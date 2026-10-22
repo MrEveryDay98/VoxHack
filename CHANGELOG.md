@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.7 (alpha) - 2026-10-22
+
+- **Cursed items show red, blessed ones light blue** once you know (the inventory, containers, item menus and the "which item?" lists).
+- **The dungeon level is under the mini-map** ("Dlvl:4 (The Gnomish Mines)", with the branch outside the main dungeon), instead of in the line top left.
+
 ## v0.7.6 (alpha) - 2026-10-22
 
 - **The Oracle speaks.** Her consultations are read aloud with SAM from where she sits: a minor one's rumor, and a major one's whole oracle.
