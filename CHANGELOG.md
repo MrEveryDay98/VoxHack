@@ -2,6 +2,12 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.5 (alpha) - 2026-10-22
+
+- **Minetown has its own music** (and the Big Room). Special levels with a track of their own now play it, instead of their branch's music.
+- **Hallways sound like hallways.** Corridors get a tight stone echo of their own, exactly on NetHack's corridor squares; rooms, doorways and the edges of rooms keep the room's sound.
+- **A monster's arrow is no longer your doing.** A monster's missile that killed a watchman counted as you murdering him ("You murderer!", luck and alignment lost, the watch's anger), and a monster's potion breaking in a shop was billed to you. Now it's the monster's, as in NetHack.
+
 ## v0.7.4 (alpha) - 2026-10-22
 
 - **Hallucinated boulders stay solid.** Hallucinating, a boulder drawn as some random object lost its hitbox and you could walk through it. It now keeps a boulder's full box (push it, squeeze past it, bump into it as ever), whatever it looks like; something merely pictured as a boulder isn't solid.
