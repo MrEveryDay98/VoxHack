@@ -113,13 +113,6 @@
    "volume": 100,
    "pitch_var": 0.05
   },
-  "gold_loss": {
-   "sounds": [
-    "yh_coinsfall"
-   ],
-   "volume": 100,
-   "pitch_var": 0.05
-  },
   "door_crash_open": {
    "sounds": [
     "yh_crack"
@@ -686,13 +679,6 @@
    "volume": 60,
    "pitch_var": 0.05
   },
-  "ambient_coins": {
-   "sounds": [
-    "yh_coinsfall"
-   ],
-   "volume": 50,
-   "pitch_var": 0.05
-  },
   "ambient_naiad": {
    "sounds": [
     "yh_naiad"
@@ -883,6 +869,20 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "gold_loss": {
+   "sounds": [
+    "yh_coins"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "ambient_coins": {
+   "sounds": [
+    "yh_water"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {},

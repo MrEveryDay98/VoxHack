@@ -105,7 +105,8 @@
     "pitch": 32,
     "throat": 145,
     "mouth": 145,
-    "smooth": true
+    "smooth": true,
+    "live": true
    }
   },
   "Priest": {
@@ -143,7 +144,8 @@
     ],
     "sing": true,
     "tone": true,
-    "smooth": true
+    "smooth": true,
+    "live": true
    }
   },
   "Voice": {

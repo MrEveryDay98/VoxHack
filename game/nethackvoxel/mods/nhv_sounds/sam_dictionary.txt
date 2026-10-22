@@ -7,3 +7,4 @@
 # The replacement is either a respelling (Asidonhopo = ah see don hoe poe)
 # or SAM phonemes in braces (Croesus = {KRIY4SAHS}); both can be mixed.
 # Words are matched whole and ignoring case; "Croesus's" uses "Croesus".
+delphi = dellfee
