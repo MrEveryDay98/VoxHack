@@ -15,7 +15,7 @@
 --   E (aux1)          same, for your wielded weapon
 --   1-5               the hotbar's action keys (hotbar.lua)
 --   T                 NetHack command line (hotbar.lua)
---   Space (jump)      wait/search for one turn
+--   Space (jump)      tap: wait a turn; hold: jump (jump.lua)
 --   Z (zoom)          toggle the large overhead map
 --   I                 inventory and equipment
 
@@ -1104,8 +1104,9 @@ core.register_globalstep(function()
 	if pressed("jump") and actions.climb_out(player) then -- luacheck: ignore 542
 		-- in a pit: Space climbs out at its edge
 	elseif pressed("jump") and nh.ready() and not nhv.clock.busy() then
-		nhv.clock.act({{key = "#"}, {text = "nhvtick"}}, {kind = "wait"})
+		nhv.jump.press() -- (a tap waits a turn; held, it aims a jump: jump.lua)
 	end
+	nhv.jump.update(player, ctl.jump)
 	if pressed("zoom") then
 		nhv.hud.toggle_map()
 	end

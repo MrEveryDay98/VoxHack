@@ -17,7 +17,7 @@ help.SECTIONS = {
 	{"Moving and looking", {
 		{"W A S D", "Walk"},
 		{"Mouse", "Look around"},
-		{"Space", "Wait a turn; in a pit, climb out (face its edge)"},
+		{"Space", "Wait a turn; hold to jump (Knights, jumping boots): the green squares are where you can land - look at one and let go; in a pit, climb out (face its edge)"},
 		{"Z", "The big map (Z again closes it)"},
 		{"Middle click", "Look at what's under the crosshair (what NetHack calls it)"},
 	}},

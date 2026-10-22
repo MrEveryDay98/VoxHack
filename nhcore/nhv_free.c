@@ -346,6 +346,23 @@ donhvchat(void)
     return res;
 }
 
+/* #nhvjump x y: jump to that square (the one the player picked in 3D) -
+   NetHack's #jump, with every check it makes, aimed there instead of
+   asking where */
+coordxy nhv_jump_x = -1, nhv_jump_y = -1;
+
+int
+donhvjump(void)
+{
+    int res;
+
+    nhv_jump_x = (coordxy) nhv_cmd_args[0];
+    nhv_jump_y = (coordxy) nhv_cmd_args[1];
+    res = dojump();
+    nhv_jump_x = nhv_jump_y = -1;
+    return res;
+}
+
 /* ---------------------------------------------------------------- API */
 NHV_API void
 nhv_set_freemove(int on)

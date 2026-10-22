@@ -300,6 +300,10 @@ NHV_API int nhv_get_floor_objects(int x, int y, nhv_obj *buf, int max);
  * "#nhvcontout <id> <obj id> <count>" (count 0 = all). Returns count, or
  * -1 if there's no such container. */
 NHV_API int nhv_get_container(unsigned id, nhv_obj *buf, int max);
+/* where a jump (#jump) could land now: x, y pairs in xy[] (max squares);
+   returns how many, -1 if the hero can jump but not right now, -2 if the
+   hero can't jump at all */
+NHV_API int nhv_jump_squares(int *xy, int max);
 
 /* ------------------------------------------------------------ glyph info */
 enum nhv_glyph_kind {

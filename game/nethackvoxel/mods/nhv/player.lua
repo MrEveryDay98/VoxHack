@@ -192,7 +192,34 @@ local function set_speed(player)
 	-- stop you walking off ledges into pits)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
-		new_move = true, gravity = (h and not levitating(h)) and 1 or 0})
+		new_move = true, gravity = ((h and not levitating(h)) and 1 or 0) * (player_mod.hop_g or 1)})
+end
+
+-- A jump (hold Space: jump.lua): the body hops to where NetHack landed
+-- you - fast, a short arc (gravity turned up for it, so it's quick and
+-- still clears the floor), then set down exactly on the square
+local HOP_S, HOP_G = 0.42, 3
+function player_mod.hop(player, to)
+	local tx, ty = U.pos_to_tile(to)
+	player_mod.trap_done = tx .. "," .. ty -- (NetHack set off any trap there)
+	local from = player:get_pos()
+	local g = (tonumber(core.settings:get("movement_gravity")) or 9.81) * HOP_G
+	local v = vector.new((to.x - from.x) / HOP_S, g * HOP_S / 2 + (to.y - from.y) / HOP_S,
+		(to.z - from.z) / HOP_S)
+	player_mod.hop_g = HOP_G
+	set_speed(player)
+	player:add_velocity(vector.subtract(v, player:get_velocity()))
+	player_mod.grace_until = core.get_us_time() + (HOP_S + 0.3) * 1e6
+	core.after(HOP_S + 0.1, function()
+		player_mod.hop_g = nil
+		if player:is_player() then
+			set_speed(player)
+			local p = player:get_pos()
+			if math.abs(p.x - to.x) + math.abs(p.z - to.z) > 0.4 then
+				player:set_pos(player_mod.free_spot(vector.new(to.x, math.max(p.y, to.y), to.z)))
+			end
+		end
+	end)
 end
 
 function player_mod.freeze(on)
@@ -574,6 +601,12 @@ nh.on_snapshot(function(snap, action)
 			end
 			core.log("action", ("[nhv] push refused: boulder %d,%d, hero %d,%d; beyond (%d,%d): %s"):format(
 				action.tx, action.ty, h.x, h.y, bx, by, beyond))
+		end
+	elseif action and action.kind == "jump" then
+		-- (you jumped: the body hops to where NetHack landed you - perhaps
+		-- short of where you aimed, stopped by something on the way)
+		if action.from_x and (h.x ~= action.from_x or h.y ~= action.from_y) then
+			player_mod.hop(player, U.tile_center(h.x, h.y, terrain.stand_y(h.x, h.y)))
 		end
 	elseif action and action.kind == "hmove" then
 		if h.x == action.from_x and h.y == action.from_y then

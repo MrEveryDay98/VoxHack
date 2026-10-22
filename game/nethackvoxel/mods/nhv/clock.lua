@@ -173,7 +173,7 @@ end
 -- Do an action that takes game time (charged when its result arrives).
 -- (aimed first: whatever it throws or zaps goes where the crosshair points;
 -- see actions.aim)
-local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true,
+local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true, jump = true,
 	search = true, search_count = true}
 function clock.act(keys, info)
 	local player = nhv.player.get()

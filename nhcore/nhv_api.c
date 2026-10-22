@@ -790,6 +790,22 @@ nhv_get_inventory(nhv_obj *buf, int max)
 }
 
 NHV_API int
+nhv_jump_squares(int *xy, int max)
+{
+    coordxy xs[64], ys[64];
+    int i, n;
+
+    if (!safe_to_read())
+        return -2;
+    if (max > 64)
+        max = 64;
+    n = nhv_jump_targets(xs, ys, max);
+    for (i = 0; i < n; i++)
+        xy[2 * i] = xs[i], xy[2 * i + 1] = ys[i];
+    return n;
+}
+
+NHV_API int
 nhv_get_floor_objects(int x, int y, nhv_obj *buf, int max)
 {
     struct obj *otmp;
