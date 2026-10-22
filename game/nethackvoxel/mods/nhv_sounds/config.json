@@ -890,5 +890,13 @@
   "effects": 100,
   "music": 60,
   "voices": 100
+ },
+ "acoustics": {
+  "room": {
+   "wet": 0.65
+  },
+  "corridor": {
+   "wet": 0.9
+  }
  }
 }
