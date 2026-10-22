@@ -360,6 +360,12 @@ local DUNGEON_MUSIC = {
 	["Vlad's Tower"] = "music_vlad", ["The Elemental Planes"] = "music_endgame",
 }
 
+-- special levels (NetHack's names for them) with music of their own
+local LEVEL_MUSIC = {
+	minetn = "music_minetown", oracle = "music_oracle", bigrm = "music_bigroom",
+	astral = "music_astral",
+}
+
 local function music_for(h)
 	if U.has(h.flags, U.HERO.DEAD) then
 		-- (dying - NetHack's last questions: silence; music_death waits for
@@ -369,8 +375,12 @@ local function music_for(h)
 		return "music_shop"
 	elseif U.has(h.flags, U.HERO.INTEMPLE) and sound.cfg.hooks.music_temple then
 		return "music_temple"
-	elseif (h.level_desc or ""):find("Astral") and sound.cfg.hooks.music_astral then
-		return "music_astral"
+	end
+	-- a special level with its own music (Minetown, the Oracle...), when it
+	-- has some; else the dungeon branch's
+	local level = LEVEL_MUSIC[h.dnum and core.nh_level_proto(h.dnum, h.dlevel) or ""]
+	if level and sound.cfg.hooks[level] then
+		return level
 	end
 	return DUNGEON_MUSIC[h.dungeon_name] or "music_dungeon"
 end
