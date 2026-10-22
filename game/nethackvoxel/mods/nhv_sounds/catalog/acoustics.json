@@ -12,7 +12,7 @@
   {"key": "gehennom", "label": "Gehennom", "help": "Anywhere in Gehennom.", "preset": "MOOD_HELL", "wet": 0.4, "follow": true},
   {"key": "vlad", "label": "Vlad's Tower", "help": "Anywhere in Vlad's Tower.", "preset": "CASTLE_HALL", "wet": 0.4, "follow": true},
   {"key": "planes", "label": "Elemental Planes", "help": "The endgame.", "preset": "MOOD_HEAVEN", "wet": 0.4, "follow": true},
-  {"key": "corridor", "label": "Corridor", "help": "A narrow passage (measured).", "preset": "STONECORRIDOR", "wet": 0.35, "follow": true},
+  {"key": "corridor", "label": "Corridor", "help": "A hallway between rooms: NetHack's corridor squares.", "preset": "STONECORRIDOR", "wet": 0.55, "follow": true},
   {"key": "open", "label": "Open sky", "help": "No ceiling overhead (measured).", "preset": "PLAIN", "wet": 0.15, "follow": false},
   {"key": "room", "label": "Room", "help": "Anywhere else: rooms and caverns, bigger ones ringing longer.", "preset": "STONEROOM", "wet": 0.35, "follow": true}
  ],

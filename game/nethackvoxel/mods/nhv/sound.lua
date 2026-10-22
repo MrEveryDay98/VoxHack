@@ -742,21 +742,15 @@ for i = 0, 7 do
 end
 local UP = vector.new(0, 1, 0)
 
--- the space around the hero: average distance to the walls and the
--- narrowest width (in squares), and whether there's a ceiling
+-- the space around the hero: average distance to the walls (in squares),
+-- and whether there's a ceiling
 local function measure(p)
 	local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
-	local d = {}
 	local sum = 0
-	for i, dir in ipairs(DIRS) do
-		d[i] = reach(eye, dir, 30)
-		sum = sum + d[i]
+	for _, dir in ipairs(DIRS) do
+		sum = sum + reach(eye, dir, 30)
 	end
-	local narrow = math.huge
-	for i = 1, 4 do
-		narrow = math.min(narrow, d[i] + d[i + 4])
-	end
-	return sum / #DIRS / U.TILE, narrow / U.TILE, reach(eye, UP, 18) < 18
+	return sum / #DIRS / U.TILE, reach(eye, UP, 18) < 18
 end
 
 local last_acoustics = nil
@@ -771,7 +765,7 @@ local function update_acoustics(dtime)
 	local h = nh.snap and nh.snap.hero
 	local setting = "preset=NONE"
 	if p and h then
-		local radius, narrow, roofed = measure(p)
+		local radius, roofed = measure(p)
 		local chosen
 		local function try(key, when)
 			if chosen or not when then
@@ -788,7 +782,10 @@ local function update_acoustics(dtime)
 		try("shop", U.has(h.flags, U.HERO.INSHOP))
 		local branch = BRANCH_KIND[h.dungeon_name or ""]
 		try(branch or "", branch ~= nil)
-		try("corridor", narrow <= 1.7)
+		-- (a hallway: NetHack's corridor squares - not the edge of a room,
+		-- however close its walls)
+		local typ = h.x and nh.snap.map.typ[U.idx(h.x, h.y)]
+		try("corridor", typ == U.TYP.CORR or typ == U.TYP.SCORR)
 		try("open", not roofed)
 		try("room", true)
 		if chosen then
