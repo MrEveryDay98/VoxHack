@@ -470,10 +470,20 @@ local function boulder_w(map, tx, ty, h, hero)
 	return h * 0.45
 end
 
+-- Hallucinating, NetHack draws some random object where a boulder lies (and
+-- may draw a boulder over something else): whether it's solid goes by what
+-- really lies on top there, so it keeps a boulder's box - pushed, squeezed
+-- past and bumped into as ever - whatever it looks like
+local function real_boulder(tx, ty)
+	local top = mobs.floor_items(tx, ty)[1]
+	return top and core.nh_obj_name(top.otyp) == "boulder" or false
+end
+
 local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
 	local ball = mobs.ball
+	local hallu = snap.hero and U.has(snap.hero.flags, U.HERO.HALLU)
 	match_moves(map, snap.hero)
 	for tx = 1, U.COLNO - 1 do
 		for ty = 0, U.ROWNO - 1 do
@@ -515,16 +525,22 @@ local function update_objects(snap)
 						fresh = true
 					end
 				end
-				local bw = name == "boulder" and boulder_w(map, tx, ty, h, snap.hero) or nil
+				local boulder = name == "boulder"
+				if hallu and gi.kind == "obj" then
+					boulder = real_boulder(tx, ty)
+				end
+				local bw = boulder and boulder_w(map, tx, ty, BOULDER_H, snap.hero) or nil
 				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
 					local props = sprite_props(tile, h)
 					e.bw = bw
-					if name == "boulder" then
+					if boulder then
 						-- boulders are solid; pushing into one tries to roll it
+						-- (its box a boulder's size from the floor up, even
+						-- when it looks like something smaller: hallucinating)
 						local w = bw
 						props.physical = true
 						props.collide_with_objects = true
-						props.collisionbox = {-w, -h / 2, -w, w, h / 2, w}
+						props.collisionbox = {-w, -h / 2, -w, w, BOULDER_H - h / 2, w}
 					else
 						props.physical = false
 						props.collide_with_objects = false
@@ -543,7 +559,7 @@ local function update_objects(snap)
 					end
 				end
 				if e then
-					e.x, e.y, e.boulder = tx, ty, name == "boulder"
+					e.x, e.y, e.boulder = tx, ty, boulder
 					if fresh then
 						fade_in(e)
 					end
