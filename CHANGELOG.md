@@ -2,6 +2,10 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.4 (alpha) - 2026-10-22
+
+- **Hallucinated boulders stay solid.** Hallucinating, a boulder drawn as some random object lost its hitbox and you could walk through it. It now keeps a boulder's full box (push it, squeeze past it, bump into it as ever), whatever it looks like; something merely pictured as a boulder isn't solid.
+
 ## v0.7.3 (alpha) - 2026-10-21
 
 - **Jumping.** Hold Space (a tap still waits a turn): the squares you can jump to light up green on the floor - a Knight's L-shaped knight's moves, or any nearby square with jumping boots - and the one you look at glows brighter. Let go to jump there; you hop across. NetHack's own rules decide everything, and when you can't jump right now (burdened, levitating, held...) it says why.

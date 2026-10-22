@@ -12,7 +12,7 @@ local title = {}
 nhv.title = title
 -- this copy's version: its release tag (bump it for each release - the
 -- update check compares it with GitHub's releases, update.lua)
-title.TAG = "v0.7.3"
+title.TAG = "v0.7.4"
 title.VERSION = "VoxHack " .. title.TAG .. " alpha"
 
 local FORM, NEW, CONFIRM = "nhv:title", "nhv:newchar", "nhv:replace"
