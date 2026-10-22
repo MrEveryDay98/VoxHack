@@ -2,6 +2,13 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.6 (alpha) - 2026-10-22
+
+- **The Oracle speaks.** Her consultations are read aloud with SAM from where she sits: a minor one's rumor, and a major one's whole oracle.
+- **Priests greet you aloud** ("Pilgrim, you enter a sacred place!"). Lines the game puts together as it goes are now spoken in their speaker's voice too.
+- **Exploding lights flash the screen.** A yellow light's blast of light (or a black light's kaleidoscopic one) turns the screen white at once, fading away slowly.
+- The mail daemon speaks live too; "Delphi" is pronounced properly; new coin sounds.
+
 ## v0.7.5 (alpha) - 2026-10-22
 
 - **Minetown has its own music** (and the Big Room). Special levels with a track of their own now play it, instead of their branch's music.
