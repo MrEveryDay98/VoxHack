@@ -123,11 +123,21 @@ donhvmove(void)
     if (!isok(x, y) || (!dx && !dy) || abs(dx) > 1 || abs(dy) > 1)
         return nhv_ok();
     mtmp = m_at(x, y);
-    if (mtmp && canspotmon(mtmp) && !M_AP_TYPE(mtmp)
-        && (!mtmp->mtame || nhv_cmd_args[2])
+    /* someone there: the body walks in among them (squares are shared). One
+       you can't see (invisible, you're blind...) too: NetHack would stop
+       you there ("Wait!  There's something there you can't see!") and the
+       host would put your body back on your square, again and again, with
+       it in the way - you'd be held next to it. You're told, as in
+       NetHack, and go on. (A mimic in disguise still stops you.) */
+    if (mtmp && !M_AP_TYPE(mtmp)
+        && (!canspotmon(mtmp) || !mtmp->mtame || nhv_cmd_args[2])
         && !mtmp->isshk
         && !u.ustuck && !u.utrap && !u.uswallow && !u.usteed
         && test_move(u.ux, u.uy, dx, dy, TEST_MOVE)) {
+        if (!canspotmon(mtmp) && !glyph_is_invisible(levl[x][y].glyph)) {
+            Norep("Wait!  There's something there you can't see!");
+            map_invisible(x, y);
+        }
         nhv_walking = TRUE;
         teleds(x, y, TELEDS_ALLOW_DRAG);
         nhv_walking = FALSE;

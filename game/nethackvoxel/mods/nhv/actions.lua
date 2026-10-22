@@ -342,6 +342,18 @@ end
 
 local ATTACK_CONE = 0.6 -- radians either side of the crosshair
 
+-- how far off the crosshair monster body `body` is, for your swing. A body
+-- touching yours counts as straight ahead: you can walk into one you can't
+-- see (nothing to bump into), and then its middle is beside or behind you,
+-- or right where you stand (no direction at all) - it's hit wherever you look
+local function swing_angle(look, body, pos)
+	local dx, dz = body.pos.x - pos.x, body.pos.z - pos.z
+	if math.sqrt(dx * dx + dz * dz) < (body.r or 0.4) + nhv.sim.HERO_R then
+		return 0
+	end
+	return angle_between(look, vector.subtract(body.pos, pos))
+end
+
 -- the perceived monster your swing would hit: within reach of your body
 -- (the same reach monsters have on you: sim.in_reach) and closest to the
 -- crosshair
@@ -353,7 +365,7 @@ local function attack_target(player, prefer_id)
 		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 		if body then
 			if nhv.sim.in_reach(e.id, pos) then
-				local a = angle_between(look, vector.subtract(body.pos, pos))
+				local a = swing_angle(look, body, pos)
 				if e.id == prefer_id then
 					a = a - 0.3
 				end
@@ -377,7 +389,7 @@ local function attack_target(player, prefer_id)
 	end
 	for id, body in pairs(nhv.sim.mons) do
 		if not perceived[id] and nhv.sim.in_reach(id, pos) then
-			local a = angle_between(look, vector.subtract(body.pos, pos))
+			local a = swing_angle(look, body, pos)
 			if a < ATTACK_CONE and (not best_a or a < best_a) then
 				best, best_a = {id = id}, a
 			end
