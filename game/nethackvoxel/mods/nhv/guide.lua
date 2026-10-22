@@ -24,6 +24,7 @@ Every game is different: the dungeon, its monsters and its treasures are made an
 W A S D: walk
 Mouse: look around
 Space: wait a turn; in a pit, climb out (facing its edge)
+Hold Space: jump (Knights, jumping boots) - green squares show where you can land; look at one and let go
 Z: the big map (Z again to close it)
 Right click a door: open or close it
 Walk into stairs or a ladder (or right click it): take it

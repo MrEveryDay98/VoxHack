@@ -2,6 +2,12 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.3 (alpha) - 2026-10-21
+
+- **Jumping.** Hold Space (a tap still waits a turn): the squares you can jump to light up green on the floor - a Knight's L-shaped knight's moves, or any nearby square with jumping boots - and the one you look at glows brighter. Let go to jump there; you hop across. NetHack's own rules decide everything, and when you can't jump right now (burdened, levitating, held...) it says why.
+- **Invisible monsters no longer hold you in place.** Stepping where an unseen monster stood was refused and your body put back, again and again: with invisible monsters around you couldn't get away. You now walk in among them, and NetHack tells you something's there.
+- **Pushed boulders stay in step.** A boulder could be seen (and bump into) where NetHack no longer had it, a square behind where it really was, blocking your way.
+
 ## v0.7.2 (alpha) - 2026-10-21
 
 - **Chatting is reliable.** Right-clicking a peaceful monster always chats with it, and holding right click always offers Chat. Before, a monster right in front of you could be two squares away on NetHack's map, or on your own square, and the right click acted on your own square instead; or it had just stepped aside, and you talked to empty air.
