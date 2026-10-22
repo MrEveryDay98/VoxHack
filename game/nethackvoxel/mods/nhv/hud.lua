@@ -131,10 +131,11 @@ local function status_text(h)
 		table.concat(conds, " ")):gsub("%s+$", ""))
 end
 
--- under the bars, top left: where you are and the numbers you check most
--- (also: the text before the gold, and the gold, for its flash)
+-- under the bars, top left: the numbers you check most (the level is under
+-- the corner map: hud.level_text) (also: the text before the gold, and the
+-- gold, for its flash)
 function hud.info_text(h)
-	local before = (h.level_desc or "") .. "   "
+	local before = ""
 	local gold = ("$:%d"):format(h.gold or 0)
 	return before .. gold .. ("   AC:%d   XL:%d/%d"):format(h.ac or 0, h.xlvl or 0, h.xp or 0),
 		before, gold
@@ -442,10 +443,36 @@ local function corner_scale()
 	return tonumber(core.settings:get("nhv_map_scale")) or 3
 end
 
+-- under the corner map: the dungeon level ("Dlvl:3"), and the branch when
+-- it isn't the main dungeon
+function hud.level_text(h)
+	local t = h.level_desc or ""
+	if h.dungeon_name and h.dungeon_name ~= "" and h.dungeon_name ~= "The Dungeons of Doom" then
+		t = t .. "  (" .. h.dungeon_name .. ")"
+	end
+	return t
+end
+local level_shown = nil
+
+-- the level's line under the corner map (not over the big map; at the top
+-- when the corner map is hidden)
+local function place_level(player)
+	if not hud.ids.level then
+		return
+	end
+	local text = (not hud.big_map and nh.snap and nh.snap.hero) and hud.level_text(nh.snap.hero) or ""
+	if text ~= level_shown then
+		level_shown = text
+		player:hud_change(hud.ids.level, "text", text)
+	end
+	player:hud_change(hud.ids.level, "offset", {x = -10, y = 10 + U.ROWNO * corner_scale() + 6})
+end
+
 local function place_map(player)
 	if not hud.ids.map then
 		return
 	end
+	place_level(player)
 	if hud.big_map then
 		local s = big_map_scale(player)
 		player:hud_change(hud.ids.map, "position", {x = 0.5, y = 0.45})
@@ -579,6 +606,11 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
 	})
+	hud.ids.level = player:hud_add({
+		type = "text", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
+		offset = {x = -10, y = 10 + U.ROWNO * 3 + 6}, number = 0xFFFFFF, z_index = 42, text = "",
+	})
+	level_shown = nil
 	hud.ids.flash = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png",
@@ -939,6 +971,7 @@ nh.on_snapshot(function(snap)
 	else
 		player:hud_change(hud.ids.map, "text", map_png(snap))
 	end
+	place_level(player)
 	if last_hp and h.hp < last_hp then
 		hud.flash("#FF2020", 0.5 + (last_hp - h.hp) / math.max(1, h.hpmax) * 2.5)
 	elseif last_hp and h.hp >= last_hp + math.max(3, h.hpmax / 5) then
