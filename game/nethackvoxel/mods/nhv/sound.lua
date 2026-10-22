@@ -495,14 +495,25 @@ end
 
 -- The SAM settings for a line, or nil if its speaker isn't voiced by SAM.
 -- who (optional): {m_id=, female=} of the monster saying it
+local sam_settings
 local function sam_for(id, who)
 	local e = dialogue[id]
-	-- (NetHack options > Spoken lines off: SAM says nothing)
-	if not e or not nhv.nhopts.get("sam_voices") then
+	if not e then
 		return nil
 	end
 	local ln = sound.cast.lines[id] or {}
-	local sc = sound.cast.speakers[ln.cast or e.speaker]
+	return sam_settings(ln.cast or e.speaker, who, ln)
+end
+
+-- the SAM settings for a speaker of the voice casting (ln: a line's own
+-- settings, if any), or nil if it isn't voiced live by SAM
+function sam_settings(speaker, who, ln)
+	ln = ln or {}
+	-- (NetHack options > Spoken lines off: SAM says nothing)
+	if not nhv.nhopts.get("sam_voices") then
+		return nil
+	end
+	local sc = sound.cast.speakers[speaker]
 	local ss = type(sc) == "table" and sc.sam
 	if type(ss) ~= "table" or not ss.live then
 		return nil
@@ -591,6 +602,25 @@ local function play_voice(id, pos, text, who)
 	return true
 end
 
+-- Lines that aren't in the dialogue catalog (put together as the game
+-- goes - a priest's greeting, the Oracle's rumors...) are still read by
+-- SAM, in the voice of whoever says them: the monster's name -> speaker
+local SPEAKER_BY_MON = {
+	Oracle = "The Oracle", priest = "Priest", priestess = "Priest",
+	["high priest"] = "Priest", ["high priestess"] = "Priest",
+	shopkeeper = "Shopkeeper", ["Wizard of Yendor"] = "Wizard of Yendor",
+	["mail daemon"] = "Mail daemon", deity = "God",
+}
+
+-- where the Oracle sits (her consultations are read from there)
+local function oracle_pos()
+	for _, e in pairs(nhv.mobs and nhv.mobs.mons or {}) do
+		if e.mon and e.mon.mndx and core.nh_mon_name(e.mon.mndx) == "Oracle" and e.obj:get_pos() then
+			return e.obj:get_pos(), e.id
+		end
+	end
+end
+
 local function voice_for_text(text)
 	text = text:gsub('^"', ""):gsub('"$', "")
 	for _, sp in ipairs(spoken_pats) do
@@ -607,18 +637,43 @@ local sam_quest = nil -- {st=, lines={}, window=bool}
 
 local function finish_sam_quest()
 	if sam_quest and #sam_quest.lines > 0 then
-		speak_sam(sam_quest.st, table.concat(sam_quest.lines, " "))
+		speak_sam(sam_quest.st, table.concat(sam_quest.lines, " "), sam_quest.pos)
 	end
 	sam_quest = nil
 end
 
+-- the Oracle's major consultation comes as a text window that opens with
+-- one of these: she reads the rest
+local ORACLE_INTRO = {
+	["The Oracle meditates for a moment and then intones:"] = true,
+	["The Oracle scornfully takes all your gold and says:"] = true,
+}
+local window_first = false -- (a text window just opened: its first line next)
+
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
+		if ev.kind == "text_begin" then
+			window_first = true
+		elseif ev.kind == "text_line" and window_first then
+			window_first = false
+			if ORACLE_INTRO[ev.text] and not sam_quest then
+				local pos, m_id = oracle_pos()
+				local st = sam_settings("The Oracle", {m_id = m_id or 0})
+				if st then
+					-- (the intro line itself isn't hers to read: begun next)
+					sam_quest = {st = st, lines = {}, window = true, pos = pos, skip = 1}
+				end
+			end
+		end
 		if sam_quest then
 			if ev.kind == "text_begin" then
 				sam_quest.window = true
 			elseif ev.kind == "text_line" and sam_quest.window then
-				table.insert(sam_quest.lines, ev.text)
+				if (sam_quest.skip or 0) > 0 then
+					sam_quest.skip = sam_quest.skip - 1
+				else
+					table.insert(sam_quest.lines, ev.text)
+				end
 			elseif ev.kind == "text_end" and sam_quest.window then
 				finish_sam_quest()
 			elseif ev.kind == "message" and not sam_quest.window then
@@ -658,9 +713,15 @@ nh.on_event(function(evs)
 				if mon and mon.obj:get_pos() then
 					body = mon.obj:get_pos()
 				end
+				local who = {m_id = tonumber(parts[2]) or 0, female = parts[4] == "1"}
 				if id then
-					play_voice(id, body, text,
-						{m_id = tonumber(parts[2]) or 0, female = parts[4] == "1"})
+					play_voice(id, body, text, who)
+				elseif SPEAKER_BY_MON[parts[3] or ""] then
+					-- (not in the catalog: SAM reads it in its speaker's voice)
+					local st = sam_settings(SPEAKER_BY_MON[parts[3]], who)
+					if st then
+						speak_sam(st, text, body)
+					end
 				end
 			elseif kind == "quest" then
 				local ids = quest_ids[(parts[2] or "") .. "/" .. (parts[3] or "")]

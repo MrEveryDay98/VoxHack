@@ -96,12 +96,24 @@ nhv_snd_ambience(int32_t action, int32_t id, int32_t proximity)
 
 static void
 nhv_snd_verbal(char *text, int32_t gender, int32_t tone, int32_t vol,
-               int32_t moreinfo UNUSED)
+               int32_t moreinfo)
 {
     unsigned id = (unsigned) gv.voice.serialno;
     const char *who = "";
     struct monst *m;
 
+    /* the Oracle's rumors are said with no speaker set, only her voice:
+       she's the one on the level (so the host knows her voice and where
+       she sits) */
+    if ((moreinfo & voice_oracle) != 0) {
+        for (m = fmon; m; m = m->nmon)
+            if (m->data == &mons[PM_ORACLE] && !DEADMONSTER(m)) {
+                id = m->m_id;
+                break;
+            }
+        if (!m)
+            who = "Oracle";
+    }
     for (m = fmon; m; m = m->nmon)
         if (m->m_id == id && !DEADMONSTER(m)) {
             who = pmname(m->data, m->female ? FEMALE : MALE);
