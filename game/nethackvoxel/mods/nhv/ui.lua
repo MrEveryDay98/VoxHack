@@ -57,6 +57,30 @@ local function wrap(text, width)
 	return table.concat(out, "\n")
 end
 
+-- an item's colour once you know it's blessed or cursed (red: cursed,
+-- light blue: blessed); nil: as usual
+local BUC_COLOR = {cursed = "#FF4848", blessed = "#80C8FF"}
+function ui.buc_color(o)
+	local f = o and o.flags or 0
+	if U.has(f, U.OBJ.CURSED_KNOWN) then
+		return BUC_COLOR.cursed
+	elseif U.has(f, U.OBJ.BLESSED_KNOWN) then
+		return BUC_COLOR.blessed
+	end
+end
+
+-- an item's name, in its blessed/cursed colour
+local function buc_text(o, text)
+	local c = ui.buc_color(o)
+	return c and core.colorize(c, text) or text
+end
+
+-- a button's text in an item's blessed/cursed colour
+local function buc_button_style(o, field)
+	local c = ui.buc_color(o)
+	return c and ("style[%s;textcolor=%s]"):format(field, c) or ""
+end
+
 local function inventory_by_letter()
 	local inv = {}
 	for _, o in ipairs((nh.snap and nh.snap.inventory) or {}) do
@@ -155,6 +179,7 @@ local function key_dialog(req)
 			fs[#fs + 1] = ("item_image[0,%f;0.8,0.8;%s]"):format(yy, nhv_tiles.item(o.tile))
 		end
 		local label = o and (c .. " - " .. o.name) or c
+		fs[#fs + 1] = buc_button_style(o, "key_" .. c:byte())
 		fs[#fs + 1] = ("button[1,%f;8,0.8;key_%d;%s]"):format(yy, c:byte(), E(label))
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
@@ -729,7 +754,7 @@ function ui.item_row(fs, o, x, y, field, w, text)
 	fs[#fs + 1] = ("item_image_button[%f,%f;0.7,0.7;%s;%s;]"):format(x, y, nhv_tiles.item(o.tile), field)
 	-- left-aligned text over an invisible button
 	fs[#fs + 1] = ("image_button[%f,%f;%f,0.7;blank.png;%s;]"):format(x + 0.8, y, w, field)
-	fs[#fs + 1] = ("label[%f,%f;%s]"):format(x + 0.9, y + 0.35, E(text))
+	fs[#fs + 1] = ("label[%f,%f;%s]"):format(x + 0.9, y + 0.35, E(buc_text(o, text)))
 	fs[#fs + 1] = ("tooltip[%s;%s]"):format(field, E(o.name))
 end
 ui.CLASS_NAMES = CLASS_NAMES
@@ -821,6 +846,7 @@ local function show_equip_choices(slot)
 	for k, o in ipairs(items) do
 		local yy = 1.1 + (k - 1) * 0.85
 		fs[#fs + 1] = ("item_image[0.5,%f;0.75,0.75;%s]"):format(yy, nhv_tiles.item(o.tile))
+		fs[#fs + 1] = buc_button_style(o, "pick_" .. k)
 		fs[#fs + 1] = ("button[1.4,%f;8,0.75;pick_%d;%s]"):format(yy, k, E(o.invlet .. " - " .. o.name))
 	end
 	if #items == 0 then
@@ -910,7 +936,7 @@ function ui.show_item_menu(invlet)
 	local h = 2.4 + #acts * 0.85
 	local fs = {head(9, h),
 		("item_image[0.4,0.3;1,1;%s]"):format(nhv_tiles.item(o.tile)),
-		("label[1.6,0.8;%s]"):format(E(wrap(o.invlet .. " - " .. o.name, 40)))}
+		("label[1.6,0.8;%s]"):format(E(buc_text(o, wrap(o.invlet .. " - " .. o.name, 40))))}
 	for k, a in ipairs(acts) do
 		fs[#fs + 1] = ("button[0.5,%f;8,0.75;act_%d;%s]"):format(1.6 + (k - 1) * 0.85, k, E(a.label))
 	end
