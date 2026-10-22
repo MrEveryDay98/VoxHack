@@ -501,6 +501,26 @@ missile_event(const char *what, unsigned pid)
     nhv_push_event(NHV_EV_MISSILE, 0, buf);
 }
 
+/* A monster's missile or ray that flies in 3D lands later, in one of the
+   commands below - which run as the hero's commands, so NetHack would
+   take whatever it does for the hero's doing (svc.context.mon_moving off):
+   a monster's arrow killing a watchman would be the hero's murder ("You
+   murderer!", the watch angry), a potion it threw breaking in a shop
+   charged to the hero. While one lands, a monster is acting, as when
+   NetHack's monsters throw in their own turn. */
+static boolean nhv_saved_mon_moving;
+
+static void
+monster_acting(boolean on)
+{
+    if (on) {
+        nhv_saved_mon_moving = svc.context.mon_moving;
+        svc.context.mon_moving = TRUE;
+    } else {
+        svc.context.mon_moving = nhv_saved_mon_moving;
+    }
+}
+
 /* #nhvmhit pid: the missile reached the hero's body */
 int
 donhvmhit(void)
@@ -510,7 +530,9 @@ donhvmhit(void)
 
     if (!f)
         return nhv_ok();
+    monster_acting(TRUE);
     r = nhv_missile_hits_hero(mon_by_id(f->mon_id), f->obj, f->lx, f->ly);
+    monster_acting(FALSE);
     if (r == 0) {
         missile_event("miss", f->pid); /* dodged: it flies on */
     } else {
@@ -529,12 +551,14 @@ donhvmhitm(void)
 
     if (!f)
         return nhv_ok();
+    monster_acting(TRUE);
     if (m && nhv_missile_hits_mon(m, f->obj, f->range)) {
         missile_event("stop", f->pid);
         f->obj = 0;
     } else {
         missile_event("pass", f->pid);
     }
+    monster_acting(FALSE);
     return nhv_ok();
 }
 
@@ -549,7 +573,9 @@ donhvmland(void)
         return nhv_ok();
     if (!isok(x, y))
         x = f->lx, y = f->ly;
+    monster_acting(TRUE);
     nhv_missile_lands(f->obj, x, y);
+    monster_acting(FALSE);
     f->obj = 0;
     missile_event("land", f->pid);
     return nhv_ok();
@@ -708,6 +734,8 @@ donhvrayhit(void)
 
     if (!r)
         return nhv_ok();
+    if (r->type < 0)
+        monster_acting(TRUE);
     if (mid == 0) {
         res = nhv_ray_hits_hero(r->type, r->nd, r->dx, r->dy, r->forcemiss);
     } else {
@@ -717,6 +745,8 @@ donhvrayhit(void)
                                    r->sayhit, r->saymiss)
                 : 0;
     }
+    if (r->type < 0)
+        monster_acting(FALSE);
     ray_event(res == 2 ? "reflect" : res == 3 ? "stop" : res == 1 ? "hit"
                                                                   : "miss",
               r->rid);
@@ -732,12 +762,16 @@ donhvraysq(void)
 
     if (!r)
         return nhv_ok();
+    if (r->type < 0)
+        monster_acting(TRUE);
     for (k = 1; k + 1 < NHV_MAXARGS; k += 2) {
         if (!nhv_cmd_args[k] && !nhv_cmd_args[k + 1])
             break;
         nhv_ray_square(r->type, (coordxy) nhv_cmd_args[k],
                        (coordxy) nhv_cmd_args[k + 1], &r->shopdamage);
     }
+    if (r->type < 0)
+        monster_acting(FALSE);
     return nhv_ok();
 }
 
@@ -749,8 +783,12 @@ donhvrayend(void)
 
     if (!r)
         return nhv_ok();
+    if (r->type < 0)
+        monster_acting(TRUE);
     nhv_ray_end(r->type, (coordxy) nhv_cmd_args[1], (coordxy) nhv_cmd_args[2],
                 r->shopdamage);
+    if (r->type < 0)
+        monster_acting(FALSE);
     r->used = FALSE;
     return nhv_ok();
 }
