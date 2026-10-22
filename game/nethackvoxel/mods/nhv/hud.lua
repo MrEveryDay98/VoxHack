@@ -821,9 +821,12 @@ function hud.fade(to, seconds)
 	fade = {from = hud.fade_level(), to = to, t0 = core.get_us_time(), dur = seconds or 0}
 end
 
-function hud.flash(color, strength, full)
+-- a flash of colour over the screen (full: all of it, else at its edges);
+-- seconds: a long one (an exploding light) starts fully opaque and fades
+-- away slowly
+function hud.flash(color, strength, full, seconds)
 	flash = {color = color or "#FF2020", t0 = core.get_us_time(),
-		strength = math.max(0.2, math.min(1, strength or 1)), full = full}
+		strength = math.max(0.2, math.min(1, strength or 1)), full = full, seconds = seconds}
 end
 
 local tick = 0
@@ -843,11 +846,12 @@ core.register_globalstep(function(dtime)
 		end
 	end
 	if flash then
-		local t = (core.get_us_time() - flash.t0) / 1e6 / FLASH_S
+		local t = (core.get_us_time() - flash.t0) / 1e6 / (flash.seconds or FLASH_S)
 		local tex = "blank.png"
 		if t < 1 then
 			-- (steps of 16 keep the number of different textures small)
-			local a = math.floor((1 - t) * 230 * flash.strength / 16) * 16
+			local k = flash.seconds and (1 - t) ^ 1.5 * 255 or (1 - t) * 230
+			local a = math.min(255, math.floor(k * flash.strength / 16 + (flash.seconds and 0.999 or 0)) * 16)
 			if flash.full then
 				tex = ("[fill:16x16:%s^[opacity:%d"):format(flash.color, a)
 			else

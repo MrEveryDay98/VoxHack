@@ -253,6 +253,14 @@ local function tint(c, strength)
 end
 
 local RULES = {
+	-- a light exploding at you ("You are blinded by a blast of light!", a
+	-- yellow light; "caught in a blast of kaleidoscopic light", a black
+	-- light): the screen goes white at once and fades away slowly
+	{function(t)
+		return t:find("blast of light") or t:find("blast of kaleidoscopic light")
+	end, function()
+		nhv.hud.flash("#ffffff", 1, true, 3)
+	end},
 	-- flashes of light
 	{function(t)
 		return t:find("blinded by") and t:find("flash")
