@@ -27,17 +27,30 @@ settings and high scores stay inside that folder.
 | Input | Action |
 |---|---|
 | WASD + mouse | Move and look |
-| Left click | Attack what's in reach under your crosshair |
+| Space | Wait a turn; **hold to jump** (Knights, jumping boots): look at a green square and let go. In a pit: climb out |
+| Left click | Attack what's in reach under your crosshair (hold to keep attacking) |
 | Shift + left click | Fire your quivered ammo where you look |
 | Right click | Tap: the obvious action for what you point at (open a door, take the stairs, talk). Hold: an action wheel |
-| Hold Shift, Ctrl, Alt, or E | Other wheel options |
+| Shift + right click (hold) | Actions on yourself (pray, rest, sit, engrave, loot, look here...) |
+| Alt + right click (hold) | Use an item (quaff, read, apply, wear, put on, wield...) |
+| Ctrl + right click (hold) | Magic and abilities (turn undead, monster abilities, invoke, skills, spells) |
+| E | Your wielded weapon's action (hold for its wheel) |
+| Middle click | Look at what's under the crosshair |
 | 1-5 | Fire, Kick, Zap, Spell, Eat |
 | F | Pick up (or tap right click while standing on items) |
 | X | Search (hold to keep searching) |
+| Ctrl + X | Search for a number of turns (X stops it) |
+| P | Pay the shopkeeper |
+| G | Advance a skill (when you can) |
 | I | Inventory and equipment |
 | Z | The big overhead map |
 | T | NetHack's command line (`#pray`, `20s`...) |
+| M | Mute or unmute the sound |
+| Esc | The game menu (Help lists every key); closes any window |
+| F1 | Hide or show the HUD |
 | F2 | Look up what you're pointing at on NetHackWiki (F2 again closes it) |
+| F3 | NetHack's commands, each with what it does |
+| F11 / F12 | Fullscreen / screenshot |
 
 Look steeply down or up when zapping, digging or casting to aim down (`>`) or up (`<`).
 
