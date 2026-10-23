@@ -459,7 +459,7 @@ function actions.attack(player, prefer_id)
 	end
 end
 
--- With a pick-axe or mattock in hand, attacking rock or a wall next to you
+-- With a pick-axe or mattock in hand, attacking rock, a wall or a boulder next to you
 -- digs into it, and attacking while looking down digs down (NetHack's
 -- apply; its direction is where you look).
 local DIGGERS = {["pick-axe"] = true, ["dwarvish mattock"] = true}
@@ -489,7 +489,11 @@ function actions.try_dig(player)
 		end
 		local typ = nh.snap.map.typ[U.idx(wx, wy)]
 		local T = U.TYP
-		if not (typ and typ < T.POOL and typ ~= T.IRONBARS and typ ~= T.DOOR and typ ~= T.TREE) then
+		-- (rock or a wall; or a boulder there: digging breaks it up, as
+		-- NetHack's apply does - "the boulder falls apart")
+		local boulder = nhv.mobs.objs[U.idx(wx, wy)]
+		if not (typ and typ < T.POOL and typ ~= T.IRONBARS and typ ~= T.DOOR and typ ~= T.TREE)
+				and not (boulder and boulder.boulder) then
 			return false
 		end
 	end

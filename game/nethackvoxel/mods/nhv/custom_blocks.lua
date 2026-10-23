@@ -419,7 +419,7 @@ local function check_fall(pos, vel, h)
 		local cmap = square_cmap(h)
 		if cmap == "S_pit" then
 			nhv.hud.message("You fall into a pit!")
-			hurt(math.random(6), "fell into a pit")
+			hurt(math.random(6), "falling into a pit")
 		elseif cmap == "S_spiked_pit" then
 			nhv.hud.message("You fall into a pit of spikes!")
 		end
