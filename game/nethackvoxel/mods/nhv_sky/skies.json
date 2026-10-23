@@ -52,6 +52,56 @@
    "cloud_brightness": 1.0
   },
   {
+   "id": "ludios",
+   "name": "Night (Ludios)",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "nhv_sky_back.png",
+     "speed": [
+      0.01,
+      -0.039
+     ],
+     "scale": 1.4,
+     "opacity": 0.85,
+     "tint": "#CAE6F1",
+     "see_through_black": false,
+     "coverage": 1,
+     "softness": 0,
+     "detail": 5,
+     "shade": "#4E6374"
+    },
+    {
+     "kind": "generated",
+     "texture": "nhv_sky_front.png",
+     "speed": [
+      0.02,
+      -0.06
+     ],
+     "scale": 2.0,
+     "opacity": 0.89,
+     "tint": "#FFFFFF",
+     "see_through_black": true,
+     "coverage": 0.61,
+     "softness": 0,
+     "detail": 4,
+     "shade": "#8C8CA6"
+    }
+   ],
+   "horizon": {
+    "color": "#2B00FF",
+    "fade": 1
+   },
+   "pixels": 40,
+   "fog_color": "#111227",
+   "daynight": false,
+   "sun": true,
+   "moon": true,
+   "stars": true,
+   "stars_always": true,
+   "cloud_brightness": 0.2
+  },
+  {
    "id": "sky1",
    "name": "Plane of Fire",
    "layers": [
@@ -206,6 +256,7 @@
   "default": "dusk",
   "fire": "sky1",
   "water": "sky2",
-  "astral": "sky3"
+  "astral": "sky3",
+  "knox": "ludios"
  }
 }
