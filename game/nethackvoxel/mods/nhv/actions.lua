@@ -61,6 +61,12 @@ local WAIT_KEY_US = 600000
 local waiting -- {a=, info=, until_t=}
 
 local function run_now(a, info)
+	-- (answers it gives to NetHack's questions on the way, each to the
+	-- question it's for: ui.lua's queued answers)
+	for _, ans in ipairs(a.answers or {}) do
+		table.insert(nhv.ui.auto_answers, {pattern = ans.pattern, menu = ans.menu, key = ans.key,
+			t = core.get_us_time()})
+	end
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
 	else
@@ -914,7 +920,7 @@ end
 -- Shift + right click: things you do by yourself
 function actions.self_context()
 	local list = {
-		act("Drop many", "D"),
+		act("Drop by type", "D"), -- (NetHack's kinds first: all cursed things...)
 		act("Rest 20 turns", "20s"),
 		act("Pray", ext("pray")),
 		act("Sit", ext("sit")),
@@ -929,11 +935,16 @@ function actions.self_context()
 	return list, nil
 end
 
+-- dropping several things at once: NetHack's D, every kind of item listed
+-- to tick (its first question, which kinds, answered "All types")
+local DROP_MANY = {label = "Drop", keys = "D",
+	answers = {{pattern = "^Drop what type of items", menu = "a"}}}
+
 -- Alt + right click: use an item (NetHack asks which)
 function actions.item_verbs()
 	-- (eating and zapping are on the hotbar)
 	return {
-		act("Quaff", "q"), act("Read", "r"), act("Drop", "d"), act("Throw", "t"),
+		act("Quaff", "q"), act("Read", "r"), DROP_MANY, act("Throw", "t"),
 		act("Apply", "a"), act("Wear", "W"), act("Take off", "T"), act("Put on", "P"),
 		act("Remove", "R"), act("Wield", "w"),
 		act("Swap weapons", "x"), act("Dual wield", ext("twoweapon")),
