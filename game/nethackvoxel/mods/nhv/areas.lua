@@ -445,6 +445,16 @@ local function region_at(tx, ty, map)
 	return nil
 end
 
+-- Is square (tx, ty) inside a hand-built area that's open to the sky? (its
+-- stairs and ladders - which keep their own prefabs - are then open too)
+function areas.in_open_area(tx, ty, map)
+	if nhv.EDITOR then
+		return false
+	end
+	local r = region_at(tx, ty, map)
+	return r ~= nil and area_open(r.t)
+end
+
 -- the built cell at template square (cx, cy) of region r, flipped as the
 -- level is, and an id for it
 local function built_at(r, f, cx, cy)

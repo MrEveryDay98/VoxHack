@@ -519,9 +519,10 @@ local function write_square(data, area, sq)
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		carve_corners(data, area, sq)
-		if terrain.open_area and sq.slot == "stone" then
+		if (terrain.open_area and sq.slot == "stone") or sq.roofless then
 			-- (open to the sky: rock you didn't build in the area stops at
-			-- wall height, not a dark cliff up to where the ceiling would be)
+			-- wall height, not a dark cliff up to where the ceiling would be;
+			-- a way down in an area open to the sky has no ceiling over it)
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
 			clear_from(data, area, vector.new(ox, prefabs.Y0, oz), prefabs.CEIL)
 		end
@@ -763,10 +764,15 @@ local function describe(map, tx, ty)
 	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap,
 		cansee = has_bit(map.flags[i], U.LOC_CANSEE)}
 	sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
-	-- (a way up on a level open to the sky: its own cell, once built)
-	if terrain.open_sky and (sq.slot == "stairs_up" or sq.slot == "ladder_up")
+	-- (a way up on a level open to the sky, or in a hand-built area open to
+	-- it: its own cell, once built; a way down there loses its ceiling -
+	-- write_square)
+	local open_here = terrain.open_sky or nhv.areas.in_open_area(tx, ty, map)
+	if open_here and (sq.slot == "stairs_up" or sq.slot == "ladder_up")
 			and prefabs.custom(sq.slot .. "_sky") then
 		sq.slot = sq.slot .. "_sky"
+	elseif open_here and (sq.slot == "stairs_down" or sq.slot == "ladder_down") then
+		sq.roofless = true
 	end
 	local fs = memcmap and terrain.feature_slot(memcmap)
 	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
