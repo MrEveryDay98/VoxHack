@@ -776,8 +776,15 @@ local function describe(map, tx, ty)
 end
 
 -- The level's wall set (main dungeon, mines, gehennom, knox, sokoban), from
--- the wall sprites NetHack shows for it.
+-- the wall sprites NetHack shows for it - or, with none seen yet (arriving
+-- blind, walls only felt), from where you are, by NetHack's own rule
+-- (display.h's cmap_walls_to_glyph): the Mines, Gehennom, Fort Ludios and
+-- Sokoban have their own walls
 terrain.wall_style = "main"
+local BRANCH_WALLS = {
+	["The Gnomish Mines"] = "mines", ["Gehennom"] = "gehennom",
+	["Fort Ludios"] = "knox", ["Sokoban"] = "sokoban",
+}
 local function detect_wall_style(map)
 	for i, typ in pairs(map.typ) do
 		if typ >= 1 and typ <= T.DBWALL and map.flags[i] % 2 == 1 then
@@ -788,7 +795,8 @@ local function detect_wall_style(map)
 			end
 		end
 	end
-	return nil
+	local h = nhv.nh.snap and nhv.nh.snap.hero
+	return h and (BRANCH_WALLS[h.dungeon_name or ""] or "main") or nil
 end
 
 -- ---------------------------------------------------------------- debris
