@@ -307,6 +307,42 @@ local function regions()
 	return active.regions
 end
 
+-- Is the level's hand-built area open to the sky (you built most of its
+-- floor without a ceiling - a Big Room under the open sky - or with the
+-- invisible Sky block)? Then rock you didn't build there stops at wall
+-- height (terrain.lua).
+local open_cache = {} -- template id -> boolean
+local function area_open(t)
+	if open_cache[t.id] == nil then
+		local cells = areas.get(t.id).cells
+		local floors, roofed = 0, 0
+		for k, typ in pairs(t.typ) do
+			local cell = cells[k]
+			if (typ == T.ROOM or typ == T.ICE) and cell then
+				floors = floors + 1
+				for i, nd in pairs(cell.nodes or {}) do
+					local _, ly = nhv.prefabs.unindex(i)
+					if ly >= nhv.prefabs.CEIL and nd.n ~= "air" and nd.n ~= "nhv:sky" then
+						roofed = roofed + 1
+						break
+					end
+				end
+			end
+		end
+		open_cache[t.id] = floors > 0 and roofed < floors / 2
+	end
+	return open_cache[t.id]
+end
+areas.area_open = area_open
+function areas.open_to_sky()
+	for _, r in ipairs(regions()) do
+		if area_open(r.t) then
+			return true
+		end
+	end
+	return false
+end
+
 -- The special level variants the level you're on was built from (as NetHack
 -- reported them: "bigrm-6", "medusa-2", ...), as a set; empty for an
 -- ordinary level.

@@ -434,6 +434,10 @@ local OPEN_SKY = {
 	["medusa-1"] = true, ["medusa-2"] = true, ["medusa-3"] = true, ["medusa-4"] = true,
 }
 terrain.open_sky = false
+-- open to the sky as the level was built: an open-sky level, or a hand-built
+-- area without a roof over most of its floor (areas.open_to_sky) - unbuilt
+-- rock stops at wall height there (write_square)
+terrain.open_area = false
 
 local function level_open_sky()
 	if nhv.EDITOR or not nhv.areas or not nhv.areas.level_variants then
@@ -515,6 +519,12 @@ local function write_square(data, area, sq)
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		carve_corners(data, area, sq)
+		if terrain.open_area and sq.slot == "stone" then
+			-- (open to the sky: rock you didn't build in the area stops at
+			-- wall height, not a dark cliff up to where the ceiling would be)
+			local ox, oz = U.tile_origin(sq.tx, sq.ty)
+			clear_from(data, area, vector.new(ox, prefabs.Y0, oz), prefabs.CEIL)
+		end
 		if sq.door_top ~= nil then
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
 			local o = vector.new(ox, prefabs.Y0, oz)
@@ -899,8 +909,9 @@ function terrain.update(map, force)
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
 	local open = level_open_sky()
-	if open ~= terrain.open_sky then
-		terrain.open_sky = open
+	local open_area = open or (not nhv.EDITOR and nhv.areas.open_to_sky()) or false
+	if open ~= terrain.open_sky or open_area ~= terrain.open_area then
+		terrain.open_sky, terrain.open_area = open, open_area
 		force = true
 	end
 	terrain.map = map
