@@ -3,6 +3,8 @@
 **NetHack 3.7 in first person, in a voxel world.** Based on NetHack, running on a
 modified [Luanti](https://www.luanti.org/) engine. Windows only.
 
+![A pillared hall on dungeon level 7, seen in first person, with monsters closing in](site/assets/shot-gameplay.jpg)
+
 **Website:** https://mreveryday98.github.io/VoxHack/ · **itch.io:** https://mreveryday.itch.io/voxhack · **Download:** [latest release](../../releases/latest) · **Changes:** [CHANGELOG](CHANGELOG.md)
 
 NetHack still decides everything: every rule, every die roll, every monster.
