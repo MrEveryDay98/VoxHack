@@ -403,6 +403,7 @@ nhv_get_map(nhv_loc *buf)
 
                 l->back = glyph_is_cmap(bg) ? (unsigned char) glyph_to_cmap(bg)
                                             : 255;
+                l->back_tile = glyph_is_cmap(bg) ? (short) tile_of(bg) : -1;
             }
             {
                 struct trap *t = t_at(x, y);

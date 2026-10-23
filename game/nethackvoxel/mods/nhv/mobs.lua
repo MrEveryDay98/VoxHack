@@ -738,12 +738,14 @@ local function update_features(snap)
 				feature_tiles[name] = tile
 			end
 			-- NetHack remembers only the top thing on a square: an altar,
-			-- fountain... with objects on it is still there once seen
+			-- fountain... with objects on it is still there once seen, in its
+			-- own picture (an altar's alignment: converted, it changes)
 			if not name and U.has(map.flags[i], U.LOC_SEEN) and map.back and map.back[i] ~= 255 then
 				local real = nhv.cmap_name(map.back[i])
 				if FEATURES[real] == false then
 					name = real
-					tile = feature_tile(real)
+					local bt = map.back_tile and map.back_tile[i]
+					tile = (bt and bt >= 0) and bt or feature_tile(real)
 				end
 			end
 			-- a trap you know of under objects or a corpse: its picture still

@@ -169,6 +169,9 @@ typedef struct nhv_loc {
                                Sokoban pit or hole not seen yet (cmap symbol index,
                                S_arrow_trap..), even with objects over it;
                                255 if none */
+    short back_tile;        /* tile index of the true background (back):
+                               an altar's own alignment, under objects
+                               too; -1 if none */
 } nhv_loc;
 
 /* Fills buf[x * NHV_ROWNO + y] for every map location. */
