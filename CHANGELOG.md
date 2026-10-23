@@ -2,6 +2,15 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.8 (alpha) - 2026-10-23
+
+- **Break boulders with a pick-axe:** attack a boulder next to you with a pick-axe or mattock in hand ("The boulder falls apart").
+- **Altars show their alignment** even with things lying on them, and change picture when you convert them.
+- **The Mines' walls** are cave walls even when you arrive blind.
+- **The Big Room under the open sky** (a hand-built area): no ceilings hanging in the air over random ice patches, stairs, melted ice or anything else that changes; the solid rock round an open-sky area stops at wall height instead of standing as a dark cliff.
+- New pictures for the altars (each alignment its own), wolves and werewolves, the mumak, the tinning kit and the can of grease.
+- Fixed: "You are hurt by fell into a pit!".
+
 ## v0.7.7 (alpha) - 2026-10-22
 
 - **Cursed items show red, blessed ones light blue** once you know (the inventory, containers, item menus and the "which item?" lists).
