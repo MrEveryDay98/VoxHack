@@ -522,7 +522,8 @@ local function write_square(data, area, sq)
 		if (terrain.open_area and sq.slot == "stone") or sq.roofless then
 			-- (open to the sky: rock you didn't build in the area stops at
 			-- wall height, not a dark cliff up to where the ceiling would be;
-			-- a way down in an area open to the sky has no ceiling over it)
+			-- in an area open to the sky, the usual prefabs have nothing
+			-- over them)
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
 			clear_from(data, area, vector.new(ox, prefabs.Y0, oz), prefabs.CEIL)
 		end
@@ -743,6 +744,9 @@ local function memcmap_of(map, i)
 	return nil
 end
 
+-- (ways up rise past where the ceiling would be: they keep all of theirs)
+local ROOF_KEPT = {stairs_up = true, ladder_up = true, stairs_up_sky = true, ladder_up_sky = true}
+
 local function describe(map, tx, ty)
 	local i = U.idx(tx, ty)
 	local memcmap = memcmap_of(map, i)
@@ -765,14 +769,11 @@ local function describe(map, tx, ty)
 		cansee = has_bit(map.flags[i], U.LOC_CANSEE)}
 	sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
 	-- (a way up on a level open to the sky, or in a hand-built area open to
-	-- it: its own cell, once built; a way down there loses its ceiling -
-	-- write_square)
-	local open_here = terrain.open_sky or nhv.areas.in_open_area(tx, ty, map)
-	if open_here and (sq.slot == "stairs_up" or sq.slot == "ladder_up")
+	-- it: its own cell, once built)
+	local in_open_area = nhv.areas.in_open_area(tx, ty, map)
+	if (terrain.open_sky or in_open_area) and (sq.slot == "stairs_up" or sq.slot == "ladder_up")
 			and prefabs.custom(sq.slot .. "_sky") then
 		sq.slot = sq.slot .. "_sky"
-	elseif open_here and (sq.slot == "stairs_down" or sq.slot == "ladder_down") then
-		sq.roofless = true
 	end
 	local fs = memcmap and terrain.feature_slot(memcmap)
 	if fs and prefabs.SLOT_INFO[fs].kind == "overlay" then
@@ -797,6 +798,11 @@ local function describe(map, tx, ty)
 	if cell then
 		sq.area_cell = cell
 		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
+	elseif in_open_area and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
+		-- an area open to the sky, its square built from the usual prefab
+		-- (stairs, water where the ice melted, a wall dug out...): nothing
+		-- over it - no ceiling hanging in the air (write_square)
+		sq.roofless = true
 	elseif terrain.DOOR_SLOTS[sq.slot] then
 		-- a door in a hand-built area: from the lintel up, what you built at
 		-- that spot; nothing built there - the door's lintel only
@@ -807,8 +813,7 @@ local function describe(map, tx, ty)
 		end
 	end
 	-- (seeing a square for the first time doesn't change what's built)
-	-- (roofless changing - a way down in an area open to the sky - rebuilds
-	-- it too)
+	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
 		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or ""}, ":")
 	return i, sq
