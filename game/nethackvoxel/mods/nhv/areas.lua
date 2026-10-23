@@ -443,6 +443,12 @@ end
 -- Oracle's centre room has its door on any side): where the template has a
 -- door and this game has wall, the wall you built beside it on the same
 -- wall line is used.
+--
+-- Floor only changing (a Big Room's random ice patches, a corridor where
+-- the template has room floor...): what you built stays, all but its floor,
+-- which is the new terrain's (third result: true) - no ceiling of the usual
+-- prefab's dropped into an area open to the sky.
+local FLOOR = {[T.ROOM] = true, [T.CORR] = true, [T.ICE] = true}
 function areas.cell(tx, ty, typ, map)
 	if nhv.EDITOR or OWN[typ] then
 		return nil
@@ -454,6 +460,12 @@ function areas.cell(tx, ty, typ, map)
 	local ttyp = areas.template_typ(r.t, cx, cy)
 	if ttyp == typ then
 		return built_at(r, f, cx, cy)
+	end
+	if FLOOR[ttyp] and FLOOR[typ] then
+		local cell, id = built_at(r, f, cx, cy)
+		if cell then
+			return cell, id .. "+floor", true
+		end
 	end
 	if ttyp == T.DOOR and typ >= T.VWALL and typ <= T.TRWALL then
 		-- (along the wall line: a north-south wall's squares above and

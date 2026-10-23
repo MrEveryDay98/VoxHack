@@ -492,6 +492,26 @@ local function write_square(data, area, sq)
 		-- part of a hand-built area (a special level's fixed part; areas.lua)
 		local ox, oz = U.tile_origin(sq.tx, sq.ty)
 		prefabs.write_at(data, area, vector.new(ox, prefabs.Y0, oz), sq.area_cell.nodes, 0, true, cid)
+		if sq.area_floor then
+			-- (only the floor changed - ice where you built room floor...: the
+			-- usual prefab's floor, up to the floor layer, in your cell)
+			local floor = {}
+			for i, nd in pairs(prefabs.get(sq.slot).nodes) do
+				local _, ly = prefabs.unindex(i)
+				if ly <= prefabs.FLOOR then
+					floor[i] = nd
+				end
+			end
+			local o = vector.new(ox, prefabs.Y0, oz)
+			for ly = 0, prefabs.FLOOR do
+				for lx = 0, prefabs.W - 1 do
+					for lz = 0, prefabs.W - 1 do
+						data.ids[area:index(o.x + lx, o.y + ly, o.z + lz)] = cid("air")
+					end
+				end
+			end
+			prefabs.write_at(data, area, o, floor, 0, false, styled_cid)
+		end
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		carve_corners(data, area, sq)
@@ -757,9 +777,10 @@ local function describe(map, tx, ty)
 		end
 	end
 	-- a special level's hand-built area covers it? (areas.lua)
-	local cell, cell_id = nhv.areas.cell(tx, ty, sq.typ, map)
+	local cell, cell_id, floor_only = nhv.areas.cell(tx, ty, sq.typ, map)
 	if cell then
 		sq.area_cell = cell
+		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
 	elseif terrain.DOOR_SLOTS[sq.slot] then
 		-- a door in a hand-built area: from the lintel up, what you built at
 		-- that spot; nothing built there - the door's lintel only
