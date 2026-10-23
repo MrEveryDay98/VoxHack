@@ -807,8 +807,10 @@ local function describe(map, tx, ty)
 		end
 	end
 	-- (seeing a square for the first time doesn't change what's built)
+	-- (roofless changing - a way down in an area open to the sky - rebuilds
+	-- it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or "", cell_id or ""}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or ""}, ":")
 	return i, sq
 end
 

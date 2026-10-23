@@ -491,10 +491,15 @@ end
 -- wall line is used.
 --
 -- Floor only changing (a Big Room's random ice patches, a corridor where
--- the template has room floor...): what you built stays, all but its floor,
+-- the template has room floor, floor where the template's game had its
+-- stairs...): what you built stays, all but its floor,
 -- which is the new terrain's (third result: true) - no ceiling of the usual
 -- prefab's dropped into an area open to the sky.
 local FLOOR = {[T.ROOM] = true, [T.CORR] = true, [T.ICE] = true}
+-- (the template's stairs and ladders are where the game it was taken from
+-- put them - most levels place them at random: floor in another game)
+local TEMPLATE_FLOOR = {[T.ROOM] = true, [T.CORR] = true, [T.ICE] = true,
+	[T.STAIRS] = true, [T.LADDER] = true}
 function areas.cell(tx, ty, typ, map)
 	if nhv.EDITOR or OWN[typ] then
 		return nil
@@ -507,7 +512,7 @@ function areas.cell(tx, ty, typ, map)
 	if ttyp == typ then
 		return built_at(r, f, cx, cy)
 	end
-	if FLOOR[ttyp] and FLOOR[typ] then
+	if TEMPLATE_FLOOR[ttyp] and FLOOR[typ] then
 		local cell, id = built_at(r, f, cx, cy)
 		if cell then
 			return cell, id .. "+floor", true
