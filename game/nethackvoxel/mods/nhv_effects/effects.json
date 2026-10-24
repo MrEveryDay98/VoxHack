@@ -318,6 +318,41 @@
    "triggers": [
     "trap_sleeping_gas_trap"
    ]
+  },
+  {
+   "id": "poison_gas",
+   "name": "Poison gas cloud",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "dot"
+     },
+     "color": "#80FF00",
+     "amount": 120,
+     "duration": 1.0,
+     "spread": 1.0,
+     "height": 0.8,
+     "speed": [
+      0.2,
+      1.0
+     ],
+     "life": [
+      1.5,
+      3.0
+     ],
+     "size": [
+      3.0,
+      6.0
+     ],
+     "gravity": -0.1,
+     "glow": 2,
+     "additive": false,
+     "fade": false,
+     "collide": false
+    }
+   ],
+   "triggers": []
   }
  ]
 }
