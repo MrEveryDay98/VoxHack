@@ -237,6 +237,7 @@ end)
 -- One arm swing (right-click doesn't swing by itself; see hud.lua)
 local swing_state = false
 local off_swing_state = false
+local stab_state = false
 function actions.swing()
 	local player = nhv.player.get()
 	if player then
@@ -283,6 +284,27 @@ local function play_swing(hand)
 	return true
 end
 
+-- a stab with the wielded item: a polearm's (or Snickersnee's) hit from
+-- a distance, as NetHack makes it (free: Snickersnee's free hit, which
+-- sounds different)
+function actions.stab(free)
+	local player = nhv.player.get()
+	if player then
+		stab_state = not stab_state
+		player:hud_set_flags({nhv_stab = stab_state})
+		nhv.sound.hook("hero_swing", {free = free})
+	end
+end
+
+-- the wielded item, when #invoke does something with it (Q invokes it)
+function actions.invokable()
+	for _, o in ipairs((nh.snap and nh.snap.inventory) or {}) do
+		if U.has(o.flags, U.OBJ.WIELDED) and U.has(o.flags, U.OBJ.INVOKE) then
+			return o
+		end
+	end
+end
+
 -- a melee swing, after any still to play (one at a time, never two at once)
 function actions.melee_swing(hand)
 	swing_queue[#swing_queue + 1] = hand or 0
@@ -294,6 +316,8 @@ nh.on_event(function(evs)
 			local hand = ev.text:match("^uswing (%d+)")
 			if hand then
 				actions.melee_swing(tonumber(hand))
+			elseif ev.text:match("^upole ") then
+				actions.stab(ev.text:match("^upole 1 ") ~= nil)
 			end
 		end
 	end
@@ -404,22 +428,26 @@ local function attack_target(player, prefer_id)
 	return best
 end
 
--- With a polearm or lance: a monster 2 squares away (NetHack's applying
--- range: squared distance 4, 5 with skill, 8 at expert; NetHack itself
--- says "Too far!" when your skill doesn't reach), in the direction you aim
+-- With a polearm or lance: a monster out of your arm's reach but within
+-- the polearm's - your melee reach (sim.in_reach) times POLE_REACH, by your
+-- skill with it, as NetHack's applying range grows with it (2 squares
+-- straight; skilled, a knight's move; expert, 2 diagonally) - in the
+-- direction you aim. (NetHack takes VoxHack's word for the distance.)
+local POLE_REACH = {basic = 9, skilled = 10, expert = 13}
 local function pole_target(player, prefer_id)
 	local h = hero()
 	if not U.has(h.flags, U.HERO.POLE) then
 		return nil
 	end
+	local mult = U.has(h.flags, U.HERO.POLE8) and POLE_REACH.expert
+		or U.has(h.flags, U.HERO.POLE5) and POLE_REACH.skilled or POLE_REACH.basic
 	local pos = player:get_pos()
 	local look = player:get_look_dir()
 	local best, best_a
 	for _, e in pairs(nhv.mobs.mons) do
-		local d2 = e.id and e.id > 0 and e.x and (e.x - h.x) ^ 2 + (e.y - h.y) ^ 2
-		local p = d2 and d2 >= 4 and d2 <= 8 and e.obj:get_pos()
-		if p then
-			local a = angle_between(look, vector.subtract(p, pos))
+		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
+		if body and nhv.sim.in_reach(e.id, pos, mult) then
+			local a = swing_angle(look, body, pos)
 			if e.id == prefer_id then
 				a = a - 0.3
 			end
@@ -451,9 +479,8 @@ function actions.attack(player, prefer_id)
 		nhv.sound.hook("hero_swing")
 		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
 	elseif far then
-		-- (out of arm's reach, in a polearm's or lance's)
-		actions.swing()
-		nhv.sound.hook("hero_swing")
+		-- (out of arm's reach, in a polearm's or lance's: it stabs as
+		-- NetHack reports the hit, below)
 		nhv.clock.act(ext("nhvpole " .. far.id), {kind = "attack"})
 	elseif actions.try_dig(player) then -- luacheck: ignore 542
 		-- (digging with the wielded pick-axe; it swings)

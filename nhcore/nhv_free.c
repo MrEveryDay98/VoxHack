@@ -292,9 +292,13 @@ donhvtick(void)
 }
 
 /* #nhvpole id: hit a monster further away with the wielded polearm or
-   lance, as applying it does (NetHack checks the range for your skill,
-   that you can see the spot, ...). */
+   lance, as applying it does (the host judged the reach; NetHack checks
+   that you can see the spot, ...). Snickersnee's distance hit is free but
+   once a turn: when it's been used this turn, the click swings instead,
+   letting the turn pass (the next one hits again) - not "The blade doesn't
+   reach there!" over and over with time standing still. */
 coordxy nhv_pole_x, nhv_pole_y;
+boolean nhv_pole_host = FALSE;
 
 int
 donhvpole(void)
@@ -303,6 +307,11 @@ donhvpole(void)
 
     if (!mtmp || !uwep || !is_pole(uwep))
         return nhv_ok();
+    if (u_wield_art(ART_SNICKERSNEE)
+        && svc.context.snickersnee_turn == svm.moves) {
+        nhv_combat_event("uswing", 0, mtmp->m_id, 1);
+        return ECMD_TIME;
+    }
     nhv_pole_x = mtmp->mx, nhv_pole_y = mtmp->my;
     return use_pole(uwep, TRUE);
 }

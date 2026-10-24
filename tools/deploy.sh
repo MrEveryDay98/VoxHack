@@ -14,7 +14,7 @@ ninja -C "$ROOT/build/nhcore"
 [ -f "$LUANTI/build/build.ninja" ] || cmake -S "$LUANTI" -B "$LUANTI/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=TRUE -DBUILD_UNITTESTS=FALSE
 ninja -C "$LUANTI/build"
 
-# 2b. samtool.exe for the sound editor's SAM previews: the engine's own SAM
+# 2b. samtool.exe for the VoxHack Editor's SAM previews: the engine's own SAM
 # code (lib/sam through sam_unity.c, and sam_speech.cpp), so they match
 SND="$LUANTI/src/client/sound"
 TOOL="$ROOT/build/sam/samtool.exe"

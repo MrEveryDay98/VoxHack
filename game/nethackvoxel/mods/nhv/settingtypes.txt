@@ -2,6 +2,15 @@
 # voxel models. (Also in the game: Inventory > Graphics.)
 nhv_flat_sprites (Flat sprites) bool false
 
+# Monsters, objects and you cast hard shadows: your sprites, blacked out, on the floor
+nhv_shadows (Shadows) bool true
+
+# How dark shadows are, in percent
+nhv_shadow_opacity (Shadow opacity) int 60 0 100
+
+# The shadows drawn on the monster and object pictures (off: a copy without them; after a restart)
+nhv_sprite_shadows (Shadows drawn on sprites) bool true
+
 # Interface style: retro (NetHack's IBM PC pixel font, old PC style boxes)
 # or modern (Luanti's own look). (Also in the game: Inventory > Graphics.)
 nhv_interface (Interface style) enum retro retro,modern

@@ -40,6 +40,7 @@ settings and high scores stay inside that folder.
 | Middle click | Look at what's under the crosshair |
 | 1-5 | Fire, Kick, Zap, Spell, Eat |
 | F | Pick up (or tap right click while standing on items) |
+| Q | Invoke what you wield (an artifact's power, a crystal ball) |
 | X | Search (hold to keep searching) |
 | Ctrl + X | Search for a number of turns (X stops it) |
 | P | Pay the shopkeeper |

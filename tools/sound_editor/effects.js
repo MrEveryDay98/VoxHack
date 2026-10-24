@@ -10,7 +10,7 @@ const Effects = (() => {
     ["implode", "Implode (pulled into the middle)"], ["rise", "Rise (float up)"], ["rain", "Rain (fall from above)"],
   ];
   const BUILTIN = ["dot", "spark", "star", "square", "ring"];
-  const GROUPS = [["traps", "Traps"], ["events", "Actions & events"], ["game", "Game"], ["nethack", "NetHack sounds"], ["music", "Music"]];
+  const GROUPS = [["loops", "Loops: play without a break while it lasts"], ["traps", "Traps"], ["events", "Actions & events"], ["game", "Game"], ["nethack", "NetHack sounds"], ["music", "Music"]];
   const LAYER_DEFAULT = {
     shape: "burst", texture: { builtin: "dot" }, color: "#FFFFFF", amount: 30, duration: 0.3, spread: 0.4,
     height: 1, speed: [1, 3], life: [0.5, 1.2], size: [1, 2], gravity: 0, glow: 10, additive: true, fade: true, collide: false,

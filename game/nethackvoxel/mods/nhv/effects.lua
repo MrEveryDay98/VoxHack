@@ -15,6 +15,7 @@
 
 local effects = {list = {}, by_hook = {}}
 nhv.effects = effects
+local U = nhv.util
 
 local MODPATH = core.get_modpath("nhv_effects")
 local DATA = MODPATH and (MODPATH .. DIR_DELIM .. "effects.json")
@@ -83,8 +84,10 @@ local function range(r, d)
 	return tonumber(r[1]) or d[1], tonumber(r[2]) or d[2]
 end
 
--- one layer of particles around pos (the hero's / the event's feet)
-local function spawn_layer(l, pos)
+-- one layer of particles around pos (the hero's / the event's feet);
+-- looping, it never stops (at the same rate: amount per duration) until
+-- core.delete_particlespawner(the id it returns)
+local function spawn_layer(l, pos, looping)
 	local center = vector.add(pos, vector.new(0, tonumber(l.height) or 1, 0))
 	local s1, s2 = range(l.speed, {1, 3})
 	local e1, e2 = range(l.life, {0.5, 1.2})
@@ -106,6 +109,10 @@ local function spawn_layer(l, pos)
 		collisiondetection = l.collide == true,
 		collision_removal = l.collide == true,
 	}
+	if looping then
+		def.amount = math.max(1, def.amount / def.time) -- (per second, forever)
+		def.time = 0
+	end
 	local shape = l.shape or "burst"
 	if shape == "burst" or shape == "ring" then
 		-- start on a small shell and get pushed straight out of it: the
@@ -130,7 +137,7 @@ local function spawn_layer(l, pos)
 			max = vector.add(center, vector.new(spread, 0.2, spread))}
 		def.vel = {min = vector.new(-0.15 * s1, s1, -0.15 * s1), max = vector.new(0.15 * s1, s2, 0.15 * s1)}
 	end
-	core.add_particlespawner(def)
+	return core.add_particlespawner(def)
 end
 
 function effects.play(id, pos)
@@ -199,5 +206,63 @@ function effects.hook(id, opts)
 		effects.play(eid, pos)
 	end
 end
+
+-- Loops: lasting things that the effects with their trigger (the editor's
+-- "Loops" group) play on without a break while they last - NetHack's gas
+-- clouds (a poison breath's, a scroll of stinking cloud's...): every square
+-- the map shows inside one, near you (CLOUD_NEAR squares), as never-ending
+-- spawners, removed when the gas goes (or the effect is edited)
+local CLOUD_LOOPS = {S_poisoncloud = "cloud_poison_gas", S_cloud = "cloud_vapour"}
+local CLOUD_NEAR = 20
+local clouds = {} -- square index -> {eid=, e= (the effect as played), ids={spawner ids}}
+
+local function cloud_stop(i)
+	for _, id in ipairs(clouds[i].ids) do
+		core.delete_particlespawner(id)
+	end
+	clouds[i] = nil
+end
+
+local cloud_scan = 0
+core.register_globalstep(function(dtime)
+	cloud_scan = cloud_scan - dtime
+	if cloud_scan > 0 then
+		return
+	end
+	cloud_scan = 0.25
+	local snap = nhv.nh.snap
+	local map, h = snap and snap.map, snap and snap.hero
+	local live = {}
+	if map and map.glyph and h and h.x then
+		for x = math.max(1, h.x - CLOUD_NEAR), math.min(U.COLNO - 1, h.x + CLOUD_NEAR) do
+			for y = math.max(0, h.y - CLOUD_NEAR), math.min(U.ROWNO - 1, h.y + CLOUD_NEAR) do
+				local i = U.idx(x, y)
+				local gi = nhv.glyph_info(map.glyph[i])
+				local hook = gi.kind == "cmap" and CLOUD_LOOPS[nhv.cmap_name(gi.index)]
+				local eid = hook and effects.by_hook[hook] and effects.by_hook[hook][1]
+				local e = eid and effects.list[eid]
+				if e then
+					live[i] = true
+					if clouds[i] and (clouds[i].eid ~= eid or clouds[i].e ~= e) then
+						cloud_stop(i) -- (another cloud, or the effect was edited)
+					end
+					if not clouds[i] then
+						local c = {eid = eid, e = e, ids = {}}
+						local pos = U.tile_center(x, y, U.STAND_Y)
+						for _, l in ipairs(e.layers or {}) do
+							c.ids[#c.ids + 1] = spawn_layer(l, pos, true)
+						end
+						clouds[i] = c
+					end
+				end
+			end
+		end
+	end
+	for i in pairs(clouds) do
+		if not live[i] then
+			cloud_stop(i)
+		end
+	end
+end)
 
 return effects

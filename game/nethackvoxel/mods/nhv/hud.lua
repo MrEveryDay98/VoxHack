@@ -148,6 +148,7 @@ local msg_shown
 -- leaves out). Hidden under the inventory and other menus.
 local HERE_MAX = 12
 local here_shown
+local invoke_shown
 local fade_shown = nil -- (the fade layer's texture now)
 local function update_here(player, snap)
 	if not hud.ids.here then
@@ -180,6 +181,13 @@ local function update_here(player, snap)
 		local key = text ~= "" and "F  Pick up" or ""
 		player:hud_change(hud.ids.here_key, "text", key)
 		player:hud_change(hud.ids.here_key_shadow, "text", key)
+	end
+	-- (and "Q  Invoke" under it, while what you wield can be invoked)
+	local inv = h and not covered and nhv.actions.invokable() and "Q  Invoke" or ""
+	if inv ~= invoke_shown then
+		invoke_shown = inv
+		player:hud_change(hud.ids.invoke_key, "text", inv)
+		player:hud_change(hud.ids.invoke_key_shadow, "text", inv)
 	end
 end
 
@@ -601,7 +609,15 @@ core.register_on_joinplayer(function(player)
 		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
 		offset = {x = 20, y = 0}, number = 0xFFD040, text = "", z_index = 11,
 	})
-	here_shown = nil
+	hud.ids.invoke_key_shadow = player:hud_add({
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 22, y = 28}, number = 0x000000, text = "", z_index = 10,
+	})
+	hud.ids.invoke_key = player:hud_add({
+		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
+		offset = {x = 20, y = 26}, number = 0xFFD040, text = "", z_index = 11,
+	})
+	here_shown, invoke_shown = nil, nil
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",

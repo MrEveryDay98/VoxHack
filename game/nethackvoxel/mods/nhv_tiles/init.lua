@@ -45,10 +45,18 @@ function nhv_tiles.sheet_texture(s)
 		s % meta.cols, math.floor(s / meta.cols))
 end
 
+-- The sprites' own sheet: nhv_tiles.png, or with the setting
+-- nhv_sprite_shadows off (Options > Drawn shadows), nhv_tiles_noshadow.png -
+-- the same without the shadows drawn on the monsters and objects
+-- (tools/make_noshadow_tiles.py makes it; the game's shadows are real:
+-- nhv/shadows.lua). Read when the game starts.
+nhv_tiles.SPRITES = core.settings:get_bool("nhv_sprite_shadows", true) and "nhv_tiles.png"
+	or "nhv_tiles_noshadow.png"
+
 -- texture string for a NetHack tile
 function nhv_tiles.texture(tile)
 	local s = nhv_tiles.sheet_index(tile)
-	local tex = string.format("nhv_tiles.png^[sheet:%dx%d:%d,%d", meta.cols, meta.rows,
+	local tex = string.format("%s^[sheet:%dx%d:%d,%d", nhv_tiles.SPRITES, meta.cols, meta.rows,
 		s % meta.cols, math.floor(s / meta.cols))
 	if meta.statue[tile] then
 		tex = tex .. nhv_tiles.STONE
@@ -62,6 +70,40 @@ nhv_tiles.FLASH = {
 	w = "^[colorize:#ffffff:70",
 	r = "^[colorize:#ff2020:150",
 }
+
+-- Something invisible that you see anyway (See_invisible): Doom's
+-- spectre fuzz - the monster faint and see-through, with fine specks of it
+-- (darker, and in its own colours) crawling over it: FUZZ_FRAMES noise
+-- masks (nhv_fuzz_<n>.png, FUZZ_RES square, finer than the sprite, which
+-- is scaled up to match), swapped FUZZ_RATE times a second by whoever
+-- draws it (mobs.lua, avatar.lua)
+nhv_tiles.FUZZ_FRAMES = 8
+nhv_tiles.FUZZ_RATE = 14
+nhv_tiles.FUZZ_RES = 64
+nhv_tiles.FUZZ_ALPHA = 120 -- (all of it see-through: 255 = only the gaps are)
+
+function nhv_tiles.fuzz_textures(tile, frame)
+	local n, r = nhv_tiles.FUZZ_FRAMES, nhv_tiles.FUZZ_RES
+	local base = ("%s^[resize:%dx%d"):format(nhv_tiles.texture(tile), r, r)
+	-- (faint, then darker specks, then specks in full colour)
+	local tex = "((" .. base .. "^[opacity:70)"
+		.. ("^(%s^[mask:nhv_fuzz_%d.png^[multiply:#505050^[opacity:200)"):format(base, frame % n)
+		.. ("^(%s^[mask:nhv_fuzz_%d.png^[opacity:150)"):format(base, (frame + 3) % n)
+		.. ")^[opacity:" .. nhv_tiles.FUZZ_ALPHA
+	return {tex, tex .. "^[transformFX"}
+end
+
+-- the fuzz frame for now (everything fuzzy crawls in step)
+function nhv_tiles.fuzz_frame()
+	return math.floor(core.get_us_time() / 1e6 * nhv_tiles.FUZZ_RATE) % nhv_tiles.FUZZ_FRAMES
+end
+
+function nhv_tiles.fuzz_look(tile, height)
+	return {
+		visual = "upright_sprite", textures = nhv_tiles.fuzz_textures(tile, nhv_tiles.fuzz_frame()),
+		visual_size = {x = height, y = height, z = height}, use_texture_alpha = true,
+	}
+end
 
 -- Entity properties that draw a tile `height` nodes tall, either as an
 -- extruded voxel model (default) or, with the setting nhv_flat_sprites,

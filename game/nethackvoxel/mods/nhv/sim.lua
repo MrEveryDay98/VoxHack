@@ -451,8 +451,9 @@ end
 -- Melee reach between you and monster id's body - the same both ways
 -- (what it can hit you from is what you can hit it from): touching plus
 -- REACH, level with you more or less (not you up a staircase over it; a
--- tall one reaches higher), nothing solid in between.
-function sim.in_reach(id, hp)
+-- tall one reaches higher), nothing solid in between. `mult` scales the
+-- arm's reach (a polearm's: actions.lua)
+function sim.in_reach(id, hp, mult)
 	local e = sim.mons[id]
 	if not (e and hp) then
 		return false
@@ -460,7 +461,7 @@ function sim.in_reach(id, hp)
 	local map = nh.snap and nh.snap.map
 	local m = nhv.mobs and nhv.mobs.mons["id" .. id]
 	local up = math.max(1.6, (m and m.h or 1.5) * 0.9)
-	return flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH
+	return flat_dist(e.pos, hp) <= e.r + sim.HERO_R + sim.REACH * (mult or 1)
 		and math.abs(hp.y - feet_y(id)) <= up
 		and (not map or clear_line(map, e.pos, hp))
 end

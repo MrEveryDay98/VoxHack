@@ -55,6 +55,8 @@ U.MON_SELF = 0x200 -- (you: your form's tile and size; avatar.lua)
 U.MON_STEED = 0x400 -- (what you ride; avatar.lua)
 U.MON_SENSED = 0x800 -- (sensed - telepathy...: a ghost when not in plain view)
 U.MON_UNSEEN = 0x1000 -- (with SENSED: NetHack says you don't see it)
+U.MON_SEEINVIS = 0x2000 -- (invisible, seen anyway - See_invisible: see-through fuzz; you too)
+U.MON_HIDDEN = 0x4000 -- (SELF: you're invisible and can't see invisible: not drawn)
 
 -- nhv_hero.flags
 U.HERO = {
@@ -72,12 +74,15 @@ U.HERO = {
 	ASLEEP = 0x1000000, -- (helpless because asleep)
 	TWOWEAP = 0x2000000, -- (dual wielding: the secondary weapon in your left hand)
 	TWOFISTS = 0x4000000, -- (a Monk bare-handed: a fist in each hand)
+	POLE5 = 0x8000000, -- (the polearm reaches squared distance 5: skilled, knight's moves)
+	POLE8 = 0x10000000, -- (... 8: expert, 2 squares diagonally)
 }
 
 -- nhv_obj.flags
 U.OBJ = {
 	WORN = 0x01, WIELDED = 0x02, QUIVERED = 0x04, CURSED_KNOWN = 0x08,
 	BLESSED_KNOWN = 0x10, ALTWEP = 0x20, CONTAINER = 0x40, LIT = 0x80,
+	INVOKE = 0x100, -- (#invoke does something with it: an artifact's power, a crystal ball)
 }
 
 -- object classes (include/objclass.h)

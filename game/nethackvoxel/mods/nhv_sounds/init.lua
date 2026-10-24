@@ -1,2 +1,2 @@
 -- Holds the sounds (sounds/*.ogg), their configuration (config.json) and
--- the catalogs the sound editor uses (catalog/). nhv/sound.lua plays them.
+-- the catalogs the VoxHack Editor uses (catalog/). nhv/sound.lua plays them.

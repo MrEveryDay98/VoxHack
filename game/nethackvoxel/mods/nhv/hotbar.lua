@@ -468,6 +468,16 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
+		if param == "invoke" then
+			-- (Q: #invoke the wielded item - an artifact's power, a crystal
+			-- ball - when it has one; "Q  Invoke" shows on the left then)
+			local o = nhv.actions.invokable()
+			if o and not nhv.ui.open and nh.ready() and not nhv.clock.busy() then
+				nhv.actions.run({label = "Invoke", keys = {{key = "#"}, {text = "invoke"}, {key = o.invlet}}},
+					{kind = "hotkey"})
+			end
+			return true
+		end
 		if param == "enhance" then
 			-- (NetHack's #enhance: the skills you could advance are
 			-- selectable in its list; takes no time)

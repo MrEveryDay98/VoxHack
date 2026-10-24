@@ -1,4 +1,4 @@
-"""SAM voices for the sound editor.
+"""SAM voices for the VoxHack Editor.
 
 Speakers ticked "Speak live with SAM" in Voice casting are voiced by SAM
 (Software Automatic Mouth, 1982), which is built into the game's engine:

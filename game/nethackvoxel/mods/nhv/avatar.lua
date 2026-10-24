@@ -37,6 +37,7 @@ local function drop(key)
 end
 
 -- the sprite `key` with tile m.tile, its middle y nodes above your feet
+-- (invisible but seen - See_invisible: see-through, nhv_tiles.fuzz_look)
 local function show(player, key, m, y)
 	local p = parts[key]
 	if p and (not p.obj:get_pos() or p.obj:get_attach() ~= player) then
@@ -52,9 +53,18 @@ local function show(player, key, m, y)
 		parts[key] = p
 	end
 	local h = scale.height(m.size, m.mndx)
-	if p.tile ~= m.tile or p.h ~= h then
-		p.obj:set_properties(nhv_tiles.look(m.tile, h))
-		p.tile, p.h = m.tile, h
+	local fuzz = U.has(m.flags, U.MON_SEEINVIS)
+	if p.tile ~= m.tile or p.h ~= h or p.fuzz ~= fuzz then
+		if fuzz then
+			p.obj:set_properties(nhv_tiles.fuzz_look(m.tile, h))
+			p.fuzz_frame = nhv_tiles.fuzz_frame()
+		else
+			-- (back from see-through: a solid voxel model again)
+			local props = nhv_tiles.look(m.tile, h)
+			props.use_texture_alpha = false
+			p.obj:set_properties(props)
+		end
+		p.tile, p.h, p.fuzz = m.tile, h, fuzz
 	end
 	y = y + h / 2
 	if p.y ~= y then
@@ -64,6 +74,12 @@ local function show(player, key, m, y)
 		p.y = y
 	end
 	return h
+end
+
+-- your sprite as drawn now ({obj=, tile=, h=, fuzz=}), or nil (shadows.lua)
+function avatar.self()
+	local p = parts.self
+	return p and p.obj:get_pos() and p or nil
 end
 
 function avatar.update(snap)
@@ -89,12 +105,25 @@ function avatar.update(snap)
 	else
 		drop("steed")
 	end
-	if me then
+	-- (invisible, and you can't see invisible: you can't see yourself)
+	if me and not U.has(me.flags, U.MON_HIDDEN) then
 		show(player, "self", me, seat)
 	else
 		drop("self")
 	end
 end
+
+-- your see-through self's fuzz crawls (as monsters' do: mobs.lua)
+core.register_globalstep(function()
+	local p = parts.self
+	if p and p.fuzz and p.obj:get_pos() then
+		local frame = nhv_tiles.fuzz_frame()
+		if p.fuzz_frame ~= frame then
+			p.fuzz_frame = frame
+			p.obj:set_properties({textures = nhv_tiles.fuzz_textures(p.tile, frame)})
+		end
+	end
+end)
 
 nh.on_snapshot(function(snap)
 	avatar.update(snap)

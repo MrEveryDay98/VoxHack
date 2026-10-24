@@ -1,4 +1,4 @@
--- Sound: plays what the sound configuration (made in the sound editor)
+-- Sound: plays what the sound configuration (made in the VoxHack Editor)
 -- attaches to each hook.
 --
 -- Hooks come from code, never from reading messages:
@@ -11,7 +11,7 @@
 --   * music for the place the hero is in.
 --
 -- The configuration is mods/nhv_sounds/config.json; it is re-read when it
--- changes, so edits in the sound editor apply while playing.
+-- changes, so edits in the VoxHack Editor apply while playing.
 
 local U = nhv.util
 local nh = nhv.nh
@@ -220,7 +220,13 @@ function sound.muffle(pos)
 	return blocked / #AROUND
 end
 
--- Play whatever is attached to a hook. opts: volume (0-100), pos.
+-- A free action's sounds (Snickersnee's free hit, which takes no time):
+-- a little slowed, ringing on in quick echoes, as if time held still
+local FREE_PITCH = 0.82
+local FREE_ECHOES = {{0.09, 0.45}, {0.19, 0.22}, {0.30, 0.1}} -- (seconds later, gain)
+
+-- Play whatever is attached to a hook. opts: volume (0-100), pos, free
+-- (a free action's: FREE_*).
 function sound.hook(id, opts)
 	-- (particle effects attach to the same hooks: effects.lua)
 	if nhv.effects then
@@ -249,6 +255,14 @@ function sound.hook(id, opts)
 		params.nhv_muffle = sound.muffle(opts.pos)
 	else
 		params.to_player = p:get_player_name()
+	end
+	if opts.free then
+		params.pitch = params.pitch * FREE_PITCH
+		for _, echo in ipairs(FREE_ECHOES) do
+			local copy = table.copy(params)
+			copy.gain = params.gain * echo[2]
+			core.after(echo[1], core.sound_play, name, copy)
+		end
 	end
 	-- not "ephemeral": those go out unreliably and get dropped when several
 	-- play at once; every effect gets its own handle, so they all overlap
@@ -651,6 +665,7 @@ local ORACLE_INTRO = {
 local window_first = false -- (a text window just opened: its first line next)
 
 nh.on_event(function(evs)
+	local free_action = false
 	for _, ev in ipairs(evs) do
 		if ev.kind == "text_begin" then
 			window_first = true
@@ -680,6 +695,11 @@ nh.on_event(function(evs)
 				table.insert(sam_quest.lines, ev.text)
 			end
 		end
+		-- (Snickersnee's free hit: the sounds after it, of the same action,
+		-- are a free action's - hitting, killing)
+		if ev.kind == "combat" and ev.text:match("^upole 1 ") then
+			free_action = true
+		end
 		if ev.kind == "sound" then
 			local parts = {}
 			for part in (ev.text .. "|"):gmatch("([^|]*)|") do
@@ -700,7 +720,7 @@ nh.on_event(function(evs)
 					end
 					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100, pos)
 				else
-					sound.hook(id, {volume = vol, pos = pos})
+					sound.hook(id, {volume = vol, pos = pos, free = free_action})
 				end
 			elseif kind == "notes" then
 				-- an instrument played: its notes (improvised or a tune)

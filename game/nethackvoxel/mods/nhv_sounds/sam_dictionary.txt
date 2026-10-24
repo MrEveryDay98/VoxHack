@@ -1,5 +1,5 @@
 # SAM's pronunciation dictionary: how SAM says words it gets wrong.
-# Edited in the sound editor (Voice casting > Pronunciation); the game reads
+# Edited in the VoxHack Editor (Voice casting > Pronunciation); the game reads
 # it again whenever it changes.
 #
 #   word = what SAM says instead

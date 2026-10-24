@@ -1,5 +1,5 @@
 """Build the catalog of sound hooks (every event a sound can be attached to)
-for the sound editor and the game.
+for the VoxHack Editor and the game.
 
 Groups:
   nethack   NetHack's own sound effects (Soundeffect(se_*) in its code)

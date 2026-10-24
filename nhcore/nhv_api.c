@@ -439,10 +439,18 @@ nhv_get_monsters(nhv_mon *buf, int max)
                 /* someone sharing the hero's square (the map shows the
                    hero there): as it would look on its own */
                 mtmp = m_at(x, y);
-                if (!mtmp || mtmp == u.ustuck || !canspotmon(mtmp))
+                if (!mtmp || mtmp == u.ustuck)
                     continue;
-                g = mtmp->mtame ? pet_to_glyph(mtmp, rn2_on_display_rng)
-                                : mon_to_glyph(mtmp, rn2_on_display_rng);
+                if (!canspotmon(mtmp)) {
+                    /* one you can't see, remembered there ('I': you
+                       bumped into it, attacked it) - the marker the map
+                       can't show under the hero */
+                    if (!glyph_is_invisible(levl[x][y].glyph))
+                        continue;
+                    g = GLYPH_INVISIBLE;
+                } else
+                    g = mtmp->mtame ? pet_to_glyph(mtmp, rn2_on_display_rng)
+                                    : mon_to_glyph(mtmp, rn2_on_display_rng);
             }
             if (!glyph_is_monster(g) && !glyph_is_invisible(g)
                 && !glyph_is_warning(g))
@@ -466,6 +474,8 @@ nhv_get_monsters(nhv_mon *buf, int max)
                     m.flags |= NHV_MON_DETECTED;
                 if ((mtmp = m_at(x, y)) != 0) {
                     m.id = mtmp->m_id;
+                    if (mtmp->minvis && canseemon(mtmp))
+                        m.flags |= NHV_MON_SEEINVIS;
                     if (sensemon(mtmp))
                         m.flags |= NHV_MON_SENSED
                                    | (canseemon(mtmp) ? 0 : NHV_MON_UNSEEN);
@@ -517,6 +527,8 @@ nhv_get_monsters(nhv_mon *buf, int max)
         m.tile = tile_of(m.glyph);
         m.size = gy.youmonst.data->msize;
         m.flags = NHV_MON_SELF;
+        if (Invis)
+            m.flags |= See_invisible ? NHV_MON_SEEINVIS : NHV_MON_HIDDEN;
         if (n < max)
             buf[n] = m;
         n++;
@@ -706,8 +718,15 @@ nhv_get_hero(nhv_hero *out)
     /* (not when it's the hero, polymorphed, holding on to a monster) */
     if (u.ustuck && !u.uswallow && !sticks(gy.youmonst.data))
         f |= NHV_HERO_HELD;
-    if (uwep && is_pole(uwep))
+    if (uwep && is_pole(uwep)) {
+        int range = nhv_pole_range();
+
         f |= NHV_HERO_POLE;
+        if (range >= 8)
+            f |= NHV_HERO_POLE8;
+        else if (range >= 5)
+            f |= NHV_HERO_POLE5;
+    }
     if (flags.female)
         f |= NHV_HERO_FEMALE;
     if (gm.multi < 0)
@@ -753,6 +772,8 @@ fill_obj(struct obj *otmp, nhv_obj *o)
         o->flags |= NHV_OBJ_WORN;
     if (otmp->owornmask & W_WEP)
         o->flags |= NHV_OBJ_WIELDED;
+    if (carried(otmp) && nhv_invokable(otmp))
+        o->flags |= NHV_OBJ_INVOKE;
     if (otmp->owornmask & W_QUIVER)
         o->flags |= NHV_OBJ_QUIVERED;
     if (otmp->owornmask & W_SWAPWEP)

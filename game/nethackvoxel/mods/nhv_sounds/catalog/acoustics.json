@@ -1,5 +1,5 @@
 {
- "about": "Acoustics: the reverb of each kind of place. The game picks the first kind that applies (top to bottom) and, when 'follow' is on, scales the reverb by the space it measures around the hero. The sound editor's Acoustics tab saves changes in config.json (acoustics); these are the defaults.",
+ "about": "Acoustics: the reverb of each kind of place. The game picks the first kind that applies (top to bottom) and, when 'follow' is on, scales the reverb by the space it measures around the hero. The VoxHack Editor's Acoustics tab saves changes in config.json (acoustics); these are the defaults.",
  "kinds": [
   {"key": "swallowed", "label": "Engulfed", "help": "Inside a monster that swallowed you.", "preset": "SEWERPIPE", "wet": 0.6, "follow": false},
   {"key": "underwater", "label": "Underwater", "help": "Under the water.", "preset": "UNDERWATER", "wet": 0.7, "follow": false},

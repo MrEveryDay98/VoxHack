@@ -31,6 +31,12 @@ local function look_for(e, kind)
 			visual_size = {x = e.h, y = e.h, z = e.h}, use_texture_alpha = true,
 			infotext = "nhv:xray", glow = 6}
 	end
+	if e.fuzz then -- (invisible, seen anyway: see-through, no flashes)
+		local props = nhv_tiles.fuzz_look(e.tile, e.h)
+		props.infotext, props.glow = "", 0
+		e.fuzz_frame = nhv_tiles.fuzz_frame()
+		return props
+	end
 	local props = nhv_tiles.look(e.tile, e.h, kind)
 	props.use_texture_alpha, props.infotext, props.glow = false, "", 0
 	return props
@@ -38,7 +44,7 @@ end
 
 -- visual_size for monster e, squashed/stretched by w
 local function size_for(e, w)
-	if e.ghost then
+	if e.ghost or e.fuzz then
 		w = w or 1
 		return {x = e.h * w, y = e.h / w, z = e.h}
 	end
@@ -267,8 +273,10 @@ local function apply_sprite(e, m)
 	-- the door it really blocks the way out, as in NetHack
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
 	local ghost = U.has(m.flags, U.MON_SENSED) and (U.has(m.flags, U.MON_UNSEEN) or e.occluded == true)
-	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost then
-		e.tile, e.h, e.ghost = m.tile, h, ghost
+	local fuzz = U.has(m.flags, U.MON_SEEINVIS)
+	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost
+			or e.fuzz ~= fuzz then
+		e.tile, e.h, e.ghost, e.fuzz = m.tile, h, ghost, fuzz
 		local props = monster_props(e)
 		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
 		props.physical = solid
@@ -597,6 +605,8 @@ end
 -- squares keep the pile you last saw there while their top stays the same.
 local PILE_MAX = 5
 local PILE_OFS = {{0.6, 0.4}, {-0.55, 0.5}, {0.45, -0.6}, {-0.6, -0.45}}
+-- chests and boxes are always among them, however deep in the pile
+local BOXES = {["large box"] = true, chest = true, ["ice box"] = true}
 mobs.piles = {} -- square index -> {top = tile, items = {{tile=, glyph=}}, extras = {entity...}}
 
 -- the objects on a square, top first; a punished hero's ball and chain
@@ -646,11 +656,20 @@ function mobs.update_piles(snap)
 		if top.boulder then
 			items = {} -- (a boulder hides what's under it)
 		elseif visible then
+			-- (boxes first, then the rest from the top down)
 			items = {}
+			local rest = {}
 			for k, o in ipairs(mobs.floor_items(top.x, top.y)) do
-				if k > 1 and #items < PILE_MAX - 1 then
-					items[#items + 1] = {tile = o.tile, glyph = o.glyph}
+				if k > 1 then
+					local box = BOXES[core.nh_obj_name(o.otyp) or ""]
+					table.insert(box and items or rest, {tile = o.tile, glyph = o.glyph})
 				end
+			end
+			for _, item in ipairs(rest) do
+				items[#items + 1] = item
+			end
+			for k = #items, PILE_MAX, -1 do
+				items[k] = nil
 			end
 		elseif pile and pile.top == top.tile then
 			items = pile.items -- (as last seen)
@@ -1300,8 +1319,13 @@ core.register_globalstep(function(dtime)
 	local player = core.get_connected_players()[1]
 	local ppos = player and player:get_pos()
 	local now = core.get_us_time()
+	local fuzz_frame = nhv_tiles.fuzz_frame()
 	for _, e in pairs(mobs.mons) do
 		local obj = e.obj
+		if e.fuzz and not e.ghost and e.fuzz_frame ~= fuzz_frame and obj:get_pos() then
+			e.fuzz_frame = fuzz_frame -- (the fuzz crawls)
+			obj:set_properties({textures = nhv_tiles.fuzz_textures(e.tile, fuzz_frame)})
+		end
 		if e.flash_until and now > e.flash_until and obj:get_pos() then
 			e.flash_until = nil
 			obj:set_properties(look_for(e))

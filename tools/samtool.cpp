@@ -1,4 +1,4 @@
-// samtool: SAM, exactly as the game speaks it, for the sound editor.
+// samtool: SAM, exactly as the game speaks it, for the VoxHack Editor.
 //
 // Built by tools/deploy.sh (build/sam/samtool.exe) from the engine's own
 // SAM code (external/luanti/lib/sam, src/client/sound/sam_unity.c and

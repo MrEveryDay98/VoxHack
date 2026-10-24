@@ -19,6 +19,9 @@ local STYLE = {"Retro", "Modern"}
 local TIME = {"Superhot", "Real time"}
 local SPRITES = {"Extruded (3D)", "Flat"}
 local DISTANT = {"Sharp", "Smoothed (blurry)"}
+local SHADOWS = {"On", "Off"}
+local SHADOW_OPACITY = {{20, "20%"}, {40, "40%"}, {60, "60%"}, {80, "80%"}, {100, "100% (solid)"}}
+local DRAWN = {"Kept", "Removed (after a restart)"}
 local RES = {
 	{1, "Full"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4 (retro)"}, {6, "1/6"}, {8, "1/8 (very chunky)"},
 }
@@ -60,7 +63,7 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 12.1),
+		theme.head(10, 14.8),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -73,9 +76,15 @@ function graphics.formspec()
 		row(7.8, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
 		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		"button[0.5,10.2;4.4,0.8;nhoptions;NetHack options...]",
-		"button[5.1,10.2;4.4,0.8;guide;Controls & guide...]",
-		"button_exit[5.1,11.1;4.4,0.8;close;Done]",
+		row(9.6, "Shadows", "shadows", table.concat(SHADOWS, ","),
+			core.settings:get_bool("nhv_shadows", true) and 1 or 2),
+		row(10.5, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
+			pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)),
+		row(11.4, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
+			core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2),
+		"button[0.5,12.9;4.4,0.8;nhoptions;NetHack options...]",
+		"button[5.1,12.9;4.4,0.8;guide;Controls & guide...]",
+		"button_exit[5.1,13.8;4.4,0.8;close;Done]",
 	})
 end
 
@@ -153,6 +162,20 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if set_num(RES, fields.res, "undersampling", 1) then
 		changed = true
+	end
+	local sh = tonumber(fields.shadows)
+	if sh and (sh == 1) ~= core.settings:get_bool("nhv_shadows", true) then
+		core.settings:set_bool("nhv_shadows", sh == 1) -- (shadows.lua, at once)
+		changed = true
+	end
+	local dr = tonumber(fields.drawn)
+	if dr and (dr == 1) ~= core.settings:get_bool("nhv_sprite_shadows", true) then
+		-- (the sprites' sheet: nhv_tiles reads it when the game starts)
+		core.settings:set_bool("nhv_sprite_shadows", dr == 1)
+		changed = true
+	end
+	if set_num(SHADOW_OPACITY, fields.shadow_opacity, "nhv_shadow_opacity", 60) then
+		changed = true -- (shadows.lua redraws them at once)
 	end
 
 	if changed then

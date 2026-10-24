@@ -193,6 +193,10 @@ NHV_API void nhv_get_map(nhv_loc *buf);
                                   ESP, warned of its kind, monster
                                   detection): known through walls too */
 #define NHV_MON_UNSEEN   0x1000 /* (with SENSED) not seen, only sensed */
+#define NHV_MON_SEEINVIS 0x2000 /* invisible, but seen (See_invisible): drawn
+                                   see-through; for the hero too (SELF) */
+#define NHV_MON_HIDDEN   0x4000 /* (SELF) the hero is invisible and can't see
+                                   invisible: not drawn at all */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */
@@ -240,6 +244,9 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
                                         the secondary one in the left hand */
 #define NHV_HERO_TWOFISTS  0x4000000 /* a Monk fighting bare-handed (no weapon,
                                         no shield): a fist in each hand */
+#define NHV_HERO_POLE5     0x8000000 /* (with NHV_HERO_POLE) it reaches squared
+                                        distance 5 (skilled: knight's moves) */
+#define NHV_HERO_POLE8     0x10000000 /* ... 8 (expert: 2 squares diagonally) */
 
 typedef struct nhv_hero {
     int x, y;
@@ -275,6 +282,7 @@ NHV_API void nhv_get_hero(nhv_hero *out);
 #define NHV_OBJ_ALTWEP   0x20
 #define NHV_OBJ_CONTAINER 0x40
 #define NHV_OBJ_LIT      0x80
+#define NHV_OBJ_INVOKE   0x100 /* carried, and #invoke does something with it */
 
 typedef struct nhv_obj {
     unsigned id;    /* o_id */

@@ -85,6 +85,16 @@ def clean_layer(l):
     }
 
 
+# triggers for effects only: lasting things the effect plays on without a
+# break while they last (the game: effects.lua, LOOPS)
+LOOP_HOOKS = [
+    {"id": "cloud_poison_gas", "group": "loops",
+     "desc": "every square of a poison gas cloud (a poison breath, a scroll of stinking cloud)"},
+    {"id": "cloud_vapour", "group": "loops",
+     "desc": "every square of a harmless cloud (the Plane of Water's, a confused stinking cloud)"},
+]
+
+
 def clean_effect(e):
     eid = re.sub(r"[^a-z0-9_]+", "_", str(e.get("id", "")).lower()).strip("_")
     if not eid:

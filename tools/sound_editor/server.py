@@ -324,7 +324,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/effects":
             return self.send(200, {"data": effects_api.load(), "textures": effects_api.textures(),
                                    "sheet": blocks_api.sheet_info(),
-                                   "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", [])})
+                                   "hooks": effects_api.LOOP_HOOKS
+                                   + load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", [])})
         if path == "/api/catalog":
             return self.send(200, {
                 "hooks": load_json(os.path.join(CATALOG, "hooks.json"), {}).get("hooks", []),
@@ -526,7 +527,7 @@ def main():
     os.makedirs(SOUNDS, exist_ok=True)
     srv = Server(("127.0.0.1", PORT), Handler)
     url = "http://127.0.0.1:%d/" % PORT + ("#blocks" if "--blocks" in sys.argv else "")
-    print("VoxHack sound editor: " + url + "  (stops when the editor tab is closed)")
+    print("VoxHack Editor: " + url + "  (stops when the editor tab is closed)")
     if "--no-browser" not in sys.argv:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     if "--stay" not in sys.argv:
