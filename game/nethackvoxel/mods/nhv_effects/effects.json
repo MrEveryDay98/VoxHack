@@ -329,8 +329,8 @@
       "builtin": "dot"
      },
      "color": "#80FF00",
-     "amount": 40,
-     "duration": 1.5,
+     "amount": 8,
+     "duration": 3.0,
      "spread": 1.0,
      "height": 0.8,
      "speed": [
@@ -342,11 +342,11 @@
       3.0
      ],
      "size": [
-      3.0,
-      6.0
+      12.0,
+      16.0
      ],
      "gravity": -0.1,
-     "glow": 2,
+     "glow": 0,
      "additive": false,
      "fade": true,
      "collide": false
