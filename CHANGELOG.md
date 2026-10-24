@@ -2,6 +2,21 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.7.9 (alpha) - 2026-10-24
+
+- **Real shadows.** Monsters, objects and you (in third person) cast a shadow on the floor: the sprite itself, blacked out and projected away from the light, from its bottom corners, turning and slanting as it turns. Options: Shadows (on/off) and Shadow opacity.
+- **Sprites without their drawn shadows.** Options > Shadows drawn on sprites > Removed (after a restart) uses a copy of the tile set with the black shadows painted on the monsters and objects taken off.
+- **Polearms stab.** Hitting from a distance with a polearm, lance or Snickersnee thrusts the weapon forward. Their reach is your arm's reach times a multiple that grows with your skill, measured in the 3D world, at any angle.
+- **Snickersnee's free hit** (once a turn, taking no time) sounds different: slowed, ringing on. Once it's used, a click spends the turn with a swing instead of "The blade doesn't reach there!" over and over.
+- **Q invokes** what you wield when it can be invoked (an artifact's power, a crystal ball): "Q  Invoke" shows on the left.
+- **Invisibility.** Invisible, you aren't drawn in third person; if you can see invisible, you and the invisible monsters you see are a see-through, crawling fuzz (as Doom's spectres).
+- **Poison gas clouds** are a lasting cloud of particles while they last.
+- **Chests and boxes always show** in a pile of things, however deep in it.
+- **Drop** (Alt wheel) lets you tick several things at once.
+- Fixed: the "?" for a monster you can't see (blind, hitting it) went missing or on the wrong square.
+- Fort Ludios is hand-built, under its own night sky; new cave dweller pictures.
+- **For modders:** the VoxHack Editor's Effects tab has Loops triggers (effects that play without a break over every square of a gas cloud).
+
 ## v0.7.8 (alpha) - 2026-10-23
 
 - **Break boulders with a pick-axe:** attack a boulder next to you with a pick-axe or mattock in hand ("The boulder falls apart").
