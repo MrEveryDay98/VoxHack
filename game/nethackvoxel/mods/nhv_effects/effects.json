@@ -329,8 +329,8 @@
       "builtin": "dot"
      },
      "color": "#80FF00",
-     "amount": 120,
-     "duration": 1.0,
+     "amount": 40,
+     "duration": 1.5,
      "spread": 1.0,
      "height": 0.8,
      "speed": [
@@ -348,11 +348,13 @@
      "gravity": -0.1,
      "glow": 2,
      "additive": false,
-     "fade": false,
+     "fade": true,
      "collide": false
     }
    ],
-   "triggers": []
+   "triggers": [
+    "cloud_poison_gas"
+   ]
   }
  ]
 }
