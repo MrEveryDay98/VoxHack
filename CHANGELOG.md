@@ -2,6 +2,13 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.8.0 (alpha) - 2026-10-25
+
+- **Achievements.** 126 of them, Steam style: kept for you, not the character, from game to game and from one VoxHack version to the next. Reach Minetown, kill Medusa, wish, be crowned, ascend as each role, race and alignment, ascend with a conduct kept... An achievement pops up at the lower right as you earn it; the Achievements button on the title screen and in the inventory lists them all, the ones you haven't earned yet hidden as "???". Nothing counts in debug or explore mode; a game already under way gets credit for NetHack's own achievements it has.
+- **Status conditions are coloured by how bad they are, and the bad ones shake:** deadly ones (Stone, Slime, Strangled, FoodPois, TermIll, Fainting...) red and shaking hard, dangerous ones (Stun, Held, Weak...) orange, the ones in your way (Blind, Conf, Hallu...) yellow, nuisances pale. NetHack's other troubles now show too: Stone, Slime, Strangled, FoodPois, TermIll, InLava, Held, Trapped, Legs, Slippery, Deaf.
+- **The Minetown watch has a voice of its own** ("Hey, stop using that fountain!", "Halt, thief!  You're under arrest!").
+- **For modders:** the VoxHack Editor has an "achievement_unlocked" sound hook and a "Minetown watch" speaker.
+
 ## v0.7.9 (alpha) - 2026-10-24
 
 - **Real shadows.** Monsters, objects and you (in third person) cast a shadow on the floor: the sprite itself, blacked out and projected away from the light, from its bottom corners, turning and slanting as it turns. Options: Shadows (on/off) and Shadow opacity.
