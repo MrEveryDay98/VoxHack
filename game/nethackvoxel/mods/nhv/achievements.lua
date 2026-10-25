@@ -538,11 +538,17 @@ local function formspec()
 			fs[#fs + 1] = ("label[0.1,%s;%s]"):format(y + 0.3, theme.title(E(group)))
 			y = y + 0.7
 		end
+		-- (one not unlocked yet is hidden: a dark square, "???")
 		local when = data.unlocked[a.id]
-		fs[#fs + 1] = ("image[0.1,%s;0.8,0.8;%s]"):format(y, E(icon(a, not when)))
-		fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.2,
-			when and E(a.name) or core.colorize("#808080", E(a.name)))
-		fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.6, theme.dim(E(a.desc)))
+		fs[#fs + 1] = ("image[0.1,%s;0.8,0.8;%s]"):format(y,
+			when and E(icon(a)) or E("[fill:16x16:#1A1A22"))
+		if when then
+			fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.2, E(a.name))
+			fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.6, theme.dim(E(a.desc)))
+		else
+			fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.2, core.colorize("#808080", "???"))
+			fs[#fs + 1] = ("label[1.1,%s;%s]"):format(y + 0.6, theme.dim("???"))
+		end
 		if when then
 			fs[#fs + 1] = ("label[%s,%s;%s]"):format(W - 3.1, y + 0.2,
 				core.colorize("#FFD25A", E(os.date("%Y-%m-%d", when))))
