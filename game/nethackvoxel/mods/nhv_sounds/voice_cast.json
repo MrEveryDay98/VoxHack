@@ -199,6 +199,26 @@
     ],
     "smooth": true
    }
+  },
+  "Vault guard": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true
+   }
+  },
+  "Monster": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 117,
+    "throat": 128,
+    "mouth": 128,
+    "live": true
+   }
   }
  },
  "lines": {
