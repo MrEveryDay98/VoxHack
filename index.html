@@ -38,6 +38,9 @@ header.hero p.tag { font-size: 1.25rem; color: var(--dim); margin: 18px auto 28p
 .btn.itch { background: #fa5c5c; color: #fff; border-color: #c43c3c; box-shadow: 0 4px 0 #c43c3c; font-size: 1.15rem; padding: 16px 30px; }
 .btn:hover { filter: brightness(1.08); }
 .small { color: var(--dim); font-size: 0.9rem; margin-top: 12px; }
+.downloads { margin: 22px 0 0; color: var(--dim); }
+.downloads[hidden] { display: none; }
+.downloads b { font-family: "Retro", ui-monospace, monospace; font-weight: normal; color: var(--gold); font-size: 1.4rem; margin-right: 6px; }
 
 .shot { margin: 8px 0 56px; }
 .shot img { width: 100%; display: block; border: 2px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
@@ -89,6 +92,7 @@ footer { margin: 64px 0 40px; padding-top: 20px; border-top: 1px solid var(--lin
     <a class="btn" href="https://github.com/MrEveryDay98/VoxHack">Source code</a>
   </div>
   <p class="small">Free. Windows 10/11, 64-bit. Early alpha. Also on <a href="https://mreveryday.itch.io/voxhack">itch.io</a>, with comments and updates.</p>
+  <p class="downloads" id="downloads" hidden><b id="downloads-n"></b>downloads from GitHub</p>
 </header>
 
 <div class="shot"><img src="assets/shot-gameplay.jpg" alt="A pillared hall on dungeon level 7, seen in first person, with monsters closing in"></div>
@@ -147,5 +151,27 @@ footer { margin: 64px 0 40px; padding-top: 20px; border-top: 1px solid var(--lin
 </footer>
 
 </div>
+<script>
+// Download counter: every release's zip downloads on GitHub, added up
+// (GitHub's API, read by the visitor's browser; hidden if it can't be read)
+(async function () {
+  try {
+    let total = 0;
+    for (let page = 1; page <= 10; page++) {
+      const r = await fetch("https://api.github.com/repos/MrEveryDay98/VoxHack/releases?per_page=100&page=" + page);
+      if (!r.ok) return;
+      const releases = await r.json();
+      for (const rel of releases)
+        for (const a of rel.assets || [])
+          total += a.download_count || 0;
+      if (releases.length < 100) break;
+    }
+    if (total > 0) {
+      document.getElementById("downloads-n").textContent = total.toLocaleString("en-US");
+      document.getElementById("downloads").hidden = false;
+    }
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>
