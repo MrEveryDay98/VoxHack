@@ -20,6 +20,8 @@ take shape around you.
 - NetHack's special levels hand-built as 3D areas (Sokoban, the Oracle, the Planes...)
 - Sound effects, music and skies for each part of the dungeon
 
+![Minetown in the Gnomish Mines: two watchmen on patrol between Izchak's Lighting Store and a general store](site/assets/shot-minetown.jpg)
+
 ## Play
 
 Download the latest zip from [itch.io](https://mreveryday.itch.io/voxhack) or [Releases](../../releases), unpack it anywhere and
