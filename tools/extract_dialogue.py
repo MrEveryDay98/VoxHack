@@ -34,6 +34,11 @@ SPEAKERS = {
     "uhitm.c": "Monster", "dig.c": "Shopkeeper", "do.c": "Voice",
     "read.c": "Voice", "artifact.c": "Talking artifact", "end.c": "Narrator",
 }
+# functions whose lines someone else says than their file's speaker
+SPEAKER_BY_FUNCTION = {
+    "watch_dig": "Minetown watch", "watchman_warn_fountain": "Minetown watch",
+    "peacefuls_respond": "Minetown watch", "watch_on_duty": "Minetown watch",
+}
 
 C_STR = r'"(?:[^"\\\n]|\\.)*"'
 
@@ -72,15 +77,16 @@ def from_c(root, entries):
         src = open(os.path.join(srcdir, fname), encoding="latin-1").read()
         speaker = SPEAKERS.get(fname, "Monster")
         seen = set()
-        # verbalize("...")
-        for m in re.finditer(r'\bverbalize\(\s*((?:' + C_STR + r'\s*)+)', src):
+        # verbalize("...") (and a monster's mon_yells(mon, "..."))
+        for m in re.finditer(r'\b(?:verbalize\(|mon_yells\(\s*\w+\s*,)\s*((?:' + C_STR + r'\s*)+)', src):
             text = c_unescape(m.group(1))
             if not text.strip() or text in seen:
                 continue
             seen.add(text)
+            func = function_at(src, m.start())
             entries.append({
                 "id": make_id("spoken", text), "category": "spoken",
-                "speaker": speaker, "context": function_at(src, m.start()),
+                "speaker": SPEAKER_BY_FUNCTION.get(func, speaker), "context": func,
                 "text": text, "source": "%s:%d" % (fname, line_of(src, m.start())),
             })
         # other quoted speech: pline("... says, \"...\"") and the like

@@ -68,6 +68,8 @@ static void
 nhv_snd_achievement(schar a, schar b, int32_t c)
 {
     sound_event("achievement|%d|%d|%d", (int) a, (int) b, (int) c);
+    if (a)
+        nhv_achieve("nh %d", abs((int) a));
 }
 
 static void

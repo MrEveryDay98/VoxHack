@@ -747,6 +747,17 @@ nhv_get_hero(nhv_hero *out)
             }
     }
     out->flags = f;
+    f = 0;
+    if (Stoned) f |= NHV_COND_STONE;
+    if (Slimed) f |= NHV_COND_SLIME;
+    if (Strangled) f |= NHV_COND_STRANGLED;
+    if (Sick && (u.usick_type & SICK_VOMITABLE)) f |= NHV_COND_FOODPOIS;
+    if (Sick && (u.usick_type & SICK_NONVOMITABLE)) f |= NHV_COND_TERMILL;
+    if (u.utrap && u.utraptype == TT_LAVA) f |= NHV_COND_LAVA;
+    if (Deaf) f |= NHV_COND_DEAF;
+    if (Glib) f |= NHV_COND_GLIB;
+    if (Wounded_legs) f |= NHV_COND_LEGS;
+    out->conds = f;
     Snprintf(out->name, sizeof out->name, "%s", svp.plname);
     Snprintf(out->rank, sizeof out->rank, "%s",
              rank_of(u.ulevel, Role_switch, flags.female));

@@ -103,32 +103,132 @@ end
 local HUNGER = {[0] = "", "", "Hungry", "Weak", "Fainting", "Fainted", "Starved"}
 local ENCUMBRANCE = {[0] = "", "Burdened", "Stressed", "Strained", "Overtaxed", "Overloaded"}
 
+-- How bad each condition on the status line is: its colour, and how hard
+-- it shakes (pixels, at box scale 1). 4: it kills you soon; 3: it's
+-- dangerous; 2: it gets in your way; 1: a nuisance; 0: not a trouble at all
+-- (levitating, flying, riding).
+local SEVERITY = {
+	[4] = {color = 0xFF3030, shake = 3},
+	[3] = {color = 0xFF8C1A, shake = 2},
+	[2] = {color = 0xFFD640, shake = 1},
+	[1] = {color = 0xE8DDA8, shake = 0},
+	[0] = {color = 0x90D0FF, shake = 0},
+}
+local HUNGER_SEVERITY = {[2] = 1, [3] = 3, [4] = 4, [5] = 4, [6] = 4}
+local ENCUMBRANCE_SEVERITY = {1, 2, 3, 3, 3}
+
+-- the status line: its numbers, and its conditions ({text=, severity=},
+-- worst first)
 local function status_text(h)
 	local conds = {}
-	local function add(flag, txt)
-		if U.has(h.flags, flag) then
-			conds[#conds + 1] = txt
+	local function add(on, txt, severity)
+		if on then
+			conds[#conds + 1] = {text = txt, severity = severity, n = #conds}
 		end
 	end
-	add(U.HERO.BLIND, "Blind")
-	add(U.HERO.HALLU, "Hallu")
-	add(U.HERO.CONF, "Conf")
-	add(U.HERO.STUN, "Stun")
-	add(U.HERO.LEVITATE, "Lev")
-	add(U.HERO.FLYING, "Fly")
-	add(U.HERO.RIDING, "Ride")
-	if HUNGER[h.hunger] and HUNGER[h.hunger] ~= "" then
-		conds[#conds + 1] = HUNGER[h.hunger]
-	end
-	if ENCUMBRANCE[h.encumbrance] and ENCUMBRANCE[h.encumbrance] ~= "" then
-		conds[#conds + 1] = ENCUMBRANCE[h.encumbrance]
-	end
+	local f, c = h.flags, h.conds or 0
+	add(U.has(c, U.COND.STONE), "Stone", 4)
+	add(U.has(c, U.COND.SLIME), "Slime", 4)
+	add(U.has(c, U.COND.STRANGLED), "Strangled", 4)
+	add(U.has(c, U.COND.FOODPOIS), "FoodPois", 4)
+	add(U.has(c, U.COND.TERMILL), "TermIll", 4)
+	add(U.has(c, U.COND.LAVA), "InLava", 4)
+	add(HUNGER_SEVERITY[h.hunger] and HUNGER_SEVERITY[h.hunger] >= 4, HUNGER[h.hunger], 4)
+	add(U.has(f, U.HERO.STUN), "Stun", 3)
+	add(U.has(f, U.HERO.HELD), "Held", 3)
+	add(h.hunger == 3, HUNGER[3], 3)
+	add(U.has(f, U.HERO.BLIND), "Blind", 2)
+	add(U.has(f, U.HERO.CONF), "Conf", 2)
+	add(U.has(f, U.HERO.HALLU), "Hallu", 2)
+	add(U.has(c, U.COND.LEGS), "Legs", 2)
+	add(U.has(c, U.COND.GLIB), "Slippery", 2)
+	add(U.has(f, U.HERO.TRAPPED) and not U.has(c, U.COND.LAVA), "Trapped", 2)
+	add(h.hunger == 2, HUNGER[2], 1)
+	add(U.has(c, U.COND.DEAF), "Deaf", 1)
+	local enc = ENCUMBRANCE_SEVERITY[h.encumbrance]
+	add(enc, ENCUMBRANCE[h.encumbrance], enc)
+	table.sort(conds, function(a, b)
+		return a.severity > b.severity or (a.severity == b.severity and a.n < b.n)
+	end)
+	add(U.has(f, U.HERO.LEVITATE), "Lev", 0)
+	add(U.has(f, U.HERO.FLYING), "Fly", 0)
+	add(U.has(f, U.HERO.RIDING), "Ride", 0)
 	-- (name and title, HP and Pw, level, gold, AC and experience are top
 	-- left, hud.info_text)
-	return (string.format("St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s   T:%d   %s",
+	return string.format("St:%s Dx:%d Co:%d In:%d Wi:%d Ch:%d   %s   T:%d",
 		h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str),
-		h.dex, h.con, h.int, h.wis, h.cha, h.align, h.moves,
-		table.concat(conds, " ")):gsub("%s+$", ""))
+		h.dex, h.con, h.int, h.wis, h.cha, h.align, h.moves), conds
+end
+
+-- The conditions are drawn each in its own colour, and shaking, as HUD
+-- texts of their own over the status line: every one of them (and the
+-- status line) is the whole line, the rest of it spaces, so in the
+-- monospace font each word lands where it would in the one line.
+local cond_ids = {}  -- HUD ids, made as they're needed
+local cond_shown = {} -- {text=, severity=} drawn by each
+local status_above = 90
+
+local function show_status(player, h)
+	local stats, conds = status_text(h)
+	local words = {stats}
+	for _, cd in ipairs(conds) do
+		words[#words + 1] = cd.text
+	end
+	local line = table.concat(words, "   ", 1, math.min(2, #words))
+		.. (#words > 2 and " " .. table.concat(words, " ", 3) or "")
+	local function only(from, len)
+		return (" "):rep(from - 1) .. line:sub(from, from + len - 1) .. (" "):rep(#line - from - len + 1)
+	end
+	player:hud_change(hud.ids.status, "text", only(1, #stats))
+	local at = #stats + 4
+	for i = 1, math.max(#conds, #cond_ids) do
+		local cd = conds[i]
+		if cd and not cond_ids[i] then
+			cond_ids[i] = player:hud_add({
+				type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
+				offset = {x = 0, y = -status_above}, number = 0xFFFFFF, text = "",
+				style = 4, -- monospace
+			})
+		end
+		local text = cd and only(at, #cd.text) or ""
+		if cond_ids[i] then
+			local was = cond_shown[i]
+			if not was or was.text ~= text or was.severity ~= (cd and cd.severity) then
+				player:hud_change(cond_ids[i], "text", text)
+				if cd then
+					player:hud_change(cond_ids[i], "number", SEVERITY[cd.severity].color)
+				end
+				cond_shown[i] = {text = text, severity = cd and cd.severity}
+			end
+		end
+		if cd then
+			at = at + #cd.text + 1
+		end
+	end
+end
+
+-- each frame or so: the conditions shake, the worse the harder
+local shake_t = 0
+local function shake_conditions(player, dtime)
+	shake_t = shake_t + dtime
+	if shake_t < 1 / 30 then
+		return
+	end
+	shake_t = 0
+	local k = nhv.theme and nhv.theme.box_scale() or 1
+	for i, id in ipairs(cond_ids) do
+		local cd = cond_shown[i]
+		local amp = cd and cd.severity and SEVERITY[cd.severity].shake or 0
+		local x, y = 0, 0
+		if amp > 0 then
+			x = math.floor((math.random() * 2 - 1) * amp * k + 0.5)
+			y = math.floor((math.random() * 2 - 1) * amp * k + 0.5)
+		end
+		if cd and (amp > 0 or cd.still ~= true) then
+			cd.still = amp == 0
+			player:hud_change(id, "offset", {x = x, y = y - status_above})
+		end
+	end
 end
 
 -- under the bars, top left: the numbers you check most (the level is under
@@ -507,6 +607,13 @@ hud.place_map = place_map
 
 -- the status line's distance from the bottom of the screen (above the hotbar)
 function hud.place_status(player, above)
+	status_above = above
+	for i, id in ipairs(cond_ids) do
+		if cond_shown[i] then
+			cond_shown[i].still = nil -- (shake_conditions moves it)
+		end
+		player:hud_change(id, "offset", {x = 0, y = -above})
+	end
 	if hud.ids.status then
 		player:hud_change(hud.ids.status, "offset", {x = 0, y = -above})
 	end
@@ -556,6 +663,7 @@ end
 
 core.register_on_joinplayer(function(player)
 	tiles.ids, tiles.shown, tiles.scale = {}, {}, nil -- (a new player object: none drawn yet)
+	cond_ids, cond_shown = {}, {}
 	-- right-click doesn't swing the arm by itself (actions.run swings it)
 	-- (clicking doesn't swing the arm by itself: actions.swing does, when an
 	-- attack really happens)
@@ -884,6 +992,7 @@ core.register_globalstep(function(dtime)
 	if not player or not hud.ids.msg then
 		return
 	end
+	shake_conditions(player, dtime)
 	if hud.ids.fade then
 		-- (steps of 8 keep the number of different textures small)
 		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
@@ -979,7 +1088,7 @@ nh.on_snapshot(function(snap)
 		return
 	end
 	local h = snap.hero
-	player:hud_change(hud.ids.status, "text", status_text(h))
+	show_status(player, h)
 	update_meters(player, h)
 	update_here(player, snap)
 	if hud.big_map then

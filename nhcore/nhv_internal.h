@@ -21,6 +21,9 @@ extern int nhv_cmd_args[NHV_MAXARGS];
 extern char nhv_cmd_text[256];
 int nhv_exec_mon_step(unsigned id, int x, int y);
 
+/* nhv_achieve.c: checked before each command */
+void nhv_achieve_check(void);
+
 /* nhv_main.c */
 void nhv_set_dirs(const char *datadir, const char *userdir);
 int nhv_game_thread_main(const char *rcfile, const char *name);

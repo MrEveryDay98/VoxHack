@@ -12,6 +12,7 @@ local meta = dofile(core.get_modpath("nhv_tiles") .. "/tilenames.lua")
 nhv_tiles = {
 	count = meta.count,
 	names = meta.names,
+	sheet_names = meta.sheet_names, -- (what's at each sheet position)
 	cols = meta.cols,
 	rows = meta.rows,
 }

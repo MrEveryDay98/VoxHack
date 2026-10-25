@@ -9227,7 +9227,7 @@
   {
    "id": "spoken.87e7229004",
    "category": "spoken",
-   "speaker": "Shopkeeper",
+   "speaker": "Minetown watch",
    "context": "watch_dig",
    "text": "Halt, vandal!  You're under arrest!",
    "source": "dig.c:1392"
@@ -9235,7 +9235,7 @@
   {
    "id": "spoken.32f3fc4a9b",
    "category": "spoken",
-   "speaker": "Shopkeeper",
+   "speaker": "Minetown watch",
    "context": "watch_dig",
    "text": "Hey, stop damaging that %s!",
    "source": "dig.c:1405"
@@ -9523,7 +9523,7 @@
   {
    "id": "spoken.e7b2aa28f7",
    "category": "spoken",
-   "speaker": "Water demon / nymph",
+   "speaker": "Minetown watch",
    "context": "watchman_warn_fountain",
    "text": "Hey, stop using that fountain!",
    "source": "fountain.c:185"
@@ -9843,7 +9843,7 @@
   {
    "id": "spoken.37a628b9d8",
    "category": "spoken",
-   "speaker": "Monster",
+   "speaker": "Minetown watch",
    "context": "peacefuls_respond",
    "text": "Halt!  You're under arrest!",
    "source": "mon.c:4185"
@@ -9935,6 +9935,22 @@
    "context": "m_move",
    "text": "I'm late!",
    "source": "monmove.c:1860"
+  },
+  {
+   "id": "spoken.725416f2dc",
+   "category": "spoken",
+   "speaker": "Minetown watch",
+   "context": "watch_on_duty",
+   "text": "Halt, thief!  You're under arrest!",
+   "source": "monmove.c:186"
+  },
+  {
+   "id": "spoken.b47e3a891c",
+   "category": "spoken",
+   "speaker": "Minetown watch",
+   "context": "watch_on_duty",
+   "text": "Hey, stop picking that lock!",
+   "source": "monmove.c:189"
   },
   {
    "id": "ambient.567d5d9373-2",

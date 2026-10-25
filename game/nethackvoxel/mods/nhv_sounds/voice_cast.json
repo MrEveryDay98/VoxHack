@@ -223,6 +223,19 @@
     "sing": false,
     "effects": []
    }
+  },
+  "Minetown watch": {
+   "sam": {
+    "voice": "Stuffy Guy",
+    "speed": 80,
+    "pitch": 88,
+    "throat": 100,
+    "mouth": 112,
+    "live": true,
+    "smooth": true,
+    "variation": 40,
+    "female": 16
+   }
   }
  },
  "lines": {

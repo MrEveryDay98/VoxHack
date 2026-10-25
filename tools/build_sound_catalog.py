@@ -55,6 +55,7 @@ GAME_HOOKS = [
     ("wheel_open", "The action wheel opens"),
     ("wheel_select", "An action is picked on the wheel"),
     ("dialog_open", "A question or menu appears"),
+    ("achievement_unlocked", "An achievement is unlocked"),
 ]
 
 MUSIC = [

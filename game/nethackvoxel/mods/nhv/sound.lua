@@ -624,6 +624,7 @@ local SPEAKER_BY_MON = {
 	["high priest"] = "Priest", ["high priestess"] = "Priest",
 	shopkeeper = "Shopkeeper", ["Wizard of Yendor"] = "Wizard of Yendor",
 	["mail daemon"] = "Mail daemon", deity = "God",
+	watchman = "Minetown watch", ["watch captain"] = "Minetown watch",
 }
 
 -- where the Oracle sits (her consultations are read from there)

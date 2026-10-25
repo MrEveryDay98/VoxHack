@@ -96,6 +96,8 @@ wait_for(int kind, const char *prompt, const char *choices, int def,
     req.def = def;
     req.for_command = (kind == NHV_REQ_KEY
                        && program_state.input_state == commandInp);
+    if (req.for_command)
+        nhv_achieve_check();
     Snprintf(req.prompt, sizeof req.prompt, "%s", prompt ? prompt : "");
     Snprintf(req.choices, sizeof req.choices, "%s", choices ? choices : "");
     if (kind == NHV_REQ_MENU && menu_win >= 0) {

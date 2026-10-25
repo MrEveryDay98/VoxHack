@@ -120,6 +120,7 @@ dofile(path .. "avatar.lua")
 dofile(path .. "shadows.lua")
 dofile(path .. "sky.lua")
 dofile(path .. "sound.lua")
+dofile(path .. "achievements.lua")
 dofile(path .. "loop.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists

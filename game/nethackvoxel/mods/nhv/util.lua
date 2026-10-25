@@ -78,6 +78,12 @@ U.HERO = {
 	POLE8 = 0x10000000, -- (... 8: expert, 2 squares diagonally)
 }
 
+-- nhv_hero.conds (hero.conds): troubles beyond the flags
+U.COND = {
+	STONE = 0x01, SLIME = 0x02, STRANGLED = 0x04, FOODPOIS = 0x08, TERMILL = 0x10,
+	LAVA = 0x20, DEAF = 0x40, GLIB = 0x80, LEGS = 0x100,
+}
+
 -- nhv_obj.flags
 U.OBJ = {
 	WORN = 0x01, WIELDED = 0x02, QUIVERED = 0x04, CURSED_KNOWN = 0x08,

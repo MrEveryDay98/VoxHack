@@ -144,7 +144,8 @@ add_library(nethack SHARED
     nhv_win.c
     nhv_api.c
     nhv_free.c
-    nhv_sound.c)
+    nhv_sound.c
+    nhv_achieve.c)
 target_include_directories(nethack PRIVATE ${NH_COMMON_INCS} "${CMAKE_CURRENT_SOURCE_DIR}")
 list(REMOVE_ITEM NH_COMMON_DEFS NO_TILE_C)
 target_compile_definitions(nethack PRIVATE ${NH_COMMON_DEFS} DLB NHV_FREEMOVE SND_LIB_VISSOUND SND_SPEECH TILES_IN_GLYPHMAP SHIM_GRAPHICS NOTTYGRAPHICS NHV_BUILDING_DLL)

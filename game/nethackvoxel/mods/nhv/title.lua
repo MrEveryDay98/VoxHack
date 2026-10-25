@@ -119,16 +119,18 @@ function title.formspec(player)
 	local saved = title.saved_character(player)
 	local fs = {screen(16, 10),
 		"image[3,0.6;10,2.5;nhv_title_logo.png]"}
-	local y = 4.0
+	-- (five buttons fit above the update notice)
+	local y = 3.8
 	local function button(name, label)
 		fs[#fs + 1] = ("button[5.5,%s;5,0.9;%s;%s]"):format(y, name, E(label))
-		y = y + 1.1
+		y = y + 1.0
 	end
 	if saved then
 		button("continue", "Continue (" .. saved .. ")")
 	end
 	button("new", "New game")
 	button("options", "Options")
+	button("achievements", "Achievements")
 	button("quitgame", "Quit")
 	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E(title.VERSION .. " - based on NetHack 3.7")) .. "]"
 	-- a newer release out (update.lua): say so, with a link to get it
@@ -291,6 +293,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		elseif fields.options then
 			title.from_title = true
 			nhv.graphics.show(player)
+		elseif fields.achievements then
+			nhv.achievements.show(player)
 		elseif fields.quitgame then
 			core.disconnect_player(pname, "nhv:quit")
 		elseif fields.quit then

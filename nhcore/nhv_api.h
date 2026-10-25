@@ -130,8 +130,9 @@ enum nhv_event_kind {
     NHV_EV_SOUND,       /* sound/voice hook, see nhv_sound.c */
     NHV_EV_RAY,         /* ray outcome: "hit|miss|reflect|stop <rid>" */
     NHV_EV_CONTAINER,   /* "open|fail|changed|gone <container id>" */
-    NHV_EV_SPLEV        /* "<game id> <ledger> <proto> <n> <x> <y> <w> <h>":
+    NHV_EV_SPLEV,       /* "<game id> <ledger> <proto> <n> <x> <y> <w> <h>":
                            a special level's fixed region n */
+    NHV_EV_ACHIEVE      /* something done or reached, see nhv_achieve.c */
 };
 
 typedef struct nhv_event {
@@ -248,6 +249,17 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
                                         distance 5 (skilled: knight's moves) */
 #define NHV_HERO_POLE8     0x10000000 /* ... 8 (expert: 2 squares diagonally) */
 
+/* nhv_hero.conds: NetHack's status-line troubles not in the flags */
+#define NHV_COND_STONE     0x01 /* turning to stone */
+#define NHV_COND_SLIME     0x02 /* turning into slime */
+#define NHV_COND_STRANGLED 0x04
+#define NHV_COND_FOODPOIS  0x08 /* food poisoning */
+#define NHV_COND_TERMILL   0x10 /* terminally ill */
+#define NHV_COND_LAVA      0x20 /* stuck in lava */
+#define NHV_COND_DEAF      0x40
+#define NHV_COND_GLIB      0x80 /* slippery fingers */
+#define NHV_COND_LEGS      0x100 /* wounded legs */
+
 typedef struct nhv_hero {
     int x, y;
     int ux0, uy0;           /* previous position */
@@ -264,6 +276,7 @@ typedef struct nhv_hero {
     int glyph, tile;
     int mndx;               /* form (polymorph) */
     unsigned flags;         /* NHV_HERO_* */
+    unsigned conds;         /* NHV_COND_* (troubles beyond the flags) */
     int dx, dy;             /* last movement direction */
     char name[32];
     char rank[32];
