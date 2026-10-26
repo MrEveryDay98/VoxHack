@@ -8,3 +8,7 @@
 # or SAM phonemes in braces (Croesus = {KRIY4SAHS}); both can be mixed.
 # Words are matched whole and ignoring case; "Croesus's" uses "Croesus".
 delphi = dellfee
+outside = out syde
+sword = sored
+Yendor = Yen dore
+usage = youssidge
