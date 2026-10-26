@@ -18,6 +18,10 @@ nhv_interface (Interface style) enum retro retro,modern
 # Pixels per map square of the corner map (0 hides it).
 nhv_map_scale (Map size) int 3 0 8
 
+# The big map: you and the monsters drawn where they really are, not on
+# their squares. (Also in the game: Options > Map icons.)
+nhv_map_exact (Map icons where they really are) bool false
+
 # Text size (font size multiplier, in menus and on the HUD). The retro
 # pixel font only uses whole steps (1, 2, 3, 4: 14, 28, 42, 56 pixels,
 # whatever the HUD size).

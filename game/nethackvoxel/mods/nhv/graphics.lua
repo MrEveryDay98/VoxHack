@@ -33,6 +33,7 @@ local TEXT_MODERN = {{0.85, "Small"}, {1, "Normal"}, {1.25, "Large"}, {1.5, "Lar
 local function text_list()
 	return theme.retro() and TEXT_RETRO or TEXT_MODERN
 end
+local MAP_ICONS = {"On their squares", "Where they are"}
 local MAP = {{0, "Hidden"}, {2, "Small"}, {3, "Normal"}, {4, "Large"}, {5, "Larger"}, {6, "Huge"}}
 
 -- index of the choice nearest the setting's value
@@ -72,18 +73,19 @@ function graphics.formspec()
 		row(4.2, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)),
 		row(5.1, "Text size", "text", labels(text_list()), pick(text_list(), "nhv_text_scale", 1)),
 		row(6.0, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
-		row(6.9, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
-		row(7.8, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
-		row(8.7, "Distant textures", "distant", table.concat(DISTANT, ","),
+		row(6.9, "Map icons", "map_icons", table.concat(MAP_ICONS, ","),
+			nhv.hud.exact_icons() and 2 or 1),
+		row(7.8, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
+		row(8.7, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
+		row(9.6, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		row(9.6, "Shadows", "shadows", table.concat(SHADOWS, ","),
+		row(10.5, "Shadows", "shadows", table.concat(SHADOWS, ","),
 			core.settings:get_bool("nhv_shadows", true) and 1 or 2),
-		row(10.5, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
+		row(11.4, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
 			pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)),
-		row(11.4, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
+		row(12.3, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
 			core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2),
-		"button[0.5,12.9;4.4,0.8;nhoptions;NetHack options...]",
-		"button[5.1,12.9;4.4,0.8;guide;Controls & guide...]",
+		"button[0.5,13.8;4.4,0.8;guide;Controls & guide...]",
 		"button_exit[5.1,13.8;4.4,0.8;close;Done]",
 	})
 end
@@ -109,10 +111,6 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if formname ~= "nhv:graphics" then
 		return false
-	end
-	if fields.nhoptions then
-		nhv.nhopts.show(player)
-		return true
 	end
 	if fields.guide then
 		nhv.guide.from_options = true
@@ -146,6 +144,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if set_num(MAP, fields.map, "nhv_map_scale", 3) then
 		nhv.hud.place_map(player)
+		changed = true
+	end
+	local mi = tonumber(fields.map_icons)
+	if mi and (mi == 2) ~= nhv.hud.exact_icons() then
+		core.settings:set_bool("nhv_map_exact", mi == 2)
+		nhv.hud.place_map(player) -- (the squares redrawn with or without them)
 		changed = true
 	end
 	local s = tonumber(fields.sprites)

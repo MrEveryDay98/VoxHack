@@ -770,7 +770,6 @@ end
 local function inventory_formspec(inv)
 	local fs = {head(19, 11), "label[0.4,0.5;Equipment]",
 		"label[5.6,0.5;Inventory  (click an item for actions)]",
-		"button[14.1,0.15;2.4,0.7;achievements;Achievements]",
 		"button[16.6,0.15;2.1,0.7;graphics;Options]",
 		"box[0.3,0.9;4.9,9.6;#00000060]"}
 	-- equipment panel

@@ -282,8 +282,11 @@ local function update_here(player, snap)
 		player:hud_change(hud.ids.here_key, "text", key)
 		player:hud_change(hud.ids.here_key_shadow, "text", key)
 	end
-	-- (and "Q  Invoke" under it, while what you wield can be invoked)
-	local inv = h and not covered and nhv.actions.invokable() and "Q  Invoke" or ""
+	-- (and what Q does under it: your form's special ability, or invoking
+	-- what you wield, while there is one)
+	local q = h and not covered and (nhv.actions.monster_ability()
+		or (nhv.actions.invokable() and "Invoke"))
+	local inv = q and "Q  " .. q or ""
 	if inv ~= invoke_shown then
 		invoke_shown = inv
 		player:hud_change(hud.ids.invoke_key, "text", inv)
@@ -453,10 +456,14 @@ local function floor_under(map, i)
 	return cmap_tile(lit and "S_room" or "S_darkroom")
 end
 
-function hud.square_tex(map, h, x, y)
+-- (bare: leave you and the monsters off it - the big map draws them where
+-- they really are instead: Options > Map icons)
+function hud.square_tex(map, h, x, y, bare)
 	local i = U.idx(x, y)
 	local top -- (you or a monster)
-	if x == h.x and y == h.y then
+	if bare then -- luacheck: ignore 542
+		-- (nothing on top)
+	elseif x == h.x and y == h.y then
 		top = h.tile
 	else
 		local c = color_for(map, i)
@@ -522,10 +529,21 @@ local function update_tiles(player, snap)
 		tiles.scale = s
 	end
 	local map, h = snap.map, snap.hero
+	-- (with the icons where they really are, the squares they're drawn
+	-- for - yours, the monsters' you see - leave them off)
+	local bare = {}
+	if hud.exact_icons() then
+		bare[U.idx(h.x, h.y)] = true
+		for _, e in pairs(nhv.mobs.mons) do
+			if e.x and e.tile then
+				bare[U.idx(e.x, e.y)] = true
+			end
+		end
+	end
 	for y = 0, U.ROWNO - 1 do
 		for x = 1, U.COLNO - 1 do
 			local i = U.idx(x, y)
-			local tex = hud.square_tex(map, h, x, y)
+			local tex = hud.square_tex(map, h, x, y, bare[i])
 			if tex ~= tiles.shown[i] then
 				tiles.shown[i] = tex
 				local id = tiles.ids[i]
@@ -543,6 +561,120 @@ local function update_tiles(player, snap)
 				end
 			end
 		end
+	end
+end
+
+-- Options > Map icons "Where they are": on the big map you and the monsters
+-- you see are drawn where they really are (where the 3D view shows them),
+-- not on their squares
+function hud.exact_icons()
+	return core.settings:get_bool("nhv_map_exact", false)
+end
+
+-- a world position on the map, in squares (x east, y south; a square's
+-- middle is +0.5)
+local function map_pos(p)
+	return (p.x + 0.5) / U.TILE, (U.ROWNO - 1) - (p.z - (U.TILE - 0.5)) / U.TILE
+end
+
+local icons = {} -- key -> {id, tex, x, y, s}
+local function clear_icons(player)
+	for key, ic in pairs(icons) do
+		player:hud_remove(ic.id)
+		icons[key] = nil
+	end
+end
+
+local function update_map_icons(player)
+	local h = nh.snap and nh.snap.hero
+	if not (hud.big_map and h and h.x and hud.exact_icons()) then
+		if next(icons) then
+			clear_icons(player)
+		end
+		return
+	end
+	local s = big_map_scale(player)
+	local want = {}
+	for key, e in pairs(nhv.mobs.mons) do
+		local p = e.tile and e.obj and e.obj:get_pos()
+		if p then
+			want[key] = {tile = e.tile, p = p, z = 3}
+		end
+	end
+	want.hero = {tile = h.tile, p = player:get_pos(), z = 4} -- (you on top)
+	for key, w in pairs(want) do
+		local fx, fy = map_pos(w.p)
+		-- (the picture's own middle where they are, not its cell's: most
+		-- stand at the bottom of theirs)
+		local cx, cy = nhv_tiles.picture_center(w.tile)
+		local x = (fx - U.COLNO / 2) * s - cx * s / TILE_PX
+		local y = (fy - U.ROWNO / 2) * s - cy * s / TILE_PX
+		local tex = nhv_tiles.texture(w.tile)
+		local ic = icons[key]
+		if not ic then
+			icons[key] = {id = player:hud_add({
+				type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
+				offset = {x = x, y = y}, scale = {x = s / TILE_PX, y = s / TILE_PX},
+				text = tex, z_index = w.z,
+			}), tex = tex, x = x, y = y, s = s}
+		else
+			if tex ~= ic.tex then
+				ic.tex = tex
+				player:hud_change(ic.id, "text", tex)
+			end
+			if x ~= ic.x or y ~= ic.y then
+				ic.x, ic.y = x, y
+				player:hud_change(ic.id, "offset", {x = x, y = y})
+			end
+			if s ~= ic.s then
+				ic.s = s
+				player:hud_change(ic.id, "scale", {x = s / TILE_PX, y = s / TILE_PX})
+			end
+		end
+	end
+	for key, ic in pairs(icons) do
+		if not want[key] then
+			player:hud_remove(ic.id)
+			icons[key] = nil
+		end
+	end
+end
+
+-- On the big map, an arrow beside you points the way you look, going round
+-- you as you turn: one of ARROW_STEPS pictures (tools/make_map_arrow.py),
+-- the one nearest your heading, ARROW_OUT squares out from where you
+-- stand (where in your square, too: it moves as you walk).
+local ARROW_STEPS, ARROW_OUT, ARROW_SIZE = 32, 1.05, 1.2 -- (squares)
+local arrow_shown = {}
+local function update_map_arrow(player)
+	if not hud.ids.map_arrow then
+		return
+	end
+	local h = nh.snap and nh.snap.hero
+	local tex, offset, sc = "", nil, nil
+	if hud.big_map and h and h.x then
+		local s = big_map_scale(player)
+		local fx, fy = map_pos(player:get_pos()) -- (where you are, in squares)
+		-- (clockwise from north: looking along -sin(yaw), cos(yaw))
+		local a = (-player:get_look_horizontal()) % (2 * math.pi)
+		local k = math.floor(a / (2 * math.pi) * ARROW_STEPS + 0.5) % ARROW_STEPS
+		tex = ("nhv_map_arrow_%02d.png"):format(k)
+		offset = {x = (fx + math.sin(a) * ARROW_OUT - U.COLNO / 2) * s,
+			y = (fy - math.cos(a) * ARROW_OUT - U.ROWNO / 2) * s}
+		sc = {x = s * ARROW_SIZE / 24, y = s * ARROW_SIZE / 24}
+	end
+	if tex ~= arrow_shown.tex then
+		arrow_shown.tex = tex
+		player:hud_change(hud.ids.map_arrow, "text", tex)
+	end
+	if offset and (not arrow_shown.offset or offset.x ~= arrow_shown.offset.x
+			or offset.y ~= arrow_shown.offset.y) then
+		arrow_shown.offset = offset
+		player:hud_change(hud.ids.map_arrow, "offset", offset)
+	end
+	if sc and (not arrow_shown.scale or sc.x ~= arrow_shown.scale.x) then
+		arrow_shown.scale = sc
+		player:hud_change(hud.ids.map_arrow, "scale", sc)
 	end
 end
 
@@ -663,6 +795,7 @@ end
 
 core.register_on_joinplayer(function(player)
 	tiles.ids, tiles.shown, tiles.scale = {}, {}, nil -- (a new player object: none drawn yet)
+	icons = {}
 	cond_ids, cond_shown = {}, {}
 	-- right-click doesn't swing the arm by itself (actions.run swings it)
 	-- (clicking doesn't swing the arm by itself: actions.swing does, when an
@@ -726,6 +859,12 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 20, y = 26}, number = 0xFFD040, text = "", z_index = 11,
 	})
 	here_shown, invoke_shown = nil, nil
+	-- the big map's facing arrow (over its squares and icons; update_map_arrow)
+	hud.ids.map_arrow = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
+		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "", z_index = 5,
+	})
+	arrow_shown = {}
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
@@ -776,9 +915,13 @@ end)
 
 -- ---------------------------------------------------------------- fog
 -- black fog in the distance (blindness brings it right in)
+-- how far you see (nodes): the fog
+function hud.fog_distance()
+	return hud.blind and 5 or 90
+end
+
 function hud.apply_fog(player)
-	local fog = hud.blind and {fog_distance = 5, fog_start = 0.1}
-		or {fog_distance = 90, fog_start = 0.3}
+	local fog = {fog_distance = hud.fog_distance(), fog_start = hud.blind and 0.1 or 0.3}
 	-- (the sky's: black, or a sky over the level - see sky.lua)
 	if nhv.sky and nhv.sky.apply then
 		nhv.sky.apply(player, fog)
@@ -993,6 +1136,8 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	shake_conditions(player, dtime)
+	update_map_arrow(player)
+	update_map_icons(player)
 	if hud.ids.fade then
 		-- (steps of 8 keep the number of different textures small)
 		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8

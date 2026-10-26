@@ -469,10 +469,20 @@ core.register_chatcommand("nhvkey", {
 			return true
 		end
 		if param == "invoke" then
-			-- (Q: #invoke the wielded item - an artifact's power, a crystal
-			-- ball - when it has one; "Q  Invoke" shows on the left then)
+			-- (Q: your form's special ability (#monster) when it has one -
+			-- breathing, spitting, hiding...; otherwise #invoke the wielded
+			-- item - an artifact's power, a crystal ball - when it has one.
+			-- "Q  <what it does>" shows on the left then. A direction it
+			-- asks for is where you look.)
+			if nhv.ui.open or not nh.ready() or nhv.clock.busy() then
+				return true
+			end
+			local ability = nhv.actions.monster_ability()
 			local o = nhv.actions.invokable()
-			if o and not nhv.ui.open and nh.ready() and not nhv.clock.busy() then
+			if ability then
+				nhv.actions.run({label = ability, keys = {{key = "#"}, {text = "monster"}}},
+					{kind = "hotkey"})
+			elseif o then
 				nhv.actions.run({label = "Invoke", keys = {{key = "#"}, {text = "invoke"}, {key = o.invlet}}},
 					{kind = "hotkey"})
 			end

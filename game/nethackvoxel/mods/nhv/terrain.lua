@@ -1005,8 +1005,9 @@ core.after(0, function()
 	end
 end)
 
--- Rebuild everything (level change, or prefabs changed).
-function terrain.build_all(map)
+-- Rebuild everything (level change, or prefabs changed). hero: where you
+-- arrive (the screen is black until what's round there is on it)
+function terrain.build_all(map, hero)
 	terrain.built = {}
 	nhv.props.clear()
 	nhv.doors.clear()
@@ -1020,6 +1021,14 @@ function terrain.build_all(map)
 	end
 	write_squares(sqs)
 	build_bounds()
+	-- (the screen stays black until it has reached the screen - as far
+	-- as the fog, round where you arrive; the rest comes as you go:
+	-- player.lua)
+	if core.nh_level_await and hero then
+		core.nh_level_await(vector.new(-1, prefabs.Y0 - 1, -1),
+			vector.new(U.COLNO * U.TILE, prefabs.Y0 + prefabs.H, U.ROWNO * U.TILE),
+			vector.round(U.tile_center(hero.x, hero.y)), nhv.hud.fog_distance())
+	end
 end
 
 -- slot built at a square (or nil)

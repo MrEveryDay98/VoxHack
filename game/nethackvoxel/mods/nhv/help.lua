@@ -43,7 +43,7 @@ help.SECTIONS = {
 		{"X", "Search (hold to keep searching; Ctrl + X: search for a number of turns)"},
 		{"P", "Pay the shopkeeper, in a shop"},
 		{"G", "Advance a skill (shown when you can)"},
-		{"Q", "Invoke what you wield: an artifact's power, a crystal ball (shown as \"Q  Invoke\" when it can be)"},
+		{"Q", "Monster ability while polymorphed (breathe, spit, hide...), otherwise invoke what you wield; shown as \"Q  ...\" when there is one"},
 		{"I", "Inventory and equipment: click an item for what you can do with it"},
 		{"T", "NetHack's command line: any NetHack command (#pray, #loot, #offer, 20s...); it also lists every message so far (Page Up scrolls back)"},
 		{"M", "Mute or unmute the sound"},

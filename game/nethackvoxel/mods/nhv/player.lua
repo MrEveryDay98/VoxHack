@@ -121,13 +121,17 @@ end)
 
 -- A level change isn't instant. NetHack has already moved you, but its
 -- snapshot is held back (nh.lua) while the view freezes and fades to black;
--- the new level is built under the black, you're held still a moment while
--- its blocks reach the screen, and it fades back in. Falling through a hole
+-- the new level is built under the black, you're held still while its
+-- blocks reach the screen (all of them: core.nh_level_progress), and it
+-- fades back in. Falling through a hole
 -- or trap door, you first drop into it on this level for half a second (a
 -- trap door's hatch opening under you), fading as you fall; on the new level
 -- you then drop in from above as it fades in.
 local FALL_S = 0.5
-local FADE_OUT_S, BLACK_S, FADE_IN_S = 0.3, 0.7, 0.4
+local FADE_OUT_S, FADE_IN_S = 0.3, 0.4
+-- black at least this long, and at most this long if the level's blocks
+-- are slow to come
+local BLACK_MIN_S, BLACK_MAX_S = 0.15, 5
 nh.hold_level_change = function(old)
 	local falling = core.get_us_time() < (player_mod.falling_until or 0)
 	local p = player_mod.get()
@@ -573,7 +577,8 @@ nh.on_snapshot(function(snap, action)
 	if level_changed or not prev then
 		-- (the new level is built now: black, held still, then fade in)
 		nhv.hud.fade(1, 0)
-		player_mod.level_hold = {t0 = core.get_us_time(), t_end = core.get_us_time() + BLACK_S * 1e6}
+		player_mod.level_hold = {t0 = core.get_us_time(), t_end = core.get_us_time() + BLACK_MAX_S * 1e6,
+			loading = true}
 	end
 	if level_changed and prev and core.get_us_time() < (player_mod.falling_until or 0) then
 		-- fell through a hole or a trap door: you drop in from above (just
@@ -879,7 +884,10 @@ core.register_globalstep(function()
 	local fz = player and player_mod.level_hold
 	if fz then
 		local now = core.get_us_time()
-		if now < fz.t_end then
+		-- (the new level: until all of it is on the screen)
+		local loaded = fz.loading and now - fz.t0 > BLACK_MIN_S * 1e6
+			and (not core.nh_level_progress or core.nh_level_progress() >= 1)
+		if now < fz.t_end and not loaded then
 			if not fz.pos and now - fz.t0 > 150000 then
 				fz.pos = player:get_pos()
 			end

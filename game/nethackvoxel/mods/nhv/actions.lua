@@ -305,6 +305,13 @@ function actions.invokable()
 	end
 end
 
+-- what NetHack's #monster would do now ("Breathe", "Spit", "Hide"...),
+-- nil when nothing: your form's special ability (Q uses it)
+function actions.monster_ability()
+	local a = nh.snap and nh.snap.hero and nh.snap.hero.ability
+	return a ~= "" and a or nil
+end
+
 -- a melee swing, after any still to play (one at a time, never two at once)
 function actions.melee_swing(hand)
 	swing_queue[#swing_queue + 1] = hand or 0

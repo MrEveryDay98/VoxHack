@@ -5,7 +5,7 @@
 -- debug or explore mode) and each achievement says which events unlock it.
 -- Unlocking one shows a note at the lower right (and plays the hook
 -- "achievement_unlocked"); the Achievements screen (the title screen's
--- button, or the inventory's) lists them all.
+-- button, or the pause menu's) lists them all.
 
 local U = nhv.util
 local nh = nhv.nh
@@ -122,23 +122,6 @@ local LIST = {
 	{"creamed", "Pie in the Face", "Blind yourself with a cream pie", "cream pie"},
 	{"shk_paid", "Restitution", "Pay a shopkeeper for damage you did", "gold piece"},
 
-	"Conducts (on ascending)",
-	{"atheist", "Atheist", "Ascend without praying, sacrificing or using a priest", "chaotic altar"},
-	{"foodless", "Foodless", "Ascend without eating", "apple"},
-	{"vegan", "Vegan", "Ascend eating no animal products", "apple"},
-	{"vegetarian", "Vegetarian", "Ascend eating no meat", "carrot"},
-	{"weaponless", "Weaponless", "Ascend without hitting with a wielded weapon", "old gloves / leather gloves"},
-	{"pacifist", "Pacifist", "Ascend without killing a monster yourself", "white unicorn"},
-	{"illiterate", "Illiterate", "Ascend without reading anything", "unlabeled / blank paper"},
-	{"polypileless", "Polypileless", "Ascend without polymorphing an object", "silver / polymorph"},
-	{"polyselfless", "Polyselfless", "Ascend without changing form", "polymorph trap"},
-	{"wishless", "Wishless", "Ascend without wishing", "pine / wishing"},
-	{"artiwishless", "Artiwishless", "Ascend without wishing for an artifact", "long sword"},
-	{"genocideless", "Genocideless", "Ascend without genociding", "ELBIB YLOH / genocide"},
-	{"blind_ascension", "Blind from Birth", "Ascend having been blind the whole game", "blindfold"},
-	{"nudist", "Nudist", "Ascend without ever wearing armor", "leather armor"},
-	{"sokoban_clean", "By the Rules", "Ascend having finished Sokoban without breaking its rules", "boulder"},
-
 	"Ascensions",
 	{"asc_archeologist", "Archeologist", "Ascend as an Archeologist", "archeologist"},
 	{"asc_barbarian", "Barbarian", "Ascend as a Barbarian", "barbarian"},
@@ -163,6 +146,21 @@ local LIST = {
 	{"asc_chaotic", "Chaotic", "Ascend chaotic", "chaotic altar"},
 	{"asc_male", "Male", "Ascend as a man", "human (male)"},
 	{"asc_female", "Female", "Ascend as a woman", "human (female)"},
+	{"atheist", "Atheist", "Ascend without praying, sacrificing or using a priest", "chaotic altar"},
+	{"foodless", "Foodless", "Ascend without eating", "apple"},
+	{"vegan", "Vegan", "Ascend eating no animal products", "apple"},
+	{"vegetarian", "Vegetarian", "Ascend eating no meat", "carrot"},
+	{"weaponless", "Weaponless", "Ascend without hitting with a wielded weapon", "old gloves / leather gloves"},
+	{"pacifist", "Pacifist", "Ascend without killing a monster yourself", "white unicorn"},
+	{"illiterate", "Illiterate", "Ascend without reading anything", "unlabeled / blank paper"},
+	{"polypileless", "Polypileless", "Ascend without polymorphing an object", "silver / polymorph"},
+	{"polyselfless", "Polyselfless", "Ascend without changing form", "polymorph trap"},
+	{"wishless", "Wishless", "Ascend without wishing", "pine / wishing"},
+	{"artiwishless", "Artiwishless", "Ascend without wishing for an artifact", "long sword"},
+	{"genocideless", "Genocideless", "Ascend without genociding", "ELBIB YLOH / genocide"},
+	{"blind_ascension", "Blind from Birth", "Ascend having been blind the whole game", "blindfold"},
+	{"nudist", "Nudist", "Ascend without ever wearing armor", "leather armor"},
+	{"sokoban_clean", "By the Rules", "Ascend having finished Sokoban without breaking its rules", "boulder"},
 }
 
 ach.list, ach.by_id = {}, {}
@@ -567,11 +565,19 @@ function ach.show(player)
 	core.show_formspec(player:get_player_name(), FORM, formspec())
 end
 
-core.register_on_player_receive_fields(function(player, formname, fields)
-	if formname == "" and fields.achievements then
-		ach.show(player)
+-- (the pause menu's Achievements button)
+core.register_chatcommand("nhvachievements", {
+	description = "(VoxHack) your achievements (the pause menu's Achievements)",
+	func = function(pname)
+		local player = core.get_player_by_name(pname)
+		if player then
+			ach.show(player)
+		end
 		return true
-	end
+	end,
+})
+
+core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= FORM then
 		return false
 	end

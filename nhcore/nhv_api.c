@@ -656,6 +656,45 @@ nhv_get_spells(nhv_spell *buf, int max)
     return n;
 }
 
+/* What NetHack's #monster would do for the hero now (in domonability()'s
+   order), or "" when it would only say there's nothing to do. */
+static const char *
+nhv_monability(void)
+{
+    struct permonst *uptr = gy.youmonst.data;
+    boolean might_hide = (is_hider(uptr) || hides_under(uptr));
+
+    if (might_hide && webmaker(uptr))
+        return "Hide or spin a web";
+    if (can_breathe(uptr))
+        return "Breathe";
+    if (attacktype(uptr, AT_SPIT))
+        return "Spit";
+    if (uptr->mlet == S_NYMPH)
+        return Punished ? "Remove the chain" : "";
+    if (attacktype(uptr, AT_GAZE))
+        return "Gaze";
+    if (is_were(uptr))
+        return "Summon help";
+    if (might_hide)
+        return "Hide";
+    if (webmaker(uptr))
+        return "Spin a web";
+    if (is_mind_flayer(uptr))
+        return "Mind blast";
+    if (u.umonnum == PM_GREMLIN)
+        return (IS_FOUNTAIN(levl[u.ux][u.uy].typ) || is_pool(u.ux, u.uy))
+                   ? "Multiply" : "";
+    if (is_unicorn(uptr))
+        return "Use your horn";
+    if (uptr->msound == MS_SHRIEK)
+        return "Shriek";
+    if (is_vampire(uptr) || is_vampshifter(&gy.youmonst))
+        return "Change form";
+    if (u.usteed && can_breathe(u.usteed->data))
+        return "Steed breathes";
+    return "";
+}
 NHV_API void
 nhv_get_hero(nhv_hero *out)
 {
@@ -767,6 +806,7 @@ nhv_get_hero(nhv_hero *out)
     Snprintf(out->dungeon_name, sizeof out->dungeon_name, "%s",
              svd.dungeons[u.uz.dnum].dname);
     (void) describe_level(out->level_desc, 0);
+    Snprintf(out->ability, sizeof out->ability, "%s", nhv_monability());
 }
 
 static void

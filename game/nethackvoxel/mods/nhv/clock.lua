@@ -126,7 +126,9 @@ function clock.update(dtime, player)
 	-- (walking flat out at the speed you can manage is full speed)
 	local walk = math.max(0.1, clock.WALK * clock.move_speed() / 12)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
-	if clock.debt > 0 or clock.realtime() then
+	-- (a ray you zapped: time runs until it has flown, or it would hang
+	-- in the air until you moved)
+	if clock.debt > 0 or clock.realtime() or (nhv.rays and nhv.rays.own_flying()) then
 		target = 1
 	end
 	if nhv.wheel and nhv.wheel.is_open() then

@@ -154,7 +154,7 @@ function title.show(player)
 end
 
 -- character creation: what's chosen is stored as the NetHack options
--- (Options > NetHack options shows the same)
+-- (the pause menu > NetHack Options shows the same)
 local CREATE = {"role", "race", "gender", "align", "pettype"}
 
 -- NetHack's allowed combinations (role.c): each role's races, genders and

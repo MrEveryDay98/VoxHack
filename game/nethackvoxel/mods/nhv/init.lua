@@ -79,7 +79,7 @@ nh.on_snapshot(function(snap)
 			nhv.containers.clear()
 			core.nh_clear_rays()
 		end
-		nhv.terrain.build_all(snap.map)
+		nhv.terrain.build_all(snap.map, snap.hero)
 	else
 		nhv.terrain.update(snap.map)
 	end

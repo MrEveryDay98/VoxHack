@@ -59,7 +59,7 @@ local function userdir()
 	return core.get_worldpath() .. DIR_DELIM .. "nethack"
 end
 
--- (the player's own choices come from Options > NetHack options, nhopts.lua)
+-- (the player's own choices come from the pause menu > NetHack Options, nhopts.lua)
 nh.OPTIONS = table.concat({
 	"OPTIONS=!legacy,!splash_screen,!rest_on_space", -- (tutorial: nhopts)
 	"OPTIONS=time,showexp,!mention_walls,suppress_alert:3.4.3,voices",

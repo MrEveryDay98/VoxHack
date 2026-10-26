@@ -1,4 +1,4 @@
--- NetHack's own options (Options > NetHack options), the ones that still
+-- NetHack's own options (the pause menu > NetHack Options), the ones that still
 -- matter here (no display, symbol or keyboard options).
 --
 -- "New characters" options (name, role..., pet and its name) are read by
@@ -328,16 +328,28 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		ticked[pname] = nil
 		nhv.hud.message("NetHack options saved.")
-		nhv.graphics.show(player)
+		core.close_formspec(pname, FORM)
 		return true
 	end
 	if fields.back or fields.quit then
 		ticked[pname] = nil -- (not saved: forgotten)
 	end
 	if fields.back then
-		nhv.graphics.show(player)
+		core.close_formspec(pname, FORM)
 	end
 	return true
 end)
+
+-- (the pause menu's NetHack Options button)
+core.register_chatcommand("nhvoptions", {
+	description = "(VoxHack) NetHack's options (the pause menu's NetHack Options)",
+	func = function(pname)
+		local player = core.get_player_by_name(pname)
+		if player then
+			nhopts.show(player)
+		end
+		return true
+	end,
+})
 
 return nhopts

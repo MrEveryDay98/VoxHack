@@ -283,6 +283,8 @@ typedef struct nhv_hero {
     char align[16];
     char dungeon_name[32];
     char level_desc[32];    /* e.g. "Dlvl:3" */
+    char ability[24];       /* what #monster would do now ("Breathe",
+                               "Spit"...), "" when it would do nothing */
 } nhv_hero;
 
 NHV_API void nhv_get_hero(nhv_hero *out);

@@ -79,6 +79,14 @@ local function launch(info)
 		waiting = false,
 	}
 	nhv.sound.hook("ray_fire", {pos = from})
+	-- a flash where it leaves from: it's on its way
+	local color = COLORS[info.kind] or "#ffffff"
+	core.add_particlespawner({
+		amount = 24, time = 0.05, pos = from,
+		minvel = vector.new(-2, -1.5, -2), maxvel = vector.new(2, 2, 2),
+		minexptime = 0.2, maxexptime = 0.4, minsize = 1, maxsize = 2.2,
+		texture = "[fill:2x2:" .. color, glow = 14,
+	})
 end
 
 nh.on_snapshot(function(snap)
@@ -205,6 +213,17 @@ function rays.update(dturns)
 	while #rays.queue > 0 and nh.ready() do
 		nh.act(table.remove(rays.queue, 1), {kind = "ray"})
 	end
+end
+
+-- Is one of your own rays still flying? (time runs while it does: you
+-- just zapped, and it takes game time to get there)
+function rays.own_flying()
+	for _, r in pairs(rays.list) do
+		if r.from_hero then
+			return true
+		end
+	end
+	return false
 end
 
 function rays.clear()

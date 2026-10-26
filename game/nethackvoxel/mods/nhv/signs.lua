@@ -7,7 +7,7 @@
 -- nhv_tiles/textures/nhv_wallWide_doorSign.png (one square wide, one block
 -- high) drawn 3x as big, with the name in white letters (and a dark shadow)
 -- in the game's pixel font, centred: textures/nhv_sf_<char code>.png and
--- nhv_sfs_<char code>.png (8x12 each). Options > NetHack options > "Signs
+-- nhv_sfs_<char code>.png (8x12 each). Pause menu > NetHack Options > "Signs
 -- over shop doors" turns them off.
 
 local nh = nhv.nh

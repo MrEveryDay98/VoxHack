@@ -65,6 +65,133 @@ function nhv_tiles.texture(tile)
 	return tex
 end
 
+-- Where a sprite's picture really is in its cell: most monsters stand on
+-- the bottom of theirs (tools/ground_monster_sprites.py), so a picture
+-- put somewhere by its cell's middle sits too high. Read once from the
+-- sheet's pixels (whatever it is now: edit it freely) the first time
+-- it's asked for: the middle of the cell's visible (not see-through)
+-- pixels, as the offset from the cell's middle in sheet pixels.
+local TILE_PX = 16
+local centers -- sheet position -> {dx, dy}; false: the sheet couldn't be read
+
+-- the sheet's alpha values, row by row ({[y] = {[x] = alpha}}), or nil
+-- (8-bit RGBA or RGB, not interlaced: what the sheet is saved as)
+local function read_alpha(path)
+	local f = io.open(path, "rb")
+	if not f then
+		return nil
+	end
+	local png = f:read("*a")
+	f:close()
+	if png:sub(1, 8) ~= "\137PNG\r\n\26\n" then
+		return nil
+	end
+	local function u32(i)
+		local a, b, c, d = png:byte(i, i + 3)
+		return ((a * 256 + b) * 256 + c) * 256 + d
+	end
+	local w, h, depth, ctype, interlace
+	local idat = {}
+	local pos = 9
+	while pos + 8 <= #png do
+		local len, kind = u32(pos), png:sub(pos + 4, pos + 7)
+		local body = pos + 8
+		if kind == "IHDR" then
+			w, h = u32(body), u32(body + 4)
+			depth, ctype, interlace = png:byte(body + 8), png:byte(body + 9), png:byte(body + 12)
+		elseif kind == "IDAT" then
+			idat[#idat + 1] = png:sub(body, body + len - 1)
+		elseif kind == "IEND" then
+			break
+		end
+		pos = body + len + 4
+	end
+	if not w or depth ~= 8 or interlace ~= 0 or (ctype ~= 6 and ctype ~= 2) then
+		return nil
+	end
+	local ok, data = pcall(core.decompress, table.concat(idat), "deflate")
+	if not ok or not data then
+		return nil
+	end
+	local bpp = ctype == 6 and 4 or 3
+	local stride = w * bpp
+	local alpha, prev = {}, {}
+	for x = 1, stride do
+		prev[x] = 0
+	end
+	for y = 0, h - 1 do
+		local at = y * (stride + 1) + 1
+		local filter = data:byte(at)
+		local raw = {data:byte(at + 1, at + stride)}
+		local cur = {}
+		for x = 1, stride do
+			local a = x > bpp and cur[x - bpp] or 0
+			local b = prev[x]
+			local v = raw[x] or 0
+			if filter == 1 then
+				v = v + a
+			elseif filter == 2 then
+				v = v + b
+			elseif filter == 3 then
+				v = v + math.floor((a + b) / 2)
+			elseif filter == 4 then
+				local c = x > bpp and prev[x - bpp] or 0
+				local p = a + b - c
+				local pa, pb, pc = math.abs(p - a), math.abs(p - b), math.abs(p - c)
+				v = v + ((pa <= pb and pa <= pc) and a or (pb <= pc and b or c))
+			end
+			cur[x] = v % 256
+		end
+		local row = {}
+		for x = 0, w - 1 do
+			row[x] = bpp == 4 and cur[x * 4 + 4] or 255
+		end
+		alpha[y] = row
+		prev = cur
+	end
+	return alpha
+end
+
+local function find_centers()
+	local alpha = read_alpha(core.get_modpath("nhv_tiles") .. DIR_DELIM .. "textures"
+		.. DIR_DELIM .. nhv_tiles.SPRITES)
+	if not alpha then
+		core.log("warning", "[nhv_tiles] couldn't read the sprite sheet's pixels")
+		return false
+	end
+	local out = {}
+	for s = 0, meta.cols * meta.rows - 1 do
+		local x0, y0 = (s % meta.cols) * TILE_PX, math.floor(s / meta.cols) * TILE_PX
+		local minx, miny, maxx, maxy
+		for y = 0, TILE_PX - 1 do
+			local row = alpha[y0 + y]
+			for x = 0, TILE_PX - 1 do
+				if row and (row[x0 + x] or 0) > 0 then
+					minx, maxx = math.min(minx or x, x), math.max(maxx or x, x)
+					miny, maxy = math.min(miny or y, y), math.max(maxy or y, y)
+				end
+			end
+		end
+		if minx then
+			out[s] = {(minx + maxx + 1) / 2 - TILE_PX / 2, (miny + maxy + 1) / 2 - TILE_PX / 2}
+		end
+	end
+	return out
+end
+
+-- the offset (sheet pixels, x right, y down) from a tile's cell middle to
+-- the middle of its picture; 0, 0 for an empty cell
+function nhv_tiles.picture_center(tile)
+	if centers == nil then
+		centers = find_centers()
+	end
+	local c = centers and centers[nhv_tiles.sheet_index(tile)]
+	if not c then
+		return 0, 0
+	end
+	return c[1], c[2]
+end
+
 -- combat flashes for monster sprites: a faint white one when attacking,
 -- red when hurt (entities swap to these items for a moment)
 nhv_tiles.FLASH = {
