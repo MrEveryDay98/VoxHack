@@ -11,6 +11,8 @@
 --   /area                   list the special level areas
 --   /area <name>            go to an area's build plate (see areas.lua)
 --   /area reset <name>      start an area over from the usual prefabs
+--   /area reload <name>     build an area's plate again from what's saved
+--                           (after its file was changed outside the editor)
 --   /area revert            start the area you're on over (all your changes gone)
 --   /fullbright             see everything at full brightness (toggle)
 -- I opens the block palette. Placing never uses up blocks; digging is
@@ -598,9 +600,12 @@ local function area_list(ts)
 	return table.concat(lines, "\n")
 end
 
+local save_areas -- (below: the area squares changed, saved now)
+
 core.register_chatcommand("area", {
-	params = "[reset] [<name>] | revert",
-	description = "Special level areas: list them, go to one, start one over (revert: the one you're on)",
+	params = "[reset | reload] [<name>] | revert",
+	description = "Special level areas: list them, go to one, start one over (revert: the one you're on), "
+		.. "build one again from its saved file (reload)",
 	func = function(pname, param)
 		local player = core.get_player_by_name(pname)
 		if param:match("^%s*revert%s*$") then
@@ -625,7 +630,8 @@ core.register_chatcommand("area", {
 			return true, "Reverted " .. areas.name(t) .. ": every change gone, back to the usual prefabs."
 		end
 		local reset = param:match("^%s*reset%s+(.-)%s*$")
-		local q = reset or param:match("^%s*(.-)%s*$")
+		local reload = param:match("^%s*reload%s+(.-)%s*$")
+		local q = reset or reload or param:match("^%s*(.-)%s*$")
 		if q == "" then
 			return true, "Areas (/area <name> to go to one):\n" .. area_list(areas.list)
 		end
@@ -640,8 +646,12 @@ core.register_chatcommand("area", {
 		if reset then
 			areas.get(t.id).cells = {}
 			areas.save(t.id)
+		elseif reload then
+			-- (what you just changed saved first, then the file read again)
+			save_areas()
+			areas.data[t.id] = nil
 		end
-		build_area(t, first or reset ~= nil, function()
+		build_area(t, first or reset ~= nil or reload ~= nil, function()
 			storage:set_string("area_laid_" .. t.id, "1")
 			if player and player:is_player() then
 				local o = area_origin[t.id]
@@ -649,7 +659,8 @@ core.register_chatcommand("area", {
 				player:set_look_horizontal(0)
 			end
 		end)
-		return true, (reset and "Starting over: " or "Going to: ") .. areas.name(t)
+		return true, (reset and "Starting over: " or reload and "Built again from its file: "
+			or "Going to: ") .. areas.name(t)
 	end,
 })
 
@@ -764,7 +775,7 @@ function editor.revert_area(t)
 end
 
 -- the area squares that were changed, as they're built now
-local function save_areas()
+function save_areas()
 	for id, ks in pairs(dirty_areas) do
 		local t = areas.templates[id]
 		local d = areas.get(id)
