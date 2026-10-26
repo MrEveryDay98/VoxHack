@@ -2,6 +2,18 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.9.0 (alpha) - 2026-10-26
+
+- **Levels fade in only once they're drawn.** After stairs, a trap door or a level teleport the screen stays black until the level around you has arrived and been drawn, and it arrives much faster: usually a fraction of a second, with no holes when it fades in.
+- **Zapped wands fire at once.** A ray you zap flies straight away even if you stand still (it used to hang until you moved), with a flash where it leaves your hand.
+- **Q uses your monster ability** while you're polymorphed: breathe, spit, gaze, hide, spin a web, summon help... The left side of the screen says what it will do ("Q  Breathe"). Without one, Q still invokes what you wield.
+- **Melee works while polymorphed.** Every claw and bite of your form now lands where it should; before, often only the first attack (or none) happened. The second hit of two-weapon fighting and martial arts no longer goes missing either.
+- **The pause menu** has the Achievements and NetHack Options buttons (moved from the inventory and the Options screen), and its buttons fit their labels.
+- **The big map shows which way you face:** an arrow beside you turns as you do. Options > Map icons > "Where they are" draws you and the monsters at your exact positions instead of on the grid.
+- **The Astral Plane** is just its rooms, without the rock around them.
+- Fixed: "Program in disorder!" after a vault guard led you out.
+- Achievements: the conducts are listed under Ascensions.
+
 ## v0.8.0 (alpha) - 2026-10-25
 
 - **Achievements.** 126 of them, Steam style: kept for you, not the character, from game to game and from one VoxHack version to the next. Reach Minetown, kill Medusa, wish, be crowned, ascend as each role, race and alignment, ascend with a conduct kept... An achievement pops up at the lower right as you earn it; the Achievements button on the title screen and in the inventory lists them all, the ones you haven't earned yet hidden as "???". Nothing counts in debug or explore mode; a game already under way gets credit for NetHack's own achievements it has.
