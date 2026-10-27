@@ -12,3 +12,6 @@ outside = out syde
 sword = sored
 Yendor = Yen dore
 usage = youssidge
+immediately = eemeediatlee
+lava = Lawhva
+creatures = creechurs

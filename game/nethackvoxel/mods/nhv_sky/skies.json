@@ -250,6 +250,56 @@
    "stars": true,
    "stars_always": true,
    "cloud_brightness": 0.4
+  },
+  {
+   "id": "sky4",
+   "name": "ValSky",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.01,
+      0.005
+     ],
+     "scale": 1.0,
+     "opacity": 1,
+     "tint": "#9E9E9E",
+     "see_through_black": false,
+     "coverage": 0.99,
+     "softness": 0.15,
+     "detail": 4,
+     "shade": "#666673"
+    },
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.02,
+      0.01
+     ],
+     "scale": 2.0,
+     "opacity": 0.8,
+     "tint": "#FFFFFF",
+     "see_through_black": false,
+     "coverage": 0.57,
+     "softness": 0.19,
+     "detail": 4,
+     "shade": "#666673"
+    }
+   ],
+   "horizon": {
+    "color": "#737373",
+    "fade": 0.6
+   },
+   "pixels": 64,
+   "fog_color": "#000000",
+   "daynight": true,
+   "sun": true,
+   "moon": true,
+   "stars": true,
+   "stars_always": false,
+   "cloud_brightness": 1.4
   }
  ],
  "levels": {
@@ -257,6 +307,7 @@
   "fire": "sky1",
   "water": "sky2",
   "astral": "sky3",
-  "knox": "ludios"
+  "knox": "ludios",
+  "val": "sky4"
  }
 }

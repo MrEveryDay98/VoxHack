@@ -95,7 +95,7 @@
     "throat": 128,
     "mouth": 128,
     "smooth": true,
-    "live": true
+    "live": false
    }
   },
   "The Oracle": {
@@ -235,6 +235,27 @@
     "smooth": true,
     "variation": 40,
     "female": 16
+   }
+  },
+  "Quest (Val)": {
+   "sam": {
+    "voice": "Little Old Lady",
+    "speed": 82,
+    "pitch": 79,
+    "throat": 145,
+    "mouth": 145,
+    "live": true
+   }
+  },
+  "Narrator": {
+   "sam": {
+    "voice": "Little Old Lady",
+    "speed": 82,
+    "pitch": 104,
+    "throat": 145,
+    "mouth": 145,
+    "smooth": true,
+    "live": true
    }
   }
  },

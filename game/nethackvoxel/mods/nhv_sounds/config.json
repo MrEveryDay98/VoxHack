@@ -883,6 +883,13 @@
    ],
    "volume": 100,
    "pitch_var": 0.05
+  },
+  "artifact_lightning": {
+   "sounds": [
+    "thunders_sfx_01"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {},
