@@ -2,6 +2,21 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.10.0 (alpha) - 2026-10-27
+
+- **Getting an artifact is a moment.** The first time an artifact comes into your hands, time stops, a beam of light comes down on you, the camera circles you in third person and you hold it up over your head, its name in gold at the top. Each artifact is an achievement of its own.
+- **Dying is a moment too.** The camera goes out behind you and circles your corpse, "You die..." stands in red in the middle of the screen, and "Do you want your possessions identified?" fades in after a few seconds. It keeps circling behind your gravestone.
+- **ASCII mode** (F4, or Options > Graphics): the world built of NetHack's own characters in the IBM EGA's font, at full brightness. Floors of `.`, corridors of `#`, doors `+`, walls of shaded blocks in their colour (solid in view, lighter when remembered), monsters, objects, your weapon and the big map all as characters. **The Rogue level is always drawn this way**, with Epyx Rogue's symbols and colours.
+- **Every command on the wheel.** Every wheel ends in More...: Items, Gear, Magic, Move, Here, Info and Game, each opening its commands (rest on one to open it, or let go on it and click). An arrow from the middle shows what you're pointing at.
+- **F3 finds any command:** type part of its name or what it does, Enter does it.
+- **Lightning flashes white:** lightning bolts, wands of lightning, Mjollnir's strikes and cameras. Fire Brand, Frost Brand, Mjollnir and Magicbane have sound hooks for their hits.
+- **Drop some** of a stack: how many is asked first.
+- **Apply to yourself** for a stethoscope, mirror, camera or horn.
+- **Long worms** can be hit anywhere along their tails, each segment drawn where it is.
+- **Sprites face the camera**, not you: right in third person too.
+- Sitting on a throne (or offering at an altar, drinking from a fountain...) works with things lying on it; containers' contents are sorted by kind; special levels open to the sky have no ceilings floating over their edges.
+- **For modders:** the VoxHack Editor has an Extract sounds tab: open a long recording, mark clips on its waveform (or find them automatically) and save them as sounds, with an optional fade at each end. New hooks: artifact_obtained, artifact_fire/cold/lightning/missiles, lightning_flash, camera_flash.
+
 ## v0.9.0 (alpha) - 2026-10-26
 
 - **Levels fade in only once they're drawn.** After stairs, a trap door or a level teleport the screen stays black until the level around you has arrived and been drawn, and it arrives much faster: usually a fraction of a second, with no holes when it fades in.
