@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.10.1 (alpha) - 2026-10-27
+
+- **Shadows are off by default** (Options > Shadows turns them on).
+- **The narrator doesn't read ordinary messages** any more ("You hear faint splashing."): just the quests' narration and arriving on special levels.
+
 ## v0.10.0 (alpha) - 2026-10-27
 
 - **Getting an artifact is a moment.** The first time an artifact comes into your hands, time stops, a beam of light comes down on you, the camera circles you in third person and you hold it up over your head, its name in gold at the top. Each artifact is an achievement of its own.
