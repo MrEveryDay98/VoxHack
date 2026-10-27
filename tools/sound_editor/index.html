@@ -29,6 +29,7 @@
   <button role="tab" data-tab="voices">Voices &amp; dialogue</button>
   <button role="tab" data-tab="casting">Voice casting</button>
   <button role="tab" data-tab="library">Sound library</button>
+  <button role="tab" data-tab="extract">Extract sounds</button>
   <button role="tab" data-tab="blocks">Blocks</button>
   <button role="tab" data-tab="effects">Effects</button>
   <button role="tab" data-tab="sky">Sky</button>
@@ -108,6 +109,11 @@
     <div id="skyBody"></div>
   </section>
 
+  <section id="tab-extract" class="tab" hidden>
+    <p class="hint">Cut sound effects out of a long recording: mark the clips on its waveform, name them, and save. Each is saved to the Sound library as its own sound, with a short fade at each end if you like (so it doesn't click).</p>
+    <div id="extractBody"></div>
+  </section>
+
   <section id="tab-library" class="tab" hidden>
     <div class="toolbar">
       <input id="libSearch" type="search" placeholder="Search sounds…">
@@ -149,6 +155,7 @@
 <script src="/blocks.js"></script>
 <script src="/effects.js"></script>
 <script src="/sky.js"></script>
+<script src="/extract.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

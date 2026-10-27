@@ -232,6 +232,10 @@ function sound.hook(id, opts)
 	if nhv.effects then
 		nhv.effects.hook(id, opts)
 	end
+	-- (and lightning and a camera flash the screen: hud.lua)
+	if nhv.hud then
+		nhv.hud.hook_flash(id)
+	end
 	local entry = sound.cfg.hooks[id]
 	local name = pick(entry)
 	local p = player()
@@ -960,7 +964,7 @@ nh.on_snapshot(function(snap)
 	flag_changed(U.HERO.HALLU, "hallucination_start", "hallucination_end")
 	flag_changed(U.HERO.FAST, "speed_fast", nil)
 	flag_changed(U.HERO.LEVITATE, "levitation_start", "levitation_end")
-	flag_changed(U.HERO.DEAD, "death", nil)
+	flag_changed(U.HERO.DIED, "death", nil) -- (dying: not quitting, winning...)
 end)
 
 -- before the dungeon exists (character selection)

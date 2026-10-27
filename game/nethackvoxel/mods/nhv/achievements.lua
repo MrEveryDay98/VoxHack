@@ -19,6 +19,45 @@ local FILE = "achievements.json"
 local FORM = "nhv:achievements"
 
 -- ---------------------------------------------------------------- the list
+-- NetHack's artifacts, in its own order (ART_* in artilist.h: the number
+-- NetHack gives each); getting each is an achievement, "art_<slug>"
+local ARTIFACTS = {
+	{"excalibur", "Excalibur", "long sword"}, -- 1
+	{"stormbringer", "Stormbringer", "runed broadsword / runesword"}, -- 2
+	{"mjollnir", "Mjollnir", "war hammer"}, -- 3
+	{"cleaver", "Cleaver", "double-headed axe / battle-axe"}, -- 4
+	{"grimtooth", "Grimtooth", "crude dagger / orcish dagger"}, -- 5
+	{"orcrist", "Orcrist", "runed broadsword / elven broadsword"}, -- 6
+	{"sting", "Sting", "runed dagger / elven dagger"}, -- 7
+	{"magicbane", "Magicbane", "athame"}, -- 8
+	{"frost_brand", "Frost Brand", "long sword"}, -- 9
+	{"fire_brand", "Fire Brand", "long sword"}, -- 10
+	{"dragonbane", "Dragonbane", "broadsword"}, -- 11
+	{"demonbane", "Demonbane", "silver mace"}, -- 12
+	{"werebane", "Werebane", "silver saber"}, -- 13
+	{"grayswandir", "Grayswandir", "silver saber"}, -- 14
+	{"giantslayer", "Giantslayer", "long sword"}, -- 15
+	{"ogresmasher", "Ogresmasher", "war hammer"}, -- 16
+	{"trollsbane", "Trollsbane", "morning star"}, -- 17
+	{"vorpal_blade", "Vorpal Blade", "long sword"}, -- 18
+	{"snickersnee", "Snickersnee", "samurai sword / katana"}, -- 19
+	{"sunsword", "Sunsword", "long sword"}, -- 20
+	{"orb_of_detection", "The Orb of Detection", "glass orb / crystal ball"}, -- 21
+	{"heart_of_ahriman", "The Heart of Ahriman", "gray / luckstone"}, -- 22
+	{"sceptre_of_might", "The Sceptre of Might", "mace"}, -- 23
+	{"staff_of_aesculapius", "The Staff of Aesculapius", "staff / quarterstaff"}, -- 24
+	{"magic_mirror_of_merlin", "The Magic Mirror of Merlin", "looking glass / mirror"}, -- 25
+	{"eyes_of_the_overworld", "The Eyes of the Overworld", "lenses"}, -- 26
+	{"mitre_of_holiness", "The Mitre of Holiness", "crystal helmet / helm of brilliance"}, -- 27
+	{"longbow_of_diana", "The Longbow of Diana", "bow"}, -- 28
+	{"master_key_of_thievery", "The Master Key of Thievery", "key / skeleton key"}, -- 29
+	{"tsurugi_of_muramasa", "The Tsurugi of Muramasa", "long samurai sword / tsurugi"}, -- 30
+	{"platinum_yendorian_express_card", "The Platinum Yendorian Express Card", "credit card"}, -- 31
+	{"orb_of_fate", "The Orb of Fate", "glass orb / crystal ball"}, -- 32
+	{"eye_of_the_aethiopica", "The Eye of the Aethiopica", "circular / amulet of ESP"}, -- 33
+}
+ach.ARTIFACTS = ARTIFACTS
+
 -- {id, name, description, icon (a sprite's name in nhv_tiles.png)}; a
 -- string starts a new group
 local LIST = {
@@ -101,6 +140,8 @@ local LIST = {
 	{"poly_undead", "Undeath", "Turn into an undead creature", "vampire leader"},
 	{"dragon_pet", "Here Be Dragons", "Have a grown dragon as a pet", "silver dragon"},
 
+	"Artifacts", -- (filled in from ARTIFACTS, below)
+
 	"Combat",
 	{"kill100", "Hundred Down", "Kill 100 monsters (across all your games)", "jackal"},
 	{"kill1000", "Thousand Down", "Kill 1,000 monsters (across all your games)", "soldier"},
@@ -162,6 +203,17 @@ local LIST = {
 	{"nudist", "Nudist", "Ascend without ever wearing armor", "leather armor"},
 	{"sokoban_clean", "By the Rules", "Ascend having finished Sokoban without breaking its rules", "boulder"},
 }
+
+-- (the Artifacts group: one each)
+for k, d in ipairs(LIST) do
+	if d == "Artifacts" then
+		for j, a in ipairs(ARTIFACTS) do
+			local name = a[2]:gsub("^The ", "the ")
+			table.insert(LIST, k + j, {"art_" .. a[1], a[2], "Get " .. name, a[3]})
+		end
+		break
+	end
+end
 
 ach.list, ach.by_id = {}, {}
 do
@@ -487,6 +539,8 @@ function ach.event(text)
 		flags_unlock(n or 0, POLY)
 	elseif kind == "artifact" then
 		flags_unlock(n or 0, ARTIFACT)
+	elseif kind == "obtained" and n and ARTIFACTS[n] then
+		ach.unlock("art_" .. ARTIFACTS[n][1])
 	elseif kind == "place" then
 		ach.unlock(rest)
 	elseif kind == "depth" and n then

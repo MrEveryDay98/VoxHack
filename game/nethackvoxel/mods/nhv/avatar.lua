@@ -36,6 +36,19 @@ local function drop(key)
 	parts[key] = nil
 end
 
+-- which way round your sprites are on you (degrees, turned from your
+-- facing) so their fronts face the camera: behind you, turned right round;
+-- in front of you (third person, from the front), as you face
+local function facing(player)
+	local cam, pos = U.camera_pos(player), player:get_pos()
+	local d = cam and vector.subtract(cam, pos)
+	if not d or d.x * d.x + d.z * d.z < 0.09 then
+		return 180 -- (first person: not seen anyway)
+	end
+	local yaw = math.atan2(d.z, d.x) - math.pi / 2 - player:get_look_horizontal()
+	return math.floor(math.deg(yaw) % 360 + 0.5)
+end
+
 -- the sprite `key` with tile m.tile, its middle y nodes above your feet
 -- (invisible but seen - See_invisible: see-through, nhv_tiles.fuzz_look)
 local function show(player, key, m, y)
@@ -67,13 +80,25 @@ local function show(player, key, m, y)
 		p.tile, p.h, p.fuzz = m.tile, h, fuzz
 	end
 	y = y + h / 2
-	if p.y ~= y then
-		-- (attachment offsets are in tenths of a node; turned round, so
-		-- the sprite's front faces the camera behind you)
-		p.obj:set_attach(player, "", vector.new(0, y * 10, 0), vector.new(0, 180, 0))
-		p.y = y
+	local rot = facing(player)
+	if p.y ~= y or p.rot ~= rot then
+		-- (attachment offsets are in tenths of a node; turned so the
+		-- sprite's front faces the camera)
+		p.obj:set_attach(player, "", vector.new(0, y * 10, 0), vector.new(0, rot, 0))
+		p.y, p.rot = y, rot
 	end
 	return h
+end
+
+-- draw your sprite (and your steed's) again, whatever it was (ASCII mode
+-- turned on or off: ascii.lua)
+function avatar.refresh()
+	for _, p in pairs(parts) do
+		p.tile = nil
+	end
+	if nhv.nh.snap then
+		avatar.update(nhv.nh.snap)
+	end
 end
 
 -- your sprite as drawn now ({obj=, tile=, h=, fuzz=}), or nil (shadows.lua)
@@ -105,16 +130,28 @@ function avatar.update(snap)
 	else
 		drop("steed")
 	end
-	-- (invisible, and you can't see invisible: you can't see yourself)
-	if me and not U.has(me.flags, U.MON_HIDDEN) then
+	-- (invisible, and you can't see invisible: you can't see yourself;
+	-- dead, your corpse lies there instead - death.lua)
+	if me and not U.has(me.flags, U.MON_HIDDEN) and not (nhv.death and nhv.death.active) then
 		show(player, "self", me, seat)
 	else
 		drop("self")
 	end
 end
 
--- your see-through self's fuzz crawls (as monsters' do: mobs.lua)
+-- your see-through self's fuzz crawls (as monsters' do: mobs.lua); your
+-- sprites keep facing the camera as it moves round you
 core.register_globalstep(function()
+	local player = nhv.player.get()
+	if player then
+		local rot = facing(player)
+		for _, part in pairs(parts) do
+			if part.rot ~= rot and part.y and part.obj:get_pos() then
+				part.obj:set_attach(player, "", vector.new(0, part.y * 10, 0), vector.new(0, rot, 0))
+				part.rot = rot
+			end
+		end
+	end
 	local p = parts.self
 	if p and p.fuzz and p.obj:get_pos() then
 		local frame = nhv_tiles.fuzz_frame()

@@ -54,7 +54,8 @@ settings and high scores stay inside that folder.
 | Esc | The game menu (Help lists every key); closes any window |
 | F1 | Hide or show the HUD |
 | F2 | Look up what you're pointing at on NetHackWiki (F2 again closes it) |
-| F3 | NetHack's commands, each with what it does |
+| F3 | Find any command by name or what it does, and do it |
+| F4 | ASCII mode: the world drawn in NetHack's characters |
 | F11 / F12 | Fullscreen / screenshot |
 
 Look steeply down or up when zapping, digging or casting to aim down (`>`) or up (`<`).

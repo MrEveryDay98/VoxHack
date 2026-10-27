@@ -616,6 +616,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   if (b.dataset.tab === "blocks") Blocks.render();
   if (b.dataset.tab === "effects") Effects.render();
   if (b.dataset.tab === "sky") Sky.render();
+  if (b.dataset.tab === "extract") Extract.render();
   history.replaceState(null, "", "#" + b.dataset.tab);
 }));
 $("#saveBtn").addEventListener("click", save);
@@ -650,7 +651,7 @@ document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (dirty) save(); }
 });
 window.addEventListener("beforeunload", (e) => {
-  if (dirty || Blocks.isDirty() || Effects.isDirty() || Sky.isDirty()) { e.preventDefault(); e.returnValue = ""; }
+  if (dirty || Blocks.isDirty() || Effects.isDirty() || Sky.isDirty() || Extract.hasClips()) { e.preventDefault(); e.returnValue = ""; }
 });
 
 load().catch((e) => toast("Could not load: " + e.message));

@@ -1358,6 +1358,42 @@
    "source": "weapon.c"
   },
   {
+   "id": "artifact_fire",
+   "group": "events",
+   "desc": "A fire artifact burns someone (Fire Brand: \"The fiery blade burns...\")",
+   "source": "artifact.c"
+  },
+  {
+   "id": "artifact_cold",
+   "group": "events",
+   "desc": "A cold artifact freezes someone (Frost Brand: \"The ice-cold blade freezes...\")",
+   "source": "artifact.c"
+  },
+  {
+   "id": "artifact_lightning",
+   "group": "events",
+   "desc": "A lightning artifact strikes someone (Mjollnir: \"Lightning strikes...\")",
+   "source": "artifact.c"
+  },
+  {
+   "id": "artifact_missiles",
+   "group": "events",
+   "desc": "A magic missile artifact strikes someone (\"A hail of magic missiles strikes...\")",
+   "source": "artifact.c"
+  },
+  {
+   "id": "lightning_flash",
+   "group": "events",
+   "desc": "A wand of lightning flashes: zapped at yourself, up or down, engraved with or broken (zapped ahead, it's a ray: ray_fire)",
+   "source": "apply.c"
+  },
+  {
+   "id": "camera_flash",
+   "group": "events",
+   "desc": "An expensive camera's flash goes off",
+   "source": "apply.c"
+  },
+  {
    "id": "trap_arrow_trap",
    "group": "traps",
    "desc": "arrow trap"
@@ -1676,6 +1712,11 @@
    "id": "achievement_unlocked",
    "group": "game",
    "desc": "An achievement is unlocked"
+  },
+  {
+   "id": "artifact_obtained",
+   "group": "game",
+   "desc": "An artifact is got for the first time this game (its cutscene starts)"
   },
   {
    "id": "music_title",

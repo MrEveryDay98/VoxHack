@@ -56,6 +56,7 @@ GAME_HOOKS = [
     ("wheel_select", "An action is picked on the wheel"),
     ("dialog_open", "A question or menu appears"),
     ("achievement_unlocked", "An achievement is unlocked"),
+    ("artifact_obtained", "An artifact is got for the first time this game (its cutscene starts)"),
 ]
 
 MUSIC = [
@@ -111,6 +112,12 @@ DESCRIBE_EVENTS = {
     "ambient_naiad": "A fountain: the splashing of a naiad", "ambient_soda": "A fountain (hallucinating): a soda fountain",
     "ambient_sink_drip": "A sink on the level: a slow drip", "ambient_sink_gurgle": "A sink: a gurgling noise",
     "ambient_sink_dishes": "A sink (hallucinating): dishes being washed",
+    "artifact_fire": "A fire artifact burns someone (Fire Brand: \"The fiery blade burns...\")",
+    "artifact_cold": "A cold artifact freezes someone (Frost Brand: \"The ice-cold blade freezes...\")",
+    "artifact_lightning": "A lightning artifact strikes someone (Mjollnir: \"Lightning strikes...\")",
+    "artifact_missiles": "A magic missile artifact strikes someone (\"A hail of magic missiles strikes...\")",
+    "lightning_flash": "A wand of lightning flashes: zapped at yourself, up or down, engraved with or broken (zapped ahead, it's a ray: ray_fire)",
+    "camera_flash": "An expensive camera's flash goes off",
 }
 
 
@@ -337,10 +344,10 @@ def main():
     for fname in sorted(os.listdir(os.path.join(root, "src"))):
         if fname.endswith(".c"):
             src = open(os.path.join(root, "src", fname), encoding="latin-1").read()
-            # NHV_HOOK("name"), NHV_HOOK(cond ? "a" : "b") and lists of hook
+            # NHV_HOOK("name") (or _AT / _MON), NHV_HOOK(cond ? "a" : "b") and lists of hook
             # names chosen in code (static const char *const ..._hook[] = {...})
             names = []
-            for call in re.findall(r'NHV_HOOK\(([^;]*?)\)\s*[;,]', src):
+            for call in re.findall(r'NHV_HOOK(?:_AT|_MON)?\(([^;]*?)\)\s*[;,]', src):
                 names += re.findall(r'"([a-z_0-9]+)"', call)
             for body in re.findall(r'_hook\[\d*\]\s*=\s*\{([^}]*)\}', src):
                 names += re.findall(r'"([a-z_0-9]+)"', body)

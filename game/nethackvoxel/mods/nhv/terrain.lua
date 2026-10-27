@@ -491,7 +491,41 @@ local function top_part(cell)
 	return part
 end
 
+-- ASCII mode (ascii.lua): the square as blocks of its character - black
+-- under the floor, the character for the floor; a wall, rock or a closed
+-- door the character up TILE blocks (one character on each face, as on the
+-- floor) and black above it to the ceiling; a black ceiling (none under an
+-- open sky)
+local function write_ascii(data, area, sq)
+	local code, color, solid = sq.ascii[1], sq.ascii[2], sq.ascii[3]
+	local ch, black, air = cid(nhv.ascii.block(code, color)), cid(nhv.ascii.block(32)), cid("air")
+	local roof = not (terrain.open_sky or sq.roofless or (terrain.open_area and solid))
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	for ly = 0, prefabs.H - 1 do
+		local id, p2 = air, 0
+		if ly < prefabs.FLOOR then
+			id = black
+		elseif ly <= prefabs.FLOOR + (solid and U.TILE or 0) then
+			id = ch
+		elseif solid and ly < prefabs.CEIL then
+			id = black
+		elseif ly == prefabs.CEIL and roof then
+			id = black
+		end
+		for lx = 0, U.TILE - 1 do
+			for lz = 0, U.TILE - 1 do
+				local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+				data.ids[vi], data.p2[vi] = id, p2
+			end
+		end
+	end
+end
+
 local function write_square(data, area, sq)
+	if sq.ascii then
+		write_ascii(data, area, sq)
+		return
+	end
 	if sq.area_cell then
 		-- part of a hand-built area (a special level's fixed part; areas.lua)
 		local ox, oz = U.tile_origin(sq.tx, sq.ty)
@@ -746,6 +780,9 @@ end
 
 -- (ways up rise past where the ceiling would be: they keep all of theirs)
 local ROOF_KEPT = {stairs_up = true, ladder_up = true, stairs_up_sky = true, ladder_up_sky = true}
+-- (the rim NetHack fills round a hand-built area open to the sky: this
+-- many squares out from it are open too - areas.near_open_area)
+local OPEN_RIM = 3
 
 local function describe(map, tx, ty)
 	local i = U.idx(tx, ty)
@@ -798,7 +835,8 @@ local function describe(map, tx, ty)
 	if cell then
 		sq.area_cell = cell
 		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
-	elseif in_open_area and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
+	elseif (in_open_area or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM)))
+			and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
 		-- an area open to the sky, its square built from the usual prefab
 		-- (stairs, water where the ice melted, a wall dug out...): nothing
 		-- over it - no ceiling hanging in the air (write_square)
@@ -816,6 +854,13 @@ local function describe(map, tx, ty)
 	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
 		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or ""}, ":")
+	-- (ASCII mode: its character instead - ascii.lua; seeing it, or what's
+	-- remembered there changing, does change what's built then)
+	if nhv.ascii and nhv.ascii.on then
+		local code, color, solid = nhv.ascii.square(map, i, true)
+		sq.ascii = {code, color, solid}
+		sq.key = ("ascii:%d:%d:%s:%s"):format(code, color, solid and 1 or 0, sq.roofless and "open" or "")
+	end
 	return i, sq
 end
 
@@ -914,6 +959,10 @@ local function debris(prev)
 end
 
 function terrain.update(map, force)
+	-- (ASCII mode turned on or off: everything is drawn again)
+	if nhv.ascii and nhv.ascii.update() then
+		force = true
+	end
 	local style = detect_wall_style(map)
 	if style and style ~= terrain.wall_style then
 		terrain.wall_style = style

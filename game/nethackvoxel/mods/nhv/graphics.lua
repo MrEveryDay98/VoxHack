@@ -3,6 +3,7 @@
 --   * interface style: Retro (pixel font, old PC boxes) or Modern
 --   * HUD size, menu size and map size
 --   * sprites drawn extruded (voxel models) or flat
+--   * ASCII mode: the world as NetHack's characters (ascii.lua; F4)
 --   * a lower render resolution for a retro look (Luanti's "undersampling":
 --     the world is drawn at 1/N size and scaled up with sharp pixels; the
 --     HUD and menus stay full resolution)
@@ -18,6 +19,7 @@ local theme = nhv.theme
 local STYLE = {"Retro", "Modern"}
 local TIME = {"Superhot", "Real time"}
 local SPRITES = {"Extruded (3D)", "Flat"}
+local ASCII = {"Off", "On (F4)"}
 local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local SHADOWS = {"On", "Off"}
 local SHADOW_OPACITY = {{20, "20%"}, {40, "40%"}, {60, "60%"}, {80, "80%"}, {100, "100% (solid)"}}
@@ -64,7 +66,7 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 14.8),
+		theme.head(10, 15.7),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -75,18 +77,21 @@ function graphics.formspec()
 		row(6.0, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)),
 		row(6.9, "Map icons", "map_icons", table.concat(MAP_ICONS, ","),
 			nhv.hud.exact_icons() and 2 or 1),
-		row(7.8, "Sprites", "sprites", table.concat(SPRITES, ","), nhv_tiles.flat() and 2 or 1),
-		row(8.7, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
-		row(9.6, "Distant textures", "distant", table.concat(DISTANT, ","),
+		row(7.8, "Sprites", "sprites", table.concat(SPRITES, ","),
+			core.settings:get_bool("nhv_flat_sprites", false) and 2 or 1),
+		row(8.7, "ASCII mode", "ascii", table.concat(ASCII, ","),
+			core.settings:get_bool("nhv_ascii", false) and 2 or 1),
+		row(9.6, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)),
+		row(10.5, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
-		row(10.5, "Shadows", "shadows", table.concat(SHADOWS, ","),
+		row(11.4, "Shadows", "shadows", table.concat(SHADOWS, ","),
 			core.settings:get_bool("nhv_shadows", true) and 1 or 2),
-		row(11.4, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
+		row(12.3, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
 			pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)),
-		row(12.3, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
+		row(13.2, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
 			core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2),
-		"button[0.5,13.8;4.4,0.8;guide;Controls & guide...]",
-		"button_exit[5.1,13.8;4.4,0.8;close;Done]",
+		"button[0.5,14.7;4.4,0.8;guide;Controls & guide...]",
+		"button_exit[5.1,14.7;4.4,0.8;close;Done]",
 	})
 end
 
@@ -153,9 +158,15 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		changed = true
 	end
 	local s = tonumber(fields.sprites)
-	if s and (s == 2) ~= nhv_tiles.flat() then
+	if s and (s == 2) ~= core.settings:get_bool("nhv_flat_sprites", false) then
 		core.settings:set_bool("nhv_flat_sprites", s == 2)
 		nhv.mobs.refresh_sizes()
+		changed = true
+	end
+	local a = tonumber(fields.ascii)
+	if a and (a == 2) ~= core.settings:get_bool("nhv_ascii", false) then
+		core.settings:set_bool("nhv_ascii", a == 2)
+		nhv.ascii.redraw()
 		changed = true
 	end
 	local d = tonumber(fields.distant)

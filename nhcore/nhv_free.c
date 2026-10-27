@@ -316,16 +316,22 @@ donhvpole(void)
     return use_pole(uwep, TRUE);
 }
 
-/* #nhvattack id: melee a monster the host says is within reach. */
+/* #nhvattack id [x y]: melee a monster the host says is within reach -
+   at x,y, one of its tail segments next to you, when it's a long worm's
+   (there NetHack hits the tail, and may cut the worm in two) */
 int
 donhvattack(void)
 {
     struct monst *mtmp = mon_by_id((unsigned) nhv_cmd_args[0]);
+    int tx = nhv_cmd_args[1], ty = nhv_cmd_args[2];
     int dx, dy;
 
     if (!mtmp)
         return nhv_ok();
     dx = sgn(mtmp->mx - u.ux), dy = sgn(mtmp->my - u.uy);
+    if (tx > 0 && isok(tx, ty) && m_at(tx, ty) == mtmp
+        && distmin(u.ux, u.uy, tx, ty) == 1)
+        dx = tx - u.ux, dy = ty - u.uy;
     if (!dx && !dy)
         dx = 1;
     u.dx = dx, u.dy = dy, u.dz = 0;

@@ -79,6 +79,9 @@ local function launch(info)
 		waiting = false,
 	}
 	nhv.sound.hook("ray_fire", {pos = from})
+	if info.kind == 5 then
+		nhv.hud.white_flash("lightning") -- (lightning: a white flash)
+	end
 	-- a flash where it leaves from: it's on its way
 	local color = COLORS[info.kind] or "#ffffff"
 	core.add_particlespawner({

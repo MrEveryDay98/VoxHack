@@ -113,6 +113,35 @@ local function yn_dialog(req)
 	return table.concat(fs)
 end
 
+-- The same question fading in (a: 0 see-through ... 1 as usual), without
+-- the usual style so all of it can fade: the death scene's "Do you want your
+-- possessions identified?" (death.lua shows it a step at a time)
+function ui.yn_fading(req, a)
+	local function hex(v)
+		return ("%02X"):format(math.floor(v * a + 0.5))
+	end
+	local op = math.floor(255 * a + 0.5)
+	local n = #req.choices
+	local w = math.max(8, n * 2.2 + 1)
+	local fs = {("formspec_version[6]size[%s,4]no_prepend[]"):format(w),
+		("bgcolor[#000000%s;true]"):format(hex(0xA0))}
+	if nhv.theme.retro() then
+		fs[#fs + 1] = ("background9[0,0;0,0;nhv_ui_panel.png^[opacity:%d;true;4]"):format(op)
+		fs[#fs + 1] = ("style_type[button;border=false;bgimg=nhv_ui_button.png^[opacity:%d;"
+			.. "bgimg_hovered=nhv_ui_button_hover.png^[opacity:%d;"
+			.. "bgimg_pressed=nhv_ui_button_pressed.png^[opacity:%d;bgimg_middle=2;textcolor=#FFFFFF%s]")
+			:format(op, op, op, hex(255))
+		fs[#fs + 1] = ("style_type[label;textcolor=#AAAAAA%s]"):format(hex(255))
+	else
+		fs[#fs + 1] = ("box[0,0;%s,4;#000000%s]"):format(w, hex(0xC0))
+		fs[#fs + 1] = ("style_type[button;bgcolor=#303040%s;textcolor=#FFFFFF%s]"):format(hex(255), hex(255))
+		fs[#fs + 1] = ("style_type[label;textcolor=#E0E0E0%s]"):format(hex(255))
+	end
+	fs[#fs + 1] = ("label[0.5,0.7;%s]"):format(E(wrap(req.prompt, math.floor(w * 5))))
+	yn_buttons(fs, req, 0.5, 2.6)
+	return table.concat(fs)
+end
+
 -- A question that comes right after information windows (e.g. at the end
 -- of the game: your attributes, then "Do you want to see your conduct?"):
 -- one window, the information scrolling above and the question below.
@@ -341,6 +370,10 @@ end
 -- ---------------------------------------------------------------- requests
 local function show_request(req)
 	ui.req = req
+	-- (the death scene asks its question itself, when it's time: death.lua)
+	if nhv.death and #ui.pending_text == 0 and nhv.death.take(req) then
+		return
+	end
 	if req.kind ~= "pos" then
 		nhv.hud.picking(false) -- (a place was being picked: not any more)
 	end
@@ -767,6 +800,29 @@ for i, c in ipairs({OC.COIN, OC.AMULET, OC.WEAPON, OC.ARMOR, OC.FOOD, OC.SCROLL,
 	INV_ORDER[c] = i
 end
 
+-- Items in that order, grouped by kind (a copy): by letter within a kind,
+-- or by name for things not in your pack (a container's)
+function ui.sort_by_kind(objs)
+	local sorted = {}
+	for i, o in ipairs(objs) do
+		sorted[i] = o
+	end
+	table.sort(sorted, function(a, b)
+		local ca, cb = INV_ORDER[a.oclass] or 99, INV_ORDER[b.oclass] or 99
+		if ca ~= cb then
+			return ca < cb
+		end
+		if a.invlet and b.invlet and a.invlet ~= b.invlet then
+			return a.invlet < b.invlet
+		end
+		if a.name ~= b.name then
+			return a.name < b.name
+		end
+		return (a.id or 0) < (b.id or 0)
+	end)
+	return sorted
+end
+
 local function inventory_formspec(inv)
 	local fs = {head(19, 11), "label[0.4,0.5;Equipment]",
 		"label[5.6,0.5;Inventory  (click an item for actions)]",
@@ -789,17 +845,7 @@ local function inventory_formspec(inv)
 	end
 	-- inventory list: one scrolling column, grouped by kind in NetHack's
 	-- usual order, letters in order within each group
-	local sorted = {}
-	for i, o in ipairs(inv) do
-		sorted[i] = o
-	end
-	table.sort(sorted, function(a, b)
-		local ca, cb = INV_ORDER[a.oclass] or 99, INV_ORDER[b.oclass] or 99
-		if ca ~= cb then
-			return ca < cb
-		end
-		return a.invlet < b.invlet
-	end)
+	local sorted = ui.sort_by_kind(inv)
 	local VIEW_H = 9.8
 	local rows, y = {}, 0.05
 	local last_class
@@ -958,8 +1004,60 @@ function ui.item_fields(player, fields)
 	end
 end
 
+-- ---------------------------------------------------------------- drop some
+-- How many of a stack to drop: NetHack's d with a count before the letter
+-- ("d5a"), asked here instead of typed.
+function ui.show_drop_count(o, n)
+	if not o or not nh.ready() then
+		return
+	end
+	ui.drop_obj = o
+	n = math.max(1, math.min(n or 1, o.quan))
+	show("nhv:dropcount", head(9, 4.6)
+		.. ("item_image[0.4,0.3;1,1;%s]"):format(nhv_tiles.item(o.tile))
+		.. ("label[1.6,0.8;%s]"):format(E(buc_text(o, wrap(o.invlet .. " - " .. o.name, 40))))
+		.. ("label[0.5,1.9;How many? (you have %d)]"):format(o.quan)
+		.. "button[0.5,2.3;0.9,0.8;less;-]"
+		.. ("field[1.5,2.3;2,0.8;count;;%d]field_close_on_enter[count;false]"):format(n)
+		.. "button[3.6,2.3;0.9,0.8;more;+]"
+		.. "button[4.7,2.3;1.6,0.8;half;Half]"
+		.. "button[6.4,2.3;2.1,0.8;allbut;All but 1]"
+		.. "button[0.5,3.5;4,0.8;drop;Drop]"
+		.. "button[4.6,3.5;3.9,0.8;cancel;Cancel]"
+		.. "set_focus[count;true]")
+end
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= "nhv:dropcount" then
+		return
+	end
+	local o = ui.drop_obj
+	if not o then
+		return true
+	end
+	local n = math.floor(tonumber(fields.count or "") or 1)
+	if fields.less or fields.more or fields.half or fields.allbut then
+		n = fields.less and n - 1 or fields.more and n + 1
+			or fields.half and math.floor(o.quan / 2) or o.quan - 1
+		ui.show_drop_count(o, n)
+	elseif fields.drop or fields.key_enter_field == "count" then
+		close("nhv:dropcount")
+		n = math.max(1, math.min(n, o.quan))
+		-- (all of them: a plain d)
+		local keys = (n < o.quan and ("d" .. n) or "d") .. o.invlet
+		nhv.actions.run({label = "Drop", keys = keys}, {kind = "item"})
+	elseif fields.cancel then
+		close("nhv:dropcount")
+	end
+	return true
+end)
+
 -- ---------------------------------------------------------------- death
 function ui.show_death()
+	-- (the death scene goes on behind your gravestone: death.lua)
+	if nhv.death then
+		nhv.death.to_grave()
+	end
 	local lines = {}
 	for _, t in ipairs(ui.pending_text) do
 		for _, l in ipairs(t.lines) do
@@ -985,6 +1083,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.totitle then
 		ui.dead = false
 		close("nhv:dead")
+		-- (the death scene ends: back to first person for the title screen)
+		if nhv.death then
+			nhv.death.finish()
+		end
 		nhv.title.show(player)
 	elseif fields.quit and ui.dead then
 		ui.show_death()

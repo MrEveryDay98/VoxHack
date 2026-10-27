@@ -57,6 +57,7 @@ U.MON_SENSED = 0x800 -- (sensed - telepathy...: a ghost when not in plain view)
 U.MON_UNSEEN = 0x1000 -- (with SENSED: NetHack says you don't see it)
 U.MON_SEEINVIS = 0x2000 -- (invisible, seen anyway - See_invisible: see-through fuzz; you too)
 U.MON_HIDDEN = 0x4000 -- (SELF: you're invisible and can't see invisible: not drawn)
+U.MON_TAIL = 0x8000 -- (a long worm's tail segment: id is the worm's)
 
 -- nhv_hero.flags
 U.HERO = {
@@ -76,6 +77,8 @@ U.HERO = {
 	TWOFISTS = 0x4000000, -- (a Monk bare-handed: a fist in each hand)
 	POLE5 = 0x8000000, -- (the polearm reaches squared distance 5: skilled, knight's moves)
 	POLE8 = 0x10000000, -- (... 8: expert, 2 squares diagonally)
+	ROGUELVL = 0x20000000, -- (on the Rogue level: drawn as text - ascii.lua)
+	DIED = 0x40000000, -- (with DEAD: the game ended in death, not quitting or winning)
 }
 
 -- nhv_hero.conds (hero.conds): troubles beyond the flags
@@ -103,18 +106,23 @@ function U.idx(x, y)
 end
 
 -- node position of the south-west bottom corner of a tile's column
--- turn a sprite entity to face the nearest player (billboarding)
-function U.face_player(obj)
-	local pos = obj:get_pos()
-	local best, bd
-	for _, p in ipairs(core.get_connected_players()) do
-		local d = vector.distance(p:get_pos(), pos)
-		if not bd or d < bd then
-			best, bd = p, d
-		end
+-- Where sprites turn to face (billboarding): the camera - in third person
+-- it's behind you (or in front), not where you are (the VoxHack build of
+-- Luanti tells: core.nhv_camera) - else the player
+function U.camera_pos(player)
+	local c = core.nhv_camera and core.nhv_camera()
+	if c then
+		return c
 	end
-	if best then
-		local d = vector.subtract(best:get_pos(), pos)
+	player = player or core.get_connected_players()[1]
+	return player and player:get_pos()
+end
+
+-- turn a sprite entity to face the camera (billboarding)
+function U.face_player(obj)
+	local pos, cam = obj:get_pos(), U.camera_pos()
+	if pos and cam then
+		local d = vector.subtract(cam, pos)
 		obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
 	end
 end

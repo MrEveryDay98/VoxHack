@@ -121,6 +121,10 @@ function clock.update(dtime, player)
 	if not (nh.ready() or helpless) or nhv.ui.open or nhv.ui.chat_open or nhv.ui.menu_open then
 		return 0
 	end
+	if nhv.cutscene and nhv.cutscene.active then
+		clock.scale = 0 -- (a cutscene: time stands still, and starts again from rest)
+		return 0
+	end
 	local v = player:get_velocity()
 	local speed = math.sqrt(v.x * v.x + v.z * v.z)
 	-- (walking flat out at the speed you can manage is full speed)

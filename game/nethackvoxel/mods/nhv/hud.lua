@@ -456,6 +456,16 @@ local function floor_under(map, i)
 	return cmap_tile(lit and "S_room" or "S_darkroom")
 end
 
+-- a tile's picture on the map: in ASCII mode (ascii.lua) its character,
+-- on black, the size of a tile's picture
+local function map_texture(tile)
+	if nhv.ascii and nhv.ascii.on then
+		return ("[fill:%dx%d:#000000^(%s^[resize:%dx%d)"):format(TILE_PX, TILE_PX,
+			nhv_tiles.texture(tile), TILE_PX, TILE_PX)
+	end
+	return nhv_tiles.texture(tile)
+end
+
 -- (bare: leave you and the monsters off it - the big map draws them where
 -- they really are instead: Options > Map icons)
 function hud.square_tex(map, h, x, y, bare)
@@ -470,6 +480,23 @@ function hud.square_tex(map, h, x, y, bare)
 		if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
 			top = map.tile[i]
 		end
+	end
+	-- ASCII mode: just the top character, as on NetHack's own screen
+	if nhv.ascii and nhv.ascii.on then
+		if top then
+			return map_texture(top)
+		end
+		-- (an object remembered there: its character; else the ground's)
+		local mt = map.mem_tile[i] or -1
+		if mt >= 0 and nhv.glyph_info(map.mem[i]).kind ~= "cmap" then
+			return map_texture(mt)
+		end
+		local code, color = nhv.ascii.square(map, i)
+		if code == 32 then
+			return nil
+		end
+		return ("[fill:%dx%d:#000000^(%s^[resize:%dx%d)"):format(TILE_PX, TILE_PX,
+			nhv_tiles.ascii_texture(code, color), TILE_PX, TILE_PX)
 	end
 	local mem = map.mem_tile[i] or -1
 	local mgi = nhv.glyph_info(map.mem[i])
@@ -609,7 +636,7 @@ local function update_map_icons(player)
 		local cx, cy = nhv_tiles.picture_center(w.tile)
 		local x = (fx - U.COLNO / 2) * s - cx * s / TILE_PX
 		local y = (fy - U.ROWNO / 2) * s - cy * s / TILE_PX
-		local tex = nhv_tiles.texture(w.tile)
+		local tex = map_texture(w.tile)
 		local ic = icons[key]
 		if not ic then
 			icons[key] = {id = player:hud_add({
@@ -1126,6 +1153,33 @@ end
 function hud.flash(color, strength, full, seconds)
 	flash = {color = color or "#FF2020", t0 = core.get_us_time(),
 		strength = math.max(0.2, math.min(1, strength or 1)), full = full, seconds = seconds}
+end
+
+-- A white flash for lightning and a camera going off (not while you're
+-- blind): their hooks (sound.hook), and a lightning ray fired (rays.lua)
+local WHITE_FLASH = {
+	lightning = {0.85, 0.45},
+	camera = {0.7, 0.3},
+}
+local FLASH_HOOKS = {
+	artifact_lightning = "lightning", -- (Mjollnir)
+	bolt_of_lightning = "lightning",  -- (a monster's spell)
+	lightning_flash = "lightning",    -- (a wand of lightning: at yourself, up or
+	                                  -- down, engraving, broken)
+	camera_flash = "camera",
+}
+function hud.white_flash(kind)
+	local h = nh.snap and nh.snap.hero
+	local f = WHITE_FLASH[kind]
+	if f and not (h and U.has(h.flags, U.HERO.BLIND)) then
+		hud.flash("#FFFFFF", f[1], true, f[2])
+	end
+end
+
+function hud.hook_flash(id)
+	if FLASH_HOOKS[id] then
+		hud.white_flash(FLASH_HOOKS[id])
+	end
 end
 
 local tick = 0

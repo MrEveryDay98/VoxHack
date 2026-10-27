@@ -82,8 +82,13 @@ local function ready_for(a)
 end
 
 function actions.run(a, info)
-	if not a then
+	if not a or (nhv.cutscene and nhv.cutscene.active) then
 		return
+	end
+	-- (not a NetHack command - the wiki, a question first - picked on a
+	-- wheel: done at once)
+	if a.func then
+		return a.func(nhv.player.get(), a.obj)
 	end
 	if ready_for(a) then
 		waiting = nil
@@ -412,6 +417,21 @@ local function attack_target(player, prefer_id)
 			end
 		end
 	end
+	-- a long worm's tail segment next to you (its square: NetHack hits the
+	-- tail there, and may cut the worm in two), if it's nearer the
+	-- crosshair than the worm's head
+	local h = hero()
+	for _, e in pairs(nhv.mobs.mons) do
+		if e.tail_of and math.max(math.abs(e.x - h.x), math.abs(e.y - h.y)) == 1 then
+			local a = swing_angle(look, {pos = U.tile_center(e.x, e.y, pos.y), r = 0.45 * U.TILE}, pos)
+			if e.tail_of == prefer_id then
+				a = a - 0.3
+			end
+			if a < ATTACK_CONE and (not best_a or a < best_a) then
+				best, best_a = {id = e.tail_of, tx = e.x, ty = e.y}, a
+			end
+		end
+	end
 	if best then
 		return best
 	end
@@ -466,7 +486,15 @@ local function pole_target(player, prefer_id)
 	return best
 end
 
+-- (anything waiting to run is dropped: a cutscene started)
+function actions.drop_waiting()
+	waiting = nil
+end
+
 function actions.attack(player, prefer_id)
+	if nhv.cutscene and nhv.cutscene.active then
+		return
+	end
 	-- a readied spell: the click casts it
 	if nhv.spells.release(player) then
 		return
@@ -484,7 +512,8 @@ function actions.attack(player, prefer_id)
 	if t then
 		-- (the arm swings as NetHack reports each swing: above)
 		nhv.sound.hook("hero_swing")
-		nhv.clock.act(ext("nhvattack " .. t.id), {kind = "attack"})
+		nhv.clock.act(ext("nhvattack " .. t.id .. (t.tx and (" " .. t.tx .. " " .. t.ty) or "")),
+			{kind = "attack"})
 	elseif far then
 		-- (out of arm's reach, in a polearm's or lance's: it stabs as
 		-- NetHack reports the hit, below)
@@ -544,7 +573,7 @@ end
 
 function actions.attack_entity(player, ent)
 	local e = nhv.mobs.mons[ent.nh_key]
-	actions.attack(player, e and e.id)
+	actions.attack(player, e and (e.id or e.tail_of))
 end
 
 function actions.fire(player)
@@ -725,9 +754,17 @@ local function square_info(tx, ty)
 	local map = nh.snap.map
 	local i = U.idx(tx, ty)
 	local gi = nhv.glyph_info(map.mem[i])
+	local cmap = gi.kind == "cmap" and nhv.cmap_name(gi.index) or nil
+	-- objects lying on a throne, altar, fountain...: NetHack shows the top
+	-- one there, but what's under them (on a square you've seen) is what
+	-- you act on first - sitting on the throne, not picking up
+	local back = map.back and map.back[i]
+	if not cmap and back and back ~= 255 and map.flags[i] % 2 == 1 then
+		cmap = nhv.cmap_name(back)
+	end
 	return {
 		typ = map.typ[i], door = map.door[i],
-		cmap = gi.kind == "cmap" and nhv.cmap_name(gi.index) or nil,
+		cmap = cmap,
 		has_obj = nhv.mobs.objs[i] ~= nil,
 		mon = nhv.mobs.monster_at(tx, ty),
 	}
@@ -887,7 +924,9 @@ function actions.context(player)
 		local peaceful = mon.mon and U.has(mon.mon.flags, U.MON_PEACEFUL)
 		add(act("Chat", mon.id and mon.id > 0 and ext("nhvchat " .. mon.id) or ext("chat", {key = key})),
 			peaceful)
-		add(act("Fight", ext("nhvattack " .. (mon.id or 0))))
+		-- (a long worm's tail: that segment)
+		add(act("Fight", ext(mon.tail_of and ("nhvattack %d %d %d"):format(mon.tail_of, tx, ty)
+			or ("nhvattack " .. (mon.id or 0)))))
 		add(act("Throw at it", "t"))
 		add(act("Apply at it", "a"))
 		return list, primary
@@ -1036,6 +1075,15 @@ function actions.item_context(o)
 		add(worn and "Remove" or "Put on", (worn and "R" or "P") .. inv, true)
 	elseif c == OC.TOOL then
 		add("Apply", "a" .. inv, true)
+		-- tools that ask which way (a stethoscope, mirror, camera, horn -
+		-- not a unicorn horn, which is always for you): at yourself, as
+		-- looking straight down would
+		local n = lname(o)
+		if (n:match("stethoscope") or n:match("mirror") or n:match("looking glass")
+				or n:match("camera") or n:match("horn")) and not n:match("unicorn") then
+			list[#list + 1] = {label = "Apply to yourself", keys = "a" .. inv,
+				answers = {{pattern = "[Dd]irection", key = "."}}}
+		end
 		if lname(o):match("blindfold") or lname(o):match("towel") or lname(o):match("lenses") then
 			add(worn and "Remove" or "Put on", (worn and "R" or "P") .. inv)
 		end
@@ -1063,10 +1111,16 @@ function actions.item_context(o)
 		add("Unwield", "w-")
 	end
 	add("Drop", "d" .. inv)
+	-- (some of a stack: how many is asked first - ui.lua)
+	if (o.quan or 1) > 1 then
+		list[#list + 1] = {label = "Drop some...", obj = o, func = function(_, obj)
+			nhv.ui.show_drop_count(obj)
+		end}
+	end
 	add("Name type", {{key = "#"}, {text = "call"}, {menu = "o"}, {key = inv}})
 	add("Adjust letter", {{key = "#"}, {text = "adjust"}, {key = inv}})
 	-- (its NetHackWiki page: as far as you know what it is - wiki.lua)
-	list[#list + 1] = {label = "Wiki", func = function(_, obj)
+	list[#list + 1] = {label = "Wiki", obj = o, func = function(_, obj)
 		nhv.wiki.open(nhv.wiki.title_for_object(obj))
 	end}
 	return list, primary

@@ -95,6 +95,11 @@ nhv_start(const char *datadir, const char *userdir, const char *options,
     Snprintf(start_name, sizeof start_name, "%s", name ? name : "");
 
     game_state = NHV_BUSY;
+    {
+        extern int nhv_end_how; /* nhv_achieve.c */
+
+        nhv_end_how = -1;
+    }
     /* NetHack recurses deeply in places (level generation, Lua); give it
      * a generous stack. */
     game_thread = (HANDLE) _beginthreadex(NULL, 16 * 1024 * 1024,
@@ -474,6 +479,9 @@ nhv_get_monsters(nhv_mon *buf, int max)
                     m.flags |= NHV_MON_DETECTED;
                 if ((mtmp = m_at(x, y)) != 0) {
                     m.id = mtmp->m_id;
+                    /* (a long worm is at every square of its tail too) */
+                    if (mtmp->mx != x || mtmp->my != y)
+                        m.flags |= NHV_MON_TAIL;
                     if (mtmp->minvis && canseemon(mtmp))
                         m.flags |= NHV_MON_SEEINVIS;
                     if (sensemon(mtmp))
@@ -743,6 +751,13 @@ nhv_get_hero(nhv_hero *out)
     if (Fast) f |= NHV_HERO_FAST;
     if (Very_fast) f |= NHV_HERO_VFAST;
     if (program_state.gameover) f |= NHV_HERO_DEAD;
+    {
+        extern int nhv_end_how; /* nhv_achieve.c */
+
+        /* (over by dying - not quitting, escaping, ascending...) */
+        if (program_state.gameover && nhv_end_how >= 0 && nhv_end_how < PANICKED)
+            f |= NHV_HERO_DIED;
+    }
     if (*u.ushops) {
         struct monst *shkp = shop_keeper(*u.ushops);
 
@@ -768,6 +783,8 @@ nhv_get_hero(nhv_hero *out)
     }
     if (flags.female)
         f |= NHV_HERO_FEMALE;
+    if (Is_rogue_level(&u.uz))
+        f |= NHV_HERO_ROGUELVL;
     if (gm.multi < 0)
         f |= NHV_HERO_HELPLESS;
     if (unconscious()) /* (asleep, fainted, knocked out) */

@@ -275,6 +275,10 @@ local function refresh(player, inv)
 		local meta = st:get_meta()
 		meta:set_string("description", wep.invlet .. " - " .. wep.name)
 		meta:set_string("nhv_invlet", wep.invlet)
+		-- (ASCII mode: its character in your hand - ascii.lua)
+		if nhv_tiles.ascii then
+			meta:set_string("wield_image", nhv_tiles.texture(wep.tile))
+		end
 	end
 	pinv:set_list("main", {st})
 	-- dual wielding, your left hand holds the secondary weapon; a Monk
@@ -443,6 +447,9 @@ end
 core.register_chatcommand("nhvkey", {
 	description = "(VoxHack) action key",
 	func = function(pname, param)
+		if nhv.cutscene and nhv.cutscene.active then
+			return true -- (a cutscene: keys do nothing, and aren't kept)
+		end
 		if param == "look" then
 			local player = core.get_player_by_name(pname)
 			if player and not nhv.ui.open and nh.ready() then
@@ -459,9 +466,16 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
+		if param == "ascii" then
+			-- (F4: ASCII mode on or off - ascii.lua)
+			if nh.snap then
+				nhv.ascii.toggle()
+			end
+			return true
+		end
 		if param == "commands" then
-			-- (F3: NetHack's commands; F3 again closes them - the engine
-			-- does that while they're open)
+			-- (F3: the command finder; F3 again closes it - the engine
+			-- does that while it's open)
 			local player = core.get_player_by_name(pname)
 			if player and not nhv.ui.open then
 				nhv.commands.toggle(player)
@@ -611,8 +625,11 @@ core.register_chatcommand("nhvchat", {
 nhv.ui.menu_open = false
 core.register_chatcommand("nhvmenu", {
 	description = "(VoxHack) a menu opened/closed",
-	func = function(_, param)
+	func = function(pname, param)
 		nhv.ui.menu_open = param == "open"
+		if param == "open" and nhv.cutscene and nhv.cutscene.active then
+			core.close_formspec(pname, "") -- (no inventory during a cutscene)
+		end
 		return true
 	end,
 })

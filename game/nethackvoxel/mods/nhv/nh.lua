@@ -63,6 +63,9 @@ end
 nh.OPTIONS = table.concat({
 	"OPTIONS=!legacy,!splash_screen,!rest_on_space", -- (tutorial: nhopts)
 	"OPTIONS=time,showexp,!mention_walls,suppress_alert:3.4.3,voices",
+	-- (the Rogue level's symbols and colours, as Epyx's Rogue had them:
+	-- VoxHack draws that level as text - ascii.lua)
+	"OPTIONS=roguesymset:RogueEpyx",
 }, "\n")
 
 -- (more_options: extra option lines for this game - the level atlas's)
@@ -170,6 +173,10 @@ end
 -- Send keys for an action. keys: string (each char a key) or list of
 -- {key=}/{text=}/{menu=} items. info is kept until the result arrives.
 function nh.act(keys, info)
+	-- (during a cutscene nothing is done, nor kept for after: cutscene.lua)
+	if nhv.cutscene and nhv.cutscene.active then
+		return
+	end
 	-- (the command, for the questions that follow: what an "In what
 	-- direction?" is for - zapping, casting, applying can go up and down)
 	if type(keys) == "string" then

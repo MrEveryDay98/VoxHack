@@ -455,6 +455,24 @@ function areas.in_open_area(tx, ty, map)
 	return r ~= nil and area_open(r.t)
 end
 
+-- Is square (tx, ty) just outside a hand-built area open to the sky (within
+-- d squares of its edge)? A special level's map seldom fills the whole
+-- level: NetHack fills the rim round it (the ice round the Valkyrie's
+-- home), and under the open sky that rim has no ceiling either.
+function areas.near_open_area(tx, ty, d)
+	if nhv.EDITOR then
+		return false
+	end
+	for _, r in ipairs(regions()) do
+		local ox = math.max(r.x - tx, 0, tx - (r.x + r.t.w - 1))
+		local oy = math.max(r.y - ty, 0, ty - (r.y + r.t.h - 1))
+		if math.max(ox, oy) <= d and area_open(r.t) then
+			return true
+		end
+	end
+	return false
+end
+
 -- the built cell at template square (cx, cy) of region r, flipped as the
 -- level is, and an id for it
 local function built_at(r, f, cx, cy)

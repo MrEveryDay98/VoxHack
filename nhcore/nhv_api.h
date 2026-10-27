@@ -198,6 +198,8 @@ NHV_API void nhv_get_map(nhv_loc *buf);
                                    see-through; for the hero too (SELF) */
 #define NHV_MON_HIDDEN   0x4000 /* (SELF) the hero is invisible and can't see
                                    invisible: not drawn at all */
+#define NHV_MON_TAIL     0x8000 /* a long worm's tail segment: its id is the
+                                   worm's, its square isn't the worm's own */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */
@@ -248,6 +250,10 @@ NHV_API int nhv_get_monsters(nhv_mon *buf, int max);
 #define NHV_HERO_POLE5     0x8000000 /* (with NHV_HERO_POLE) it reaches squared
                                         distance 5 (skilled: knight's moves) */
 #define NHV_HERO_POLE8     0x10000000 /* ... 8 (expert: 2 squares diagonally) */
+#define NHV_HERO_DIED      0x40000000 /* (with NHV_HERO_DEAD) the game ended in
+                                        death, not by quitting or winning */
+#define NHV_HERO_ROGUELVL  0x20000000 /* on the Rogue level (its own symbols and
+                                        colours: the host draws it as text) */
 
 /* nhv_hero.conds: NetHack's status-line troubles not in the flags */
 #define NHV_COND_STONE     0x01 /* turning to stone */

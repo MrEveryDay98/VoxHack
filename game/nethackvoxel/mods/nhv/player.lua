@@ -186,8 +186,8 @@ local function set_speed(player)
 	if h and stuck(h) then
 		speed = 0
 	end
-	if player_mod.frozen or nhv.clock.searching() then
-		speed = 0 -- (a prompt is up; searching)
+	if player_mod.frozen or nhv.clock.searching() or (nhv.cutscene and nhv.cutscene.active) then
+		speed = 0 -- (a prompt is up; searching; a cutscene)
 	end
 	-- Only the walking speeds change: the engine's "speed" also scales how
 	-- fast you speed up AND slow down, so at 0 you'd keep sliding at
@@ -224,6 +224,14 @@ function player_mod.hop(player, to)
 			end
 		end
 	end)
+end
+
+-- (walking speed worked out again: a cutscene started or ended)
+function player_mod.refresh_speed()
+	local p = player_mod.get()
+	if p then
+		set_speed(p)
+	end
 end
 
 function player_mod.freeze(on)

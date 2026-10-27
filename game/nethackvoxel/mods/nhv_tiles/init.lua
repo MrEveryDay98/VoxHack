@@ -54,8 +54,33 @@ end
 nhv_tiles.SPRITES = core.settings:get_bool("nhv_sprite_shadows", true) and "nhv_tiles.png"
 	or "nhv_tiles_noshadow.png"
 
+-- ASCII mode (nhv/ascii.lua): while it's on, this is a function giving a
+-- tile's NetHack character and colour (code 0-255, NetHack colour 0-15),
+-- and every sprite is that character, flat, in that colour
+-- (textures/nhv_ascii.png: tools/make_ascii_font.py - the IBM EGA's 8x14
+-- characters, in its colours)
+nhv_tiles.ascii = nil
+nhv_tiles.ASCII_COLORS = {
+	[0] = "#555555", "#AA0000", "#00AA00", "#AA5500", "#0000AA", "#AA00AA", "#00AAAA", "#AAAAAA",
+	"#AAAAAA", "#FF5555", "#55FF55", "#FFFF55", "#5555FF", "#FF55FF", "#55FFFF", "#FFFFFF",
+}
+nhv_tiles.ASCII_ASPECT = 8 / 14 -- (a character's width for its height)
+
+-- a character (code 0-255) in a colour (0-15), on see-through
+function nhv_tiles.ascii_texture(code, color)
+	code = code % 256
+	return ("nhv_ascii.png^[sheet:16x16:%d,%d^[multiply:%s"):format(code % 16, math.floor(code / 16),
+		nhv_tiles.ASCII_COLORS[color or 7] or "#B0B0B0")
+end
+
 -- texture string for a NetHack tile
 function nhv_tiles.texture(tile)
+	if nhv_tiles.ascii then
+		local code, color = nhv_tiles.ascii(tile)
+		if code then
+			return nhv_tiles.ascii_texture(code, color)
+		end
+	end
 	local s = nhv_tiles.sheet_index(tile)
 	local tex = string.format("%s^[sheet:%dx%d:%d,%d", nhv_tiles.SPRITES, meta.cols, meta.rows,
 		s % meta.cols, math.floor(s / meta.cols))
@@ -182,6 +207,9 @@ end
 -- the offset (sheet pixels, x right, y down) from a tile's cell middle to
 -- the middle of its picture; 0, 0 for an empty cell
 function nhv_tiles.picture_center(tile)
+	if nhv_tiles.ascii then
+		return 0, 0 -- (a character sits in the middle of its cell)
+	end
 	if centers == nil then
 		centers = find_centers()
 	end
@@ -237,16 +265,19 @@ end
 -- extruded voxel model (default) or, with the setting nhv_flat_sprites,
 -- as a flat sprite. kind: nil, or a FLASH key ("w"/"r") for a combat flash.
 function nhv_tiles.flat()
-	return core.settings:get_bool("nhv_flat_sprites", false)
+	-- (ASCII mode: characters are flat)
+	return nhv_tiles.ascii ~= nil or core.settings:get_bool("nhv_flat_sprites", false)
 end
 
 function nhv_tiles.look(tile, height, kind)
 	if nhv_tiles.flat() then
 		local tex = nhv_tiles.texture(tile) .. (kind and nhv_tiles.FLASH[kind] or "")
+		-- (a character is narrower than it's tall, as on a text screen)
+		local w = nhv_tiles.ascii and height * nhv_tiles.ASCII_ASPECT or height
 		return {
 			visual = "upright_sprite",
 			textures = {tex, tex .. "^[transformFX"},
-			visual_size = {x = height, y = height, z = height},
+			visual_size = {x = w, y = height, z = height},
 		}
 	end
 	local s = height / 2
@@ -261,7 +292,8 @@ end
 function nhv_tiles.size(height, w)
 	local s = nhv_tiles.flat() and height or height / 2
 	w = w or 1
-	return {x = s * w, y = s / w, z = s}
+	local aspect = nhv_tiles.ascii and nhv_tiles.ASCII_ASPECT or 1
+	return {x = s * w * aspect, y = s / w, z = s}
 end
 
 function nhv_tiles.flash_item(tile, kind)

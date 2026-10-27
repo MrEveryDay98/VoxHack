@@ -72,6 +72,20 @@ nhv_achieve(const char *fmt, ...)
     nhv_push_event(NHV_EV_ACHIEVE, 0, buf);
 }
 
+/* An artifact went into the hero's inventory: its achievement ("obtained
+   <ART_* number>"), and for the host's moment of glory, "artifact_get
+   <o_id> <ART_* number>" (in debug mode too; the host plays it the first
+   time each game). */
+void
+nhv_artifact_obtained(struct obj *obj)
+{
+    char buf[64];
+
+    nhv_achieve("obtained %d", (int) obj->oartifact);
+    Sprintf(buf, "artifact_get %u %d", obj->o_id, (int) obj->oartifact);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 static boolean
 is_grown_dragon(int mndx)
 {
@@ -130,12 +144,18 @@ has_achievement(int ach)
     return FALSE;
 }
 
+/* how the game ended (end.c's how: DIED ... ASCENDED; -1 not over): the
+   host's NHV_HERO_DIED */
+int nhv_end_how = -1;
+
 /* end.c's really_done: the game is over */
 void
 nhv_achieve_end(int how)
 {
     int c = 0;
     struct u_conduct *k = &u.uconduct;
+
+    nhv_end_how = how;
 
     if (!k->gnostic)
         c |= NHV_CONDUCT_ATHEIST;

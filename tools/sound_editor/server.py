@@ -37,6 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks_api  # noqa: E402
 import effects_api  # noqa: E402
+import extract_api  # noqa: E402
 import sky_api  # noqa: E402
 import speakable  # noqa: E402
 import samvoice  # noqa: E402
@@ -66,7 +67,7 @@ CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/voices.js": ("voices.js", "text/javascript"),
           "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"), "/sky.js": ("sky.js", "text/javascript"),
-          "/texgen.js": ("texgen.js", "text/javascript"),
+          "/texgen.js": ("texgen.js", "text/javascript"), "/extract.js": ("extract.js", "text/javascript"),
           "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
 FOLDER_PART = re.compile(r"^[a-z0-9_][a-z0-9_ .-]{0,40}$")
@@ -406,6 +407,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if url.path == "/api/upload":
                 return self.upload(q)
+            if url.path == "/api/extract/source":
+                filename = (q.get("filename") or [""])[0]
+                return self.send(200, {"source": extract_api.upload_source(VOICES.work, filename, self.read_body())})
             if url.path == "/api/sky/texture":
                 name = (q.get("name") or ["layer"])[0]
                 return self.send(200, {"file": sky_api.upload_texture(name, self.read_body())})
@@ -454,6 +458,18 @@ class Handler(BaseHTTPRequestHandler):
         return self.send(200, {"name": name, "folder": folder, "midi": ext in MIDI_EXTS})
 
     def api_post(self, path, data):
+        if path == "/api/extract/save":
+            folder = clean_folder(data.get("folder", ""))
+            index = sound_index()
+
+            def unique(name):
+                name = unique_name(name, index)
+                index[name] = folder
+                return name
+            saved = extract_api.save_clips(
+                data, os.path.join(SOUNDS, *(folder.split("/") if folder else [])),
+                lambda n: bool(NAME_RE.match(n)), unique)
+            return self.send(200, {"saved": saved, "folder": folder})
         if path == "/api/folders":
             folder = clean_folder(data.get("folder", ""))
             if not folder:

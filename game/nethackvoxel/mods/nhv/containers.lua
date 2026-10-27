@@ -94,7 +94,8 @@ local function column(fs, objs, x, w, dir, empty_text)
 	fs[#fs + 1] = ("scroll_container[%f,1.55;%f,%f;scroll_%s;vertical;0.1]"):format(x, w + 0.2, view_h, dir)
 	local y = 0.05
 	local last_class
-	for _, o in ipairs(objs) do
+	-- (grouped by kind, in the inventory screen's order)
+	for _, o in ipairs(ui.sort_by_kind(objs)) do
 		if o.oclass ~= last_class then
 			last_class = o.oclass
 			fs[#fs + 1] = ("label[0.05,%f;%s]"):format(y + 0.25,

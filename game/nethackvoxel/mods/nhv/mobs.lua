@@ -295,7 +295,11 @@ local function update_monsters(snap)
 				or U.has(m.flags, U.MON_STEED) then
 			goto continue -- (you're inside it: holds.lua; you, your steed: avatar.lua)
 		end
-		local key = m.id > 0 and ("id" .. m.id) or ("at" .. m.x .. "," .. m.y)
+		-- (a long worm's tail segments have the worm's id: each its own,
+		-- by square - tail_of says whose it is; the worm's id is its head's)
+		local tail = m.id > 0 and U.has(m.flags, U.MON_TAIL)
+		local key = (tail and ("tail" .. m.id .. ":" .. m.x .. "," .. m.y))
+			or (m.id > 0 and ("id" .. m.id)) or ("at" .. m.x .. "," .. m.y)
 		seen[key] = true
 		local e = mobs.mons[key]
 		if e and not e.obj:get_pos() then
@@ -312,7 +316,12 @@ local function update_monsters(snap)
 			end
 		end
 		if e then
-			e.x, e.y, e.mon, e.id = m.x, m.y, m, m.id
+			e.x, e.y, e.mon = m.x, m.y, m
+			if tail then
+				e.id, e.tail_of = nil, m.id
+			else
+				e.id = m.id
+			end
 			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
 			apply_sprite(e, m)
 			e.obj:set_pos(mon_draw_pos(e))
@@ -776,6 +785,10 @@ local function update_features(snap)
 				tile = name and feature_tile(name)
 				trap_under = name ~= nil
 			end
+			-- (ASCII mode: the square's own character shows it)
+			if nhv.ascii and nhv.ascii.on then
+				name = nil
+			end
 			if name then
 				local flat = FEATURES[name]
 				if flat == nil and (trap_under or is_trap(name, gi)) then
@@ -999,9 +1012,8 @@ local function update_rolls(now)
 		else
 			local pos = vector.add(r.from, vector.multiply(vector.subtract(r.to, r.from), t))
 			r.obj:move_to(pos, true)
-			-- (facing you, as boulders do)
-			local player = core.get_connected_players()[1]
-			local pp = player and player:get_pos()
+			-- (facing the camera, as boulders do)
+			local pp = U.camera_pos()
 			if pp then
 				r.obj:set_yaw(math.atan2(pp.z - pos.z, pp.x - pos.x) - math.pi / 2)
 			end
@@ -1317,7 +1329,8 @@ core.register_globalstep(function(dtime)
 	end
 	update_glides(core.get_us_time())
 	local player = core.get_connected_players()[1]
-	local ppos = player and player:get_pos()
+	-- (sprites face the camera: U.camera_pos)
+	local ppos = player and U.camera_pos(player)
 	local now = core.get_us_time()
 	local fuzz_frame = nhv_tiles.fuzz_frame()
 	for _, e in pairs(mobs.mons) do
