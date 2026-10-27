@@ -85,7 +85,7 @@ function graphics.formspec()
 		row(10.5, "Distant textures", "distant", table.concat(DISTANT, ","),
 			core.settings:get_bool("mip_map", false) and 2 or 1),
 		row(11.4, "Shadows", "shadows", table.concat(SHADOWS, ","),
-			core.settings:get_bool("nhv_shadows", true) and 1 or 2),
+			core.settings:get_bool("nhv_shadows", false) and 1 or 2),
 		row(12.3, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY),
 			pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)),
 		row(13.2, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
@@ -179,7 +179,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		changed = true
 	end
 	local sh = tonumber(fields.shadows)
-	if sh and (sh == 1) ~= core.settings:get_bool("nhv_shadows", true) then
+	if sh and (sh == 1) ~= core.settings:get_bool("nhv_shadows", false) then
 		core.settings:set_bool("nhv_shadows", sh == 1) -- (shadows.lua, at once)
 		changed = true
 	end

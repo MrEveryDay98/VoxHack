@@ -771,9 +771,13 @@ nh.on_event(function(evs)
 				end
 			end
 		elseif ev.kind == "message" then
-			-- arrival narration and ambient lines have no speaker hook
+			-- arrival narration and ambient lines have no speaker hook (SAM
+			-- doesn't read the ambient ones - "You hear faint splashing.":
+			-- ordinary messages; a recording of one still plays)
 			local id = voice_for_text(ev.text)
-			if id and dialogue[id] and dialogue[id].category ~= "spoken" and not sam_quest then
+			local e = id and dialogue[id]
+			if e and e.category ~= "spoken" and not sam_quest
+					and not (e.category == "ambient" and sam_for(id)) then
 				play_voice(id, nil, ev.text)
 			end
 		end

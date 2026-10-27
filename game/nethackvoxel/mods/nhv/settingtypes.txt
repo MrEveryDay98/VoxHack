@@ -3,7 +3,7 @@
 nhv_flat_sprites (Flat sprites) bool false
 
 # Monsters, objects and you cast hard shadows: your sprites, blacked out, on the floor
-nhv_shadows (Shadows) bool true
+nhv_shadows (Shadows) bool false
 
 # How dark shadows are, in percent
 nhv_shadow_opacity (Shadow opacity) int 60 0 100

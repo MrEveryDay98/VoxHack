@@ -12,7 +12,7 @@
 -- the sprite's bottom edge, the slant made by shifting each row of pixels
 -- sideways in the texture: whole pixels, as the pixel art itself.)
 -- Its base is the sprite's bottom edge, corner to corner, wherever it turns.
--- Setting nhv_shadows (Options > Shadows; default on) turns them off,
+-- Setting nhv_shadows (Options > Shadows; default off) turns them on,
 -- nhv_shadow_opacity (Options > Shadow opacity) sets how dark they are.
 
 local U = nhv.util
@@ -161,7 +161,7 @@ end
 core.register_globalstep(function()
 	local live = {}
 	local mobs = nhv.mobs
-	if core.settings:get_bool("nhv_shadows", true) and mobs then
+	if core.settings:get_bool("nhv_shadows", false) and mobs then
 		local function add(owner, tile, h, feet, yaw, w, body)
 			if tile and feet then
 				live[owner] = true
