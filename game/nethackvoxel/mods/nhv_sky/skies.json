@@ -162,14 +162,14 @@
       -0.046,
       -0.046
      ],
-     "scale": 1.4,
+     "scale": 5.5,
      "opacity": 1,
-     "tint": "#6B97FF",
+     "tint": "#004CFF",
      "see_through_black": false,
      "coverage": 0.85,
-     "softness": 0.27,
+     "softness": 1,
      "detail": 4,
-     "shade": "#00008A"
+     "shade": "#00003D"
     },
     {
      "kind": "generated",
@@ -180,12 +180,12 @@
      ],
      "scale": 2.0,
      "opacity": 0.8,
-     "tint": "#52B4FF",
+     "tint": "#1C03D8",
      "see_through_black": false,
-     "coverage": 0.76,
-     "softness": 0.37,
+     "coverage": 0,
+     "softness": 0.08,
      "detail": 4,
-     "shade": "#8585FF"
+     "shade": "#4D4DFF"
     }
    ],
    "horizon": {
