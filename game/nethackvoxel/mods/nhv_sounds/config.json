@@ -930,6 +930,20 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "kaboom_boom_boom": {
+   "sounds": [
+    "thunders_sfx_03"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "storm_lightning": {
+   "sounds": [
+    "thunders_sfx_02"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {},
