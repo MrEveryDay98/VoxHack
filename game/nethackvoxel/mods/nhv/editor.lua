@@ -518,6 +518,13 @@ local function build_area(t, build, done)
 		-- Minetown, Gehennom's in Orcus Town... - as the game builds them;
 		-- squares you built are as you built them, there too)
 		local styled = nhv.terrain.styled_cid_for(areas.wall_style(t))
+		-- (the squares you haven't built are as the game builds them: in an
+		-- area open to the sky - most of its floor built without a roof -
+		-- none of them has a ceiling, nor water on a level open to the sky;
+		-- terrain.lua's describe)
+		areas.forget_open(t.id)
+		local open_area = areas.area_open(t)
+		local open_level = nhv.terrain.OPEN_SKY[t.proto]
 		for cy = 0, t.h - 1 do
 			for cx = 0, t.w - 1 do
 				local so = square_origin(t, cx, cy)
@@ -542,6 +549,9 @@ local function build_area(t, build, done)
 						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, styled)
 						-- (a door: its lintel, not its ceiling, as in the game)
 						if nhv.terrain.DOOR_SLOTS[slot] then
+							nhv.terrain.clear_over_lintel(data, va, so)
+						elseif (open_area or (open_level and nhv.terrain.OPEN_LIQUID[typ]))
+								and not nhv.terrain.ROOF_KEPT[slot] then
 							nhv.terrain.clear_over_lintel(data, va, so)
 						end
 					end
@@ -643,6 +653,9 @@ core.register_chatcommand("area", {
 		end
 		local t = found[1]
 		local first = storage:get_string("area_laid_" .. t.id) == ""
+		-- (what you just changed - anywhere - is saved before any plate is
+		-- built again: a square not saved yet would be built over)
+		save_areas()
 		if reset then
 			areas.get(t.id).cells = {}
 			areas.save(t.id)

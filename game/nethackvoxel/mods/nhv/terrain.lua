@@ -433,6 +433,7 @@ local OPEN_SKY = {
 	["juiblex"] = true,
 	["medusa-1"] = true, ["medusa-2"] = true, ["medusa-3"] = true, ["medusa-4"] = true,
 }
+terrain.OPEN_SKY = OPEN_SKY
 terrain.open_sky = false
 -- open to the sky as the level was built: an open-sky level, or a hand-built
 -- area without a roof over most of its floor (areas.open_to_sky) - unbuilt
@@ -784,6 +785,7 @@ local ROOF_KEPT = {stairs_up = true, ladder_up = true, stairs_up_sky = true, lad
 -- many squares out from it are open too - areas.near_open_area)
 local OPEN_RIM = 3
 local OPEN_LIQUID = {[T.POOL] = true, [T.MOAT] = true, [T.LAVAPOOL] = true}
+terrain.ROOF_KEPT, terrain.OPEN_LIQUID = ROOF_KEPT, OPEN_LIQUID
 
 local function describe(map, tx, ty)
 	local i = U.idx(tx, ty)

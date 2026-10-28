@@ -334,6 +334,10 @@ local function area_open(t)
 	return open_cache[t.id]
 end
 areas.area_open = area_open
+-- (the editor: its squares changed - worked out again when next asked)
+function areas.forget_open(id)
+	open_cache[id] = nil
+end
 function areas.open_to_sky()
 	for _, r in ipairs(regions()) do
 		if area_open(r.t) then
