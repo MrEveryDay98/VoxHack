@@ -57,6 +57,7 @@ GAME_HOOKS = [
     ("dialog_open", "A question or menu appears"),
     ("achievement_unlocked", "An achievement is unlocked"),
     ("artifact_obtained", "An artifact is got for the first time this game (its cutscene starts)"),
+    ("sky_thunder", "Thunder after a bolt across a sky with lightning (the Sky tab; where the bolt was, a moment later)"),
     ("ascension_offered", "The Amulet is offered on your own god's high altar: the choir as the ascension cutscene starts"),
 ]
 

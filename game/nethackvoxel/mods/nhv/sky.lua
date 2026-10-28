@@ -15,12 +15,15 @@
 --   skies:  {id, name, layers = {back, front}, horizon = {color, fade},
 --            pixels (pixels per repeat: sharp; 0 smooth), fog_color,
 --            daynight, sun, moon, stars, stars_always (by day too, or in
---            a plain sky), cloud_brightness (1: as drawn)}
+--            a plain sky), cloud_brightness (1: as drawn), lightning}
 --     layer: kind ("generated" or "texture"), speed = {x, y} (repeats per
 --            second), scale, opacity (0..1), tint ("#RRGGBB");
 --            generated: coverage, softness (0..1), detail (1..6), shade
 --            (the shadowed parts' colour); texture: texture (in
 --            nhv_sky/textures), see_through_black
+--   lightning: {on, rate (bolts a minute, on average), sound (thunder:
+--            the hook sky_thunder, a moment after - longer the further off
+--            the bolt)}: bolts across the sky now and then, high over you
 --   levels: level -> sky id: a special level variant ("medusa-2"), or the
 --           name before its "-" ("medusa", "bigrm"), or "default"
 
@@ -197,6 +200,57 @@ core.register_globalstep(function(dtime)
 		since = 0
 		load()
 		sky.update()
+	end
+end)
+
+-- ---------------------------------------------------------------- lightning
+-- A sky with lightning: now and then (rate a minute, at random) a bolt
+-- shoots across it, high over you somewhere round about, forking on its
+-- way (lightning.lua draws it); the sky lights up for a moment, and the
+-- thunder follows (when it has sound), later the further off it was. Not
+-- while you're blind; only where the sky is shown.
+local BOLT_H = {24, 40}     -- how high over you (nodes)
+local BOLT_OFF = {12, 48}   -- how far off to the side its middle is
+local BOLT_LEN = {18, 42}   -- how long
+
+local function between(r)
+	return r[1] + math.random() * (r[2] - r[1])
+end
+
+function sky.bolt(player)
+	local p = player:get_pos()
+	local a = math.random() * 2 * math.pi
+	local off = between(BOLT_OFF)
+	local mid = vector.new(p.x + math.cos(a) * off, p.y + between(BOLT_H), p.z + math.sin(a) * off)
+	-- (across the sky, sloping down a little)
+	local d = math.random() * 2 * math.pi
+	local half = between(BOLT_LEN) / 2
+	local dir = vector.new(math.cos(d) * half, -half * (0.1 + math.random() * 0.35), math.sin(d) * half)
+	nhv.lightning.bolt(vector.subtract(mid, dir), vector.add(mid, dir),
+		{width = 3.2, life = 0.14, flickers = 2 + math.random(0, 2), rough = 0.16, branches = 2})
+	nhv.hud.flash("#DDE6FF", 0.25 + 0.2 * (1 - off / BOLT_OFF[2]), true, 0.35)
+	local l = sky.def and sky.def.lightning
+	if l and l.sound ~= false and nhv.sound then
+		-- (sound is slower than light: a second or two for a far one)
+		core.after(0.15 + vector.distance(p, mid) / 40, function()
+			nhv.sound.hook("sky_thunder", {pos = mid})
+		end)
+	end
+end
+
+core.register_globalstep(function(dtime)
+	local s = sky.def
+	local l = s and s.lightning
+	if not (l and l.on) then
+		return
+	end
+	local player = nhv.player.get()
+	local h = nh.snap and nh.snap.hero
+	if not player or (h and U.has(h.flags, U.HERO.BLIND)) then
+		return
+	end
+	if math.random() < dtime * (tonumber(l.rate) or 4) / 60 then
+		sky.bolt(player)
 	end
 end)
 

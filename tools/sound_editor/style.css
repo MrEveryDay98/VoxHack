@@ -299,3 +299,6 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .ac-name .muted { font-size: 12px; }
 .ac-row select { width: 100%; }
 .ac-row .sl { grid-template-columns: 60px minmax(80px, 1fr) 48px; min-width: 0; }
+
+.sky-stack { position: relative; max-width: 640px; }
+.sky-stack .sky-overlay { position: absolute; inset: 0; pointer-events: none; }

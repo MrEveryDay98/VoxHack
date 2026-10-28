@@ -198,6 +198,7 @@ def clean_sky(s):
     while len(layers) < 2:
         layers.append({})
     h = s.get("horizon") if isinstance(s.get("horizon"), dict) else {}
+    lt = s.get("lightning") if isinstance(s.get("lightning"), dict) else {}
     return {
         "id": sid,
         "name": str(s.get("name") or sid)[:60],
@@ -213,6 +214,9 @@ def clean_sky(s):
         "stars_always": bool(s.get("stars_always", False)),
         # the clouds' brightness: 1 as drawn
         "cloud_brightness": round(_num(s.get("cloud_brightness"), 0.2, 3, 1), 2),
+        # bolts across the sky now and then: how many a minute, thunder or not
+        "lightning": {"on": bool(lt.get("on", False)), "rate": round(_num(lt.get("rate"), 0.5, 60, 4), 2),
+                      "sound": bool(lt.get("sound", True))},
     }
 
 

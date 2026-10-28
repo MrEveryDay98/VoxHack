@@ -17,6 +17,7 @@ const Sky = (() => {
       Object.assign({}, LAYER_DEFAULT, { speed: [0.02, 0.01], scale: 2, opacity: 0.8, coverage: 0.3, softness: 0.1 })],
     horizon: { color: "#000000", fade: 0.6 }, pixels: 64, fog_color: "#000000",
     daynight: false, sun: true, moon: true, stars: true, stars_always: false, cloud_brightness: 1,
+    lightning: { on: false, rate: 4, sound: true },
   };
   const LAYER_NAMES = ["Back layer", "Front layer"];
 
@@ -229,7 +230,67 @@ void main() {
     gl.uniform1f(u("pitch"), view.pitch);
     gl.viewport(0, 0, view.canvas.width, view.canvas.height);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    drawLightning(s);
     view.raf = requestAnimationFrame(frame);
+  }
+
+  // The sky's lightning, over the preview: now and then (its rate) a jagged,
+  // forking bolt across it, and the sky lit up for a moment
+  const bolts = [];
+  let lastBoltT = performance.now();
+  function boltPath(x0, y0, x1, y1, rough, depth, out) {
+    let pts = [[x0, y0], [x1, y1]];
+    let amp = Math.hypot(x1 - x0, y1 - y0) * rough;
+    for (let k = 0; k < 6; k++) {
+      const next = [pts[0]];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+        next.push([(ax + bx) / 2 + (Math.random() - 0.5) * amp, (ay + by) / 2 + (Math.random() - 0.5) * amp], pts[i + 1]);
+      }
+      pts = next;
+      amp *= 0.55;
+    }
+    out.push({ pts, w: depth === 2 ? 2.5 : 1.3 });
+    if (depth > 0) {
+      for (let i = 8; i < pts.length - 8; i += 16) {
+        if (Math.random() < 0.45) {
+          const [fx, fy] = pts[i];
+          boltPath(fx, fy, fx + (x1 - fx) * 0.4 + (Math.random() - 0.5) * 60, fy + 20 + Math.random() * 50, rough * 1.3, depth - 1, out);
+        }
+      }
+    }
+  }
+  function drawLightning(s) {
+    const ov = view.overlay;
+    if (!ov) return;
+    const g = ov.getContext("2d");
+    g.clearRect(0, 0, ov.width, ov.height);
+    const l = s.lightning || {};
+    const now = performance.now();
+    const dt = (now - lastBoltT) / 1000;
+    lastBoltT = now;
+    if (l.on && Math.random() < dt * (l.rate || 4) / 60) {
+      const W = ov.width, H = ov.height;
+      const x = W * (0.15 + Math.random() * 0.7), y = H * (0.1 + Math.random() * 0.35), half = W * (0.12 + Math.random() * 0.15);
+      const d = Math.random() < 0.5 ? -1 : 1;
+      const lines = [];
+      boltPath(x - half * d, y - Math.random() * 20, x + half * d, y + 15 + Math.random() * 40, 0.16, 2, lines);
+      bolts.push({ t0: now, lines, flickers: 2 + Math.floor(Math.random() * 3) });
+    }
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i], age = (now - b.t0) / 1000;
+      if (age > b.flickers * 0.13 + 0.25) { bolts.splice(i, 1); continue; }
+      // (the sky lit up, fading)
+      g.fillStyle = `rgba(221,230,255,${Math.max(0, 0.28 - age * 0.6)})`;
+      g.fillRect(0, 0, ov.width, ov.height);
+      if (age > b.flickers * 0.13 || Math.floor(age / 0.065) % 2) continue; // (flickering)
+      for (const ln of b.lines) {
+        g.beginPath();
+        ln.pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py)));
+        g.strokeStyle = "rgba(159,196,255,0.6)"; g.lineWidth = ln.w * 3; g.stroke();
+        g.strokeStyle = "#FFFFFF"; g.lineWidth = ln.w; g.stroke();
+      }
+    }
   }
 
   function preview(s) {
@@ -247,12 +308,14 @@ void main() {
     try { ok = setupGL(canvas); } catch (e) { toast("Sky preview: " + e.message); }
     if (!ok) return el("p", { class: "muted" }, "(No preview: this browser has no WebGL.)");
     if (!view.raf) view.raf = requestAnimationFrame(frame);
+    // (the lightning is drawn over it: drawLightning)
+    view.overlay = el("canvas", { width: 640, height: 360, class: "sky-canvas sky-overlay", "aria-hidden": "true" });
     const hours = (v) => { const m = Math.round(v * 1440); return String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
     const out = el("span", { class: "muted" }, hours(view.tod));
     const tod = s.daynight ? el("label", { class: "inline" }, "Preview at",
       el("input", { type: "range", min: 0, max: 1, step: 0.005, value: view.tod, "aria-label": "Preview time of day",
         oninput: (e) => { view.tod = +e.target.value; out.textContent = hours(view.tod); } }), out) : null;
-    return el("div", {}, canvas, tod);
+    return el("div", {}, el("div", { class: "sky-stack" }, canvas, view.overlay), tod);
   }
 
   // ------------------------------------------------------------ editing
@@ -327,6 +390,18 @@ void main() {
       field("Opacity", slider(l, "opacity", 0, 1, 0.01, pct)));
   }
 
+  // Lightning shooting across the sky now and then
+  function lightningEditor(s) {
+    s.lightning = Object.assign({ on: false, rate: 4, sound: true }, s.lightning || {});
+    const l = s.lightning;
+    return el("div", {},
+      el("h4", {}, "Lightning"),
+      check(l, "on", "Lightning shoots across the sky now and then", render),
+      l.on ? field("How often", slider(l, "rate", 0.5, 60, 0.5, (v) => (+v) + " a minute"),
+        "On average: the bolts come at random.") : null,
+      l.on ? check(l, "sound", "Thunder (the sound hook sky_thunder, a moment after each bolt)") : null);
+  }
+
   function skyEditor(s) {
     const px = (v) => (+v ? v + " px" : "smooth");
     return el("div", { class: "blk-editor" },
@@ -348,7 +423,8 @@ void main() {
           field("Cloud brightness", slider(s, "cloud_brightness", 0.2, 3, 0.05, (v) => Math.round(v * 100) + "%"),
             "100% is as the clouds are drawn; more makes them glow brighter."),
           s.daynight ? null : field("Sky colour", color(s, "fog_color"),
-            "Behind the clouds; distant walls also fade into it on levels open to the sky all over.")),
+            "Behind the clouds; distant walls also fade into it on levels open to the sky all over."),
+          lightningEditor(s)),
         el("div", { class: "blk-preview" }, preview(s), el("small", { class: "muted" }, "Drag to look around."))),
       el("div", { class: "sky-layers" }, ...s.layers.map(layerEditor)));
   }
