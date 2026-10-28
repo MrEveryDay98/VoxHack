@@ -236,6 +236,10 @@ function sound.hook(id, opts)
 	if nhv.hud then
 		nhv.hud.hook_flash(id)
 	end
+	-- (a lightning artifact's bolt: lightning.lua)
+	if nhv.lightning then
+		nhv.lightning.hook(id, opts)
+	end
 	local entry = sound.cfg.hooks[id]
 	local name = pick(entry)
 	local p = player()

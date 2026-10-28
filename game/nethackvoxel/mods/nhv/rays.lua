@@ -123,7 +123,18 @@ local function finish(r)
 	rays.list[r.rid] = nil
 end
 
+local BOLT_STEP = 1.5 -- (lightning: a jagged stretch of bolt each this far)
 local function trail(r, p)
+	if r.kind == 5 and nhv.lightning then
+		-- lightning crackles along its way, a jagged stretch at a time
+		r.bolt_from = r.bolt_from or r.pos
+		if vector.distance(r.bolt_from, p) >= BOLT_STEP then
+			nhv.lightning.bolt(r.bolt_from, p, {width = 0.8, life = 0.18, flickers = 2, rough = 0.3,
+				branches = 1})
+			r.bolt_from = p
+		end
+		return
+	end
 	core.add_particle({
 		pos = p, velocity = vector.zero(), expirationtime = 0.35,
 		size = r.kind == 6 and 6 or 2.5, glow = 14,

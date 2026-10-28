@@ -1394,6 +1394,18 @@
    "source": "apply.c"
   },
   {
+   "id": "storm_lightning",
+   "group": "events",
+   "desc": "Lightning strikes a cloud in the Plane of Air's thunderstorm (where it strikes; its bolt runs on to storm_lightning_end)",
+   "source": "timeout.c"
+  },
+  {
+   "id": "storm_lightning_end",
+   "group": "events",
+   "desc": "Where a thunderstorm's lightning bolt ends (the Plane of Air)",
+   "source": "timeout.c"
+  },
+  {
    "id": "camera_flash",
    "group": "events",
    "desc": "An expensive camera's flash goes off",
