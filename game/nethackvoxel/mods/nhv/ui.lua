@@ -370,6 +370,10 @@ end
 -- ---------------------------------------------------------------- requests
 local function show_request(req)
 	ui.req = req
+	-- (the ascension's questions wait for its scene: cutscene.lua)
+	if nhv.cutscene and nhv.cutscene.take(req) then
+		return
+	end
 	-- (the death scene asks its question itself, when it's time: death.lua)
 	if nhv.death and #ui.pending_text == 0 and nhv.death.take(req) then
 		return
@@ -1069,6 +1073,8 @@ function ui.show_death()
 	-- (your gravestone: now the death music, if you died)
 	if nhv.sound.died then
 		nhv.sound.set_music("music_death")
+	elseif nhv.cutscene and nhv.cutscene.ascended then
+		nhv.sound.set_music(nhv.sound.music_for_ascension())
 	end
 	show("nhv:dead", head(14, 11)
 		.. "label[0.5,0.6;" .. E(ui.end_title or "Your game is over.") .. "]"

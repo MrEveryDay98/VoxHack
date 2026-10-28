@@ -1737,6 +1737,11 @@
    "desc": "An artifact is got for the first time this game (its cutscene starts)"
   },
   {
+   "id": "ascension_offered",
+   "group": "game",
+   "desc": "The Amulet is offered on your own god's high altar: the choir as the ascension cutscene starts"
+  },
+  {
    "id": "music_title",
    "group": "music",
    "desc": "Character selection"

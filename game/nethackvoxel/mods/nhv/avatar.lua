@@ -131,8 +131,10 @@ function avatar.update(snap)
 		drop("steed")
 	end
 	-- (invisible, and you can't see invisible: you can't see yourself;
-	-- dead, your corpse lies there instead - death.lua)
-	if me and not U.has(me.flags, U.MON_HIDDEN) and not (nhv.death and nhv.death.active) then
+	-- dead, your corpse lies there instead - death.lua; ascended, you're
+	-- gone into the light - cutscene.lua)
+	if me and not U.has(me.flags, U.MON_HIDDEN) and not (nhv.death and nhv.death.active)
+			and not (nhv.cutscene and nhv.cutscene.hide_self) then
 		show(player, "self", me, seat)
 	else
 		drop("self")

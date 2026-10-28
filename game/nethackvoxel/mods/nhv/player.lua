@@ -218,7 +218,8 @@ local function set_speed(player)
 	-- stop you walking off ledges into pits)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
-		new_move = true, gravity = ((h and not levitating(h)) and 1 or 0) * (player_mod.hop_g or 1)})
+		new_move = true, gravity = ((h and not levitating(h)
+			and not (nhv.cutscene and nhv.cutscene.no_gravity)) and 1 or 0) * (player_mod.hop_g or 1)})
 end
 
 -- A jump (hold Space: jump.lua): the body hops to where NetHack landed
@@ -896,8 +897,8 @@ end
 local flail = {next = 0, kick = 0, stall_until = 0}
 
 local function hover(player)
-	if not levitating(player_mod.hero) or player_mod.frozen then
-		return
+	if not levitating(player_mod.hero) or player_mod.frozen or (nhv.cutscene and nhv.cutscene.no_gravity) then
+		return -- (rising into the light, ascending: cutscene.lua)
 	end
 	local pos = player:get_pos()
 	local t = core.get_us_time() / 1e6

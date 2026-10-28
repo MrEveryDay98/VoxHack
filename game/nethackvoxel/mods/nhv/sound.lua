@@ -392,7 +392,20 @@ local LEVEL_MUSIC = {
 -- Plane's three high altars are its whole point)
 local LEVEL_MUSIC_FIRST = {music_astral = true}
 
+-- the ascension's music (cutscene.lua): music_victory, if it has a sound;
+-- else whatever is playing goes on
+function sound.music_for_ascension()
+	local e = sound.cfg.hooks.music_victory
+	if e and e.sounds and #e.sounds > 0 then
+		return "music_victory"
+	end
+	return sound.music and sound.music.hook or nil
+end
+
 local function music_for(h)
+	if nhv.cutscene and nhv.cutscene.ascended then
+		return sound.music_for_ascension()
+	end
 	-- a special level with its own music (Minetown, the Oracle...), when it
 	-- has some; else the dungeon branch's
 	local level = LEVEL_MUSIC[h.dnum and core.nh_level_proto(h.dnum, h.dlevel) or ""]
@@ -615,6 +628,13 @@ local function speak_sam(st, text, pos, key)
 	return true
 end
 
+-- A line said by a speaker of the voice casting (SAM, live), now: the
+-- ascension's god (cutscene.lua). False if that speaker isn't SAM's.
+function sound.say(speaker, text, key)
+	local st = sam_settings(speaker)
+	return st and speak_sam(st, text, nil, key or speaker) or false
+end
+
 -- text: what the game actually said (SAM reads it; a recording ignores it)
 local function play_voice(id, pos, text, who)
 	local e = dialogue[id]
@@ -768,6 +788,10 @@ nh.on_event(function(evs)
 				sound.tune(tonumber(parts[2]) or 74, parts[4] or "", tonumber(parts[3]) or 50)
 			elseif kind == "verbal" then
 				local text = table.concat(parts, "|", 7)
+				-- (the ascension's lines are said in its scene: cutscene.lua)
+				if nhv.cutscene and nhv.cutscene.ascended then
+					goto next_ev
+				end
 				local id = voice_for_text(text)
 				local who = {m_id = tonumber(parts[2]) or 0, female = parts[4] == "1"}
 				local body = speaker_pos(who.m_id)
@@ -813,6 +837,7 @@ nh.on_event(function(evs)
 				play_voice(id, nil, ev.text)
 			end
 		end
+		::next_ev::
 	end
 	-- a quest message given as plain messages ends with its batch
 	if sam_quest and not sam_quest.window then
