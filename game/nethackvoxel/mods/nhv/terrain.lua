@@ -783,6 +783,7 @@ local ROOF_KEPT = {stairs_up = true, ladder_up = true, stairs_up_sky = true, lad
 -- (the rim NetHack fills round a hand-built area open to the sky: this
 -- many squares out from it are open too - areas.near_open_area)
 local OPEN_RIM = 3
+local OPEN_LIQUID = {[T.POOL] = true, [T.MOAT] = true, [T.LAVAPOOL] = true}
 
 local function describe(map, tx, ty)
 	local i = U.idx(tx, ty)
@@ -835,11 +836,13 @@ local function describe(map, tx, ty)
 	if cell then
 		sq.area_cell = cell
 		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
-	elseif (in_open_area or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM)))
+	elseif (in_open_area or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM))
+				or (terrain.open_sky and OPEN_LIQUID[sq.typ]))
 			and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
 		-- an area open to the sky, its square built from the usual prefab
-		-- (stairs, water where the ice melted, a wall dug out...): nothing
-		-- over it - no ceiling hanging in the air (write_square)
+		-- (stairs, water where the ice melted, a wall dug out...), or water
+		-- on a level open to the sky (Medusa's sea): nothing over it - no
+		-- ceiling hanging in the air (write_square)
 		sq.roofless = true
 	elseif terrain.DOOR_SLOTS[sq.slot] then
 		-- a door in a hand-built area: from the lintel up, what you built at
@@ -1009,6 +1012,10 @@ function terrain.update(map, force)
 		end
 	end
 	write_squares(sqs)
+	-- (the sea round the level, if it stands in one: sea.lua)
+	if nhv.sea then
+		nhv.sea.update(map)
+	end
 	return #sqs
 end
 
@@ -1062,6 +1069,10 @@ function terrain.build_all(map, hero)
 	nhv.doors.clear()
 	terrain.wall_style = detect_wall_style(map) or "main"
 	terrain.hero_light_pos = nil
+	-- (column 0 is built again: the sea there too)
+	if nhv.sea then
+		nhv.sea.rebuild()
+	end
 	terrain.update(map, true)
 	-- column 0 is never part of the map; fill it with rock
 	local sqs = {}
