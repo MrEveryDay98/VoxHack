@@ -269,6 +269,8 @@ local function apply_sprite(e, m)
 	-- a solid body the size of the sprite (Luanti only collides with
 	-- "physical" objects); pets stay passable, as you swap places with them
 	local solid = m.id > 0 and not U.has(m.flags, U.MON_PET)
+	-- (one seen only noclipping: nothing to bump into)
+	solid = solid and not m.noclip_only
 	-- a shopkeeper in its shop fills its whole square, so standing inside
 	-- the door it really blocks the way out, as in NetHack
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
@@ -287,10 +289,62 @@ local function apply_sprite(e, m)
 	end
 end
 
+-- Noclipping in wizard mode (wizard.lua), you see every monster in plain
+-- view of where you are, as if you were there - not through walls - besides
+-- what the hero sees: each {id, x, y, mndx, size, tile, flags = 0,
+-- noclip_only}. Looked for a few times a second (the globalstep below).
+local noclip_seen, noclip_sig = {}, ""
+local wall_between
+local function find_noclip_seen(snap)
+	local player = core.get_connected_players()[1]
+	if not (player and nhv.wizard and nhv.wizard.noclipping()) then
+		return {}
+	end
+	local known = {}
+	for _, m in ipairs(snap.monsters) do
+		if m.id > 0 then
+			known[m.id] = true
+		end
+	end
+	local eye = U.camera_pos(player)
+	local far = nhv.hud.fog_distance()
+	local out = {}
+	for _, m in ipairs(core.nh_get_all_monsters and core.nh_get_all_monsters() or {}) do
+		if not known[m.id] and m.x > 0 then
+			local p = U.tile_center(m.x, m.y, U.STAND_Y + 1)
+			if vector.distance(eye, p) < far and not wall_between(eye, p) then
+				-- (its picture: the monster's own glyph, male or female - the
+				-- glyphs start with every monster, then again female)
+				local gi = core.nh_glyph_info(m.mndx)
+				out[#out + 1] = {id = m.id, x = m.x, y = m.y, mndx = m.mndx, size = m.size,
+					tile = gi and gi.tile or 0, flags = 0, noclip_only = true}
+			end
+		end
+	end
+	return out
+end
+local function noclip_signature(list)
+	local parts = {}
+	for i, m in ipairs(list) do
+		parts[i] = m.id .. "@" .. m.x .. "," .. m.y
+	end
+	table.sort(parts)
+	return table.concat(parts, " ")
+end
+
 local function update_monsters(snap)
 	local seen = {}
 	local hallu = U.has(snap.hero.flags, U.HERO.HALLU)
-	for _, m in ipairs(snap.monsters) do
+	noclip_seen = find_noclip_seen(snap)
+	noclip_sig = noclip_signature(noclip_seen)
+	local all = snap.monsters
+	if #noclip_seen > 0 then
+		all = table.copy(snap.monsters)
+		for _, m in ipairs(noclip_seen) do
+			all[#all + 1] = m
+		end
+	end
+	for _, m in ipairs(all) do
 		if U.has(m.flags, U.MON_ENGULFING) or U.has(m.flags, U.MON_SELF)
 				or U.has(m.flags, U.MON_STEED) then
 			goto continue -- (you're inside it: holds.lua; you, your steed: avatar.lua)
@@ -1285,7 +1339,7 @@ end
 
 local clock_t = 0
 -- is there a wall between your eyes and point p?
-local function wall_between(eye, p)
+function wall_between(eye, p)
 	for pt in core.raycast(eye, p, false, false) do
 		if pt.type == "node" then
 			local def = core.registered_nodes[core.get_node(pt.under).name]
@@ -1318,9 +1372,27 @@ local function update_occlusion(player, dtime)
 	end
 end
 
+-- (noclipping: the monsters in view of where you are now)
+local noclip_t = 0
+local function update_noclip(dtime)
+	noclip_t = noclip_t + dtime
+	local snap = nhv.nh.snap
+	if noclip_t < 0.25 or not (snap and snap.monsters and snap.hero) then
+		return
+	end
+	noclip_t = 0
+	if #noclip_seen == 0 and not (nhv.wizard and nhv.wizard.noclipping()) then
+		return
+	end
+	if noclip_signature(find_noclip_seen(snap)) ~= noclip_sig then
+		update_monsters(snap)
+	end
+end
+
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	update_fades()
+	update_noclip(dtime)
 	do
 		local pl = core.get_connected_players()[1]
 		if pl then

@@ -79,6 +79,12 @@ local function noclipping()
 	return flying() and core.settings:get_bool("noclip", false)
 end
 
+-- Noclipping in wizard mode (H): every monster you could see from where
+-- you are is shown, wherever the hero is (mobs.lua)
+function wizard.noclipping()
+	return wizard.on and noclipping()
+end
+
 -- Is the body flying free of the hero (wizard mode, K)? Then nothing it
 -- does moves the hero, and the hero's position never pulls it back.
 function wizard.detached()
