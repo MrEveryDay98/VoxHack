@@ -957,6 +957,15 @@ function actions.context(player)
 	local mon = p.kind == "mon" and p.mon or sq.mon
 
 	if mon and (tx ~= h.x or ty ~= h.y) then
+		-- pointing at a door with something standing in it: the door first
+		-- (NetHack says who's in the way), then the monster
+		if p.kind == "door" and sq.typ == U.TYP.DOOR then
+			if door_closed(sq.door) then
+				add(act("Open", "o" .. key), true)
+			elseif door_open(sq.door) then
+				add(act("Close", "c" .. key), true)
+			end
+		end
 		local peaceful = mon.mon and U.has(mon.mon.flags, U.MON_PEACEFUL)
 		add(act("Chat", mon.id and mon.id > 0 and ext("nhvchat " .. mon.id) or ext("chat", {key = key})),
 			peaceful)
