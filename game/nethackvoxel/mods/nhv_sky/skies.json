@@ -300,6 +300,56 @@
    "stars": true,
    "stars_always": false,
    "cloud_brightness": 1.4
+  },
+  {
+   "id": "sky5",
+   "name": "Air",
+   "layers": [
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.01,
+      0.005
+     ],
+     "scale": 1.0,
+     "opacity": 1,
+     "tint": "#FFFFFF",
+     "see_through_black": false,
+     "coverage": 1,
+     "softness": 1,
+     "detail": 4,
+     "shade": "#FFFFFF"
+    },
+    {
+     "kind": "generated",
+     "texture": "",
+     "speed": [
+      0.02,
+      0.01
+     ],
+     "scale": 3.7,
+     "opacity": 0.8,
+     "tint": "#FFFFFF",
+     "see_through_black": false,
+     "coverage": 1,
+     "softness": 1,
+     "detail": 4,
+     "shade": "#FFFFFF"
+    }
+   ],
+   "horizon": {
+    "color": "#000000",
+    "fade": 0.6
+   },
+   "pixels": 64,
+   "fog_color": "#000000",
+   "daynight": true,
+   "sun": true,
+   "moon": true,
+   "stars": true,
+   "stars_always": false,
+   "cloud_brightness": 1.0
   }
  ],
  "levels": {
@@ -308,6 +358,7 @@
   "water": "sky2",
   "astral": "sky3",
   "knox": "ludios",
-  "val": "sky4"
+  "val": "sky4",
+  "air": "sky5"
  }
 }
