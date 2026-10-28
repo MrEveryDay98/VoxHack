@@ -65,7 +65,7 @@ function update.check()
 			core.log("action", "[nhv] update check: " .. best_tag .. " is available")
 			-- (the title screen up: shown again, with the news)
 			local player = nhv.player.get()
-			if player and nhv.title.open then
+			if player and nhv.title.open and not nhv.title.from_title then
 				nhv.title.show(player)
 			end
 		end

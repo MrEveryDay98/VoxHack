@@ -78,7 +78,7 @@ local function start(player, name)
 	-- (whichever screen it was started from: the title, the new character
 	-- form or the replace question; only one with the right name closes)
 	core.close_formspec(player:get_player_name(), "")
-	title.open = false
+	title.open, title.from_title = false, false
 	nhv.guide.first_run() -- (the guide, the very first time)
 	nhv.new_game(player, name)
 end
@@ -144,8 +144,19 @@ function title.formspec(player)
 	return table.concat(fs)
 end
 
+-- Options or Achievements closed: back to the title screen if that's where
+-- they were opened from (true), not if they were opened in the game
+function title.back_from(player)
+	if title.from_title then
+		title.from_title = false
+		title.show(player)
+		return true
+	end
+	return false
+end
+
 function title.show(player)
-	title.open = true
+	title.open, title.from_title = true, false
 	if nhv.update then
 		nhv.update.check() -- (once a session)
 	end
@@ -294,6 +305,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			title.from_title = true
 			nhv.graphics.show(player)
 		elseif fields.achievements then
+			title.from_title = true
 			nhv.achievements.show(player)
 		elseif fields.quitgame then
 			core.disconnect_player(pname, "nhv:quit")
