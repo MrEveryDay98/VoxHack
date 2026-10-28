@@ -9707,7 +9707,7 @@
   {
    "id": "spoken.0545d41e4a",
    "category": "spoken",
-   "speaker": "Monster",
+   "speaker": "Wizard of Yendor",
    "context": "mcast_summon_mons",
    "text": "Destroy the thief, my pet%s!",
    "source": "mcastu.c:429"

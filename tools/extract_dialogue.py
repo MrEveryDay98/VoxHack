@@ -38,6 +38,8 @@ SPEAKERS = {
 SPEAKER_BY_FUNCTION = {
     "watch_dig": "Minetown watch", "watchman_warn_fountain": "Minetown watch",
     "peacefuls_respond": "Minetown watch", "watch_on_duty": "Minetown watch",
+    # (only the Wizard of Yendor says his summoning line: mtmp->iswiz)
+    "mcast_summon_mons": "Wizard of Yendor",
 }
 
 C_STR = r'"(?:[^"\\\n]|\\.)*"'
