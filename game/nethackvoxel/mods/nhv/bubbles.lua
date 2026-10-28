@@ -52,9 +52,11 @@ end
 entity("nhv:bubble", {visual = "mesh", mesh = "nhv_bubble.obj", textures = {TINT},
 	use_texture_alpha = true, backface_culling = true, glow = 4, shaded = true})
 -- (the ring's pieces hang off this, which carries them along: it shows
--- nothing itself)
-entity("nhv:bubble_ring", {visual = "sprite", textures = {"blank.png"}, is_visible = false,
-	visual_size = {x = 1, y = 1}})
+-- nothing itself - see-through, not hidden: what hangs off a hidden one is
+-- hidden with it)
+local BLANK = "blank.png"
+entity("nhv:bubble_ring", {visual = "cube", textures = {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
+	use_texture_alpha = true, visual_size = {x = 1, y = 1, z = 1}})
 entity("nhv:bubble_piece", {visual = "mesh", mesh = "nhv_bubble_ring_00.obj", textures = BAND_TEX,
 	use_texture_alpha = true, backface_culling = false, glow = 12, shaded = false})
 
