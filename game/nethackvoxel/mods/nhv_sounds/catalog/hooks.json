@@ -1310,6 +1310,12 @@
    "source": "teleport.c"
   },
   {
+   "id": "monster_teleport",
+   "group": "events",
+   "desc": "A monster you see teleports (Rodney's \"vanishes and reappears\", a teleportation trap, a wand...): once where it was, once where it lands",
+   "source": "teleport.c"
+  },
+  {
    "id": "lot_of_noise",
    "group": "events",
    "desc": "The hero makes a lot of noise",
