@@ -388,20 +388,29 @@ local LEVEL_MUSIC = {
 	astral = "music_astral",
 }
 
+-- (levels whose music plays in their temples and shops too: the Astral
+-- Plane's three high altars are its whole point)
+local LEVEL_MUSIC_FIRST = {music_astral = true}
+
 local function music_for(h)
+	-- a special level with its own music (Minetown, the Oracle...), when it
+	-- has some; else the dungeon branch's
+	local level = LEVEL_MUSIC[h.dnum and core.nh_level_proto(h.dnum, h.dlevel) or ""]
+	if level and not sound.cfg.hooks[level] then
+		level = nil
+	end
 	if U.has(h.flags, U.HERO.DEAD) then
 		-- (dying - NetHack's last questions: silence; music_death waits for
 		-- your gravestone, ui.show_death)
 		return nil
+	elseif level and LEVEL_MUSIC_FIRST[level] then
+		return level
 	elseif U.has(h.flags, U.HERO.INSHOP) and sound.cfg.hooks.music_shop then
 		return "music_shop"
 	elseif U.has(h.flags, U.HERO.INTEMPLE) and sound.cfg.hooks.music_temple then
 		return "music_temple"
 	end
-	-- a special level with its own music (Minetown, the Oracle...), when it
-	-- has some; else the dungeon branch's
-	local level = LEVEL_MUSIC[h.dnum and core.nh_level_proto(h.dnum, h.dlevel) or ""]
-	if level and sound.cfg.hooks[level] then
+	if level then
 		return level
 	end
 	return DUNGEON_MUSIC[h.dungeon_name] or "music_dungeon"

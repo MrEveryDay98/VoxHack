@@ -584,11 +584,48 @@ function actions.fire(player)
 end
 
 -- ---------------------------------------------------------------- pointing
+-- An open door next to you that you look through (the leaf swung back out
+-- of the way, nothing of it to point at): its square, and how far off
+-- (nodes) its doorway starts - so it can still be closed
+local function doorway(player)
+	local h = hero()
+	local map = h and nh.snap and nh.snap.map
+	local look = player:get_look_dir()
+	local flat = vector.new(look.x, 0, look.z)
+	if not map or vector.length(flat) < 0.3 then
+		return nil -- (looking steeply down or up: not through it)
+	end
+	flat = vector.normalize(flat)
+	local base = player:get_pos()
+	local bx, by = U.pos_to_tile(base)
+	for d = 0.25, U.TILE * 1.5, 0.25 do
+		local tx, ty = U.pos_to_tile(vector.add(base, vector.multiply(flat, d)))
+		if tx ~= bx or ty ~= by then
+			local i = U.idx(tx, ty)
+			if math.abs(tx - h.x) <= 1 and math.abs(ty - h.y) <= 1
+					and (tx ~= h.x or ty ~= h.y) and U.in_map(tx, ty)
+					and map.typ[i] == U.TYP.DOOR and U.has(map.door[i], U.D_ISOPEN) then
+				return {kind = "door", tx = tx, ty = ty}, d
+			end
+			return nil
+		end
+	end
+	return nil
+end
+
 -- What the player is pointing at: {kind = "mon"|"square", tx, ty, mon}
 function actions.pointed(player)
 	local eye = vector.add(player:get_pos(), vector.new(0, 1.6, 0))
 	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 6))
+	local door, door_d = doorway(player)
 	for pt in core.raycast(eye, to, true, false) do
+		-- (anything past an open doorway you look through: that door)
+		if door and pt.intersection_point and (pt.type == "node" or pt.ref ~= player) then
+			local d = pt.intersection_point - eye
+			if math.sqrt(d.x * d.x + d.z * d.z) > door_d then
+				return door
+			end
+		end
 		if pt.type == "object" and pt.ref ~= player then
 			local ent = pt.ref:get_luaentity()
 			if ent and ent.name == "nhv:mon" and ent.nh_key then
@@ -619,6 +656,9 @@ function actions.pointed(player)
 			local wx, wy = U.pos_to_tile(pt.under)
 			return {kind = "square", tx = tx, ty = ty, wx = wx, wy = wy}
 		end
+	end
+	if door then
+		return door
 	end
 	local h = hero()
 	return {kind = "square", tx = h.x, ty = h.y}
@@ -902,6 +942,8 @@ function actions.context(player)
 			return {}, nil, "The door is too far away: step up to it."
 		end
 		tx, ty = h.x, h.y
+	elseif p.kind == "door" and tx == h.x and ty == h.y then
+		return {}, nil, "You're standing in the doorway: step out of it first."
 	end
 	local sq = square_info(tx, ty)
 	local list, primary = {}, nil

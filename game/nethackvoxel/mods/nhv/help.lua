@@ -37,7 +37,6 @@ help.SECTIONS = {
 		{"Alt + right click", "Hold: use an item (quaff, read, apply, drop, throw, wear, take off, put on, wield, swap weapons, dual wield)"},
 		{"Ctrl + right click", "Hold: magic and abilities (turn undead, monster abilities, invoke, skills, known spells, teleport)"},
 		{"E (tap / hold)", "The same for your wielded weapon: its usual action, or a wheel of what you can do with it"},
-		{"More... (on every wheel)", "Every other command, in groups (Items, Gear, Magic, Move, Here, Info, Game): rest on one to open it, or let go on it and the wheel stays open - then click on a command (in the middle: close)"},
 	}},
 	{"Items and other keys", {
 		{"F", "Pick up what's under you (shown as \"F  Pick up\" when something is; a right click tap does it too, when nothing else is there)"},
