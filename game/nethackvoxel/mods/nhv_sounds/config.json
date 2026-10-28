@@ -922,6 +922,14 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "music_astral": {
+   "sounds": [
+    "nhv_music_diesirae"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {},
