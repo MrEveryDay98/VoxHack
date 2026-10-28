@@ -628,12 +628,7 @@ end
 -- Save every square of the area you're on that you've built, again, from
 -- what stands there now - all of its height (squares used to be saved only
 -- up to layer 19: tower tops built above that were left out)
-local function recapture(player)
-	local t = area_here(player)
-	if not t then
-		return false, "Stand on (or next to) an area's plate to recapture it."
-	end
-	local pname = player:get_player_name()
+local function recapture_area(t, pname, done)
 	local o = area_origin[t.id]
 	local minp = vector.new(o.x, o.y, o.z)
 	local maxp = vector.new(o.x + t.w * W - 1, o.y + H - 1, o.z + t.h * W - 1)
@@ -648,7 +643,8 @@ local function recapture(player)
 		local ignore = core.get_content_id("ignore")
 		for _, id in ipairs(vm:get_data()) do
 			if id == ignore then
-				core.chat_send_player(pname, "Part of the area isn't loaded yet: fly over all of it and try again.")
+				core.chat_send_player(pname, "Part of " .. areas.name(t) .. " isn't loaded yet, so it wasn't "
+					.. "saved again at full height: fly over all of it and /area recapture.")
 				return
 			end
 		end
@@ -661,13 +657,30 @@ local function recapture(player)
 			n = n + 1
 		end
 		if areas.save(t.id) then
-			core.chat_send_player(pname, ("Saved %d squares of %s again, all their height."):format(n, areas.name(t)))
+			core.chat_send_player(pname, ("Saved the %d squares you built of %s again, all their height.")
+				:format(n, areas.name(t)))
+			if done then
+				done()
+			end
 		else
 			core.chat_send_player(pname, "Could not save area " .. t.id)
 		end
 	end)
+end
+
+local function recapture(player)
+	local t = area_here(player)
+	if not t then
+		return false, "Stand on (or next to) an area's plate to recapture it."
+	end
+	recapture_area(t, player:get_player_name())
 	return true, "Recapturing " .. areas.name(t) .. "..."
 end
+
+-- (cells were 19 layers tall: an area built before they grew is saved again,
+-- all its height, the first time you go to it - what you built over layer
+-- 19 still stands in the editor world; once per area)
+local TALL_KEY = "recaptured_h" .. H .. "_"
 
 core.register_chatcommand("area", {
 	params = "[reset | reload] [<name>] | revert | recapture",
@@ -725,8 +738,14 @@ core.register_chatcommand("area", {
 			save_areas()
 			areas.data[t.id] = nil
 		end
-		build_area(t, first or reset ~= nil or reload ~= nil, function()
+		local rebuild = first or reset ~= nil or reload ~= nil
+		build_area(t, rebuild, function()
 			storage:set_string("area_laid_" .. t.id, "1")
+			if not rebuild and areas.built(t.id) and storage:get_string(TALL_KEY .. t.id) == "" then
+				recapture_area(t, pname, function()
+					storage:set_string(TALL_KEY .. t.id, "1")
+				end)
+			end
 			if player and player:is_player() then
 				local o = area_origin[t.id]
 				player:set_pos(vector.new(o.x + t.w * W / 2, BASE_Y - 1, o.z - 3))
