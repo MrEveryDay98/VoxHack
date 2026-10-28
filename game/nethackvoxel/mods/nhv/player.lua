@@ -181,8 +181,9 @@ end
 
 local function set_speed(player)
 	local h = player_mod.hero
-	-- NetHack speed, slowed by what you carry (see clock.move_speed)
-	local speed = nhv.clock.move_speed() / 12
+	-- NetHack speed, slowed by what you carry (see clock.move_speed) - and
+	-- in the Plane of Air's thin air (clock.walk_speed)
+	local speed = nhv.clock.walk_speed() / 12
 	if h and stuck(h) then
 		speed = 0
 	end

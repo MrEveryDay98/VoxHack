@@ -88,6 +88,22 @@ function clock.move_speed()
 	return s
 end
 
+-- The Plane of Air: walking in thin air (neither flying nor levitating),
+-- NetHack fails three steps in four ("You tumble in place."), each a turn
+-- - so a square takes four turns on the whole. The body walks a quarter
+-- as fast, time running as it would at a walk (nhcore lets the step itself
+-- through: it was walked; hack.c's air_turbulence)
+clock.AIR_WALK = 0.25
+function clock.walk_speed()
+	local s = clock.move_speed()
+	local h = nh.snap and nh.snap.hero
+	if nhv.terrain and nhv.terrain.sky_floor and h
+			and not U.has(h.flags, U.HERO.LEVITATE) and not U.has(h.flags, U.HERO.FLYING) then
+		s = s * clock.AIR_WALK
+	end
+	return s
+end
+
 -- turns one hero action takes
 function clock.action_turns()
 	-- (carrying more, each action spans more turns, as in NetHack; even
@@ -128,7 +144,7 @@ function clock.update(dtime, player)
 	local v = player:get_velocity()
 	local speed = math.sqrt(v.x * v.x + v.z * v.z)
 	-- (walking flat out at the speed you can manage is full speed)
-	local walk = math.max(0.1, clock.WALK * clock.move_speed() / 12)
+	local walk = math.max(0.1, clock.WALK * clock.walk_speed() / 12)
 	local target = clock.MIN_SCALE + (1 - clock.MIN_SCALE) * math.min(1, speed / walk)
 	-- (a ray you zapped: time runs until it has flown, or it would hang
 	-- in the air until you moved)
