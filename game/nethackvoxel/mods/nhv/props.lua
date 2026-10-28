@@ -41,7 +41,8 @@ end
 
 -- A floating particle (a block of the block editor's "particle" shape:
 -- custom_blocks.lua): one big sprite, always facing you, glowing, floating
--- up and down. The float goes by its velocity and acceleration (the
+-- up and down, maybe spinning round (automatic_rotate: the VoxHack engine
+-- turns a sprite about the view by it, on the client). The float goes by its velocity and acceleration (the
 -- client moves it smoothly between the server's steps), steered back to
 -- where it should be now and then.
 core.register_entity("nhv:floater", {
@@ -85,7 +86,8 @@ local function show_floater(pos, p, k)
 	if not obj then
 		return
 	end
-	obj:set_properties({textures = {p.texture}, visual_size = {x = p.size, y = p.size}, glow = p.glow})
+	obj:set_properties({textures = {p.texture}, visual_size = {x = p.size, y = p.size}, glow = p.glow,
+		automatic_rotate = -math.rad(p.spin)})
 	obj:set_pos(home)
 	local e = obj:get_luaentity()
 	-- (each its own place in the float: they don't all bob together)

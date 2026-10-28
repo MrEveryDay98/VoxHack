@@ -31,7 +31,9 @@
 --   hidden     the same, for sides that aren't drawn at all
 --   particle   (particle) {color=, opacity= 0-100, glow= 0-14, bob= how far
 --              it floats up and down (blocks), bob_s= seconds for once up
---              and down, height= how high in its block its middle is (0-1)};
+--              and down, height= how high in its block its middle is (0-1),
+--              spin= degrees a second it turns round like a pinwheel (minus:
+--              the other way)};
 --              its size is scale, its picture texture - which can also be
 --              one of the Effects' particles ({"builtin": "star"})
 -- New or changed blocks need the game (or editor) restarted.
@@ -157,6 +159,7 @@ local function register(b)
 			glow = math.max(0, math.min(14, tonumber(pt.glow) or 14)),
 			bob = math.max(0, tonumber(pt.bob) or 0), bob_s = math.max(0.2, tonumber(pt.bob_s) or 3),
 			height = math.max(0, math.min(1, tonumber(pt.height) or 0.5)),
+			spin = math.max(-720, math.min(720, tonumber(pt.spin) or 0)),
 		}
 		nhv.props.register(name, look, b.name or id, common)
 		cblocks.defs[name] = info

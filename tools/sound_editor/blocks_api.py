@@ -214,6 +214,8 @@ def clean_particle(p):
     return {
         "color": color.upper(), "opacity": num("opacity", 0, 100, 100), "glow": int(num("glow", 0, 14, 14)),
         "bob": num("bob", 0, 3, 0.3), "bob_s": num("bob_s", 0.2, 30, 3), "height": num("height", 0, 1, 0.5),
+        # degrees a second it turns round (minus: the other way)
+        "spin": num("spin", -720, 720, 0),
     }
 
 

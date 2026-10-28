@@ -10,7 +10,39 @@ const Blocks = (() => {
   ];
   // the Effects tab's particle pictures (mods/nhv_effects/textures)
   const FX = ["dot", "spark", "star", "square", "ring"];
-  const PARTICLE_DEFAULT = { color: "#FFFFFF", opacity: 100, glow: 14, bob: 0.3, bob_s: 3, height: 0.5 };
+  const PARTICLE_DEFAULT = { color: "#FFFFFF", opacity: 100, glow: 14, bob: 0.3, bob_s: 3, height: 0.5, spin: 0 };
+
+  // A picture (any kind of texture), tinted: drawn on a canvas, the colour
+  // multiplied in where the picture is (and only there)
+  function tintedCanvas(t, color, px) {
+    const cv = el("canvas", { width: 64, height: 64, style: `width:${px}px;height:${px}px;image-rendering:pixelated` });
+    let url, cell = null; // cell: [cols, rows, col, row] of a sheet
+    if (t && t.builtin) url = `/fxtex/nhvfx_${t.builtin}.png`;
+    else if (t && t.file) url = `/blocktex/${t.file}`;
+    else if (t && t.gamefile) url = `/gametex/${t.gamefile}`;
+    else if (t && t.wb != null) { url = "/wb.png"; cell = [wb.cols, wb.rows, t.wb % wb.cols, Math.floor(t.wb / wb.cols)]; }
+    else if (t && t.sheet != null) { url = "/sheet.png"; cell = [sheet.cols, sheet.rows, t.sheet % sheet.cols, Math.floor(t.sheet / sheet.cols)]; }
+    if (!url) return cv;
+    const im = new Image();
+    im.onload = () => {
+      const g = cv.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      let sx = 0, sy = 0, sw = im.width, sh = im.height;
+      if (cell) { sw = im.width / cell[0]; sh = im.height / cell[1]; sx = cell[2] * sw; sy = cell[3] * sh; }
+      else if (t.frames > 1) sh = im.height / t.frames; // (an animation: its first frame)
+      const draw = () => g.drawImage(im, sx, sy, sw, sh, 0, 0, 64, 64);
+      draw();
+      if ((color || "#FFFFFF").toUpperCase() !== "#FFFFFF") {
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = color;
+        g.fillRect(0, 0, 64, 64);
+        g.globalCompositeOperation = "destination-in"; // (back to the picture's own shape)
+        draw();
+      }
+    };
+    im.src = url;
+    return cv;
+  }
   let data = { version: 1, blocks: [] };
   let textures = [];
   let sheet = { cols: 48, rows: 25, names: {} };
@@ -184,17 +216,13 @@ const Blocks = (() => {
       // tinted, see-through, glowing, floating up and down)
       const pt = Object.assign({}, PARTICLE_DEFAULT, b.particle || {});
       const y = S / 2 - pt.height * S;
-      const url = b.texture && b.texture.builtin ? `/fxtex/nhvfx_${b.texture.builtin}.png` : null;
       const sprite = el("div", { class: "blk-particle", style: `width:${s}px;height:${s}px;margin:${-s / 2}px 0 0 ${-s / 2}px;`
         + `opacity:${pt.opacity / 100};--bob:${pt.bob * S / 2}px;--y:${y}px;animation:blkbob ${pt.bob_s}s ease-in-out infinite;`
         + `filter:drop-shadow(0 0 ${2 + pt.glow}px ${pt.color});` });
-      // (the picture, tinted: the colour where the picture is)
-      sprite.append(el("div", { style: `position:absolute;inset:0;${tex}` }));
-      if (pt.color.toUpperCase() !== "#FFFFFF") {
-        const mask = url ? `url(${url})` : null;
-        sprite.append(el("div", { style: `position:absolute;inset:0;background:${pt.color};mix-blend-mode:multiply;`
-          + (mask ? `-webkit-mask-image:${mask};mask-image:${mask};-webkit-mask-size:100% 100%;mask-size:100% 100%;` : "") }));
-      }
+      // (the picture, tinted where it is; spinning round, if it spins)
+      const pic = tintedCanvas(b.texture, pt.color, s);
+      if (pt.spin) pic.style.animation = `blkspin2d ${360 / Math.abs(pt.spin)}s linear infinite${pt.spin < 0 ? " reverse" : ""}`;
+      sprite.append(pic);
       scene.append(el("div", { class: "blk-billboard" }, sprite));
     } else {
       rig.append(el("div", { class: "blk-face blk-ghost", style: `width:${S}px;height:${S}px;margin:${-S / 2}px 0 0 ${-S / 2}px` }));
@@ -410,7 +438,8 @@ const Blocks = (() => {
         field("Height in its block", num("height", 0, 1, 0.05), "0 = the bottom, 1 = the top")),
       el("div", { class: "inline" },
         field("Float (blocks)", num("bob", 0, 3, 0.05), "how far it floats up and down; 0 = still"),
-        field("Float time (s)", num("bob_s", 0.2, 30, 0.1), "seconds for once up and down")),
+        field("Float time (s)", num("bob_s", 0.2, 30, 0.1), "seconds for once up and down"),
+        field("Spin (°/s)", num("spin", -720, 720, 5), "turns round like a pinwheel; 0 = still, minus = the other way")),
       el("small", { class: "muted", style: "display:block" },
         "One big sprite that always faces you. It's never solid; in the game you can't point at it. "
         + "Light (below) lights the blocks round it too."));
