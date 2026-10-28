@@ -570,7 +570,18 @@ function sam_settings(speaker, who, ln)
 	return st
 end
 
-local function speak_sam(st, text, pos)
+-- Voices play over each other; a speaker's new line cuts off their last
+-- (key: who's speaking - a monster, or a speaker of the catalog)
+local voices = {} -- key -> sound handle
+local function start_voice(key, name, params)
+	key = key or "?"
+	if voices[key] then
+		core.sound_stop(voices[key])
+	end
+	voices[key] = core.sound_play(name, params)
+end
+
+local function speak_sam(st, text, pos, key)
 	local p = player()
 	if not p then
 		return false
@@ -578,9 +589,6 @@ local function speak_sam(st, text, pos)
 	text = (st.text or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
 	if not text:find("%w") then
 		return false
-	end
-	if sound.voice then
-		core.sound_stop(sound.voice)
 	end
 	local name = ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
 		st.sing, st.smooth, st.tone, st.effects, text)
@@ -590,24 +598,23 @@ local function speak_sam(st, text, pos)
 	else
 		params.to_player = p:get_player_name()
 	end
-	sound.voice = core.sound_play(name, params)
+	start_voice(key, name, params)
 	return true
 end
 
 -- text: what the game actually said (SAM reads it; a recording ignores it)
 local function play_voice(id, pos, text, who)
+	local e = dialogue[id]
+	local key = who and who.m_id and who.m_id > 0 and ("mon" .. who.m_id) or (e and e.speaker) or id
 	local st = text and sam_for(id, who)
 	if st then
-		return speak_sam(st, text, pos)
+		return speak_sam(st, text, pos, key)
 	end
 	local v = sound.cfg.voices[id]
 	local name = v and v.sound
 	local p = player()
 	if not name or not known[name] or not p then
 		return false
-	end
-	if sound.voice then
-		core.sound_stop(sound.voice)
 	end
 	local gain = (v.volume or 100) / 100 * ((sound.cfg.master.voices or 100) / 100)
 	local params = {gain = gain}
@@ -616,7 +623,7 @@ local function play_voice(id, pos, text, who)
 	else
 		params.to_player = p:get_player_name()
 	end
-	sound.voice = core.sound_play(name, params)
+	start_voice(key, name, params)
 	return true
 end
 
@@ -640,6 +647,22 @@ local function oracle_pos()
 	end
 end
 
+-- Where a monster says something: its square now, as NetHack has it (its
+-- body may still be on its way there - having just teleported next to you,
+-- Rodney would be heard from where he was), else its body
+local function speaker_pos(m_id)
+	if not m_id or m_id <= 0 then
+		return nil
+	end
+	for _, m in ipairs(core.nh_get_all_monsters and core.nh_get_all_monsters() or {}) do
+		if m.id == m_id and m.x > 0 then
+			return U.tile_center(m.x, m.y, nhv.terrain.stand_y(m.x, m.y) + 1.0)
+		end
+	end
+	local e = nhv.mobs and nhv.mobs.mons["id" .. m_id]
+	return e and e.obj and e.obj:get_pos()
+end
+
 local function voice_for_text(text)
 	text = text:gsub('^"', ""):gsub('"$', "")
 	for _, sp in ipairs(spoken_pats) do
@@ -656,7 +679,7 @@ local sam_quest = nil -- {st=, lines={}, window=bool}
 
 local function finish_sam_quest()
 	if sam_quest and #sam_quest.lines > 0 then
-		speak_sam(sam_quest.st, table.concat(sam_quest.lines, " "), sam_quest.pos)
+		speak_sam(sam_quest.st, table.concat(sam_quest.lines, " "), sam_quest.pos, sam_quest.key)
 	end
 	sam_quest = nil
 end
@@ -681,7 +704,7 @@ nh.on_event(function(evs)
 				local st = sam_settings("The Oracle", {m_id = m_id or 0})
 				if st then
 					-- (the intro line itself isn't hers to read: begun next)
-					sam_quest = {st = st, lines = {}, window = true, pos = pos, skip = 1}
+					sam_quest = {st = st, lines = {}, window = true, pos = pos, skip = 1, key = "The Oracle"}
 				end
 			end
 		end
@@ -733,19 +756,15 @@ nh.on_event(function(evs)
 			elseif kind == "verbal" then
 				local text = table.concat(parts, "|", 7)
 				local id = voice_for_text(text)
-				local body
-				local mon = nhv.mobs and nhv.mobs.mons["id" .. (parts[2] or "")]
-				if mon and mon.obj:get_pos() then
-					body = mon.obj:get_pos()
-				end
 				local who = {m_id = tonumber(parts[2]) or 0, female = parts[4] == "1"}
+				local body = speaker_pos(who.m_id)
 				if id then
 					play_voice(id, body, text, who)
 				elseif SPEAKER_BY_MON[parts[3] or ""] then
 					-- (not in the catalog: SAM reads it in its speaker's voice)
 					local st = sam_settings(SPEAKER_BY_MON[parts[3]], who)
 					if st then
-						speak_sam(st, text, body)
+						speak_sam(st, text, body, who.m_id > 0 and ("mon" .. who.m_id) or parts[3])
 					end
 				end
 			elseif kind == "quest" then
@@ -753,7 +772,7 @@ nh.on_event(function(evs)
 				local st = ids and sam_for(ids[1])
 				if st then
 					finish_sam_quest()
-					sam_quest = {st = st, lines = {}, window = false}
+					sam_quest = {st = st, lines = {}, window = false, key = "quest"}
 				elseif ids and #ids == 1 then
 					play_voice(ids[1])
 				elseif ids then
