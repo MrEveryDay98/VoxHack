@@ -23,7 +23,11 @@ local prefabs = {
 nhv.prefabs = prefabs
 
 prefabs.W = U.TILE                 -- x and z size
-prefabs.H = 19                     -- height
+-- height: tall enough for towers over the walls - 40 fills three map
+-- blocks (y -9..30, with the level's invisible box round it -10..31). A
+-- node's index doesn't depend on it (prefabs.index), so cells saved when
+-- it was lower read the same.
+prefabs.H = 40
 prefabs.Y0 = U.FLOOR_Y - 8         -- world y of the cell's bottom layer
 prefabs.FLOOR = 8                  -- layer index (0-based) of the floor
 prefabs.CEIL = prefabs.FLOOR + U.WALL_H + 1

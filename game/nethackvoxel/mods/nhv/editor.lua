@@ -612,12 +612,74 @@ end
 
 local save_areas -- (below: the area squares changed, saved now)
 
+-- the area whose plate you're on (or just beside: /area <name> puts you at
+-- its edge)
+local function area_here(player)
+	local t
+	if player then
+		local p = player:get_pos()
+		t = area_at(p, true)
+		for _, d in ipairs({{0, 4}, {0, -4}, {4, 0}, {-4, 0}}) do
+			t = t or area_at(vector.offset(p, d[1], 0, d[2]), true)
+		end
+	end
+	return t
+end
+
+-- Save every square of the area you're on that you've built, again, from
+-- what stands there now - all of its height (squares used to be saved only
+-- up to layer 19: tower tops built above that were left out)
+local function recapture(player)
+	local t = area_here(player)
+	if not t then
+		return false, "Stand on (or next to) an area's plate to recapture it."
+	end
+	local pname = player:get_player_name()
+	local o = area_origin[t.id]
+	local minp = vector.new(o.x, o.y, o.z)
+	local maxp = vector.new(o.x + t.w * W - 1, o.y + H - 1, o.z + t.h * W - 1)
+	core.emerge_area(minp, maxp, function(_, _, remaining)
+		if remaining > 0 then
+			return
+		end
+		-- (all of it must be there to read: a part not loaded would be
+		-- saved as nothing)
+		local vm = core.get_voxel_manip()
+		vm:read_from_map(minp, maxp)
+		local ignore = core.get_content_id("ignore")
+		for _, id in ipairs(vm:get_data()) do
+			if id == ignore then
+				core.chat_send_player(pname, "Part of the area isn't loaded yet: fly over all of it and try again.")
+				return
+			end
+		end
+		save_areas()
+		local d = areas.get(t.id)
+		local n = 0
+		for k in pairs(d.cells) do
+			local cx, cy = (k - 1) % t.w, math.floor((k - 1) / t.w)
+			d.cells[k] = {nodes = prefabs.read_at(square_origin(t, cx, cy))}
+			n = n + 1
+		end
+		if areas.save(t.id) then
+			core.chat_send_player(pname, ("Saved %d squares of %s again, all their height."):format(n, areas.name(t)))
+		else
+			core.chat_send_player(pname, "Could not save area " .. t.id)
+		end
+	end)
+	return true, "Recapturing " .. areas.name(t) .. "..."
+end
+
 core.register_chatcommand("area", {
-	params = "[reset | reload] [<name>] | revert",
+	params = "[reset | reload] [<name>] | revert | recapture",
 	description = "Special level areas: list them, go to one, start one over (revert: the one you're on), "
-		.. "build one again from its saved file (reload)",
+		.. "build one again from its saved file (reload), save the one you're on again at full height "
+		.. "(recapture)",
 	func = function(pname, param)
 		local player = core.get_player_by_name(pname)
+		if param:match("^%s*recapture%s*$") then
+			return recapture(player)
+		end
 		if param:match("^%s*revert%s*$") then
 			-- (on the plate, or just beside it - /area <name> puts you at its edge)
 			local t

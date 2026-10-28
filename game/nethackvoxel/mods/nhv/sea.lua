@@ -106,10 +106,21 @@ local LIGHT = {lava = 12, lit = 13, dark = 2}
 -- one after another; gen: given up if another fill starts meanwhile (it
 -- writes all of it again)
 local gen = 0
+-- (the highest layer the sea written last had: clearing it, no higher -
+-- the cells are tall, the sea isn't; not known, all of them)
+local written_top = tonumber(storage:get_string("sea_top")) or H - 1
 local function fill(col, light)
 	gen = gen + 1
 	local my_gen = gen
-	local y0, y1 = Y0, Y0 + H - 1
+	local top = -1
+	for ly in pairs(col or {}) do
+		top = math.max(top, ly)
+	end
+	local layers = math.max(top, written_top, prefabs.FLOOR)
+	written_top = top
+	storage:set_string("sea_top", tostring(top))
+	-- (lit a little over its top too: what's over a face lights it)
+	local y0, y1 = Y0, Y0 + math.min(H - 1, layers + 2)
 	local strips = {
 		{-SIZE, X1 - 1 + SIZE, -SIZE, -1}, {-SIZE, X1 - 1 + SIZE, Z1, Z1 - 1 + SIZE},
 		{-SIZE, U.TILE - 1, 0, Z1 - 1}, {X1, X1 - 1 + SIZE, 0, Z1 - 1},
@@ -130,7 +141,7 @@ local function fill(col, light)
 			local area = VoxelArea(emin, emax)
 			local ids, p2 = vm:get_data(), vm:get_param2_data()
 			local air, bounds = terrain.cid("air"), terrain.cid("nhv:bounds")
-			for ly = 0, H - 1 do
+			for ly = 0, y1 - y0 do
 				local id = col and col[ly] and terrain.cid(col[ly]) or air
 				-- (the level's invisible walls, one node out, stay where the sea
 				-- has nothing - over the liquid: it goes on under them)
