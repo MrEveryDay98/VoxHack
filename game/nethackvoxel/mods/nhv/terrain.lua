@@ -522,7 +522,41 @@ local function write_ascii(data, area, sq)
 	end
 end
 
+-- the rock round a special level's map (describe): nothing to see - the
+-- sea's column there if the level stands in one - and an invisible wall
+-- where that has nothing, from the floor up
+local function write_outer(data, area, sq)
+	local col = nhv.sea and nhv.sea.column()
+	local air, bounds = cid("air"), cid("nhv:bounds")
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	for ly = 0, prefabs.H - 1 do
+		local id = col and col[ly] and cid(col[ly]) or (ly >= prefabs.FLOOR and bounds or air)
+		for lx = 0, U.TILE - 1 do
+			for lz = 0, U.TILE - 1 do
+				local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+				data.ids[vi], data.p2[vi] = id, 0
+			end
+		end
+	end
+end
+
+-- the squares round a special level's map built again (the sea there now
+-- known or gone: sea.lua)
+function terrain.rewrite_outer()
+	local sqs = {}
+	for _, sq in pairs(terrain.built or {}) do
+		if sq.outer then
+			sqs[#sqs + 1] = sq
+		end
+	end
+	terrain.write_squares(sqs)
+end
+
 local function write_square(data, area, sq)
+	if sq.outer then
+		write_outer(data, area, sq)
+		return
+	end
 	if sq.ascii then
 		write_ascii(data, area, sq)
 		return
@@ -620,6 +654,8 @@ local function write_squares(sqs)
 	-- doors: one picture across each group of connected door blocks
 	nhv.doors.refresh(vector.new(minx, y0, minz), vector.new(maxx, y1, maxz))
 end
+
+terrain.write_squares = write_squares
 
 -- ---------------------------------------------------------------- sky
 -- Does the level have the sky over any part of it? Open-sky levels (see
@@ -855,13 +891,20 @@ local function describe(map, tx, ty)
 			cell_id = "top:" .. (top_id or "none")
 		end
 	end
+	-- the rock round a special level's map: an invisible wall (and the
+	-- sea, on a level standing in one: sea.lua), not a cliff
+	if typ == T.STONE and nhv.areas.outside_special(tx, ty) then
+		sq.outer = true
+	end
 	-- (seeing a square for the first time doesn't change what's built)
 	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
 		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or ""}, ":")
 	-- (ASCII mode: its character instead - ascii.lua; seeing it, or what's
 	-- remembered there changing, does change what's built then)
-	if nhv.ascii and nhv.ascii.on then
+	if sq.outer then
+		sq.key = "outer"
+	elseif nhv.ascii and nhv.ascii.on then
 		local code, color, solid = nhv.ascii.square(map, i, true)
 		sq.ascii = {code, color, solid}
 		sq.key = ("ascii:%d:%d:%s:%s"):format(code, color, solid and 1 or 0, sq.roofless and "open" or "")

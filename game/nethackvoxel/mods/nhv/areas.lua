@@ -287,24 +287,43 @@ local function regions()
 		return {} -- (no game running)
 	end
 	if active.gid ~= gid or active.ledger ~= ledger then
-		active.gid, active.ledger, active.regions = gid, ledger, {}
+		active.gid, active.ledger, active.regions, active.rects = gid, ledger, {}, {}
 		for _, r in pairs(core.deserialize(storage:get_string(key(gid, ledger))) or {}) do
+			-- (where it is now: NetHack may have flipped the level)
+			local x, y, f = r.x, r.y, r.flip or 0
+			if f >= 2 then
+				x = r.maxx - (r.x + r.w - 1) + r.minx
+			end
+			if f % 2 == 1 then
+				y = r.maxy - (r.y + r.h - 1) + r.miny
+			end
+			active.rects[#active.rects + 1] = {x = x, y = y, w = r.w, h = r.h}
 			local t = areas.templates[r.proto .. "#" .. r.n]
 			-- (only if it's laid out as the template is)
 			if t and t.w == r.w and t.h == r.h and areas.built(t.id) then
-				-- (where it is now: NetHack may have flipped the level)
-				local x, y, f = r.x, r.y, r.flip or 0
-				if f >= 2 then
-					x = r.maxx - (r.x + r.w - 1) + r.minx
-				end
-				if f % 2 == 1 then
-					y = r.maxy - (r.y + r.h - 1) + r.miny
-				end
 				active.regions[#active.regions + 1] = {t = t, x = x, y = y}
 			end
 		end
 	end
-	return active.regions
+	return active.regions, active.rects
+end
+
+-- Is square (tx, ty) outside every fixed region of the special level you're
+-- on - the rock NetHack fills round its map? (false on ordinary levels)
+function areas.outside_special(tx, ty)
+	if nhv.EDITOR then
+		return false
+	end
+	local _, rects = regions()
+	if not rects or #rects == 0 then
+		return false
+	end
+	for _, r in ipairs(rects) do
+		if tx >= r.x and ty >= r.y and tx < r.x + r.w and ty < r.y + r.h then
+			return false
+		end
+	end
+	return true
 end
 
 -- Is the level's hand-built area open to the sky (you built most of its

@@ -168,7 +168,16 @@ local pending = nil -- {col=, light=}: to fill as soon as the level's on screen
 
 -- The level's built again (a new one, or starting up): the sea is put
 -- back too, whatever's there
+local current = nil -- the column the level's sea is made of (nil: none)
+
+-- the sea's column, on a level that stands in one: the rock round a special
+-- level's map is built of it too (terrain.lua's write_outer)
+function sea.column()
+	return current
+end
+
 function sea.rebuild()
+	current = nil
 	if built ~= "" then
 		built = "?" .. built
 	end
@@ -186,6 +195,11 @@ function sea.update(map)
 	built = key
 	storage:set_string("sea", key)
 	local col = kind and (nhv.ascii and nhv.ascii.on and ascii_column(kind) or sample(map, kind))
+	-- (the squares round the level's map: the sea comes up to the island)
+	if col ~= current then
+		current = col
+		terrain.rewrite_outer()
+	end
 	local light = not kind and 0 or kind == "lava" and LIGHT.lava
 		or (sea.lit or (nhv.ascii and nhv.ascii.on)) and LIGHT.lit or LIGHT.dark
 	-- (once the level is on the screen: it doesn't hold that up)
