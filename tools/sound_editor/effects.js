@@ -163,9 +163,9 @@ const Effects = (() => {
       const px = Math.max(2, p.size * 0.1 * S);
       const im = particleImage(p.l);
       g.globalCompositeOperation = p.l.additive ? "lighter" : "source-over";
-      const t = Math.min(1, age / p.life), op = (p.l.opacity ?? 100) / 100;
-      g.globalAlpha = op * (p.l.fade && p.l.fade_in ? 1 - Math.abs(2 * t - 1)
-        : p.l.fade ? 1 - t : p.l.fade_in ? t : 1);
+      const k = Math.min(1, age / p.life), op = (p.l.opacity ?? 100) / 100;
+      g.globalAlpha = op * (p.l.fade && p.l.fade_in ? 1 - Math.abs(2 * k - 1)
+        : p.l.fade ? 1 - k : p.l.fade_in ? k : 1);
       if (im) g.drawImage(im, sx - px / 2, sy - px / 2, px, px);
       else { g.fillStyle = p.l.color; g.fillRect(sx - px / 2, sy - px / 2, px, px); }
     }
