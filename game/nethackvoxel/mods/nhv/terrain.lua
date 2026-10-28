@@ -432,7 +432,14 @@ local OPEN_SKY = {
 	["bigrm-7"] = true, ["bigrm-8"] = true, ["bigrm-10"] = true,
 	["juiblex"] = true,
 	["medusa-1"] = true, ["medusa-2"] = true, ["medusa-3"] = true, ["medusa-4"] = true,
+	["air"] = true,
 }
+-- Levels whose open air and clouds are nothing but the sky under your feet
+-- (the Plane of Air: no ground, no rock - the sky blocks as a floor; its
+-- clouds are the clouds' effect, effects.lua)
+local SKY_FLOOR = {["air"] = true}
+local SKY_FLOOR_TYP = {[T.AIR] = true, [T.CLOUD] = true}
+terrain.sky_floor = false
 terrain.OPEN_SKY = OPEN_SKY
 terrain.open_sky = false
 -- open to the sky as the level was built: an open-sky level, or a hand-built
@@ -442,14 +449,14 @@ terrain.open_area = false
 
 local function level_open_sky()
 	if nhv.EDITOR or not nhv.areas or not nhv.areas.level_variants then
-		return false
+		return false, false
 	end
+	local open, sky_floor = false, false
 	for v in pairs(nhv.areas.level_variants()) do
-		if OPEN_SKY[v] then
-			return true
-		end
+		open = open or OPEN_SKY[v] or false
+		sky_floor = sky_floor or SKY_FLOOR[v] or false
 	end
-	return false
+	return open, sky_floor
 end
 
 -- the doors' prefabs: in a hand-built area, a door's own prefab gives the
@@ -552,9 +559,35 @@ function terrain.rewrite_outer()
 	terrain.write_squares(sqs)
 end
 
+-- the Plane of Air's open air (describe): a layer of sky blocks to walk on
+-- - the sky shows through them, under your feet as all round - and nothing
+-- else (but the light over a lit square, as in a lit room: what's in the
+-- air shows lit)
+local function write_sky_floor(data, area, sq)
+	local air, sky = cid("air"), cid("nhv:sky")
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	for ly = 0, prefabs.H - 1 do
+		local id = ly == prefabs.FLOOR and sky or air
+		for lx = 0, U.TILE - 1 do
+			for lz = 0, U.TILE - 1 do
+				local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+				data.ids[vi], data.p2[vi] = id, 0
+			end
+		end
+	end
+	if sq.lit then
+		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
+		data.ids[area:index(c.x, c.y, c.z)] = cid("nhv:room_light")
+	end
+end
+
 local function write_square(data, area, sq)
 	if sq.outer then
 		write_outer(data, area, sq)
+		return
+	end
+	if sq.sky_floor and not sq.ascii then
+		write_sky_floor(data, area, sq)
 		return
 	end
 	if sq.ascii then
@@ -898,6 +931,10 @@ local function describe(map, tx, ty)
 	if typ == T.STONE and nhv.areas.outside_special(tx, ty) then
 		sq.outer = true
 	end
+	-- the Plane of Air's open air and clouds: the sky as the floor
+	if terrain.sky_floor and SKY_FLOOR_TYP[typ] then
+		sq.sky_floor = true
+	end
 	-- (seeing a square for the first time doesn't change what's built)
 	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
@@ -906,6 +943,8 @@ local function describe(map, tx, ty)
 	-- remembered there changing, does change what's built then)
 	if sq.outer then
 		sq.key = "outer"
+	elseif sq.sky_floor and not (nhv.ascii and nhv.ascii.on) then
+		sq.key = "skyfloor"
 	elseif nhv.ascii and nhv.ascii.on then
 		local code, color, solid = nhv.ascii.square(map, i, true)
 		sq.ascii = {code, color, solid}
@@ -1020,10 +1059,10 @@ function terrain.update(map, force)
 	end
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
-	local open = level_open_sky()
+	local open, sky_floor = level_open_sky()
 	local open_area = open or (not nhv.EDITOR and nhv.areas.open_to_sky()) or false
-	if open ~= terrain.open_sky or open_area ~= terrain.open_area then
-		terrain.open_sky, terrain.open_area = open, open_area
+	if open ~= terrain.open_sky or open_area ~= terrain.open_area or sky_floor ~= terrain.sky_floor then
+		terrain.open_sky, terrain.open_area, terrain.sky_floor = open, open_area, sky_floor
 		force = true
 	end
 	terrain.map = map
