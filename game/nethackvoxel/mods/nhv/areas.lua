@@ -549,6 +549,10 @@ local FLOOR = {[T.ROOM] = true, [T.CORR] = true, [T.ICE] = true}
 -- put them - most levels place them at random: floor in another game)
 local TEMPLATE_FLOOR = {[T.ROOM] = true, [T.CORR] = true, [T.ICE] = true,
 	[T.STAIRS] = true, [T.LADDER] = true}
+local WALLISH = {[T.SDOOR] = true}
+for typ = T.VWALL, T.DBWALL do
+	WALLISH[typ] = true
+end
 function areas.cell(tx, ty, typ, map)
 	if nhv.EDITOR or OWN[typ] then
 		return nil
@@ -558,7 +562,11 @@ function areas.cell(tx, ty, typ, map)
 		return nil
 	end
 	local ttyp = areas.template_typ(r.t, cx, cy)
-	if ttyp == typ then
+	-- (a wall is a wall: NetHack flips special levels, which turns a
+	-- top-left corner into a top-right one, and joins walls up by what's
+	-- round them - your wall square is used whichever kind it came out as;
+	-- a secret door looks like the wall it's in)
+	if ttyp == typ or (WALLISH[ttyp] and WALLISH[typ]) then
 		return built_at(r, f, cx, cy)
 	end
 	if TEMPLATE_FLOOR[ttyp] and FLOOR[typ] then
