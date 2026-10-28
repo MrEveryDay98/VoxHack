@@ -1,5 +1,7 @@
 -- The Plane of Water's air bubbles: round, see-through spheres, not holes
--- in blocks of water. The plane itself is open space over a floor of sky
+-- in blocks of water (going on below the invisible floor: terrain.lua).
+-- Outside them you're underwater: the screen is tinted the deep blue of
+-- the water, darker at its edges, and bubbles rise round you. The plane itself is open space over a floor of sky
 -- (terrain.lua's sky_floor); NetHack makes each bubble's squares air and
 -- moves the bubbles a square at a time every turn (mkmaze.c's
 -- movebubbles). Each group of touching air squares is a bubble: a sphere
@@ -139,6 +141,63 @@ end
 
 nh.on_snapshot(function(snap)
 	bubbles.update(snap and snap.map)
+end)
+
+-- ---------------------------------------------------------------- underwater
+-- On the Plane of Water outside a bubble (NetHack: Underwater): the blue
+-- tint and the dark edges on the screen, and bubbles rising round you
+-- (particles following you - they rise smoothly)
+local TINT_TEX = "[fill:16x16:#0A3C8C^[opacity:85"
+local EDGE_TEX = "nhv_vignette.png^[multiply:#041838^[opacity:200"
+local RISING_TEX = "nhvfx_ring.png^[multiply:#CFEFFF"
+local under = nil -- {hud = {ids}, spawner = id} while underwater
+
+local function go_under(player)
+	under = {hud = {}}
+	for k, tex in ipairs({TINT_TEX, EDGE_TEX}) do
+		under.hud[#under.hud + 1] = player:hud_add({
+			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+			scale = {x = -100, y = -100}, text = tex, z_index = -400 + k,
+		})
+	end
+	under.spawner = core.add_particlespawner({
+		amount = 14, time = 0, attached = player, playername = player:get_player_name(),
+		minpos = vector.new(-2.5, -0.5, -2.5), maxpos = vector.new(2.5, 1.2, 2.5),
+		minvel = vector.new(-0.15, 0.8, -0.15), maxvel = vector.new(0.15, 1.8, 0.15),
+		minacc = vector.new(-0.2, 0.3, -0.2), maxacc = vector.new(0.2, 0.6, 0.2),
+		minexptime = 1.5, maxexptime = 3, minsize = 1.2, maxsize = 3.5,
+		texture = {name = RISING_TEX, alpha_tween = {1, 0}}, glow = 8,
+	})
+end
+
+local function come_up(player)
+	if player and player:is_player() then
+		for _, id in ipairs(under.hud) do
+			player:hud_remove(id)
+		end
+	end
+	if under.spawner then
+		core.delete_particlespawner(under.spawner)
+	end
+	under = nil
+end
+
+core.register_globalstep(function()
+	local player = nhv.player.get()
+	local h = nh.snap and nh.snap.hero
+	local want = player and h and nhv.terrain.sky_floor == "water" and U.has(h.flags, U.HERO.UNDERWATER)
+		and not (nhv.cutscene and nhv.cutscene.active) or false
+	if want and not under then
+		go_under(player)
+	elseif not want and under then
+		come_up(player)
+	end
+end)
+
+core.register_on_leaveplayer(function(player)
+	if under then
+		come_up(player)
+	end
 end)
 
 return bubbles

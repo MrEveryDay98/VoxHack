@@ -566,7 +566,10 @@ end
 -- else (but the light over a lit square, as in a lit room: what's in the
 -- air shows lit)
 local function write_sky_floor(data, area, sq)
-	local air, sky = cid("air"), cid("nhv:sky")
+	-- (the Plane of Water's floor is invisible instead: its bubbles go on
+	-- below it - the sky blocks would hide them - and the sky shows round
+	-- them)
+	local air, sky = cid("air"), cid(terrain.sky_floor == "water" and "nhv:bounds" or "nhv:sky")
 	local ox, oz = U.tile_origin(sq.tx, sq.ty)
 	for ly = 0, prefabs.H - 1 do
 		local id = ly == prefabs.FLOOR and sky or air
