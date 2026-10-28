@@ -31,6 +31,8 @@
      "glow": 14,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     },
     {
@@ -59,6 +61,8 @@
      "glow": 14,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -96,6 +100,8 @@
      "glow": 12,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -133,6 +139,8 @@
      "glow": 14,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     },
     {
@@ -161,15 +169,17 @@
      "glow": 12,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
    "triggers": [
+    "monster_teleport",
     "teleport",
     "trap_level_teleporter",
     "trap_magic_portal",
-    "trap_teleportation_trap",
-    "monster_teleport"
+    "trap_teleportation_trap"
    ]
   },
   {
@@ -202,6 +212,8 @@
      "glow": 14,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -239,6 +251,8 @@
      "glow": 6,
      "additive": false,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -276,6 +290,8 @@
      "glow": 14,
      "additive": true,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -313,6 +329,8 @@
      "glow": 2,
      "additive": false,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -350,6 +368,8 @@
      "glow": 0,
      "additive": false,
      "fade": true,
+     "fade_in": false,
+     "opacity": 100,
      "collide": false
     }
    ],
@@ -383,18 +403,55 @@
       24.0,
       40.0
      ],
-     "gravity": 0,
+     "gravity": 0.0,
      "glow": 6,
      "additive": false,
      "fade": true,
      "fade_in": true,
-     "collide": false,
-     "opacity": 35
+     "opacity": 35,
+     "collide": false
     }
    ],
    "triggers": [
     "cloud_vapour"
    ]
+  },
+  {
+   "id": "effect1",
+   "name": "STAR",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "builtin": "star"
+     },
+     "color": "#C800FF",
+     "amount": 30,
+     "duration": 0.3,
+     "spread": 0.4,
+     "height": 1.0,
+     "speed": [
+      1.0,
+      3.0
+     ],
+     "life": [
+      0.5,
+      1.2
+     ],
+     "size": [
+      1.0,
+      2.0
+     ],
+     "gravity": 0.0,
+     "glow": 10,
+     "additive": true,
+     "fade": true,
+     "fade_in": false,
+     "opacity": 100,
+     "collide": false
+    }
+   ],
+   "triggers": []
   }
  ]
 }
