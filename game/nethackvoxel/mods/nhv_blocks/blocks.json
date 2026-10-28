@@ -103,6 +103,34 @@
    "texture_top": {
     "file": "nhv_wall_columnTop.png"
    }
+  },
+  {
+   "id": "block4",
+   "name": "New block",
+   "shape": "particle",
+   "texture": {
+    "file": "nhvfx_spark.png"
+   },
+   "scale": 3.0,
+   "solid": false,
+   "climbable": false,
+   "stretch": false,
+   "turns": "",
+   "light": 14,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {},
+   "hidden": {},
+   "particle": {
+    "color": "#FFFFFF",
+    "opacity": 100,
+    "glow": 14,
+    "bob": 0.3,
+    "bob_s": 3.0,
+    "height": 1
+   }
   }
  ]
 }
