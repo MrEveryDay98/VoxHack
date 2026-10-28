@@ -432,13 +432,15 @@ local OPEN_SKY = {
 	["bigrm-7"] = true, ["bigrm-8"] = true, ["bigrm-10"] = true,
 	["juiblex"] = true,
 	["medusa-1"] = true, ["medusa-2"] = true, ["medusa-3"] = true, ["medusa-4"] = true,
-	["air"] = true,
+	["air"] = true, ["water"] = true,
 }
--- Levels whose open air and clouds are nothing but the sky under your feet
--- (the Plane of Air: no ground, no rock - the sky blocks as a floor; its
--- clouds are the clouds' effect, effects.lua)
-local SKY_FLOOR = {["air"] = true}
-local SKY_FLOOR_TYP = {[T.AIR] = true, [T.CLOUD] = true}
+-- Levels with nothing but the sky under your feet (no ground, no rock -
+-- the sky blocks as a floor), and which: the Plane of Air (its clouds are
+-- the clouds' effect, effects.lua) and the Plane of Water (its water open
+-- space, its air bubbles spheres: bubbles.lua). terrain.sky_floor is the
+-- plane's name ("air", "water") or false.
+local SKY_FLOOR = {["air"] = "air", ["water"] = "water"}
+local SKY_FLOOR_TYP = {[T.AIR] = true, [T.CLOUD] = true, [T.WATER] = true}
 terrain.sky_floor = false
 terrain.OPEN_SKY = OPEN_SKY
 terrain.open_sky = false

@@ -175,8 +175,9 @@ local function stuck(h)
 end
 
 -- levitating: you float a little over the ground (hover, below) - and on
--- the Plane of Air, in thin air with no ground at all, you do too (off the
--- ground the engine doesn't bob the view and the weapon as you walk)
+-- the Planes of Air and Water, in thin air or open water with no ground at
+-- all, you do too (off the ground the engine doesn't bob the view and the
+-- weapon as you walk)
 local function levitating(h)
 	return h and (U.has(h.flags, U.HERO.LEVITATE) or (nhv.terrain and nhv.terrain.sky_floor)) or false
 end
@@ -871,7 +872,7 @@ end
 -- now and then, and the view rolling from side to side (the VoxHack
 -- engine's core.nhv_camera_roll), harder as you try to go
 local function struggling(h)
-	return h and nhv.terrain and nhv.terrain.sky_floor and not U.has(h.flags, U.HERO.LEVITATE)
+	return h and nhv.terrain and nhv.terrain.sky_floor == "air" and not U.has(h.flags, U.HERO.LEVITATE)
 		and not U.has(h.flags, U.HERO.FLYING) or false
 end
 local flail = {next = 0, kick = 0, stall_until = 0}

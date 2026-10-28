@@ -97,7 +97,7 @@ clock.AIR_WALK = 0.25
 function clock.walk_speed()
 	local s = clock.move_speed()
 	local h = nh.snap and nh.snap.hero
-	if nhv.terrain and nhv.terrain.sky_floor and h
+	if nhv.terrain and nhv.terrain.sky_floor == "air" and h
 			and not U.has(h.flags, U.HERO.LEVITATE) and not U.has(h.flags, U.HERO.FLYING) then
 		s = s * clock.AIR_WALK
 	end

@@ -504,7 +504,7 @@ function hud.square_tex(map, h, x, y, bare)
 	-- (the Plane of Air: NetHack shows every square you can't see as cloud -
 	-- the map shows the clouds where they really are, as the world does)
 	local rtyp = map.typ[i]
-	if nhv.terrain.sky_floor and (mname == "S_cloud" or mname == "S_air")
+	if nhv.terrain.sky_floor == "air" and (mname == "S_cloud" or mname == "S_air")
 			and (rtyp == U.TYP.CLOUD or rtyp == U.TYP.AIR) then
 		mname = rtyp == U.TYP.CLOUD and "S_cloud" or "S_air"
 		mem = cmap_tile(mname)
