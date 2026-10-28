@@ -15,3 +15,5 @@ usage = youssidge
 immediately = eemeediatlee
 lava = Lawhva
 creatures = creechurs
+return = re turn
+immortality = immorttalitey

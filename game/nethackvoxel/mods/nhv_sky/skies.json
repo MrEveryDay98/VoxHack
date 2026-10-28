@@ -49,7 +49,12 @@
    "moon": true,
    "stars": true,
    "stars_always": false,
-   "cloud_brightness": 1.0
+   "cloud_brightness": 1.0,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   },
   {
    "id": "ludios",
@@ -99,7 +104,12 @@
    "moon": true,
    "stars": true,
    "stars_always": true,
-   "cloud_brightness": 0.2
+   "cloud_brightness": 0.2,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   },
   {
    "id": "sky1",
@@ -149,7 +159,12 @@
    "moon": true,
    "stars": true,
    "stars_always": false,
-   "cloud_brightness": 1.0
+   "cloud_brightness": 1.0,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   },
   {
    "id": "sky2",
@@ -199,7 +214,12 @@
    "moon": true,
    "stars": true,
    "stars_always": false,
-   "cloud_brightness": 1.0
+   "cloud_brightness": 1.0,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   },
   {
    "id": "sky3",
@@ -249,7 +269,12 @@
    "moon": false,
    "stars": true,
    "stars_always": true,
-   "cloud_brightness": 0.4
+   "cloud_brightness": 0.4,
+   "lightning": {
+    "on": true,
+    "rate": 18.5,
+    "sound": false
+   }
   },
   {
    "id": "sky4",
@@ -299,7 +324,12 @@
    "moon": true,
    "stars": true,
    "stars_always": false,
-   "cloud_brightness": 1.4
+   "cloud_brightness": 1.4,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   },
   {
    "id": "sky5",
@@ -349,7 +379,12 @@
    "moon": true,
    "stars": true,
    "stars_always": false,
-   "cloud_brightness": 1.0
+   "cloud_brightness": 1.0,
+   "lightning": {
+    "on": false,
+    "rate": 4.0,
+    "sound": true
+   }
   }
  ],
  "levels": {
