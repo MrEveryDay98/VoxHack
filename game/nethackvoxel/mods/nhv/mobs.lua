@@ -1337,6 +1337,37 @@ local function update_glides(now)
 	end
 end
 
+-- Moving a monster's sprite smoothly: not put somewhere new every step
+-- (the client eases between those, unevenly - they come at uneven times:
+-- it shook), but given a velocity the client moves it by every frame -
+-- the pace of where it's to be, and a pull toward it - told again only
+-- when that changes. Far off (a teleport, a new level...), it's put there.
+local STEER_PULL = 5   -- (per second: how hard it's drawn to where it's to be)
+local STEER_SNAP = 3   -- (nodes: further off than this, put there)
+local ZERO = vector.zero()
+local function steer(e, pos, dtime)
+	local obj = e.obj
+	local cur = obj:get_pos()
+	local err = vector.subtract(pos, cur)
+	if vector.length(err) > STEER_SNAP or dtime <= 0 then
+		obj:set_pos(pos)
+		obj:set_velocity(ZERO)
+		e.steer_v, e.pace, e.last_target = ZERO, ZERO, pos
+		return
+	end
+	local pace = e.last_target and vector.divide(vector.subtract(pos, e.last_target), dtime) or ZERO
+	e.last_target = pos
+	e.pace = vector.add(e.pace or ZERO, vector.multiply(vector.subtract(pace, e.pace or ZERO), math.min(1, dtime * 8)))
+	local v = vector.add(e.pace, vector.multiply(err, STEER_PULL))
+	if vector.length(v) < 0.03 and vector.length(err) < 0.02 then
+		v = ZERO
+	end
+	if not e.steer_v or vector.distance(v, e.steer_v) > 0.08 then
+		e.steer_v = v
+		obj:set_velocity(v)
+	end
+end
+
 local clock_t = 0
 -- is there a wall between your eyes and point p?
 function wall_between(eye, p)
@@ -1417,7 +1448,7 @@ core.register_globalstep(function(dtime)
 		end
 		if obj:get_pos() and e.h then
 			local pos = mon_draw_pos(e)
-			obj:move_to(pos, true)
+			steer(e, pos, dtime)
 			if ppos then
 				local d = vector.subtract(ppos, pos)
 				local yaw = math.atan2(d.z, d.x) - math.pi / 2
