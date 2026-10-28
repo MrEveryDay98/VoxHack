@@ -145,6 +145,7 @@ donhvmove(void)
         return nhv_ok();
     }
     u.dx = dx, u.dy = dy, u.dz = 0;
+    nhv_water_step(x, y); /* (the Plane of Water: as the body is) */
     /* walking never fights (the no-fighting flag, as NetHack's 'm' prefix,
        when someone is there); it may swap places with a pet. With nobody
        there it's an ordinary step: autopickup picks things up, a boulder
@@ -160,6 +161,7 @@ donhvmove(void)
     nhv_walking = FALSE;
     svc.context.nopick = 0;
     nhv_bc_follow();
+    nhv_water_apply();
     return nhv_ok();
 }
 
@@ -256,6 +258,101 @@ donhvgod(void)
 {
     nhv_godmode = wizard && nhv_cmd_args[0] != 0;
     return nhv_ok();
+}
+
+/* ---------------------------------------------------------------- water
+   The Plane of Water, as the host's 3D world has it: whether the hero is
+   in an air bubble is whether its body is inside one of the bubbles'
+   spheres there - not NetHack's squares, a turn behind and jagged. The
+   host says (#nhvwater 0|1); the hero's square is made air or water to
+   match (and the square it was on before put back as its bubble has it),
+   now, as it walks (donhvmove) and after the bubbles move (movebubbles).
+   The bubbles don't carry the hero: the host's drift does. */
+boolean nhv_water_air = TRUE;
+static coordxy nhv_water_x, nhv_water_y; /* the square last made to match */
+
+/* is <x,y> inside one of the bubbles (its mask)? */
+staticfn boolean
+nhv_in_bubble(coordxy x, coordxy y)
+{
+    struct bubble *b;
+
+    for (b = svb.bbubbles; b; b = b->next) {
+        int i = x - b->x, j = y - b->y;
+
+        if (i >= 0 && j >= 0 && i < (int) b->bm[0] && j < (int) b->bm[1]
+            && (b->bm[j + 2] & (1 << i)))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+staticfn void
+nhv_water_set(coordxy x, coordxy y, boolean air)
+{
+    if (!isok(x, y) || (levl[x][y].typ != AIR && levl[x][y].typ != WATER))
+        return;
+    if (air && levl[x][y].typ != AIR) {
+        levl[x][y].typ = AIR;
+        levl[x][y].lit = 1;
+        unblock_point(x, y);
+        newsym(x, y);
+    } else if (!air && levl[x][y].typ != WATER) {
+        levl[x][y].typ = WATER;
+        levl[x][y].lit = 0;
+        block_point(x, y);
+        newsym(x, y);
+    }
+}
+
+/* the hero's square as the host says; the one before as its bubble has it */
+void
+nhv_water_apply(void)
+{
+    if (!nhv_freemove || !Is_waterlevel(&u.uz) || u.uswallow)
+        return;
+    if (nhv_water_x && (nhv_water_x != u.ux || nhv_water_y != u.uy))
+        nhv_water_set(nhv_water_x, nhv_water_y,
+                      nhv_in_bubble(nhv_water_x, nhv_water_y));
+    nhv_water_set(u.ux, u.uy, nhv_water_air);
+    nhv_water_x = u.ux, nhv_water_y = u.uy;
+    /* (in the water or out of it now: what that does - "You pop into an
+       air bubble.", or the water's own) */
+    if (!!u.uinwater == !!nhv_water_air)
+        spoteffects(FALSE);
+}
+
+/* #nhvwater 0|1: the hero's body is in water / in an air bubble (3D) */
+int
+donhvwater(void)
+{
+    nhv_water_air = nhv_cmd_args[0] != 0;
+    nhv_water_apply();
+    return nhv_ok();
+}
+
+/* the square a step goes into: air or water as the body is (donhvmove) */
+void
+nhv_water_step(coordxy x, coordxy y)
+{
+    if (nhv_freemove && Is_waterlevel(&u.uz))
+        nhv_water_set(x, y, nhv_water_air);
+}
+
+NHV_API int
+nhv_get_bubbles(int *buf, int max)
+{
+    struct bubble *b;
+    int n = 0;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop || !Is_waterlevel(&u.uz))
+        return 0;
+    for (b = svb.bbubbles; b && n < max; b = b->next, n++) {
+        buf[4 * n] = b->x, buf[4 * n + 1] = b->y;
+        buf[4 * n + 2] = b->bm[0], buf[4 * n + 3] = b->bm[1];
+    }
+    return n;
 }
 
 int

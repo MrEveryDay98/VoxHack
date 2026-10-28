@@ -85,10 +85,6 @@ local function teleport(player, pos)
 	local tx, ty = U.pos_to_tile(pos)
 	player_mod.trap_done = tx .. "," .. ty
 	player:set_pos(player_mod.free_spot(pos))
-	player_mod.carry = nil
-	if core.nhv_player_drift then
-		core.nhv_player_drift(vector.zero())
-	end
 	if nhv.effects then
 		nhv.effects.arrived() -- (teleport effects play where you arrive)
 	end
@@ -106,64 +102,12 @@ local function teleport(player, pos)
 end
 player_mod.teleport = teleport
 
--- Carried: on the Plane of Water a bubble carries you along with it, a
--- square a turn (NetHack moves the hero with it). The body isn't put there
--- at once but drifts there, as fast as the bubble glides (bubbles.lua):
--- carry is how far it still has to go. Meanwhile walking counts it as
--- already there (logical_pos), so it doesn't walk the hero back.
-local CARRY_MAX = 2 -- (squares: further than this, it's put there)
-function player_mod.logical_pos(player)
-	local pos = player:get_pos()
-	return player_mod.carry and vector.add(pos, player_mod.carry) or pos
-end
-
 -- NetHack moved the hero from square (fx, fy) to h without your walking
--- there: carried, or put there
-local function moved_by_nethack(player, h, fx, fy)
-	if nhv.terrain.sky_floor == "water" and fx
-			and math.max(math.abs(h.x - fx), math.abs(h.y - fy)) <= CARRY_MAX then
-		local d = vector.subtract(U.tile_center(h.x, h.y), U.tile_center(fx, fy))
-		player_mod.carry = vector.add(player_mod.carry or vector.zero(), vector.new(d.x, 0, d.z))
-		return
-	end
+-- there: the body is put there (the Plane of Water's bubbles don't carry
+-- the hero: their drift carries the body, and it walks - bubbles.lua)
+local function moved_by_nethack(player, h)
 	teleport(player, U.tile_center(h.x, h.y))
 end
-
--- (the engine carries the body along on its side, every frame, on top of
--- your own moving - core.nhv_player_drift - so you keep full control of
--- it; this keeps count of how far it still has to go)
-local drift_set = vector.zero()
-local function set_drift(v)
-	if not vector.equals(v, drift_set) then
-		drift_set = v
-		if core.nhv_player_drift then
-			core.nhv_player_drift(v)
-		end
-	end
-end
-core.register_globalstep(function(dtime)
-	local c = player_mod.carry
-	local player = c and player_mod.get()
-	local left = c and vector.length(c) or 0
-	if not player or left < 0.01 then
-		player_mod.carry = nil
-		set_drift(vector.zero())
-		return
-	end
-	-- (as fast as a bubble: a square a turn, at the time's rate - never
-	-- quite stopping, so it's always caught up)
-	local turns = nhv.clock.RATE * math.max(0.25, nhv.clock.scale)
-	local speed = U.TILE * turns
-	local go = math.min(left, speed * dtime)
-	local d = vector.multiply(c, go / left)
-	player_mod.carry = vector.subtract(c, d)
-	if core.nhv_player_drift then
-		-- (slower for the last bit, so it doesn't overshoot)
-		set_drift(vector.multiply(c, math.min(speed, left / math.max(dtime, 0.03)) / left))
-	else
-		player:set_pos(vector.add(player:get_pos(), d))
-	end
-end)
 
 -- NetHack saying you're falling to the level below (through a hole or a
 -- trap door, a hole dug in the floor): the level change that follows
@@ -468,8 +412,7 @@ local function step(player)
 	if try_push(player) then
 		return
 	end
-	-- (being carried: where the body is on its way to)
-	local pos = player_mod.logical_pos(player)
+	local pos = player:get_pos()
 	local tx, ty = U.pos_to_tile(pos)
 	if tx == h.x and ty == h.y then
 		player_mod.ahead = nil
@@ -709,13 +652,13 @@ nh.on_snapshot(function(snap, action)
 		else
 			player_mod.refusals = 0
 			if h.x ~= action.tx or h.y ~= action.ty then
-				moved_by_nethack(player, h, action.tx, action.ty) -- moved elsewhere
+				moved_by_nethack(player, h) -- moved elsewhere
 			end
 		end
 	elseif prev.x ~= h.x or prev.y ~= h.y then
-		local tx, ty = U.pos_to_tile(player_mod.logical_pos(player))
+		local tx, ty = U.pos_to_tile(player:get_pos())
 		if tx ~= h.x or ty ~= h.y then
-			moved_by_nethack(player, h, prev.x, prev.y)
+			moved_by_nethack(player, h)
 		end
 	end
 end)
@@ -970,8 +913,17 @@ local function hover(player)
 			player:add_velocity(vector.multiply(hv, -0.6))
 		end
 	end
+	-- (the Plane of Water: held level, no bob - and only set right when
+	-- it's really off, so the view stays still)
+	local water = nhv.terrain.sky_floor == "water" and not U.has(player_mod.hero.flags, U.HERO.LEVITATE)
+	if water then
+		bob = 0
+	end
 	local target = ground_below(pos, v) + HOVER_H + bob
 	local want = math.max(-4, math.min(4, (target - pos.y) * 6))
+	if water and math.abs(target - pos.y) < 0.08 then
+		want = 0
+	end
 	if math.abs(want - v.y) > 0.05 then
 		player:add_velocity(vector.new(0, want - v.y, 0))
 	end

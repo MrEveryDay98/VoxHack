@@ -413,6 +413,10 @@ typedef struct nhv_monfull {
  * only draw what nhv_get_monsters() says the hero perceives). */
 NHV_API int nhv_get_all_monsters(nhv_monfull *buf, int max);
 
+/* The Plane of Water's air bubbles: 4 ints each into buf - x, y (its top
+ * left square), w, h (its size in squares) - at most max; how many. */
+NHV_API int nhv_get_bubbles(int *buf, int max);
+
 /* Move monster <id> onto adjacent square <x,y>. Only while WAITING; runs
  * synchronously on the game thread. Returns 1 moved, 0 refused (the
  * square itself won't do), -1 the monster is gone (e.g. died in a trap),
