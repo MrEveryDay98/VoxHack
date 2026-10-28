@@ -253,9 +253,11 @@ end)
 -- NetHack's questions wait till then (ui.lua: cutscene.take); the camera
 -- goes on circling the light behind them and your gravestone.
 --
--- The camera is you (first person, the hand put away), moved round and
--- above the altar; you, on the altar, are drawn by a stand-in of your
--- sprite (nhv:asc_hero) - your own sprite goes (cutscene.hide_self).
+-- The camera circles above the altar, placed by the VoxHack engine every
+-- frame (core.nhv_camera_orbit: smooth, not stepping as the server's
+-- moves would); you, on the altar, are drawn by a stand-in of your sprite
+-- (nhv:asc_hero) - your own sprite goes (cutscene.hide_self), and nothing
+-- is in your hand.
 
 local ASC = {
 	SPIN = math.rad(14),  -- the camera's turn round the altar, a second
@@ -376,6 +378,24 @@ local function asc_start(player, god)
 			break
 		end
 	end
+	-- the camera, round and above the altar: as far out as the walls let
+	-- it, all the way round
+	local r = ASC.CAM_R
+	for k = 0, 23 do
+		local a = k / 24 * 2 * math.pi
+		while r > 1.5 do
+			local e = vector.new(pos.x - math.sin(a) * r, pos.y + asc.cam_h + 1.6, pos.z + math.cos(a) * r)
+			local def = core.registered_nodes[core.get_node(vector.round(e)).name]
+			if not (def and def.walkable) then
+				break
+			end
+			r = r - 0.5
+		end
+	end
+	if core.nhv_camera_orbit then
+		core.nhv_camera_orbit({center = pos, radius = r, height = asc.cam_h + 1.6, speed = ASC.SPIN,
+			angle = asc.yaw + math.pi, look_y = (asc.hero_h or 1.6) * 0.6})
+	end
 	-- the beam, wide, standing on the altar
 	asc.beam = core.add_entity(pos, "nhv:glory_beam")
 	if asc.beam then
@@ -422,6 +442,9 @@ local function asc_finish()
 	if s.hero then
 		s.hero:remove()
 	end
+	if core.nhv_camera_orbit then
+		core.nhv_camera_orbit(nil)
+	end
 	local player = nhv.player.get()
 	if player and player:is_player() then
 		player:hud_set_flags({wielditem = true, crosshair = true})
@@ -459,42 +482,24 @@ local function flash_opacity(player, a)
 	end
 end
 
-local function solid(p)
-	local def = core.registered_nodes[core.get_node(vector.round(p)).name]
-	return def and def.walkable
-end
-
--- the camera: out round the altar at this angle and above it, looking at
--- you (at `look`); nearer in where a wall is in the way
-local EYE = 1.6 -- (your eye over your feet: the camera's height over the player's position)
-local function place_camera(player, ang, look)
-	local p = asc.pos
-	local eye
-	for r = ASC.CAM_R, 1.5, -0.5 do
-		eye = vector.new(p.x - math.sin(ang) * r, p.y + asc.cam_h + EYE, p.z + math.cos(ang) * r)
-		if not solid(eye) and not solid(vector.new(eye.x, eye.y - 1, eye.z)) then
-			break
-		end
-	end
-	player:set_velocity(vector.zero())
-	player:set_pos(vector.new(eye.x, eye.y - EYE, eye.z))
-	local d = vector.subtract(look, eye)
-	player:set_look_horizontal(math.atan2(-d.x, d.z))
-	player:set_look_vertical(-math.atan2(d.y, math.sqrt(d.x * d.x + d.z * d.z)))
-end
-
 local function asc_step(player, dtime)
 	asc.t = asc.t + dtime
 	local t = asc.t
 	-- you on the altar (risen `asc.rise` nodes), facing the camera
 	local hh = asc.hero_h or 1.6
 	local feet = vector.new(asc.pos.x, asc.pos.y + (asc.rise or 0), asc.pos.z)
-	local ang = asc.yaw + math.pi + ASC.SPIN * t
 	if asc.hero then
 		asc.hero:set_pos(vector.new(feet.x, feet.y + hh / 2, feet.z))
-		asc.hero:set_rotation(vector.new(0, ang + math.pi, 0))
+		-- (turned to the camera, wherever the engine has it)
+		local cam = core.nhv_camera and core.nhv_camera()
+		if cam then
+			asc.hero:set_rotation(vector.new(0, math.atan2(-(cam.x - feet.x), cam.z - feet.z) + math.pi, 0))
+		end
 	end
-	place_camera(player, ang, vector.new(feet.x, feet.y + hh * 0.6, feet.z))
+	player:set_velocity(vector.zero())
+	if core.nhv_camera_orbit then
+		core.nhv_camera_orbit({look_y = (asc.rise or 0) + hh * 0.6})
+	end
 	-- 1. the offering, then the choir
 	if not asc.said.offer then
 		asc.said.offer = true
