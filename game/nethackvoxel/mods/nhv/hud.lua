@@ -1283,10 +1283,89 @@ function hud.silenced(text)
 	return false
 end
 
+-- ---------------------------------------------------------------- the Amulet
+-- Wearing or wielding the Amulet of Yendor, now and then it feels warm,
+-- very warm or hot: how near the magic portal is (wizard.c's amulet). That
+-- has a line of its own, at the bottom in the middle, coloured by how near
+-- - warm yellow, very warm orange, hot red - fading slowly away a second
+-- after it shows; it's in the log too, not with the other messages.
+local AMULET = {
+	{pat = "feels? hot!$", color = 0xFF3A28},
+	{pat = "feels? very warm%.$", color = 0xFF9A30},
+	{pat = "feels? warm%.$", color = 0xFFE070},
+}
+local AMULET_HOLD, AMULET_FADE = 1.0, 2.5 -- (seconds)
+local amulet_line = nil -- {id=, color=, t=} while shown
+
+function hud.amulet_feel(text)
+	if not text:find("Amulet of Yendor") then
+		return false
+	end
+	local color
+	for _, a in ipairs(AMULET) do
+		if text:find(a.pat) then
+			color = a.color
+			break
+		end
+	end
+	if not color then
+		return false
+	end
+	local player = nhv.player.get()
+	if not player then
+		return true
+	end
+	core.chat_send_player(player:get_player_name(), text) -- (the log)
+	-- (a line over the status line, wherever the HUD's layout has put it)
+	local st = hud.ids.status and player:hud_get(hud.ids.status)
+	local y = (st and st.offset and st.offset.y or -90) - 48
+	if not amulet_line then
+		amulet_line = {id = player:hud_add({
+			type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
+			offset = {x = 0, y = y}, size = {x = 1.5, y = 0}, number = color, text = text,
+			z_index = 30,
+		})}
+	else
+		player:hud_change(amulet_line.id, "text", text)
+		player:hud_change(amulet_line.id, "offset", {x = 0, y = y})
+	end
+	amulet_line.color, amulet_line.t = color, core.get_us_time() / 1e6
+	player:hud_change(amulet_line.id, "number", color)
+	return true
+end
+
+core.register_globalstep(function()
+	local line = amulet_line
+	if not line then
+		return
+	end
+	local player = nhv.player.get()
+	local age = core.get_us_time() / 1e6 - line.t
+	if not player or age > AMULET_HOLD + AMULET_FADE then
+		if player then
+			player:hud_remove(line.id)
+		end
+		amulet_line = nil
+		return
+	end
+	if age > AMULET_HOLD then
+		-- (fading: the colour's alpha, from solid down to nearly clear - 0
+		-- would be solid again)
+		local a = math.max(1, math.floor(255 * (1 - (age - AMULET_HOLD) / AMULET_FADE)))
+		player:hud_change(line.id, "number", a * 0x1000000 + line.color)
+	end
+end)
+
+core.register_on_leaveplayer(function()
+	amulet_line = nil
+end)
+
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
 		if (ev.kind == "message" or ev.kind == "raw") and not hud.silenced(ev.text) then
-			if hud.inscription(ev.text) then
+			if hud.amulet_feel(ev.text) then -- luacheck: ignore 542
+				-- (its own line: above)
+			elseif hud.inscription(ev.text) then
 				-- (not with the messages, but still in the log)
 				local player = nhv.player.get()
 				if player then
