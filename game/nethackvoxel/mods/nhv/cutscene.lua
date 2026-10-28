@@ -269,6 +269,11 @@ local ASC = {
 	RISE_H = 7,           -- nodes you rise
 	FLASH = 1.2,          -- the flash you're gone in (seconds)
 	BEAM = 2.4,           -- the beam's width, the artifact one's times this
+	BEAM_H = 16,          -- its height, the artifact one's times this: up out
+	                      -- of sight (about 70 blocks)
+	ASK_AFTER = 1,        -- seconds after you're gone NetHack's question
+	ASK_FADE = 1.5,       -- fades in, over this
+	ASK_STEPS = 12,
 }
 local OFFER = "^You offer the Amulet of Yendor to (.-)%.%.%.$"
 local CHOIR = "^An invisible choir sings, and you are bathed in radiance"
@@ -399,13 +404,13 @@ local function asc_start(player, god)
 	-- the beam, wide, standing on the altar
 	asc.beam = core.add_entity(pos, "nhv:glory_beam")
 	if asc.beam then
-		asc.beam:set_properties({visual_size = {x = ASC.BEAM, y = 1.6, z = ASC.BEAM}})
+		asc.beam:set_properties({visual_size = {x = ASC.BEAM, y = ASC.BEAM_H, z = ASC.BEAM}})
 	end
 	local pname = player:get_player_name()
 	asc.spawners = {
 		core.add_particlespawner({
-			amount = 400, time = 0, minpos = vector.new(pos.x - 1.1, pos.y + 0.2, pos.z - 1.1),
-			maxpos = vector.new(pos.x + 1.1, pos.y + 9, pos.z + 1.1),
+			amount = 600, time = 0, minpos = vector.new(pos.x - 1.1, pos.y + 0.2, pos.z - 1.1),
+			maxpos = vector.new(pos.x + 1.1, pos.y + 24, pos.z + 1.1),
 			minvel = vector.new(-0.05, -0.8, -0.05), maxvel = vector.new(0.05, -0.2, 0.05),
 			minexptime = 1.2, maxexptime = 2.8, minsize = 0.25, maxsize = 0.6,
 			texture = "[fill:2x2:#FFF4C0", glow = 14, playername = pname,
@@ -429,7 +434,7 @@ end
 local function asc_finish()
 	local s = asc
 	asc = nil
-	cutscene.active, cutscene.hide_self, cutscene.no_gravity = false, false, false
+	cutscene.active, cutscene.hide_self, cutscene.no_gravity, cutscene.menus_ok = false, false, false, false
 	if not s then
 		return
 	end
@@ -559,11 +564,33 @@ local function asc_step(player, dtime)
 		-- light still circling where you were
 		if t >= rise_at + ASC.RISE + 1.5 then
 			flash_opacity(player, 255 - 120 * smooth((t - rise_at - ASC.RISE - 1.5) / 2))
-			if not asc.released then
-				asc.released = true
-				clear_text(player) -- (out of the questions' way)
+		end
+		-- NetHack's question, once you're gone: fading in a step at a time
+		-- (then it stays, as any question; answered meanwhile - a key -
+		-- it's gone)
+		local ask_at = rise_at + ASC.RISE + ASC.ASK_AFTER
+		if t >= ask_at and not asc.released then
+			local req = nh.req
+			if not asc.asking then
+				asc.asking, asc.shown = true, 0
+				cutscene.menus_ok = true -- (hotbar.lua: menus may open now)
+				clear_text(player) -- (out of the question's way)
+			end
+			local step = math.min(ASC.ASK_STEPS, math.floor((t - ask_at) / ASC.ASK_FADE * ASC.ASK_STEPS) + 1)
+			if not (asc.held and req and req.kind == "yn") then
+				asc.released = true -- (nothing asked, or not a yes/no: as usual)
 				if asc.held then
 					nhv.ui.reshow()
+				end
+			elseif step > asc.shown then
+				asc.shown = step
+				nhv.ui.open = "nhv:req"
+				core.show_formspec(player:get_player_name(), "nhv:req", nhv.ui.yn_fading(req, step / ASC.ASK_STEPS))
+				if step == 1 then
+					nhv.sound.hook("dialog_open")
+				end
+				if step == ASC.ASK_STEPS then
+					asc.released = true
 				end
 			end
 		end

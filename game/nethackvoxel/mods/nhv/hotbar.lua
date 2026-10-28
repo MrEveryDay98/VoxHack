@@ -627,8 +627,9 @@ core.register_chatcommand("nhvmenu", {
 	description = "(VoxHack) a menu opened/closed",
 	func = function(pname, param)
 		nhv.ui.menu_open = param == "open"
-		if param == "open" and nhv.cutscene and nhv.cutscene.active then
-			core.close_formspec(pname, "") -- (no inventory during a cutscene)
+		if param == "open" and nhv.cutscene and nhv.cutscene.active and not nhv.cutscene.menus_ok then
+			core.close_formspec(pname, "") -- (no inventory during a cutscene; the
+			-- ascension's questions once it lets them: cutscene.lua)
 		end
 		return true
 	end,
