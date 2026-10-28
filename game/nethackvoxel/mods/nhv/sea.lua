@@ -60,8 +60,7 @@ local function sample(map, kind)
 			end
 		end
 	end
-	-- (lit like that square: a room light over each square, as the
-	-- level's own - terrain.lua)
+	-- (lit like that square)
 	sea.lit = best and best.lit or false
 	local nodes = best and (best.area_cell and best.area_cell.nodes or prefabs.get(best.slot).nodes)
 	local col = {}
@@ -90,7 +89,6 @@ local function sample(map, kind)
 end
 
 local function ascii_column(kind)
-	sea.lit = false -- (full brightness anyway)
 	local col = {}
 	for ly = 0, prefabs.FLOOR - 1 do
 		col[ly] = nhv.ascii.block(32)
@@ -99,58 +97,74 @@ local function ascii_column(kind)
 	return col
 end
 
--- every node from the level's edge out to SIZE: col's (nil: air)
-local function fill(col)
-	local x0, x1, z0, z1 = -SIZE, X1 - 1 + SIZE, -SIZE, Z1 - 1 + SIZE
+-- How bright the sea is: lit evenly, as it's written (working out the light
+-- of a whole sea from its lights - lava glows - would hold everything up)
+local LIGHT = {lava = 12, lit = 13, dark = 2}
+
+-- every node from the level's edge out to SIZE: col's (nil: air), in four
+-- strips round the level (north, south, west - with column 0 - and east),
+-- one after another; gen: given up if another fill starts meanwhile (it
+-- writes all of it again)
+local gen = 0
+local function fill(col, light)
+	gen = gen + 1
+	local my_gen = gen
 	local y0, y1 = Y0, Y0 + H - 1
-	core.emerge_area(vector.new(x0, y0, z0), vector.new(x1, y1, z1), function(_, _, left)
-		if left > 0 then
+	local strips = {
+		{-SIZE, X1 - 1 + SIZE, -SIZE, -1}, {-SIZE, X1 - 1 + SIZE, Z1, Z1 - 1 + SIZE},
+		{-SIZE, U.TILE - 1, 0, Z1 - 1}, {X1, X1 - 1 + SIZE, 0, Z1 - 1},
+	}
+	local function strip(k)
+		local s = strips[k]
+		if not s or my_gen ~= gen then
 			return
 		end
-		local vm = core.get_voxel_manip()
-		local emin, emax = vm:read_from_map(vector.new(x0, y0, z0), vector.new(x1, y1, z1))
-		local area = VoxelArea(emin, emax)
-		local ids, p2 = vm:get_data(), vm:get_param2_data()
-		local air, bounds = terrain.cid("air"), terrain.cid("nhv:bounds")
-		for ly = 0, H - 1 do
-			local id = col and col[ly] and terrain.cid(col[ly]) or air
-			-- (the level's invisible walls, one node out, stay where the sea
-			-- has nothing - over the liquid: it goes on under them)
-			local edge = id == air and bounds or id
-			local y = y0 + ly
-			for z = z0, z1 do
-				local inz = z >= 0 and z < Z1
-				local zedge = z == -1 or z == Z1
-				local vi = area:index(x0, y, z)
-				for x = x0, x1 do
-					-- (outside the level, and its column 0)
-					if not inz or x < 0 or x >= X1 or (col and x < U.TILE) then
-						local ring = x >= -1 and x <= X1 and z >= -1 and z <= Z1
-							and (zedge or x == -1 or x == X1)
-						ids[vi], p2[vi] = ring and edge or id, 0
-					end
-					vi = vi + 1
-				end
+		local x0, x1, z0, z1 = s[1], s[2], s[3], s[4]
+		local p0, p1 = vector.new(x0, y0, z0), vector.new(x1, y1, z1)
+		core.emerge_area(p0, p1, function(_, _, left)
+			if left > 0 or my_gen ~= gen then
+				return
 			end
-		end
-		if col and sea.lit then
-			local light = terrain.cid("nhv:room_light")
-			local y = U.CEIL_Y - 1
-			for z = z0 + 1, z1, U.TILE do
-				for x = x0 + 1, x1, U.TILE do
-					if (z < 0 or z >= Z1 or x < U.TILE or x >= X1) and ids[area:index(x, y, z)] == air then
-						ids[area:index(x, y, z)] = light
+			local vm = core.get_voxel_manip()
+			local emin, emax = vm:read_from_map(p0, p1)
+			local area = VoxelArea(emin, emax)
+			local ids, p2 = vm:get_data(), vm:get_param2_data()
+			local air, bounds = terrain.cid("air"), terrain.cid("nhv:bounds")
+			for ly = 0, H - 1 do
+				local id = col and col[ly] and terrain.cid(col[ly]) or air
+				-- (the level's invisible walls, one node out, stay where the sea
+				-- has nothing - over the liquid: it goes on under them)
+				local edge = id == air and bounds or id
+				local y = y0 + ly
+				for z = z0, z1 do
+					local inz = z >= 0 and z < Z1
+					local zedge = z == -1 or z == Z1
+					local vi = area:index(x0, y, z)
+					for x = x0, x1 do
+						-- (outside the level, and its column 0)
+						if not inz or x < 0 or x >= X1 or (col and x < U.TILE) then
+							local ring = x >= -1 and x <= X1 and z >= -1 and z <= Z1
+								and (zedge or x == -1 or x == X1)
+							ids[vi], p2[vi] = ring and edge or id, 0
+						end
+						vi = vi + 1
 					end
 				end
 			end
-		end
-		vm:set_data(ids)
-		vm:set_param2_data(p2)
-		vm:write_to_map(true)
-	end)
+			vm:set_data(ids)
+			vm:set_param2_data(p2)
+			-- (column 0 is the level's: its light comes from the level)
+			local lx1 = k == 3 and -1 or x1
+			vm:set_lighting({day = light, night = light}, p0, vector.new(lx1, y1, z1))
+			vm:write_to_map(false)
+			strip(k + 1)
+		end)
+	end
+	strip(1)
 end
 
 local built = storage:get_string("sea") -- (what's there now: "" none)
+local pending = nil -- {col=, light=}: to fill as soon as the level's on screen
 
 -- The level's built again (a new one, or starting up): the sea is put
 -- back too, whatever's there
@@ -172,7 +186,19 @@ function sea.update(map)
 	built = key
 	storage:set_string("sea", key)
 	local col = kind and (nhv.ascii and nhv.ascii.on and ascii_column(kind) or sample(map, kind))
-	fill(col)
+	local light = not kind and 0 or kind == "lava" and LIGHT.lava
+		or (sea.lit or (nhv.ascii and nhv.ascii.on)) and LIGHT.lit or LIGHT.dark
+	-- (once the level is on the screen: it doesn't hold that up)
+	pending = {col = col, light = light}
 end
+
+core.register_globalstep(function()
+	if pending and not nhv.player.level_hold
+			and (not core.nh_level_progress or core.nh_level_progress() >= 1) then
+		local p = pending
+		pending = nil
+		fill(p.col, p.light)
+	end
+end)
 
 return sea
