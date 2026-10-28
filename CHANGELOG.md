@@ -2,6 +2,24 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.10.2 (alpha) - 2026-10-27
+
+- **Ascending is a moment.** Offer the Amulet on your own god's high altar: time stops, the camera circles high above the altar, and a great beam of light comes down on you. The offering and the choir appear as subtitles, then your god speaks ("Mortal, thou hast done well!") in SAM's God voice. "You ascend to the status of Demigod..." stands large in the middle as you rise into the light and vanish in a flash. NetHack's last question fades in after.
+- **The Planes, as in NetHack.** The Plane of Air is nothing but sky, under your feet too: you float over it, walking is a quarter as fast, and without flying or levitation you struggle in the thin air (a clumsy float, the view rolling). Its clouds are big soft puffs where NetHack has them, on the map too, and its thunderstorms strike with drawn, branching lightning. The Plane of Water is open water over a floor of sky, with its air bubbles as real spheres that drift smoothly and carry you along. You stay in control; the 3D world says whether you're inside one, a glowing outline on the floor shows where they are (one outline where they meet), and outside them everything is underwater. Falling out, you glide back to safety.
+- **Medusa's island stands in an endless ocean, and the Plane of Fire in a sea of lava.** The rock round a special level's map is an invisible wall, not a cliff.
+- **The Amulet of Yendor's warmth** has a line of its own at the bottom, coloured by how near the portal is (warm, very warm, hot!), fading away after a few seconds.
+- **Zaps and spells fly straight where you look**, not to the middle of a square (a wand of digging still digs along NetHack's 8 directions).
+- **Monsters move smoothly**, steered rather than jumping from place to place, and a monster that teleports leaves a swirl where it was and where it lands (even one you only sense).
+- **Rodney speaks in his own voice** ("Destroy the thief, my pets!"). Voices overlap, cutting off only the same speaker, and are heard from where the speaker is. The Astral Plane's music plays in its temples too.
+- **Doors:** an open door can be closed by looking through its doorway; with something standing in the doorway, Close or Open is still offered and NetHack says who's in the way.
+- **The action wheel is back as it was** (no More...); F3 still finds any command.
+- Fixed: on a crowded level (more than 512 monsters: a long stay on the Astral Plane) some monsters couldn't be hit. An engulfer swallowing you no longer lands on a monster sharing your square. Closing Options or Achievements only goes back to the title screen if they were opened from it.
+- **Wizard mode:** /god toggles infinite health; noclipping, you see every monster in view of where you are.
+- **For modders:**
+  - **Prefab editor:** a Box tool and a Pencil that draw with the mouse in the air too, and middle mouse picks the block to draw with. Cells are 40 layers tall (towers are kept), there are no generated ceilings in hand-built areas, and built walls are used whatever kind of wall NetHack makes there.
+  - **VoxHack Editor:** floating particle blocks (one big sprite, tinted, glowing, floating and spinning) in the Blocks tab, and skies can have lightning across them (how often, thunder or not). Effect layers can fade in and be see-through, and the Effects preview works again.
+  - **New sound hooks:** ascension_offered, sky_thunder, storm_lightning.
+
 ## v0.10.1 (alpha) - 2026-10-27
 
 - **Shadows are off by default** (Options > Shadows turns them on).
