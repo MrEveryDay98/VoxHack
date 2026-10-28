@@ -1,12 +1,12 @@
 -- The Plane of Water, in 3D. The plane is open space over an invisible floor
 -- (terrain.lua's sky_floor); its air bubbles - NetHack's own, each its
 -- shape and size, moving a square a turn (mkmaze.c's movebubbles) - are
--- round, see-through spheres (models/nhv_bubble.obj), gliding smoothly
--- after them at the time's rate (standing still in stopped time, they
--- stop), with a ring where each meets the floor: its edge, fading toward
--- the middle, in pieces (models/nhv_bubble_ring_NN.obj, both from
--- tools/make_bubble_mesh.py) - a piece inside another bubble is left out,
--- so where two meet is clear.
+-- round, see-through spheres (models/nhv_bubble.obj, from
+-- tools/make_bubble_mesh.py), gliding smoothly after them at the time's
+-- rate (standing still in stopped time, they stop). Where they meet the
+-- floor the VoxHack engine draws them (core.nhv_bubble_floor: its
+-- nhv_bubble_shader): all the bubbles as one shape - where two meet, one
+-- smooth outline round both - bright at its edge, fading toward the middle.
 --
 -- The 3D world says whether you're in a bubble, not NetHack's squares (a
 -- turn behind the spheres, and jagged): your body inside a sphere is in
@@ -26,40 +26,22 @@ nhv.bubbles = bubbles
 
 local TINT = "[fill:16x16:#CFEFFF40"
 -- (each sphere's middle is on the floor - half of it below, going on
--- under the floor - so its widest is its ring: what you see on the floor is
--- just where you're in it or not)
-local RING_Y = U.FLOOR_Y + 0.53   -- (just over the floor's top)
-local CENTER_Y = RING_Y
-local SECTORS = 48
--- the ring's bands, its edge in (tools/make_bubble_mesh.py's BANDS): bright
--- to faint
-local BAND_TEX = {}
-for k, op in ipairs({235, 150, 90, 45, 15}) do
-	BAND_TEX[k] = ("[fill:16x16:#C8F6FF^[opacity:%d"):format(op)
-end
+-- under the floor - so its widest is where it meets the floor: what you
+-- see painted there is just where you're in it or not)
+local CENTER_Y = U.FLOOR_Y + 0.53
 
-local function entity(name, def)
-	def.physical, def.pointable, def.static_save = false, false, false
-	def.collisionbox = {0, 0, 0, 0, 0, 0}
-	core.register_entity(name, {
-		initial_properties = def,
-		on_step = function(self)
-			if not self.bubble then
-				self.object:remove()
-			end
-		end,
-	})
-end
-entity("nhv:bubble", {visual = "mesh", mesh = "nhv_bubble.obj", textures = {TINT},
-	use_texture_alpha = true, backface_culling = true, glow = 4, shaded = true})
--- (the ring's pieces hang off this, which carries them along: it shows
--- nothing itself - see-through, not hidden: what hangs off a hidden one is
--- hidden with it)
-local BLANK = "blank.png"
-entity("nhv:bubble_ring", {visual = "cube", textures = {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
-	use_texture_alpha = true, visual_size = {x = 1, y = 1, z = 1}})
-entity("nhv:bubble_piece", {visual = "mesh", mesh = "nhv_bubble_ring_00.obj", textures = BAND_TEX,
-	use_texture_alpha = true, backface_culling = false, glow = 12, shaded = false})
+core.register_entity("nhv:bubble", {
+	initial_properties = {
+		visual = "mesh", mesh = "nhv_bubble.obj", textures = {TINT},
+		use_texture_alpha = true, backface_culling = true, glow = 4, shaded = true,
+		physical = false, pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+	on_step = function(self)
+		if not self.bubble then
+			self.object:remove()
+		end
+	end,
+})
 
 -- NetHack's bubbles: {x, y (their top left square), w, h}, in its order -
 -- the same bubble at the same place in it, turn after turn. (Without the
@@ -98,56 +80,30 @@ local function find(map)
 	return out
 end
 
--- a bubble's middle in the world, its sphere's size, its ring's size (as
--- wide as the sphere: its middle is on the floor)
+-- a bubble's middle in the world and its sphere's size
 local function placing(b)
 	local a = U.tile_center(b.x, b.y, CENTER_Y)
 	local c = U.tile_center(b.x + b.w - 1, b.y + b.h - 1, CENTER_Y)
 	local pos = vector.multiply(vector.add(a, c), 0.5)
 	local wx, wz = b.w * U.TILE, b.h * U.TILE
-	return pos, {x = wx, y = math.min(wx, wz), z = wz}, {x = wx, y = 1, z = wz}
+	return pos, {x = wx, y = math.min(wx, wz), z = wz}
 end
 
--- (each ring a hair over or under the others: never two in one place)
-local function ring_at(pos, e)
-	return vector.new(pos.x, RING_Y + (e and e.yoff or 0), pos.z)
-end
-
-local function make(pos, size, ring_size)
-	local e = {at = pos, target = pos, vel = vector.zero(), pieces = {}, shown = {}}
+local function make(pos, size)
+	local e = {at = pos, target = pos, vel = vector.zero()}
 	e.obj = core.add_entity(pos, "nhv:bubble")
 	if not e.obj then
 		return nil
 	end
 	e.obj:get_luaentity().bubble = true
 	e.obj:set_properties({visual_size = size})
-	e.ring = core.add_entity(ring_at(pos), "nhv:bubble_ring")
-	if e.ring then
-		e.ring:get_luaentity().bubble = true
-		for k = 0, SECTORS - 1 do
-			local p = core.add_entity(ring_at(pos), "nhv:bubble_piece")
-			if p then
-				p:get_luaentity().bubble = true
-				p:set_properties({mesh = ("nhv_bubble_ring_%02d.obj"):format(k), visual_size = ring_size})
-				p:set_attach(e.ring)
-				e.pieces[k] = p
-				e.shown[k] = true
-			end
-		end
-	end
 	return e
 end
 
 local function remove(e)
-	local objs = {e.obj, e.ring}
-	for _, p in pairs(e.pieces) do
-		objs[#objs + 1] = p
-	end
-	for _, o in ipairs(objs) do
-		if o and o:get_pos() then
-			o:get_luaentity().bubble = nil
-			o:remove()
-		end
+	if e.obj and e.obj:get_pos() then
+		e.obj:get_luaentity().bubble = nil
+		e.obj:remove()
 	end
 end
 
@@ -168,19 +124,18 @@ function bubbles.update(map)
 	local found = find(map)
 	local old, keep = bubbles.list, {}
 	for k, b in ipairs(found) do
-		local pos, size, ring_size = placing(b)
+		local pos, size = placing(b)
 		local e = old[k]
 		if e and (e.w ~= b.w or e.h ~= b.h) then
 			remove(e) -- (not the same bubble: NetHack's list changed)
 			e = nil
 		end
 		if not e then
-			e = make(pos, size, ring_size)
+			e = make(pos, size)
 		end
 		if e then
 			e.w, e.h, e.target = b.w, b.h, pos
-			e.rx, e.rz = ring_size.x / 2, ring_size.z / 2
-			e.yoff = (k % 16) * 0.004
+			e.rx, e.rz = size.x / 2, size.z / 2
 			keep[k] = e
 		end
 	end
@@ -194,8 +149,8 @@ nh.on_snapshot(function(snap)
 	bubbles.update(snap and snap.map)
 end)
 
--- is p (on the floor) inside bubble e's ring?
-local function inside_ring(e, p)
+-- is p (on the floor) inside bubble e?
+local function inside(e, p)
 	if not (e.rx and e.rx > 0) then
 		return false
 	end
@@ -203,25 +158,24 @@ local function inside_ring(e, p)
 	return dx * dx + dz * dz <= 1
 end
 
--- (each ring's pieces whose edge is inside another bubble's ring are left
--- out: where bubbles meet, one outline round them both)
-local function show_pieces()
+-- ---------------------------------------------------------------- the floor
+-- where they are, and how fast they're going, for the engine to draw them
+-- on the floor (gliding on between steps at that speed)
+local FLOOR_TOP = U.FLOOR_Y + 0.51
+local floor_shown = false
+local function show_floor()
+	if not core.nhv_bubble_floor then
+		return
+	end
+	local list = {}
 	for _, e in ipairs(bubbles.list) do
-		for k, p in pairs(e.pieces) do
-			local a = 2 * math.pi * (k + 0.5) / SECTORS
-			local at = vector.new(e.at.x + e.rx * 0.999 * math.cos(a), 0, e.at.z + e.rz * 0.999 * math.sin(a))
-			local covered = false
-			for _, o in ipairs(bubbles.list) do
-				if o ~= e and inside_ring(o, at) then
-					covered = true
-					break
-				end
-			end
-			if covered == e.shown[k] then
-				e.shown[k] = not covered
-				p:set_properties({is_visible = not covered})
-			end
+		if e.rx and e.rx > 0 then
+			list[#list + 1] = {x = e.at.x, z = e.at.z, rx = e.rx, rz = e.rz, vx = e.vel.x, vz = e.vel.z}
 		end
+	end
+	if #list > 0 or floor_shown then
+		core.nhv_bubble_floor(list, FLOOR_TOP)
+		floor_shown = #list > 0
 	end
 end
 
@@ -255,6 +209,7 @@ core.register_globalstep(function(dtime)
 	if #bubbles.list == 0 then
 		set_drift(vector.zero())
 		told, settled = nil, false
+		show_floor()
 		return
 	end
 	local turns = nhv.clock.RATE * nhv.clock.scale
@@ -269,17 +224,12 @@ core.register_globalstep(function(dtime)
 			e.at = vector.add(e.at, step)
 			e.vel = vector.divide(step, dtime)
 			e.obj:move_to(e.at, true)
-			if e.ring and e.ring:get_pos() then
-				e.ring:move_to(ring_at(e.at, e), true)
-			end
 			moved = true
 		else
 			e.vel = vector.zero()
 		end
 	end
-	if moved then
-		show_pieces()
-	end
+	show_floor()
 	local player = nhv.player.get()
 	local h = nh.snap and nh.snap.hero
 	if not (player and h) then
@@ -304,7 +254,7 @@ core.register_globalstep(function(dtime)
 	-- in a bubble (the 3D world's say): carried along with it
 	local mine
 	for _, e in ipairs(bubbles.list) do
-		if inside_ring(e, pos) then
+		if inside(e, pos) then
 			mine = e
 			break
 		end
@@ -332,11 +282,11 @@ core.register_globalstep(function(dtime)
 end)
 
 -- is square (tx, ty) in a bubble, as the 3D world has it (its middle
--- inside a sphere's ring)? - the big map shows the bubbles so (hud.lua)
+-- inside a sphere)? - the big map shows the bubbles so (hud.lua)
 function bubbles.air_at(tx, ty)
 	local c = U.tile_center(tx, ty)
 	for _, e in ipairs(bubbles.list) do
-		if inside_ring(e, c) then
+		if inside(e, c) then
 			return true
 		end
 	end
@@ -352,7 +302,7 @@ local EDGE_TEX = "nhv_vignette.png^[multiply:#041838^[opacity:200"
 local RISING_TEX = "nhvfx_ring.png^[multiply:#CFEFFF"
 local RIM_TEX = "nhv_vignette.png^[multiply:#C8F6FF^[opacity:150"
 local under = nil -- {hud = {ids}, spawner = id} while underwater
-local inside = nil -- the HUD id of the bubble's rim, while in one
+local rim = nil -- the HUD id of the bubble's rim, while in one
 
 local function go_under(player)
 	under = {hud = {}}
@@ -395,16 +345,16 @@ core.register_globalstep(function()
 		come_up(player)
 	end
 	local in_bubble = here and bubbles.in_air or false
-	if in_bubble and not inside then
-		inside = player:hud_add({
+	if in_bubble and not rim then
+		rim = player:hud_add({
 			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 			scale = {x = -100, y = -100}, text = RIM_TEX, z_index = -399,
 		})
-	elseif not in_bubble and inside then
+	elseif not in_bubble and rim then
 		if player and player:is_player() then
-			player:hud_remove(inside)
+			player:hud_remove(rim)
 		end
-		inside = nil
+		rim = nil
 	end
 end)
 
@@ -412,7 +362,7 @@ core.register_on_leaveplayer(function(player)
 	if under then
 		come_up(player)
 	end
-	inside = nil
+	rim = nil
 end)
 
 return bubbles
