@@ -926,9 +926,10 @@ local function describe(map, tx, ty)
 			cell_id = "top:" .. (top_id or "none")
 		end
 	end
-	-- the rock round a special level's map: an invisible wall (and the
-	-- sea, on a level standing in one: sea.lua), not a cliff
-	if typ == T.STONE and nhv.areas.outside_special(tx, ty) then
+	-- the rock round a special level's map (and any on the Plane of Air,
+	-- which has none): an invisible wall (and the sea, on a level standing
+	-- in one: sea.lua), not a cliff
+	if typ == T.STONE and (nhv.areas.outside_special(tx, ty) or terrain.sky_floor) then
 		sq.outer = true
 	end
 	-- the Plane of Air's open air and clouds: the sky as the floor
@@ -1160,10 +1161,12 @@ function terrain.build_all(map, hero)
 		nhv.sea.rebuild()
 	end
 	terrain.update(map, true)
-	-- column 0 is never part of the map; fill it with rock
+	-- column 0 is never part of the map: nothing to see there - an
+	-- invisible wall (or the sea, on a level standing in one), not a cliff
+	-- of rock (write_outer)
 	local sqs = {}
 	for ty = 0, U.ROWNO - 1 do
-		sqs[#sqs + 1] = {tx = 0, ty = ty, seen = true, slot = "stone", rot = 0, typ = T.STONE}
+		sqs[#sqs + 1] = {tx = 0, ty = ty, seen = true, slot = "stone", rot = 0, typ = T.STONE, outer = true}
 	end
 	write_squares(sqs)
 	build_bounds()
