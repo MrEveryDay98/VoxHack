@@ -76,11 +76,13 @@ def clean_layer(l):
         "height": _num(l.get("height"), -1, 4, 1.0),
         "speed": _range(l.get("speed"), 0, 30, [1, 3]),
         "life": _range(l.get("life"), 0.05, 10, [0.5, 1.2]),
-        "size": _range(l.get("size"), 0.1, 20, [1, 2]),
+        "size": _range(l.get("size"), 0.1, 60, [1, 2]),
         "gravity": _num(l.get("gravity"), -20, 20, 0),
         "glow": int(_num(l.get("glow"), 0, 14, 10)),
         "additive": bool(l.get("additive", True)),
         "fade": bool(l.get("fade", True)),
+        "fade_in": bool(l.get("fade_in", False)),
+        "opacity": int(_num(l.get("opacity"), 0, 100, 100)),
         "collide": bool(l.get("collide", False)),
     }
 
@@ -91,7 +93,8 @@ LOOP_HOOKS = [
     {"id": "cloud_poison_gas", "group": "loops",
      "desc": "every square of a poison gas cloud (a poison breath, a scroll of stinking cloud)"},
     {"id": "cloud_vapour", "group": "loops",
-     "desc": "every square of a harmless cloud (the Plane of Water's, a confused stinking cloud)"},
+     "desc": "every square of a harmless cloud (the Plane of Air's clouds, the Plane of Water's, "
+             "a confused stinking cloud)"},
 ]
 
 

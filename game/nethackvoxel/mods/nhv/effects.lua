@@ -76,6 +76,11 @@ local function texture(l)
 	if c:upper() ~= "#FFFFFF" then
 		tex = "(" .. tex .. ")^[multiply:" .. c
 	end
+	-- (see-through: big soft clouds)
+	local op = tonumber(l.opacity) or 100
+	if op < 100 then
+		tex = "(" .. tex .. ")^[opacity:" .. math.floor(math.max(0, op) * 2.55 + 0.5)
+	end
 	return tex
 end
 
@@ -99,7 +104,10 @@ local function spawn_layer(l, pos, looping)
 		time = math.max(0.05, tonumber(l.duration) or 0.3),
 		texture = {
 			name = texture(l),
-			alpha_tween = l.fade ~= false and {1, 0} or nil,
+			-- (fading out as it goes, in as it comes - or both: up and
+			-- down again over its life)
+			alpha_tween = (l.fade ~= false and l.fade_in) and {0, 1, style = "pulse", reps = 1}
+				or l.fade ~= false and {1, 0} or l.fade_in and {0, 1} or nil,
 			blend = l.additive ~= false and "add" or "alpha",
 		},
 		glow = math.max(0, math.min(14, tonumber(l.glow) or 10)),

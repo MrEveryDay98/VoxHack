@@ -13,7 +13,7 @@ const Effects = (() => {
   const GROUPS = [["loops", "Loops: play without a break while it lasts"], ["traps", "Traps"], ["events", "Actions & events"], ["game", "Game"], ["nethack", "NetHack sounds"], ["music", "Music"]];
   const LAYER_DEFAULT = {
     shape: "burst", texture: { builtin: "dot" }, color: "#FFFFFF", amount: 30, duration: 0.3, spread: 0.4,
-    height: 1, speed: [1, 3], life: [0.5, 1.2], size: [1, 2], gravity: 0, glow: 10, additive: true, fade: true, collide: false,
+    height: 1, speed: [1, 3], life: [0.5, 1.2], size: [1, 2], gravity: 0, glow: 10, additive: true, fade: true, fade_in: false, opacity: 100, collide: false,
   };
 
   let data = { version: 1, effects: [] };
@@ -163,7 +163,9 @@ const Effects = (() => {
       const px = Math.max(2, p.size * 0.1 * S);
       const im = particleImage(p.l);
       g.globalCompositeOperation = p.l.additive ? "lighter" : "source-over";
-      g.globalAlpha = p.l.fade ? Math.max(0, 1 - age / p.life) : 1;
+      const t = Math.min(1, age / p.life), op = (p.l.opacity ?? 100) / 100;
+      g.globalAlpha = op * (p.l.fade && p.l.fade_in ? 1 - Math.abs(2 * t - 1)
+        : p.l.fade ? 1 - t : p.l.fade_in ? t : 1);
       if (im) g.drawImage(im, sx - px / 2, sy - px / 2, px, px);
       else { g.fillStyle = p.l.color; g.fillRect(sx - px / 2, sy - px / 2, px, px); }
     }
@@ -246,9 +248,11 @@ const Effects = (() => {
         field("Gravity", num(l, "gravity", -20, 20, 0.5), "negative floats up")),
       field("Speed (blocks/s)", pair(l, "speed", 0, 30, 0.1)),
       field("Lifetime (seconds)", pair(l, "life", 0.05, 10, 0.05)),
-      field("Size", pair(l, "size", 0.1, 20, 0.1), "10 = one block"),
-      el("div", { class: "inline" }, check(l, "additive", "Glowy (adds light)"), check(l, "fade", "Fade out"),
-        check(l, "collide", "Stop at walls and floor")),
+      el("div", { class: "inline" },
+        field("Size", pair(l, "size", 0.1, 60, 0.1), "10 = one block"),
+        field("Opacity (%)", num(l, "opacity", 0, 100, 5), "100 = solid")),
+      el("div", { class: "inline" }, check(l, "additive", "Glowy (adds light)"), check(l, "fade_in", "Fade in"),
+        check(l, "fade", "Fade out"), check(l, "collide", "Stop at walls and floor")),
       el("h4", {}, "Particle"), texturePicker(l));
   }
 
