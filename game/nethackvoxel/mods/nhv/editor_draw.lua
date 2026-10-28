@@ -13,6 +13,8 @@
 --       in the air too - and holding it down keeps drawing as you sweep.
 --   /reach <n>
 --       how far in front of you the tools reach into the air (default 5)
+--   middle mouse
+--       picks the block you point at to draw with
 --
 -- The block: the one in the hotbar slot just right of the tool, else the one
 -- named, else the last block you placed. What they do is saved like hand
@@ -334,6 +336,44 @@ cmd("pencil", "[block]", "Hold the Pencil: put (left mouse) or take away (right 
 	end
 	return true, "Pencil in hand: left mouse puts a block, right mouse takes one away; hold to keep drawing."
 end)
+
+-- Middle mouse (the VoxHack build of Luanti sends "/nhvkey look"; in the
+-- editor, the game's other keys do nothing): pick the block you point at -
+-- holding the Box tool or the Pencil, into the slot right of it (what they
+-- draw with), else into your hand
+core.register_chatcommand("nhvkey", {
+	description = "(VoxHack) a game key; in the editor, middle mouse picks a block",
+	func = function(pname, param)
+		local player = core.get_player_by_name(pname)
+		if param ~= "look" or not player then
+			return true
+		end
+		local eye, dir = eye_of(player), player:get_look_dir()
+		local name
+		for pt in core.raycast(eye, vector.add(eye, vector.multiply(dir, RANGE)), false, false) do
+			if pt.type == "node" then
+				name = core.get_node(pt.under).name
+				break
+			end
+		end
+		local def = name and core.registered_nodes[name]
+		if not def or name:match("^nhv:editor_") then
+			return true
+		end
+		local inv = player:get_inventory()
+		local i = player:get_wield_index()
+		local item = player:get_wielded_item():get_name()
+		if item == "nhv:boxtool" or item == "nhv:pencil" then
+			i = i + 1
+		end
+		if i > inv:get_size("main") then
+			i = player:get_wield_index()
+		end
+		inv:set_stack("main", i, ItemStack(name))
+		named[pname] = name
+		return true, "Drawing with: " .. (def.description or name):match("^[^\n]*")
+	end,
+})
 
 cmd("reach", "<n>", "How far the Box tool and Pencil reach into the air in front of you (1-30)",
 	function(pname, param)
