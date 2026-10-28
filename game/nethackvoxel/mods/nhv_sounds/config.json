@@ -898,6 +898,30 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "music_quest": {
+   "sounds": [
+    "nhv_music_dungeon3"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_gehennom": {
+   "sounds": [
+    "nhv_music_apocolypse"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
+  },
+  "music_oracle": {
+   "sounds": [
+    "nhv_music_dungeon2"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {},
