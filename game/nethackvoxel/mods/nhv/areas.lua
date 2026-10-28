@@ -288,6 +288,7 @@ local function regions()
 	end
 	if active.gid ~= gid or active.ledger ~= ledger then
 		active.gid, active.ledger, active.regions, active.rects = gid, ledger, {}, {}
+		active.made_round = nil
 		for _, r in pairs(core.deserialize(storage:get_string(key(gid, ledger))) or {}) do
 			-- (where it is now: NetHack may have flipped the level)
 			local x, y, f = r.x, r.y, r.flip or 0
@@ -308,22 +309,51 @@ local function regions()
 	return active.regions, active.rects
 end
 
+local function in_rects(rects, tx, ty)
+	for _, r in ipairs(rects) do
+		if tx >= r.x and ty >= r.y and tx < r.x + r.w and ty < r.y + r.h then
+			return true
+		end
+	end
+	return false
+end
+
+-- Is the level made up round its fixed map too - Minetown in the Mines'
+-- caves, a map dropped into rooms and corridors - not just solid rock?
+-- (somewhere to walk outside the map - floor, a corridor, a door, stairs:
+-- then its rock is the level's own; the sea or lava round Medusa's or the
+-- Castle's map doesn't count)
+local WALKABLE = {[T.ROOM] = true, [T.CORR] = true, [T.DOOR] = true, [T.STAIRS] = true, [T.LADDER] = true}
+local function made_round(rects)
+	if active.made_round == nil then
+		active.made_round = false
+		local map = nhv.nh.snap and nhv.nh.snap.map
+		if map then
+			for tx = 1, U.COLNO - 1 do
+				for ty = 0, U.ROWNO - 1 do
+					if WALKABLE[map.typ[U.idx(tx, ty)]] and not in_rects(rects, tx, ty) then
+						active.made_round = true
+						return true
+					end
+				end
+			end
+		end
+	end
+	return active.made_round
+end
+
 -- Is square (tx, ty) outside every fixed region of the special level you're
--- on - the rock NetHack fills round its map? (false on ordinary levels)
+-- on - the solid rock NetHack fills round its map? (false on ordinary
+-- levels, and on a special level made up round its map - Minetown's caves)
 function areas.outside_special(tx, ty)
 	if nhv.EDITOR then
 		return false
 	end
 	local _, rects = regions()
-	if not rects or #rects == 0 then
+	if not rects or #rects == 0 or in_rects(rects, tx, ty) then
 		return false
 	end
-	for _, r in ipairs(rects) do
-		if tx >= r.x and ty >= r.y and tx < r.x + r.w and ty < r.y + r.h then
-			return false
-		end
-	end
-	return true
+	return not made_round(rects)
 end
 
 -- Is the level's hand-built area open to the sky (you built most of its
