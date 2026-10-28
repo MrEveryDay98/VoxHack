@@ -85,6 +85,7 @@ local function teleport(player, pos)
 	local tx, ty = U.pos_to_tile(pos)
 	player_mod.trap_done = tx .. "," .. ty
 	player:set_pos(player_mod.free_spot(pos))
+	player_mod.carry = nil
 	if nhv.effects then
 		nhv.effects.arrived() -- (teleport effects play where you arrive)
 	end
@@ -101,6 +102,49 @@ local function teleport(player, pos)
 	player_mod.grace_until = core.get_us_time() + GRACE_US
 end
 player_mod.teleport = teleport
+
+-- Carried: on the Plane of Water a bubble carries you along with it, a
+-- square a turn (NetHack moves the hero with it). The body isn't put there
+-- at once but drifts there, as fast as the bubble glides (bubbles.lua):
+-- carry is how far it still has to go. Meanwhile walking counts it as
+-- already there (logical_pos), so it doesn't walk the hero back.
+local CARRY_MAX = 2 -- (squares: further than this, it's put there)
+function player_mod.logical_pos(player)
+	local pos = player:get_pos()
+	return player_mod.carry and vector.add(pos, player_mod.carry) or pos
+end
+
+-- NetHack moved the hero from square (fx, fy) to h without your walking
+-- there: carried, or put there
+local function moved_by_nethack(player, h, fx, fy)
+	if nhv.terrain.sky_floor == "water" and fx
+			and math.max(math.abs(h.x - fx), math.abs(h.y - fy)) <= CARRY_MAX then
+		local d = vector.subtract(U.tile_center(h.x, h.y), U.tile_center(fx, fy))
+		player_mod.carry = vector.add(player_mod.carry or vector.zero(), vector.new(d.x, 0, d.z))
+		return
+	end
+	teleport(player, U.tile_center(h.x, h.y))
+end
+
+core.register_globalstep(function(dtime)
+	local c = player_mod.carry
+	local player = c and player_mod.get()
+	if not player then
+		return
+	end
+	local left = vector.length(c)
+	if left < 0.01 then
+		player_mod.carry = nil
+		return
+	end
+	-- (as fast as a bubble: a square a turn, at the time's rate - never
+	-- quite stopping, so it's always caught up)
+	local turns = nhv.clock.RATE * math.max(0.25, nhv.clock.scale)
+	local go = math.min(left, U.TILE * turns * dtime)
+	local d = vector.multiply(c, go / left)
+	player:set_pos(vector.add(player:get_pos(), d))
+	player_mod.carry = vector.subtract(c, d)
+end)
 
 -- NetHack saying you're falling to the level below (through a hole or a
 -- trap door, a hole dug in the floor): the level change that follows
@@ -405,7 +449,8 @@ local function step(player)
 	if try_push(player) then
 		return
 	end
-	local pos = player:get_pos()
+	-- (being carried: where the body is on its way to)
+	local pos = player_mod.logical_pos(player)
 	local tx, ty = U.pos_to_tile(pos)
 	if tx == h.x and ty == h.y then
 		player_mod.ahead = nil
@@ -645,13 +690,13 @@ nh.on_snapshot(function(snap, action)
 		else
 			player_mod.refusals = 0
 			if h.x ~= action.tx or h.y ~= action.ty then
-				teleport(player, U.tile_center(h.x, h.y)) -- moved elsewhere
+				moved_by_nethack(player, h, action.tx, action.ty) -- moved elsewhere
 			end
 		end
 	elseif prev.x ~= h.x or prev.y ~= h.y then
-		local tx, ty = U.pos_to_tile(player:get_pos())
+		local tx, ty = U.pos_to_tile(player_mod.logical_pos(player))
 		if tx ~= h.x or ty ~= h.y then
-			teleport(player, U.tile_center(h.x, h.y))
+			moved_by_nethack(player, h, prev.x, prev.y)
 		end
 	end
 end)

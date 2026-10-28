@@ -6,7 +6,10 @@
 -- moves the bubbles a square at a time every turn (mkmaze.c's
 -- movebubbles). Each group of touching air squares is a bubble: a sphere
 -- (models/nhv_bubble.obj, tools/make_bubble_mesh.py) as wide and deep as
--- its squares, gliding after them as they move.
+-- its squares, gliding after them smoothly - a square a turn, at the
+-- time's rate - as they move; inside one, the rim of the bubble shows round
+-- the screen. Only its outside is drawn (the inside, see-through too,
+-- drawn over it in the wrong order, banded it).
 
 local U = nhv.util
 local T = U.TYP
@@ -21,7 +24,7 @@ local CENTER_Y = U.STAND_Y + 1.2 -- (chest height: you're inside the one you're 
 core.register_entity("nhv:bubble", {
 	initial_properties = {
 		visual = "mesh", mesh = "nhv_bubble.obj", visual_size = {x = 3, y = 3, z = 3},
-		textures = {TINT}, use_texture_alpha = true, backface_culling = false,
+		textures = {TINT}, use_texture_alpha = true, backface_culling = true,
 		glow = 4, shaded = true,
 		physical = false, pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
 	},
@@ -113,7 +116,6 @@ function bubbles.update(map)
 		if best then
 			used[best] = true
 			e = old[best]
-			e.obj:move_to(pos, true)
 			if e.w ~= b.w or e.h ~= b.h then
 				e.obj:set_properties({visual_size = size})
 			end
@@ -122,11 +124,11 @@ function bubbles.update(map)
 			if obj then
 				obj:set_properties({visual_size = size})
 				obj:get_luaentity().bubble = true
-				e = {obj = obj}
+				e = {obj = obj, at = pos}
 			end
 		end
 		if e then
-			e.cx, e.cy, e.w, e.h = b.cx, b.cy, b.w, b.h
+			e.cx, e.cy, e.w, e.h, e.target = b.cx, b.cy, b.w, b.h, pos
 			keep[#keep + 1] = e
 		end
 	end
@@ -143,6 +145,29 @@ nh.on_snapshot(function(snap)
 	bubbles.update(snap and snap.map)
 end)
 
+-- (gliding: toward where each bubble is now, a square a turn at the time's
+-- rate - so it moves on smoothly instead of jumping a square each turn;
+-- further behind than that, it catches up faster)
+core.register_globalstep(function(dtime)
+	if #bubbles.list == 0 then
+		return
+	end
+	local turns = nhv.clock.RATE * math.max(0.25, nhv.clock.scale)
+	for _, e in ipairs(bubbles.list) do
+		if e.target and e.at and e.obj:get_pos() then
+			local d = vector.subtract(e.target, e.at)
+			local left = vector.length(d)
+			if left > 0.001 then
+				local go = math.min(left, U.TILE * turns * dtime * math.max(1, left / U.TILE))
+				e.at = vector.add(e.at, vector.multiply(d, go / left))
+				e.obj:move_to(e.at, true)
+			end
+		elseif e.target then
+			e.at = e.target
+		end
+	end
+end)
+
 -- ---------------------------------------------------------------- underwater
 -- On the Plane of Water outside a bubble (NetHack: Underwater): the blue
 -- tint and the dark edges on the screen, and bubbles rising round you
@@ -150,7 +175,9 @@ end)
 local TINT_TEX = "[fill:16x16:#0A3C8C^[opacity:85"
 local EDGE_TEX = "nhv_vignette.png^[multiply:#041838^[opacity:200"
 local RISING_TEX = "nhvfx_ring.png^[multiply:#CFEFFF"
+local RIM_TEX = "nhv_vignette.png^[multiply:#C8F6FF^[opacity:150"
 local under = nil -- {hud = {ids}, spawner = id} while underwater
+local inside = nil -- the HUD id of the bubble's rim, while in one
 
 local function go_under(player)
 	under = {hud = {}}
@@ -185,12 +212,26 @@ end
 core.register_globalstep(function()
 	local player = nhv.player.get()
 	local h = nh.snap and nh.snap.hero
-	local want = player and h and nhv.terrain.sky_floor == "water" and U.has(h.flags, U.HERO.UNDERWATER)
+	local here = player and h and nhv.terrain.sky_floor == "water"
 		and not (nhv.cutscene and nhv.cutscene.active) or false
+	local want = here and U.has(h.flags, U.HERO.UNDERWATER) or false
 	if want and not under then
 		go_under(player)
 	elseif not want and under then
 		come_up(player)
+	end
+	-- in a bubble: its rim round the screen, so you can tell
+	local in_bubble = here and not want
+	if in_bubble and not inside then
+		inside = player:hud_add({
+			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+			scale = {x = -100, y = -100}, text = RIM_TEX, z_index = -399,
+		})
+	elseif not in_bubble and inside then
+		if player and player:is_player() then
+			player:hud_remove(inside)
+		end
+		inside = nil
 	end
 end)
 
@@ -198,6 +239,7 @@ core.register_on_leaveplayer(function(player)
 	if under then
 		come_up(player)
 	end
+	inside = nil
 end)
 
 return bubbles
