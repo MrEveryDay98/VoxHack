@@ -174,9 +174,11 @@ local function stuck(h)
 		or U.has(h.flags, U.HERO.HELD) or U.has(h.flags, U.HERO.HELPLESS)
 end
 
--- levitating: you float a little over the ground (hover, below)
+-- levitating: you float a little over the ground (hover, below) - and on
+-- the Plane of Air, in thin air with no ground at all, you do too (off the
+-- ground the engine doesn't bob the view and the weapon as you walk)
 local function levitating(h)
-	return h and U.has(h.flags, U.HERO.LEVITATE)
+	return h and (U.has(h.flags, U.HERO.LEVITATE) or (nhv.terrain and nhv.terrain.sky_floor)) or false
 end
 
 local function set_speed(player)
