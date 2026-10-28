@@ -216,8 +216,9 @@ function effects.hook(id, opts)
 end
 
 -- Loops: lasting things that the effects with their trigger (the editor's
--- "Loops" group) play on without a break while they last - NetHack's gas
--- clouds (a poison breath's, a scroll of stinking cloud's...): every square
+-- "Loops" group) play on without a break while they last - the Plane of
+-- Air's clouds, NetHack's gas clouds (a poison breath's, a scroll of
+-- stinking cloud's...): every square
 -- the map shows inside one, near you (CLOUD_NEAR squares), as never-ending
 -- spawners, removed when the gas goes (or the effect is edited)
 local CLOUD_LOOPS = {S_poisoncloud = "cloud_poison_gas", S_cloud = "cloud_vapour"}
@@ -247,6 +248,15 @@ core.register_globalstep(function(dtime)
 				local i = U.idx(x, y)
 				local gi = nhv.glyph_info(map.glyph[i])
 				local hook = gi.kind == "cmap" and CLOUD_LOOPS[nhv.cmap_name(gi.index)]
+				-- (a cloud is where one really is - the Plane of Air's: NetHack
+				-- shows every square there you can't see as cloud - or a gas
+				-- cloud you see)
+				if hook == "cloud_vapour" and map.flags[i] % 2 ~= 1 then
+					hook = nil
+				end
+				if map.typ and map.typ[i] == U.TYP.CLOUD then
+					hook = "cloud_vapour"
+				end
 				local eid = hook and effects.by_hook[hook] and effects.by_hook[hook][1]
 				local e = eid and effects.list[eid]
 				if e then
