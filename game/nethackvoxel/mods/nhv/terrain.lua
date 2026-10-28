@@ -874,13 +874,15 @@ local function describe(map, tx, ty)
 	if cell then
 		sq.area_cell = cell
 		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
-	elseif (in_open_area or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM))
+	elseif (nhv.areas.in_region(tx, ty, map)
+				or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM))
 				or (terrain.open_sky and OPEN_LIQUID[sq.typ]))
 			and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
-		-- an area open to the sky, its square built from the usual prefab
-		-- (stairs, water where the ice melted, a wall dug out...), or water
-		-- on a level open to the sky (Medusa's sea): nothing over it - no
-		-- ceiling hanging in the air (write_square)
+		-- a square of a hand-built area that you didn't build (built from the
+		-- usual prefab: rock, stairs, water where the ice melted...) - the
+		-- roofs there are the ones you built - just round an area open to the
+		-- sky, or water on a level open to the sky (Medusa's sea): nothing
+		-- over it, no ceiling hanging in the air (write_square)
 		sq.roofless = true
 	elseif terrain.DOOR_SLOTS[sq.slot] then
 		-- a door in a hand-built area: from the lintel up, what you built at

@@ -468,6 +468,14 @@ local function region_at(tx, ty, map)
 	return nil
 end
 
+-- Is square (tx, ty) inside a hand-built area (one you've built some of)?
+function areas.in_region(tx, ty, map)
+	if nhv.EDITOR then
+		return false
+	end
+	return region_at(tx, ty, map) ~= nil
+end
+
 -- Is square (tx, ty) inside a hand-built area that's open to the sky? (its
 -- stairs and ladders - which keep their own prefabs - are then open too)
 function areas.in_open_area(tx, ty, map)

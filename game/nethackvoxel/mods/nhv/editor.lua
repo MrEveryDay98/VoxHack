@@ -519,11 +519,10 @@ local function build_area(t, build, done)
 		-- squares you built are as you built them, there too)
 		local styled = nhv.terrain.styled_cid_for(areas.wall_style(t))
 		-- (the squares you haven't built are as the game builds them: in an
-		-- area open to the sky - most of its floor built without a roof -
-		-- none of them has a ceiling, nor water on a level open to the sky;
+		-- area you've built some of, none of them has a ceiling - the roofs
+		-- are the ones you built - nor water on a level open to the sky;
 		-- terrain.lua's describe)
-		areas.forget_open(t.id)
-		local open_area = areas.area_open(t)
+		local built_any = areas.built(t.id)
 		local open_level = nhv.terrain.OPEN_SKY[t.proto]
 		for cy = 0, t.h - 1 do
 			for cx = 0, t.w - 1 do
@@ -550,7 +549,7 @@ local function build_area(t, build, done)
 						-- (a door: its lintel, not its ceiling, as in the game)
 						if nhv.terrain.DOOR_SLOTS[slot] then
 							nhv.terrain.clear_over_lintel(data, va, so)
-						elseif (open_area or (open_level and nhv.terrain.OPEN_LIQUID[typ]))
+						elseif (built_any or (open_level and nhv.terrain.OPEN_LIQUID[typ]))
 								and not nhv.terrain.ROOF_KEPT[slot] then
 							nhv.terrain.clear_over_lintel(data, va, so)
 						end

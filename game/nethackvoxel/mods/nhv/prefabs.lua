@@ -105,9 +105,12 @@ for i, s in ipairs(prefabs.SLOTS) do
 end
 
 -- ---------------------------------------------------------------- defaults
+-- (the usual prefabs stop where cells used to: rock five layers over the
+-- ceiling, not up to the top of the taller cells)
+local DEFAULT_TOP = math.min(H - 1, CL + 5)
 local function column(get)
 	local nodes = {}
-	for ly = 0, H - 1 do
+	for ly = 0, DEFAULT_TOP do
 		local n = get(ly)
 		if n and n ~= "air" then
 			for lx = 0, W - 1 do
