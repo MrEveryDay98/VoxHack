@@ -39,6 +39,60 @@ function props.remove(pos)
 	props.objs[k] = nil
 end
 
+-- A floating particle (a block of the block editor's "particle" shape:
+-- custom_blocks.lua): one big sprite, always facing you, glowing, floating
+-- up and down. The float goes by its velocity and acceleration (the
+-- client moves it smoothly between the server's steps), steered back to
+-- where it should be now and then.
+core.register_entity("nhv:floater", {
+	initial_properties = {
+		visual = "sprite", textures = {"blank.png"}, use_texture_alpha = true,
+		physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+	on_step = function(self, dtime)
+		local p = self.nhv_p
+		if not p or p.bob <= 0 then
+			return
+		end
+		self.t = (self.t or 0) + dtime
+		self.next = (self.next or 0) - dtime
+		if self.next > 0 then
+			return
+		end
+		self.next = 0.25
+		local w = 2 * math.pi / p.bob_s
+		local a = p.bob / 2
+		local ph = w * self.t + self.phase
+		local want = self.home.y + a * math.sin(ph)
+		local pos = self.object:get_pos()
+		if math.abs(pos.y - want) > 0.08 then
+			self.object:set_pos(vector.new(self.home.x, want, self.home.z))
+		end
+		self.object:set_velocity(vector.new(0, a * w * math.cos(ph), 0))
+		self.object:set_acceleration(vector.new(0, -a * w * w * math.sin(ph), 0))
+	end,
+})
+
+local function show_floater(pos, p, k)
+	local home = vector.new(pos.x, pos.y - 0.5 + p.height, pos.z)
+	local obj = props.objs[k]
+	if not (obj and obj:get_pos() and obj:get_luaentity() and obj:get_luaentity().name == "nhv:floater") then
+		props.remove(pos)
+		obj = core.add_entity(home, "nhv:floater")
+		props.objs[k] = obj
+	end
+	if not obj then
+		return
+	end
+	obj:set_properties({textures = {p.texture}, visual_size = {x = p.size, y = p.size}, glow = p.glow})
+	obj:set_pos(home)
+	local e = obj:get_luaentity()
+	-- (each its own place in the float: they don't all bob together)
+	e.nhv_p, e.home, e.next = p, home, 0
+	e.phase = ((pos.x * 7 + pos.y * 13 + pos.z * 31) % 17) / 17 * 2 * math.pi
+end
+
 -- (re)draw the prop at pos, if the node there is one
 function props.show(pos)
 	local node = core.get_node(pos)
@@ -48,6 +102,10 @@ function props.show(pos)
 		return
 	end
 	local k = key(pos)
+	if def._nhv_particle then
+		show_floater(pos, def._nhv_particle, k)
+		return
+	end
 	local obj = props.objs[k]
 	if not (obj and obj:get_pos()) then
 		obj = core.add_entity(pos, "nhv:prop")

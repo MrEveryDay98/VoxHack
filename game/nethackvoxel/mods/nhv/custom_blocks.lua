@@ -6,7 +6,8 @@
 --   name       shown in the palette
 --   shape      cube | x (two crossed sprites, like grass) | floor (flat on
 --              the ground) | slab | pane | object (an extruded 3D sprite
---              keeping the way it was placed) | invisible
+--              keeping the way it was placed) | invisible | particle (one
+--              big sprite floating in the air, always facing you: below)
 --   texture    {"file": "name.png"}, {"sheet": <sprite number>} or {"wb":
 --              <sprite number>} (the world-building sheet, below)
 --   scale      size of x / object sprites (1 = one block)
@@ -28,6 +29,11 @@
 --              back is drawn too, so they're seen from inside the block
 --              (cube, slab, pane, floor)
 --   hidden     the same, for sides that aren't drawn at all
+--   particle   (particle) {color=, opacity= 0-100, glow= 0-14, bob= how far
+--              it floats up and down (blocks), bob_s= seconds for once up
+--              and down, height= how high in its block its middle is (0-1)};
+--              its size is scale, its picture texture - which can also be
+--              one of the Effects' particles ({"builtin": "star"})
 -- New or changed blocks need the game (or editor) restarted.
 
 local cblocks = {defs = {}, stretch = {}}
@@ -81,6 +87,8 @@ local function texture_of(t)
 		return nhv_tiles.sheet_texture(tonumber(t.sheet) or 0)
 	elseif t.wb then
 		return wb_texture(t.wb)
+	elseif t.builtin then
+		return "nhvfx_" .. tostring(t.builtin):gsub("[^%w_]", "") .. ".png"
 	end
 	return "blank.png"
 end
@@ -120,6 +128,37 @@ local function register(b)
 	if shape == "object" then
 		common.groups = groups
 		nhv.props.register(name, tex, b.name or id, common)
+		cblocks.defs[name] = info
+		return
+	end
+	if shape == "particle" then
+		-- (drawn by an entity floating there: props.lua; the block itself
+		-- can only be pointed at in the editor)
+		local pt = type(b.particle) == "table" and b.particle or {}
+		local c = type(pt.color) == "string" and pt.color:match("^#%x%x%x%x%x%x$") or "#FFFFFF"
+		local look = tex
+		if c:upper() ~= "#FFFFFF" then
+			look = "(" .. look .. ")^[multiply:" .. c
+		end
+		local op = math.max(0, math.min(100, tonumber(pt.opacity) or 100))
+		if op < 100 then
+			look = "(" .. look .. ")^[opacity:" .. math.floor(op * 2.55 + 0.5)
+		end
+		groups.nhv_particle = 1
+		common.groups = groups
+		common.walkable = false
+		common.pointable = nhv.EDITOR or false
+		common.inventory_image, common.wield_image = look, look
+		common.paramtype2 = "none"
+		common.on_place = nil
+		common.selection_box = {type = "fixed", fixed = {-0.25, -0.25, -0.25, 0.25, 0.25, 0.25}}
+		common._nhv_particle = {
+			texture = look, size = math.max(0.1, tonumber(b.scale) or 1),
+			glow = math.max(0, math.min(14, tonumber(pt.glow) or 14)),
+			bob = math.max(0, tonumber(pt.bob) or 0), bob_s = math.max(0.2, tonumber(pt.bob_s) or 3),
+			height = math.max(0, math.min(1, tonumber(pt.height) or 0.5)),
+		}
+		nhv.props.register(name, look, b.name or id, common)
 		cblocks.defs[name] = info
 		return
 	end

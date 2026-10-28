@@ -22,7 +22,8 @@ TILENAMES = os.path.join(MODS, "nhv_tiles", "tilenames.lua")
 WB_SHEET = os.path.join(MODS, "nhv_tiles", "textures", "nhv_worldbuilding.png")
 WB_NAMES = os.path.join(MODS, "nhv_tiles", "worldbuilding.json")
 
-SHAPES = ("cube", "x", "floor", "slab", "pane", "object", "invisible")
+SHAPES = ("cube", "x", "floor", "slab", "pane", "object", "invisible", "particle")
+FX = ("dot", "spark", "star", "square", "ring")  # (the Effects tab's particle pictures)
 SIDES = ("top", "bottom", "east", "west", "north", "south")
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
@@ -148,6 +149,8 @@ def clean_texture(tex):
         tex = {"sheet": int(tex["sheet"])}
     elif tex.get("wb") is not None:
         tex = {"wb": int(tex["wb"])}
+    elif tex.get("builtin") in FX:
+        tex = {"builtin": tex["builtin"]}
     else:
         tex = {}
     return tex
@@ -172,7 +175,7 @@ def clean_block(b):
         raise ValueError("damage must be like 1d4, 2d6+1 or 3")
     out = {
         "id": bid, "name": str(b.get("name") or bid)[:60], "shape": shape, "texture": tex,
-        "scale": max(0.1, min(4.0, float(b.get("scale") or 1))),
+        "scale": max(0.1, min(8.0 if shape == "particle" else 4.0, float(b.get("scale") or 1))),
         "solid": bool(b.get("solid")), "climbable": bool(b.get("climbable")),
         # (cube) touching blocks of it are drawn as one, the pictures stretched
         "stretch": bool(b.get("stretch")),
@@ -190,7 +193,28 @@ def clean_block(b):
     }
     # its own top and bottom (bottom alone: the top's too)
     out.update(ends)
+    if shape == "particle":
+        out["solid"] = out["climbable"] = False
+        out["particle"] = clean_particle(b.get("particle"))
     return out
+
+
+def clean_particle(p):
+    """A floating particle's settings: tint, opacity, glow, the float."""
+    p = p if isinstance(p, dict) else {}
+    color = str(p.get("color") or "#FFFFFF")
+    if not re.match(r"^#[0-9A-Fa-f]{6}$", color):
+        color = "#FFFFFF"
+
+    def num(k, lo, hi, default):
+        try:
+            return max(lo, min(hi, float(p.get(k, default))))
+        except (TypeError, ValueError):
+            return default
+    return {
+        "color": color.upper(), "opacity": num("opacity", 0, 100, 100), "glow": int(num("glow", 0, 14, 14)),
+        "bob": num("bob", 0, 3, 0.3), "bob_s": num("bob_s", 0.2, 30, 3), "height": num("height", 0, 1, 0.5),
+    }
 
 
 def save(data):

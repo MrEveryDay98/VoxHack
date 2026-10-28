@@ -245,6 +245,10 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .blk-rig { position: relative; width: 0; height: 0; transform-style: preserve-3d; animation: blkspin 9s linear infinite; }
 .blk-face { position: absolute; left: 0; top: 0; image-rendering: pixelated; background-repeat: no-repeat; backface-visibility: hidden; }
 .blk-ghost { border: 2px dashed #6a6a80; }
+.blk-billboard { position: relative; width: 0; height: 0; }
+.blk-particle { position: absolute; transform: translateY(var(--y)); image-rendering: pixelated; }
+.blk-particle > div { image-rendering: pixelated; }
+@keyframes blkbob { 0%, 100% { transform: translateY(calc(var(--y) + var(--bob))); } 50% { transform: translateY(calc(var(--y) - var(--bob))); } }
 .blk-ground { position: absolute; left: 0; top: 0; background: radial-gradient(#2a2a35, transparent 70%); }
 @keyframes blkspin { from { transform: rotateX(-22deg) rotateY(0deg); } to { transform: rotateX(-22deg) rotateY(360deg); } }
 .blk-sides { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 6px 14px; margin-bottom: 6px; }

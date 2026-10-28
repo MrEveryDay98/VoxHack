@@ -6,7 +6,11 @@ const Blocks = (() => {
   const SHAPES = [
     ["cube", "Cube"], ["x", "Crossed sprites (like grass)"], ["floor", "Flat on the floor"],
     ["slab", "Slab"], ["pane", "Pane"], ["object", "3D object (extruded sprite)"], ["invisible", "Invisible"],
+    ["particle", "Floating particle (one big glowing sprite)"],
   ];
+  // the Effects tab's particle pictures (mods/nhv_effects/textures)
+  const FX = ["dot", "spark", "star", "square", "ring"];
+  const PARTICLE_DEFAULT = { color: "#FFFFFF", opacity: 100, glow: 14, bob: 0.3, bob_s: 3, height: 0.5 };
   let data = { version: 1, blocks: [] };
   let textures = [];
   let sheet = { cols: 48, rows: 25, names: {} };
@@ -121,6 +125,7 @@ const Blocks = (() => {
       + (t.frames > 1 ? `animation:${frameAnim(t)};` : "");
     if (t && t.gamefile) return `background-image:url(/gametex/${t.gamefile});background-size:100% 100%;`;
     if (t && t.color) return `background:${t.color};`;
+    if (t && t.builtin) return `background-image:url(/fxtex/nhvfx_${t.builtin}.png);background-size:100% 100%;`;
     if (t && t.wb != null) {
       const c = wb.cols, r = wb.rows;
       const x = t.wb % c, y = Math.floor(t.wb / c);
@@ -174,6 +179,23 @@ const Blocks = (() => {
         rig.append(face(s, s, `translateY(${(S - s) / 2}px) translateZ(${(i - 2.5) * 1.6}px)`,
           i > 0 && i < 5 ? "filter:brightness(0.65)" : ""));
       }
+    } else if (shape === "particle") {
+      // (always facing you, as in the game: it doesn't turn with the rest;
+      // tinted, see-through, glowing, floating up and down)
+      const pt = Object.assign({}, PARTICLE_DEFAULT, b.particle || {});
+      const y = S / 2 - pt.height * S;
+      const url = b.texture && b.texture.builtin ? `/fxtex/nhvfx_${b.texture.builtin}.png` : null;
+      const sprite = el("div", { class: "blk-particle", style: `width:${s}px;height:${s}px;margin:${-s / 2}px 0 0 ${-s / 2}px;`
+        + `opacity:${pt.opacity / 100};--bob:${pt.bob * S / 2}px;--y:${y}px;animation:blkbob ${pt.bob_s}s ease-in-out infinite;`
+        + `filter:drop-shadow(0 0 ${2 + pt.glow}px ${pt.color});` });
+      // (the picture, tinted: the colour where the picture is)
+      sprite.append(el("div", { style: `position:absolute;inset:0;${tex}` }));
+      if (pt.color.toUpperCase() !== "#FFFFFF") {
+        const mask = url ? `url(${url})` : null;
+        sprite.append(el("div", { style: `position:absolute;inset:0;background:${pt.color};mix-blend-mode:multiply;`
+          + (mask ? `-webkit-mask-image:${mask};mask-image:${mask};-webkit-mask-size:100% 100%;mask-size:100% 100%;` : "") }));
+      }
+      scene.append(el("div", { class: "blk-billboard" }, sprite));
     } else {
       rig.append(el("div", { class: "blk-face blk-ghost", style: `width:${S}px;height:${S}px;margin:${-S / 2}px 0 0 ${-S / 2}px` }));
     }
@@ -191,7 +213,8 @@ const Blocks = (() => {
   function texturePicker(b, key = "texture") {
     const box = el("div", { class: "blk-texpick" });
     const tabs = el("div", { class: "chips" },
-      ...[["sheet", "Sprite sheet"], ["wb", "World-building"], ["file", "Your pictures"], ["gen", "Generate"]].map(([k, l]) =>
+      ...[["sheet", "Sprite sheet"], ["wb", "World-building"], ["file", "Your pictures"], ["gen", "Generate"],
+        ...(b.shape === "particle" ? [["fx", "Particles"]] : [])].map(([k, l]) =>
         el("button", { class: "chip", "aria-pressed": String(texTab === k), onclick: () => { texTab = k; render(); } }, l)));
     box.append(tabs);
     if (texTab === "gen") {
@@ -202,6 +225,17 @@ const Blocks = (() => {
         else delete anims[t.file];
         b[key] = t; touch(); render();
       }));
+      return box;
+    }
+    if (texTab === "fx" && b.shape === "particle") {
+      // (the Effects tab's particle pictures)
+      const grid = el("div", { class: "blk-grid big" });
+      for (const f of FX) {
+        grid.append(el("div", { class: "blk-file" + (b[key] && b[key].builtin === f ? " on" : ""), role: "button", tabindex: 0,
+          onclick: () => { b[key] = { builtin: f }; touch(); render(); } },
+        texView({ builtin: f }, 48), el("small", {}, f)));
+      }
+      box.append(el("p", { class: "muted" }, "The Effects tab's particles (white: tint them with Colour)."), grid);
       return box;
     }
     if (texTab === "wb") {
@@ -334,7 +368,9 @@ const Blocks = (() => {
           field("Id", text("id", "spikes"), "letters, digits and _; the block is nhv:x_<id>"),
           field("Shape", shapeSel),
           (b.shape === "x" || b.shape === "object") ? field("Size", num("scale", 0.1, 4, 0.1), "1 = one block") : null,
-          el("div", { class: "inline" }, check("solid", "Solid (can't walk through)"), check("climbable", "Climbable")),
+          b.shape === "particle" ? particleFields(b) : null,
+          b.shape === "particle" ? null
+            : el("div", { class: "inline" }, check("solid", "Solid (can't walk through)"), check("climbable", "Climbable")),
           ["cube", "slab", "pane"].includes(b.shape || "cube") ? field("When you place it",
             el("select", { onchange: (e) => set("turns", e.target.value) },
               ...[["", (b.shape || "cube") === "cube" ? "Always the same way" : "Turns (its usual way)"],
@@ -353,6 +389,31 @@ const Blocks = (() => {
           check("spikes", "Iron spikes (iron boots protect; 1 in 6 are poisoned)"))),
       ["cube", "slab", "pane", "floor"].includes(b.shape || "cube") ? backfaces(b) : null,
       el("h4", {}, "Texture"), endsPicker(b));
+  }
+
+  // A floating particle's settings (b.particle) and its size (b.scale)
+  function particleFields(b) {
+    b.particle = Object.assign({}, PARTICLE_DEFAULT, b.particle || {});
+    const pt = b.particle;
+    const set = (k, v) => { pt[k] = v; touch(); render(); };
+    const num = (k, min, max, step) => el("input", { type: "number", value: pt[k], min, max, step,
+      onchange: (e) => set(k, +e.target.value) });
+    return el("div", {},
+      el("div", { class: "inline" },
+        field("Size", el("input", { type: "number", value: b.scale ?? 1, min: 0.1, max: 8, step: 0.1,
+          onchange: (e) => { b.scale = +e.target.value; touch(); render(); } }), "1 = one block"),
+        field("Colour", el("input", { type: "color", value: pt.color, onchange: (e) => set("color", e.target.value) }),
+          "the picture is tinted this colour"),
+        field("Opacity (%)", num("opacity", 0, 100, 5), "100 = solid")),
+      el("div", { class: "inline" },
+        field("Glow", num("glow", 0, 14, 1), "how bright it is in the dark (0-14)"),
+        field("Height in its block", num("height", 0, 1, 0.05), "0 = the bottom, 1 = the top")),
+      el("div", { class: "inline" },
+        field("Float (blocks)", num("bob", 0, 3, 0.05), "how far it floats up and down; 0 = still"),
+        field("Float time (s)", num("bob_s", 0.2, 30, 0.1), "seconds for once up and down")),
+      el("small", { class: "muted", style: "display:block" },
+        "One big sprite that always faces you. It's never solid; in the game you can't point at it. "
+        + "Light (below) lights the blocks round it too."));
   }
 
   // A cube, slab or pane can have its own top and bottom (a tree trunk's
