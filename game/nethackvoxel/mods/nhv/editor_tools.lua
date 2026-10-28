@@ -20,7 +20,8 @@
 --   /undo                   put back what the last tool changed
 --   /desel                  forget the box
 -- Block names can be short: "stone" finds "nhv:stone" etc. Everything the
--- tools change is saved like hand building.
+-- tools change is saved like hand building. (Drawing with the mouse - the
+-- Box tool and the Pencil: editor_draw.lua.)
 
 local prefabs = nhv.prefabs
 local editor = nhv.editor
@@ -181,6 +182,8 @@ local function apply(pname, minp, maxp, fn)
 	editor.mark_box(minp, maxp)
 	return true, ("Changed %d blocks. (/undo puts them back)"):format(count)
 end
+
+tools.apply, tools.block = apply, block
 
 local function need_box(pname)
 	local minp, maxp = box(pname)

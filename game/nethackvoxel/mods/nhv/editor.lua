@@ -870,6 +870,7 @@ core.register_globalstep(function(dtime)
 				info.kind == "overlay" and "  (overlay: added on top of a floor)" or "", info.desc)
 		end
 		text = text .. "\nK fly - H noclip (while flying) - hold Ctrl: 4x speed - /fullbright"
+			.. "\n/box, /pencil: draw with the mouse, in the air too - /sel: select a box"
 		if not hud_ids[name] then
 			hud_ids[name] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
