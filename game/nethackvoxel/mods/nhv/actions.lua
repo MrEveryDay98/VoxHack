@@ -631,15 +631,16 @@ end
 -- Throwing, firing and zapping go where the crosshair points, at any angle
 -- (not just NetHack's 8 directions): "#nhvaim dx dy" before the action
 -- gives NetHack the line, from your square to the square you point at (or
--- along your look when that's your own square).
-function actions.aim(player)
+-- along your look when that's your own square). free: straight along your
+-- look whatever you point at (zaps and spells: not locked to squares).
+function actions.aim(player, free)
 	local h = hero()
 	if not (h and nh.snap) then
 		return nil
 	end
 	local p = actions.pointed(player)
 	local dx, dy = p.tx - h.x, p.ty - h.y
-	if dx == 0 and dy == 0 then
+	if free or (dx == 0 and dy == 0) then
 		local look = player:get_look_dir()
 		dx, dy = look.x, -look.z
 	end
@@ -651,8 +652,8 @@ function actions.aim(player)
 end
 
 -- the keys that set the aim (nil: no aim)
-function actions.aim_keys(player)
-	local dx, dy = actions.aim(player)
+function actions.aim_keys(player, free)
+	local dx, dy = actions.aim(player, free)
 	if not dx then
 		return nil
 	end
@@ -660,19 +661,12 @@ function actions.aim_keys(player)
 		math.floor(dy * 1000 + 0.5))}}
 end
 
--- the same aim as a level world direction from `from` (for rays)
-function actions.aim_world_dir(player, from)
-	local dx, dy, p = actions.aim(player)
+-- the same aim as a level world direction (for rays: straight where you
+-- look, not at the middle of a square)
+function actions.aim_world_dir(player)
+	local dx, dy = actions.aim(player, true)
 	if not dx then
 		return nil
-	end
-	local h = hero()
-	if p and (p.tx ~= h.x or p.ty ~= h.y) then
-		local t = U.tile_center(p.tx, p.ty, from.y)
-		local d = vector.new(t.x - from.x, 0, t.z - from.z)
-		if vector.length(d) > 0.1 then
-			return vector.normalize(d)
-		end
 	end
 	return vector.normalize(vector.new(dx, 0, -dy))
 end

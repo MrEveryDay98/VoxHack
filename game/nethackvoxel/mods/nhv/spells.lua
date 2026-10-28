@@ -258,16 +258,26 @@ function spells.release(player)
 	stop_glow()
 	spells.ready = nil
 	local now = core.get_us_time()
+	-- NetHack's direction: the nearest of its 8 to where you look (the zap
+	-- itself flies along your look - see clock.act; up, down and yourself
+	-- stay as they are)
+	local function look_dir(dir)
+		if dir == "<" or dir == ">" or dir == "." then
+			return dir
+		end
+		local dx, dy = U.vec_to_dir(player:get_look_dir())
+		return (dx ~= 0 or dy ~= 0) and U.dir_key(dx, dy) or dir
+	end
 	if r.wand then
 		-- (looking straight down zaps down, never at yourself: that's Self)
-		local dir = nhv.actions.pointed_dir_key(player, "zap", true)
+		local dir = look_dir(nhv.actions.pointed_dir_key(player, "zap", true))
 		table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
 		nhv.actions.swing()
 		nhv.clock.act({{key = "z"}, {key = r.wand}}, {kind = "zap"})
 		return true
 	end
 	-- (looking down means down for dig, but yourself for anything else)
-	local dir = nhv.actions.pointed_dir_key(player, r.name == "dig" and "dig" or r.name, true)
+	local dir = look_dir(nhv.actions.pointed_dir_key(player, r.name == "dig" and "dig" or r.name, true))
 	table.insert(nhv.ui.auto_answers, {pattern = spells.PROMPT, menu = r.sel, t = now})
 	table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
 	nhv.actions.swing()

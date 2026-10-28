@@ -197,9 +197,21 @@ end
 -- see actions.aim)
 local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = true, jump = true,
 	search = true, search_count = true}
+-- (zaps and spells fly straight where you look, not to a square; a wand of
+-- digging still digs along NetHack's 8 directions, whatever the aim)
+local FREE_AIM = {zap = true, spell = true}
+local function free_aim(keys, info)
+	if info and FREE_AIM[info.kind] then
+		return true
+	end
+	local first = type(keys) == "string" and keys:sub(1, 1) or (keys[1] and keys[1].key)
+	return first == "z" or first == "Z"
+end
+
 function clock.act(keys, info)
 	local player = nhv.player.get()
-	local aim = player and not (info and NO_AIM[info.kind]) and nhv.actions.aim_keys(player)
+	local aim = player and not (info and NO_AIM[info.kind])
+		and nhv.actions.aim_keys(player, free_aim(keys, info))
 	if aim then
 		if type(keys) == "string" then
 			for c in keys:gmatch(".") do

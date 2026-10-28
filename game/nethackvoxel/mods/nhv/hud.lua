@@ -1294,7 +1294,7 @@ local AMULET = {
 	{pat = "feels? very warm%.$", color = 0xFF9A30},
 	{pat = "feels? warm%.$", color = 0xFFE070},
 }
-local AMULET_HOLD, AMULET_FADE = 1.0, 2.5 -- (seconds)
+local AMULET_HOLD, AMULET_FADE = 3.0, 4.0 -- (seconds)
 local amulet_line = nil -- {id=, color=, t=} while shown
 
 function hud.amulet_feel(text)
