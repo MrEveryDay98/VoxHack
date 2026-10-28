@@ -19,13 +19,31 @@ local bubbles = {list = {}}
 nhv.bubbles = bubbles
 
 local TINT = "[fill:16x16:#CFEFFF40"
+local RING_TEX = "[fill:16x16:#C8F6FF"
 local CENTER_Y = U.STAND_Y + 1.2 -- (chest height: you're inside the one you're in)
+local RING_Y = U.FLOOR_Y + 0.53   -- (just over the floor's top)
 
 core.register_entity("nhv:bubble", {
 	initial_properties = {
 		visual = "mesh", mesh = "nhv_bubble.obj", visual_size = {x = 3, y = 3, z = 3},
 		textures = {TINT}, use_texture_alpha = true, backface_culling = true,
 		glow = 4, shaded = true,
+		physical = false, pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+	on_step = function(self)
+		if not self.bubble then
+			self.object:remove()
+		end
+	end,
+})
+
+-- where it meets the floor: a bright ring - its edge, to walk up to
+-- (models/nhv_bubble_ring.obj), gliding with it
+core.register_entity("nhv:bubble_ring", {
+	initial_properties = {
+		visual = "mesh", mesh = "nhv_bubble_ring.obj", visual_size = {x = 3, y = 1, z = 3},
+		textures = {RING_TEX}, use_texture_alpha = false, backface_culling = false,
+		glow = 12, shaded = false,
 		physical = false, pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
 	},
 	on_step = function(self)
@@ -78,13 +96,30 @@ local function placing(b)
 	-- (squares to nodes: tile_center is linear in the square)
 	local pos = vector.new(a.x + (c.x - a.x) * b.cx, CENTER_Y, a.z + (c.z - a.z) * b.cy)
 	local wx, wz = b.w * U.TILE, b.h * U.TILE
-	return pos, {x = wx, y = math.min(wx, wz), z = wz}
+	local size = {x = wx, y = math.min(wx, wz), z = wz}
+	-- (the ring: the sphere's width where it crosses the floor, a little
+	-- under its widest)
+	local ry = size.y / 2
+	local k = math.sqrt(math.max(0.05, 1 - ((CENTER_Y - RING_Y) / ry) ^ 2))
+	return pos, size, {x = wx * k, y = 1, z = wz * k}
+end
+
+local function ring_at(pos)
+	return vector.new(pos.x, RING_Y, pos.z)
+end
+
+local function remove(e)
+	for _, o in ipairs({e.obj, e.ring}) do
+		if o and o:get_pos() then
+			o:get_luaentity().bubble = nil
+			o:remove()
+		end
+	end
 end
 
 function bubbles.clear()
 	for _, e in ipairs(bubbles.list) do
-		e.obj:get_luaentity().bubble = nil
-		e.obj:remove()
+		remove(e)
 	end
 	bubbles.list = {}
 end
@@ -111,13 +146,16 @@ function bubbles.update(map)
 				end
 			end
 		end
-		local pos, size = placing(b)
+		local pos, size, ring_size = placing(b)
 		local e
 		if best then
 			used[best] = true
 			e = old[best]
 			if e.w ~= b.w or e.h ~= b.h then
 				e.obj:set_properties({visual_size = size})
+				if e.ring then
+					e.ring:set_properties({visual_size = ring_size})
+				end
 			end
 		else
 			local obj = core.add_entity(pos, "nhv:bubble")
@@ -125,6 +163,12 @@ function bubbles.update(map)
 				obj:set_properties({visual_size = size})
 				obj:get_luaentity().bubble = true
 				e = {obj = obj, at = pos}
+				local ring = core.add_entity(ring_at(pos), "nhv:bubble_ring")
+				if ring then
+					ring:set_properties({visual_size = ring_size})
+					ring:get_luaentity().bubble = true
+					e.ring = ring
+				end
 			end
 		end
 		if e then
@@ -133,9 +177,8 @@ function bubbles.update(map)
 		end
 	end
 	for k, e in ipairs(old) do
-		if not used[k] and e.obj:get_pos() then
-			e.obj:get_luaentity().bubble = nil
-			e.obj:remove()
+		if not used[k] then
+			remove(e)
 		end
 	end
 	bubbles.list = keep
@@ -161,6 +204,9 @@ core.register_globalstep(function(dtime)
 				local go = math.min(left, U.TILE * turns * dtime * math.max(1, left / U.TILE))
 				e.at = vector.add(e.at, vector.multiply(d, go / left))
 				e.obj:move_to(e.at, true)
+				if e.ring and e.ring:get_pos() then
+					e.ring:move_to(ring_at(e.at), true)
+				end
 			end
 		elseif e.target then
 			e.at = e.target

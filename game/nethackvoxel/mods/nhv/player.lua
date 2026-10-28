@@ -86,6 +86,9 @@ local function teleport(player, pos)
 	player_mod.trap_done = tx .. "," .. ty
 	player:set_pos(player_mod.free_spot(pos))
 	player_mod.carry = nil
+	if core.nhv_player_drift then
+		core.nhv_player_drift(vector.zero())
+	end
 	if nhv.effects then
 		nhv.effects.arrived() -- (teleport effects play where you arrive)
 	end
@@ -126,24 +129,40 @@ local function moved_by_nethack(player, h, fx, fy)
 	teleport(player, U.tile_center(h.x, h.y))
 end
 
+-- (the engine carries the body along on its side, every frame, on top of
+-- your own moving - core.nhv_player_drift - so you keep full control of
+-- it; this keeps count of how far it still has to go)
+local drift_set = vector.zero()
+local function set_drift(v)
+	if not vector.equals(v, drift_set) then
+		drift_set = v
+		if core.nhv_player_drift then
+			core.nhv_player_drift(v)
+		end
+	end
+end
 core.register_globalstep(function(dtime)
 	local c = player_mod.carry
 	local player = c and player_mod.get()
-	if not player then
-		return
-	end
-	local left = vector.length(c)
-	if left < 0.01 then
+	local left = c and vector.length(c) or 0
+	if not player or left < 0.01 then
 		player_mod.carry = nil
+		set_drift(vector.zero())
 		return
 	end
 	-- (as fast as a bubble: a square a turn, at the time's rate - never
 	-- quite stopping, so it's always caught up)
 	local turns = nhv.clock.RATE * math.max(0.25, nhv.clock.scale)
-	local go = math.min(left, U.TILE * turns * dtime)
+	local speed = U.TILE * turns
+	local go = math.min(left, speed * dtime)
 	local d = vector.multiply(c, go / left)
-	player:set_pos(vector.add(player:get_pos(), d))
 	player_mod.carry = vector.subtract(c, d)
+	if core.nhv_player_drift then
+		-- (slower for the last bit, so it doesn't overshoot)
+		set_drift(vector.multiply(c, math.min(speed, left / math.max(dtime, 0.03)) / left))
+	else
+		player:set_pos(vector.add(player:get_pos(), d))
+	end
 end)
 
 -- NetHack saying you're falling to the level below (through a hole or a

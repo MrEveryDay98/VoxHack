@@ -508,6 +508,12 @@ function hud.square_tex(map, h, x, y, bare)
 			and (rtyp == U.TYP.CLOUD or rtyp == U.TYP.AIR) then
 		mname = rtyp == U.TYP.CLOUD and "S_cloud" or "S_air"
 		mem = cmap_tile(mname)
+	elseif nhv.terrain.sky_floor == "water" and (mem < 0 or mgi.kind == "cmap")
+			and (rtyp == U.TYP.WATER or rtyp == U.TYP.AIR) then
+		-- (the Plane of Water likewise: its bubbles - air - where they are
+		-- now, as NetHack's own tiles, in the water)
+		mname = rtyp == U.TYP.AIR and "S_air" or "S_water"
+		mem = cmap_tile(mname)
 	end
 	local known = mem >= 0 and mname ~= "S_stone" and mname ~= "S_unexplored"
 	if not known then
