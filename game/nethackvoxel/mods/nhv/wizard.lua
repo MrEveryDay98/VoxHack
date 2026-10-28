@@ -5,6 +5,8 @@
 --                  it stands (nothing you pass moves it, and it never pulls
 --                  you back); stop flying to go back to the hero. Noclipping,
 --                  the hero is invulnerable.
+--   /god           infinite health on or off: invulnerable (no damage, no
+--                  death) whether noclipping or not; kept for the world.
 --   /brightness N  the level's brightness, 0 (as lit) .. 100 (everything at
 --                  full brightness); kept for the world.
 -- Outside wizard mode none of this is there.
@@ -42,7 +44,7 @@ core.register_on_joinplayer(function(player)
 	core.after(3, function()
 		if nhv.hud then
 			nhv.hud.message("Wizard mode: K flies, H noclips (flying, the hero stays put; land to go back). "
-				.. "/brightness 0-100 lights the level.")
+				.. "/brightness 0-100 lights the level. /god: infinite health.")
 		end
 	end)
 end)
@@ -96,21 +98,38 @@ end
 -- it changes, and after a game starts or loads.
 local god_told = nil
 local nh = nhv.nh
+-- /god: infinite health, on its own (kept for the world)
+local function god_on()
+	return storage:get_string("god") == "1"
+end
 core.register_globalstep(function()
 	if not wizard.on then
 		return
 	end
-	local want = noclipping()
+	local want = noclipping() or god_on()
 	if want ~= god_told and nh.ready() then
 		local was = god_told
 		god_told = want
 		nh.act({{key = "#"}, {text = "nhvgod " .. (want and 1 or 0)}}, {kind = "info"})
 		-- (said only when it changes: not "vulnerable" on every game start)
 		if nhv.hud and (want or was) then
-			nhv.hud.message(want and "Noclip: invulnerable." or "Noclip off: vulnerable again.")
+			local why = god_on() and "Infinite health" or "Noclip"
+			nhv.hud.message(want and (why .. ": invulnerable.") or "Vulnerable again.")
 		end
 	end
 end)
+
+core.register_chatcommand("god", {
+	description = "Wizard mode: infinite health on or off (no damage, no death)",
+	func = function()
+		if not wizard.on then
+			return false, "Only in wizard mode."
+		end
+		local on = not god_on()
+		storage:set_string("god", on and "1" or "")
+		return true, on and "Infinite health on." or "Infinite health off."
+	end,
+})
 nh.on_snapshot(function(snap)
 	if not snap then
 		god_told = nil -- (a new game: tell it again)
