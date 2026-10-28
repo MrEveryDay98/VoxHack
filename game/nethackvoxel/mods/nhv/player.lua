@@ -865,6 +865,17 @@ local function ground_below(pos, vel)
 	return best
 end
 
+-- Struggling in the Plane of Air's thin air (neither flying nor
+-- levitating; NetHack: "You tumble in place."): the float is clumsy - an
+-- uneven bob that dips, the way forward stalling and lurching to the side
+-- now and then, and the view rolling from side to side (the VoxHack
+-- engine's core.nhv_camera_roll), harder as you try to go
+local function struggling(h)
+	return h and nhv.terrain and nhv.terrain.sky_floor and not U.has(h.flags, U.HERO.LEVITATE)
+		and not U.has(h.flags, U.HERO.FLYING) or false
+end
+local flail = {next = 0, kick = 0, stall_until = 0}
+
 local function hover(player)
 	if not levitating(player_mod.hero) or player_mod.frozen then
 		return
@@ -872,12 +883,56 @@ local function hover(player)
 	local pos = player:get_pos()
 	local t = core.get_us_time() / 1e6
 	local v = player:get_velocity()
-	local target = ground_below(pos, v) + HOVER_H + 0.06 * math.sin(t * 2.2)
+	local bob = 0.06 * math.sin(t * 2.2)
+	if struggling(player_mod.hero) then
+		bob = 0.14 * math.sin(t * 3.1) + 0.07 * math.sin(t * 7.3 + 1.0) - 0.12 * math.max(0, math.sin(t * 1.3)) ^ 6
+		-- (going somewhere: now and then the way forward stalls - a step
+		-- that didn't take - or lurches to one side)
+		local hv = vector.new(v.x, 0, v.z)
+		local sp = vector.length(hv)
+		if sp > 0.2 and t > flail.next then
+			flail.next = t + 0.5 + math.random() * 0.9
+			if math.random() < 0.6 then
+				flail.stall_until = t + 0.2 + math.random() * 0.2
+			else
+				local side = vector.new(-hv.z / sp, 0, hv.x / sp)
+				local k = (math.random() < 0.5 and -1 or 1) * (0.8 + math.random() * 0.8)
+				player:add_velocity(vector.multiply(side, k))
+				flail.kick = flail.kick + k * 6
+			end
+		end
+		if t < flail.stall_until and sp > 0.05 then
+			player:add_velocity(vector.multiply(hv, -0.6))
+		end
+	end
+	local target = ground_below(pos, v) + HOVER_H + bob
 	local want = math.max(-4, math.min(4, (target - pos.y) * 6))
 	if math.abs(want - v.y) > 0.05 then
 		player:add_velocity(vector.new(0, want - v.y, 0))
 	end
 end
+
+-- the view's roll while struggling (0 otherwise)
+local roll_set = 0
+core.register_globalstep(function(dtime)
+	if not core.nhv_camera_roll then
+		return
+	end
+	local player = player_mod.get()
+	local roll = 0
+	if player and struggling(player_mod.hero) and not player_mod.frozen
+			and not (nhv.cutscene and nhv.cutscene.active) then
+		local t = core.get_us_time() / 1e6
+		local v = player:get_velocity()
+		local moving = math.min(1, math.sqrt(v.x * v.x + v.z * v.z) / 0.6)
+		roll = (2 + 3 * moving) * math.sin(t * 1.7) + (1 + 1.5 * moving) * math.sin(t * 4.1 + 0.7) + flail.kick
+	end
+	flail.kick = flail.kick * math.max(0, 1 - dtime * 3)
+	if math.abs(roll - roll_set) > 0.05 then
+		roll_set = roll
+		core.nhv_camera_roll(roll)
+	end
+end)
 
 local was_searching, was_dragging = false
 core.register_globalstep(function()
