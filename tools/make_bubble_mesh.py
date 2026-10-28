@@ -16,7 +16,8 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODELS = os.path.join(HERE, "..", "game", "nethackvoxel", "mods", "nhv", "models")
 OUT = os.path.join(MODELS, "nhv_bubble.obj")
-SECTORS = 24  # (the ring's pieces)
+SECTORS = 48  # (the ring's pieces)
+UV_REPEAT = 0.6  # (the band textures' repeats per mesh unit)
 # the bands from the edge in, as parts of the radius R (bubbles.lua textures
 # them bright to faint)
 BANDS = (1.0, 0.97, 0.92, 0.85, 0.75, 0.6)
@@ -77,8 +78,11 @@ def ring():
                 a1 = 2 * math.pi * (k + (st + 1) / steps) / SECTORS
                 base = len(v) + 1
                 for a, r in ((a0, r0), (a0, r1), (a1, r1), (a1, r0)):
-                    v.append((R * r * math.cos(a), 0.0, R * r * math.sin(a)))
-                    vt.append((0.5, 0.5))
+                    x, z = R * r * math.cos(a), R * r * math.sin(a)
+                    v.append((x, 0.0, z))
+                    # (the texture repeats across it: bubbles.lua's bands
+                    # are dither patterns, a fade in solid pixels)
+                    vt.append((x * UV_REPEAT, z * UV_REPEAT))
                 faces.append((base, base + 1, base + 2))
                 faces.append((base, base + 2, base + 3))
             groups.append(faces)

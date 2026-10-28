@@ -30,8 +30,9 @@ local TINT = "[fill:16x16:#CFEFFF40"
 -- just where you're in it or not)
 local RING_Y = U.FLOOR_Y + 0.53   -- (just over the floor's top)
 local CENTER_Y = RING_Y
-local SECTORS = 24
--- the ring's bands, its edge in (tools/make_bubble_mesh.py's BANDS)
+local SECTORS = 48
+-- the ring's bands, its edge in (tools/make_bubble_mesh.py's BANDS): bright
+-- to faint
 local BAND_TEX = {}
 for k, op in ipairs({235, 150, 90, 45, 15}) do
 	BAND_TEX[k] = ("[fill:16x16:#C8F6FF^[opacity:%d"):format(op)
@@ -107,8 +108,9 @@ local function placing(b)
 	return pos, {x = wx, y = math.min(wx, wz), z = wz}, {x = wx, y = 1, z = wz}
 end
 
-local function ring_at(pos)
-	return vector.new(pos.x, RING_Y, pos.z)
+-- (each ring a hair over or under the others: never two in one place)
+local function ring_at(pos, e)
+	return vector.new(pos.x, RING_Y + (e and e.yoff or 0), pos.z)
 end
 
 local function make(pos, size, ring_size)
@@ -178,6 +180,7 @@ function bubbles.update(map)
 		if e then
 			e.w, e.h, e.target = b.w, b.h, pos
 			e.rx, e.rz = ring_size.x / 2, ring_size.z / 2
+			e.yoff = (k % 16) * 0.004
 			keep[k] = e
 		end
 	end
@@ -200,12 +203,13 @@ local function inside_ring(e, p)
 	return dx * dx + dz * dz <= 1
 end
 
--- (each ring's pieces inside another bubble's ring are left out)
+-- (each ring's pieces whose edge is inside another bubble's ring are left
+-- out: where bubbles meet, one outline round them both)
 local function show_pieces()
 	for _, e in ipairs(bubbles.list) do
 		for k, p in pairs(e.pieces) do
 			local a = 2 * math.pi * (k + 0.5) / SECTORS
-			local at = vector.new(e.at.x + e.rx * math.cos(a), 0, e.at.z + e.rz * math.sin(a))
+			local at = vector.new(e.at.x + e.rx * 0.999 * math.cos(a), 0, e.at.z + e.rz * 0.999 * math.sin(a))
 			local covered = false
 			for _, o in ipairs(bubbles.list) do
 				if o ~= e and inside_ring(o, at) then
@@ -226,6 +230,14 @@ end
 -- time's rate (further behind, faster). The bubble your body is in carries
 -- you along as fast; whether you're in one at all is said to NetHack.
 local told -- (what NetHack was last told: true in air, false in water)
+-- (the drift eases from one speed to the next: no jolts)
+local drift_now = vector.zero()
+-- (a slide: NetHack moved you a square or two - out of the water to safety
+-- - and the body glides there: {v=, until=})
+local slide = nil
+function bubbles.slide(v, secs)
+	slide = {v = v, ["until"] = core.get_us_time() + secs * 1e6}
+end
 -- (arriving, nothing is said until the body has settled on the hero's
 -- square: till then NetHack's own say stands)
 local settled = false
@@ -251,13 +263,14 @@ core.register_globalstep(function(dtime)
 		local d = vector.subtract(e.target, e.at)
 		local left = vector.length(d)
 		if left > 0.001 and turns > 0 and dtime > 0 then
-			local go = math.min(left, U.TILE * turns * dtime * math.max(1, left / U.TILE))
+			-- (steadily a square a turn; only well behind, faster)
+			local go = math.min(left, U.TILE * turns * dtime * (left > U.TILE * 1.5 and left / U.TILE or 1))
 			local step = vector.multiply(d, go / left)
 			e.at = vector.add(e.at, step)
 			e.vel = vector.divide(step, dtime)
 			e.obj:move_to(e.at, true)
 			if e.ring and e.ring:get_pos() then
-				e.ring:move_to(ring_at(e.at), true)
+				e.ring:move_to(ring_at(e.at, e), true)
 			end
 			moved = true
 		else
@@ -296,7 +309,20 @@ core.register_globalstep(function(dtime)
 			break
 		end
 	end
-	set_drift(mine and vector.new(mine.vel.x, 0, mine.vel.z) or vector.zero())
+	local want = mine and vector.new(mine.vel.x, 0, mine.vel.z) or vector.zero()
+	drift_now = vector.add(drift_now, vector.multiply(vector.subtract(want, drift_now), math.min(1, dtime * 4)))
+	if vector.length(drift_now) < 0.02 then
+		drift_now = vector.zero()
+	end
+	local v = drift_now
+	if slide then
+		if core.get_us_time() < slide["until"] then
+			v = vector.add(v, slide.v)
+		else
+			slide = nil
+		end
+	end
+	set_drift(v)
 	local air = mine ~= nil
 	if air ~= told and nh.ready() then
 		told = air
@@ -304,6 +330,18 @@ core.register_globalstep(function(dtime)
 	end
 	bubbles.in_air = air
 end)
+
+-- is square (tx, ty) in a bubble, as the 3D world has it (its middle
+-- inside a sphere's ring)? - the big map shows the bubbles so (hud.lua)
+function bubbles.air_at(tx, ty)
+	local c = U.tile_center(tx, ty)
+	for _, e in ipairs(bubbles.list) do
+		if inside_ring(e, c) then
+			return true
+		end
+	end
+	return false
+end
 
 -- ---------------------------------------------------------------- underwater
 -- Outside the bubbles: the blue tint and the dark edges on the screen, and

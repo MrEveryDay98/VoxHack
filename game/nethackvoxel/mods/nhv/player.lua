@@ -105,8 +105,19 @@ player_mod.teleport = teleport
 -- NetHack moved the hero from square (fx, fy) to h without your walking
 -- there: the body is put there (the Plane of Water's bubbles don't carry
 -- the hero: their drift carries the body, and it walks - bubbles.lua)
+local SLIDE_S = 0.4
 local function moved_by_nethack(player, h)
-	teleport(player, U.tile_center(h.x, h.y))
+	-- (on the Plane of Water a square or two - pulled out of the water to
+	-- safety - the body glides there, not put there at once)
+	local to = U.tile_center(h.x, h.y)
+	local pos = player:get_pos()
+	local d = vector.new(to.x - pos.x, 0, to.z - pos.z)
+	if nhv.terrain.sky_floor == "water" and nhv.bubbles and vector.length(d) <= U.TILE * 2.5 then
+		nhv.bubbles.slide(vector.divide(d, SLIDE_S), SLIDE_S)
+		player_mod.grace_until = core.get_us_time() + (SLIDE_S + 0.1) * 1e6
+		return
+	end
+	teleport(player, to)
 end
 
 -- NetHack saying you're falling to the level below (through a hole or a
