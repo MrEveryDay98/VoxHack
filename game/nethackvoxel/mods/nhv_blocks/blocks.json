@@ -106,12 +106,12 @@
   },
   {
    "id": "block4",
-   "name": "New block",
+   "name": "Star",
    "shape": "particle",
    "texture": {
-    "file": "nhvfx_spark.png"
+    "file": "nhvfx_dot.png"
    },
-   "scale": 3.0,
+   "scale": 1.5,
    "solid": false,
    "climbable": false,
    "stretch": false,
@@ -124,12 +124,13 @@
    "backfaces": {},
    "hidden": {},
    "particle": {
-    "color": "#FFFFFF",
+    "color": "#D885FF",
     "opacity": 100,
     "glow": 14,
     "bob": 0.3,
     "bob_s": 3.0,
-    "height": 1
+    "height": 1,
+    "spin": 90.0
    }
   }
  ]
