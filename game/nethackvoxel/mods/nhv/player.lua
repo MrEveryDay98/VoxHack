@@ -84,17 +84,24 @@ local function teleport(player, pos)
 	-- gone off already; the body landing on its pad isn't stepping on it)
 	local tx, ty = U.pos_to_tile(pos)
 	player_mod.trap_done = tx .. "," .. ty
-	player:set_pos(player_mod.free_spot(pos))
+	local at = player_mod.free_spot(pos)
+	player:set_pos(at)
+	-- (where you're held while a new level loads: here, as NetHack said -
+	-- not read back from the body, which the client may still be
+	-- reporting where it was on the level you left while it loads)
+	player_mod.arrived_at = at
 	if nhv.effects then
 		nhv.effects.arrived() -- (teleport effects play where you arrive)
 	end
 	-- on a new level the blocks are built just after this: check again then
+	-- (from where you were put, not the body's position read back: a
+	-- client busy loading may still report where it was before)
 	core.after(0.1, function()
-		if player:is_player() then
-			local p = player:get_pos()
-			local f = player_mod.free_spot(p)
-			if not vector.equals(f, p) then
+		if player:is_player() and player_mod.arrived_at == at then
+			local f = player_mod.free_spot(at)
+			if not vector.equals(f, at) then
 				player:set_pos(f)
+				player_mod.arrived_at = f
 			end
 		end
 	end)
@@ -984,7 +991,8 @@ core.register_globalstep(function()
 			and (not core.nh_level_progress or core.nh_level_progress() >= 1)
 		if now < fz.t_end and not loaded then
 			if not fz.pos and now - fz.t0 > 150000 then
-				fz.pos = player:get_pos()
+				-- (arriving: where NetHack put you - teleport, above)
+				fz.pos = (fz.loading and player_mod.arrived_at) or player:get_pos()
 			end
 			if fz.pos then
 				player:set_pos(fz.pos)
