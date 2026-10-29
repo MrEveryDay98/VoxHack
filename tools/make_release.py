@@ -35,7 +35,7 @@ GAME_SKIP = ["*.bak", "*.before-*", "*.tmp", "__pycache__",
 	"voices"]  # (recordings made in the editor: not in public releases)
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
-LAUNCHERS = ["Play VoxHack.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
+LAUNCHERS = ["Play VoxHack.bat", "Play Demo.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
 # (renamed: in a release it's for starting over, not just testing)
 RESET = ("Reset NetHack Save (testing).bat", "Reset NetHack Save.bat")
 
@@ -80,6 +80,13 @@ Launchers\\VoxHack Level Atlas.bat asks for a seed (any whole number) and
 builds every level of that game side by side, terrain only - to look at how
 the dungeon's pieces fit together. K: fly, H: noclip; /atlas lists the
 levels, /atlas <number> goes to one, /atlas ceilings takes the ceilings off.
+
+Demos
+-----
+Options > Record demos records each game you play, from when it starts, to
+engine\demos. Drop a demo onto Launchers\Play Demo.bat to watch it (run
+on its own, it plays the newest): Space pauses, W and S speed it up and
+slow it down, Esc leaves. A demo plays only in the version that recorded it.
 
 Starting over
 -------------

@@ -24,6 +24,9 @@ local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local SHADOWS = {"On", "Off"}
 local SHADOW_OPACITY = {{20, "20%"}, {40, "40%"}, {60, "60%"}, {80, "80%"}, {100, "100% (solid)"}}
 local DRAWN = {"Kept", "Removed (after a restart)"}
+-- recording demos (the VoxHack engine's nhv_demo: each session from its
+-- start, to engine/demos; played with Launchers\Play Demo.bat)
+local DEMOS = {"Off", "On (from the next start)"}
 local RES = {
 	{1, "Full"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4 (retro)"}, {6, "1/6"}, {8, "1/8 (very chunky)"},
 }
@@ -66,7 +69,7 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 15.7),
+		theme.head(10, 16.6),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -90,8 +93,10 @@ function graphics.formspec()
 			pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)),
 		row(13.2, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
 			core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2),
-		"button[0.5,14.7;4.4,0.8;guide;Controls & guide...]",
-		"button_exit[5.1,14.7;4.4,0.8;close;Done]",
+		row(14.1, "Record demos", "demos", table.concat(DEMOS, ","),
+			core.settings:get_bool("nhv_demo_record", false) and 2 or 1),
+		"button[0.5,15.6;4.4,0.8;guide;Controls & guide...]",
+		"button_exit[5.1,15.6;4.4,0.8;close;Done]",
 	})
 end
 
@@ -187,6 +192,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if dr and (dr == 1) ~= core.settings:get_bool("nhv_sprite_shadows", true) then
 		-- (the sprites' sheet: nhv_tiles reads it when the game starts)
 		core.settings:set_bool("nhv_sprite_shadows", dr == 1)
+		changed = true
+	end
+	local dm = tonumber(fields.demos)
+	if dm and (dm == 2) ~= core.settings:get_bool("nhv_demo_record", false) then
+		-- (the engine starts recording as a session begins: from the next one)
+		core.settings:set_bool("nhv_demo_record", dm == 2)
 		changed = true
 	end
 	if set_num(SHADOW_OPACITY, fields.shadow_opacity, "nhv_shadow_opacity", 60) then
