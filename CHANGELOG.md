@@ -2,6 +2,10 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.10.3 (alpha) - 2026-10-28
+
+- Fixed: taking the stairs to a level that was slow to load could leave you where you'd been on the level you left, not on the stairs NetHack put you on (and NetHack's hero then walked there too). You're now held on the stairs while the level loads.
+
 ## v0.10.2 (alpha) - 2026-10-27
 
 - **Ascending is a moment.** Offer the Amulet on your own god's high altar: time stops, the camera circles high above the altar, and a great beam of light comes down on you. The offering and the choir appear as subtitles, then your god speaks ("Mortal, thou hast done well!") in SAM's God voice. "You ascend to the status of Demigod..." stands large in the middle as you rise into the light and vanish in a flash. NetHack's last question fades in after.
