@@ -1066,7 +1066,11 @@ function terrain.update(map, force)
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
 	local open, sky_floor = level_open_sky()
-	local open_area = open or (not nhv.EDITOR and nhv.areas.open_to_sky()) or false
+	-- (a hand-built area open to the sky opens the level round it too -
+	-- its rim, its rock - unless the level is made up round it: the
+	-- Oracle's rooms and tunnels keep their ceilings)
+	local open_area = open or (not nhv.EDITOR and nhv.areas.open_to_sky()
+		and not nhv.areas.made_round_level()) or false
 	if open ~= terrain.open_sky or open_area ~= terrain.open_area or sky_floor ~= terrain.sky_floor then
 		terrain.open_sky, terrain.open_area, terrain.sky_floor = open, open_area, sky_floor
 		force = true

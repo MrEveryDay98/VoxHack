@@ -342,6 +342,18 @@ local function made_round(rects)
 	return active.made_round
 end
 
+-- Is the special level you're on made up round its fixed map (rooms and
+-- corridors, the Mines' caves: the Oracle's, Minetown)? Then it's an
+-- ordinary level round the map - no open sky over its rock and tunnels,
+-- even if the map itself is open (terrain.lua).
+function areas.made_round_level()
+	if nhv.EDITOR then
+		return false
+	end
+	local _, rects = regions()
+	return rects ~= nil and #rects > 0 and made_round(rects)
+end
+
 -- Is square (tx, ty) outside every fixed region of the special level you're
 -- on - the solid rock NetHack fills round its map? (false on ordinary
 -- levels, and on a special level made up round its map - Minetown's caves)
