@@ -2,6 +2,10 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.10.4 (alpha) - 2026-10-28
+
+- Fixed: the tunnels round the Oracle's Delphi had no ceiling. A special level filled in with rooms and corridors round its map (the Oracle's, Minetown) is no longer opened to the sky with it; levels set in rock, ice or the sea are as before.
+
 ## v0.10.3 (alpha) - 2026-10-28
 
 - Fixed: taking the stairs to a level that was slow to load could leave you where you'd been on the level you left, not on the stairs NetHack put you on (and NetHack's hero then walked there too). You're now held on the stairs while the level loads.
