@@ -35,7 +35,7 @@ GAME_SKIP = ["*.bak", "*.before-*", "*.tmp", "__pycache__",
 	"voices"]  # (recordings made in the editor: not in public releases)
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
-LAUNCHERS = ["Play VoxHack.bat", "Play Demo.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
+LAUNCHERS = ["Play VoxHack.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
 # (renamed: in a release it's for starting over, not just testing)
 RESET = ("Reset NetHack Save (testing).bat", "Reset NetHack Save.bat")
 
@@ -84,9 +84,10 @@ levels, /atlas <number> goes to one, /atlas ceilings takes the ceilings off.
 Demos
 -----
 Options > Record demos records each game you play, from when it starts, to
-engine\demos. Drop a demo onto Launchers\Play Demo.bat to watch it (run
-on its own, it plays the newest): Space pauses, W and S speed it up and
-slow it down, Esc leaves. A demo plays only in the version that recorded it.
+engine\demos. Drop a demo onto "Play Demo.bat" in that folder to watch it
+(run on its own, it plays the newest): Space pauses, W and S speed it up
+and slow it down, Esc leaves. A demo plays only in the version that
+recorded it.
 
 Starting over
 -------------
@@ -156,6 +157,9 @@ def stage(out):
 	# an empty world for the game, and fresh settings
 	write(os.path.join(engine, "worlds", "nethack", "world.mt"), WORLD_MT, crlf=False)
 	write(os.path.join(engine, "minetest.conf"), CONF, crlf=False)
+	# the demos folder, with the script that plays them
+	os.makedirs(os.path.join(engine, "demos"))
+	shutil.copy2(os.path.join(LUANTI, "demos", "Play Demo.bat"), os.path.join(engine, "demos", "Play Demo.bat"))
 	# launchers
 	os.makedirs(os.path.join(out, "Launchers"))
 	for f in LAUNCHERS:
