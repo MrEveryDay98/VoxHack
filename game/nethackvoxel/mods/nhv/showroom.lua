@@ -61,9 +61,7 @@ core.register_entity("nhv:showroom", {
 
 core.register_entity("nhv:showroom_pedestal", {
 	initial_properties = {
-		visual = "cube", glow = 6,
-		textures = {"nhv_showroom_top.png", "nhv_showroom_side.png", "nhv_showroom_side.png",
-			"nhv_showroom_side.png", "nhv_showroom_side.png", "nhv_showroom_side.png"},
+		visual = "cube", glow = 6, textures = {"blank.png"}, -- (the game's own: look_of, below)
 		visual_size = {x = PEDESTAL.w, y = PEDESTAL.h, z = PEDESTAL.d},
 		physical = false, pointable = false, static_save = false,
 		collisionbox = {0, 0, 0, 0, 0, 0},
@@ -74,6 +72,18 @@ core.register_entity("nhv:showroom_pedestal", {
 		end
 	end,
 })
+
+-- the pedestal's look: the dungeon's floor on top, its wall on the sides
+-- (the game's own blocks' pictures)
+local function tile_name(node)
+	local def = core.registered_nodes[node]
+	local t = def and def.tiles and def.tiles[1]
+	return type(t) == "table" and t.name or t or "blank.png"
+end
+local function pedestal_look()
+	local top, side = tile_name("nhv:floor"), tile_name("nhv:wall")
+	return {textures = {top, top, side, side, side, side}}
+end
 
 -- where the scene stands, from where you are: ahead of you and to your left
 -- (the form covers the right of the screen), a little below your eyes
@@ -147,6 +157,9 @@ local function draw(player)
 	if not (ped and ped:get_pos()) then
 		ped = core.add_entity(base, "nhv:showroom_pedestal")
 		showroom.objs.pedestal = ped
+		if ped then
+			ped:set_properties(pedestal_look())
+		end
 	end
 	if ped then
 		ped:set_pos(base)
