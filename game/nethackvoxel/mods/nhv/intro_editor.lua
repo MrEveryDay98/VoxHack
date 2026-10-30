@@ -166,11 +166,31 @@ local function next_index()
 	return n + 1
 end
 
-local TRANSITIONS = {{"glide", "Glide to the next point"}, {"black", "Fade to black, then cut to it"},
-	{"white", "Fade to white, then cut to it"}}
+local TRANSITIONS = {{"glide", "Glide to the next point"}, {"cut", "Cut to the next point"},
+	{"black", "Fade out to black, then cut to it"}, {"white", "Fade out to white, then cut to it"}}
+-- how it starts, as the camera gets here (nil: as the last point faded out
+-- - the first point: from black)
+local FADE_INS = {{nil, "As the last point faded out"}, {"", "No fade"}, {"black", "Fade in from black"},
+	{"white", "Fade in from white"}}
 
 local function esc(s)
 	return core.formspec_escape(tostring(s or ""))
+end
+
+local function fade_in_names()
+	local names = {}
+	for i, f in ipairs(FADE_INS) do
+		names[i] = f[2]
+	end
+	return table.concat(names, ",")
+end
+local function fade_in_index(v)
+	for i, f in ipairs(FADE_INS) do
+		if f[1] == v then
+			return i
+		end
+	end
+	return 1
 end
 
 local function cam_form(pos, c)
@@ -192,7 +212,9 @@ local function cam_form(pos, c)
 		"field[0.4,6.4;3,0.8;seconds;Otherwise: seconds;", esc(c.seconds or 3), "]",
 		"field[3.8,6.4;3,0.8;delay;Wait first: seconds;", esc(c.delay or 0), "]",
 		"label[0.4,7.6;How it goes on]",
-		"dropdown[0.4,7.9;7,0.8;transition;", table.concat(names, ","), ";", sel, ";true]",
+		"dropdown[0.4,7.9;5.1,0.8;transition;", table.concat(names, ","), ";", sel, ";true]",
+		"label[5.8,7.6;How it starts here]",
+		"dropdown[5.8,7.9;4.8,0.8;fade_in;", fade_in_names(), ";", fade_in_index(c.fade_in), ";true]",
 		"button[0.4,9.3;3,0.8;view;Take my view]",
 		"button[3.6,9.3;3.4,0.8;look;Look through it]",
 		"button_exit[7.6,9.3;3,0.8;save;Save]",
@@ -440,6 +462,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	local tr = tonumber(fields.transition)
 	if tr and TRANSITIONS[tr] then
 		c.transition = TRANSITIONS[tr][1]
+	end
+	local fi = tonumber(fields.fade_in)
+	if fi and FADE_INS[fi] then
+		c.fade_in = FADE_INS[fi][1]
 	end
 	if fields.view then
 		c.yaw, c.pitch = player:get_look_horizontal(), player:get_look_vertical()

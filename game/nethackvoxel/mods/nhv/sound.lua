@@ -572,8 +572,9 @@ end
 -- settings, if any), or nil if it isn't voiced live by SAM
 function sam_settings(speaker, who, ln)
 	ln = ln or {}
-	-- (NetHack options > Spoken lines off: SAM says nothing)
-	if not nhv.nhopts.get("sam_voices") then
+	-- (NetHack options > Spoken lines off: SAM says nothing - the intro
+	-- editor has no options of its own: it speaks)
+	if nhv.nhopts and not nhv.nhopts.get("sam_voices") then
 		return nil
 	end
 	local sc = sound.cast.speakers[speaker]
@@ -1104,7 +1105,7 @@ end
 -- before the dungeon exists (character selection)
 core.register_on_joinplayer(function()
 	core.after(1, function()
-		if not nh.snap then
+		if not nh.snap and not nhv.INTRO_EDITOR then
 			sound.set_music("music_title")
 		end
 	end)

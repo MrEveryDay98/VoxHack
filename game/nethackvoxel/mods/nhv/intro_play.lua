@@ -7,10 +7,12 @@
 -- and signs (intro.json): the game puts the forest up out of the way
 -- (ORIGIN: once, and again when it's saved anew) and plays it there.
 --
--- At each camera point: its line starts as the camera gets there; it waits
--- (delay), then goes on to the next point - gliding there (in the line's
--- time, or so many seconds), or fading to black or white for as long,
--- jumping there and fading back. The VoxHack engine flies the camera
+-- At each camera point: it fades in as the camera gets there (from black or
+-- white, or not; as the last point faded out if it isn't said - the first:
+-- from black), and its line starts; it waits (delay), then goes on to the
+-- next point - gliding there (in the line's time, or so many seconds),
+-- cutting to it after as long, or fading out to black or white for as long
+-- and cutting to it. The VoxHack engine flies the camera
 -- (core.nhv_camera_path: smooth, every frame); this times the rest.
 --
 --   intro_play.ready()                the game has an opening to play
@@ -90,18 +92,42 @@ end
 -- The timeline: the camera's points (for the engine) and what happens when
 -- (lines, fades) - times in seconds from the start; at: added to every
 -- point's place (where the forest is)
+local COLOR = {black = "#000000", white = "#FFFFFF"}
 local function timeline(points, at)
 	local cam, events = {}, {}
 	local function key(t, p, cut)
 		cam[#cam + 1] = {t = t, pos = vector.add(at, p.pos), yaw = p.yaw or 0, pitch = p.pitch or 0, cut = cut}
 	end
-	local t = OPEN_S
+	local function event(e)
+		e.n = #events -- (the order they're put in, for ones at the same time)
+		events[#events + 1] = e
+	end
+	local t = 0
 	key(0, points[1])
+	local last_out = "black" -- (the screen's black as it starts)
 	for i, p in ipairs(points) do
+		-- (in: as set - or as the last point went out)
+		local fade_in = p.fade_in
+		if fade_in == nil then
+			fade_in = last_out
+		end
+		if COLOR[fade_in] then
+			-- (that colour now - at once if it isn't already - then from it)
+			if fade_in ~= last_out then
+				event({t = t, fade = COLOR[fade_in], out = true, dur = 0})
+			end
+			event({t = t, fade = COLOR[fade_in], out = false})
+		elseif last_out then
+			event({t = t, fade = COLOR[last_out], out = false, dur = 0})
+		end
+		if i == 1 and COLOR[fade_in] then
+			t = t + OPEN_S
+		end
+		last_out = nil
 		local secs, voiced = line_seconds(p)
 		if secs > 0 then
-			events[#events + 1] = {t = t, line = p, voiced = voiced}
-			events[#events + 1] = {t = t + secs + 0.3, line = false}
+			event({t = t, line = p, voiced = voiced})
+			event({t = t + secs + 0.3, line = false, of = p})
 		end
 		local delay = tonumber(p.delay) or 0
 		local move = p.sync ~= false and secs > 0 and secs or (tonumber(p.seconds) or 3)
@@ -112,27 +138,61 @@ local function timeline(points, at)
 		local nxt = points[i + 1]
 		if not nxt then
 			t = t + math.max(delay, secs) + CLOSE_S
-			events[#events + 1] = {t = t, fade = "#000000", out = true}
-			events[#events + 1] = {t = t + FADE_S + 0.2, done = true}
+			event({t = t, fade = "#000000", out = true})
+			event({t = t + FADE_S + 0.2, done = true})
 			break
 		end
-		if p.transition == "black" or p.transition == "white" then
-			local color = p.transition == "white" and "#FFFFFF" or "#000000"
+		if COLOR[p.transition] then
 			-- (it waits, then fades out for the time set - its line's, or
-			-- the seconds - jumps there and fades back in)
+			-- the seconds - and cuts there)
 			local out_t = t + delay + math.max(move - FADE_S, 0)
-			events[#events + 1] = {t = out_t, fade = color, out = true}
+			event({t = out_t, fade = COLOR[p.transition], out = true})
 			t = out_t + FADE_S
 			key(t, nxt, true)
-			events[#events + 1] = {t = t, fade = color, out = false}
+			last_out = p.transition
+		elseif p.transition == "cut" then
+			t = t + delay + move
+			key(t, nxt, true)
 		else
 			t = t + delay + move
 		end
 	end
+	table.sort(events, function(a, b)
+		if a.t ~= b.t then
+			return a.t < b.t
+		end
+		return a.n < b.n
+	end)
 	return cam, events
 end
 
 local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
+
+-- the fade (the game's: hud.fade; the intro editor has its own, here)
+local function fade(to, seconds, color)
+	if nhv.hud and nhv.hud.fade then
+		nhv.hud.fade(to, seconds, color)
+		return
+	end
+	local f = run.fade
+	local now = core.get_us_time()
+	local level = f and (f.from + (f.to - f.from) * math.min(1, (now - f.t0) / math.max(1, f.dur))) or 0
+	run.fade = {from = level, to = to, t0 = now, dur = (seconds or 0) * 1e6, color = color or "#000000"}
+end
+local function draw_fade()
+	local f = run.fade
+	if not f or not run.fade_id then
+		return
+	end
+	local k = math.min(1, (core.get_us_time() - f.t0) / math.max(1, f.dur))
+	local a = math.floor((f.from + (f.to - f.from) * k) * 255 + 0.5)
+	local text = a > 0 and ("[fill:16x16:%s^[opacity:%d"):format(f.color, a) or ""
+	if text ~= run.fade_text then
+		run.fade_text = text
+		run.player:hud_change(run.fade_id, "text", text)
+	end
+end
+
 local FORM = "nhv:opening"
 
 local function skip_formspec()
@@ -147,6 +207,9 @@ local function hide_huds(player)
 	local keep = {}
 	for _, id in ipairs(run.ids) do
 		keep[id] = true
+	end
+	if run.fade_id then
+		keep[run.fade_id] = true
 	end
 	for id, def in pairs(player:hud_get_all() or {}) do
 		-- (not the hotbar: off by its flag, below - moved away it's drawn
@@ -174,6 +237,9 @@ local function finish()
 	end
 	for _, id in ipairs(run.ids) do
 		player:hud_remove(id)
+	end
+	if run.fade_id then
+		player:hud_remove(run.fade_id)
 	end
 	for id, pos in pairs(run.huds) do
 		local def = player:hud_get(id)
@@ -212,12 +278,12 @@ local function play(player, data, at, done)
 	run = {player = player, t0 = core.get_us_time(), ids = {}, huds = {}, signs = {}, done = done,
 		ratio = player:get_day_night_ratio(), sky = player:get_sky(true)}
 	local cam, events = timeline(data.points, at)
-	table.sort(events, function(a, b) return a.t < b.t end)
 	run.events, run.next_ev = events, 1
-	-- the words: white, with a shadow, low in the middle
+	-- the words: white, with a shadow, low in the middle (a longer line goes
+	-- further up)
 	for _, l in ipairs({{0x000000, 2}, {0xFFFFFF, 0}}) do
 		run.ids[#run.ids + 1] = player:hud_add({
-			type = "text", position = {x = 0.5, y = 0.84}, alignment = {x = 0, y = 1},
+			type = "text", position = {x = 0.5, y = 0.9}, alignment = {x = 0, y = -1},
 			offset = {x = l[2], y = l[2]}, size = {x = 1, y = 0}, number = l[1], text = "",
 			z_index = 60,
 		})
@@ -261,8 +327,13 @@ local function play(player, data, at, done)
 	local mid = vector.add(at, vector.divide(vector.add(data.min, data.max), 2))
 	player:set_pos(vector.new(mid.x, at.y + data.max.y + 2, mid.z))
 	core.nhv_camera_path(cam)
-	if nhv.hud then
-		nhv.hud.fade(0, OPEN_S)
+	if not (nhv.hud and nhv.hud.fade) then
+		-- (the editor's own fade: over the whole screen, black to start)
+		run.fade_id = player:hud_add({
+			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
+			scale = {x = -100, y = -100}, text = "", z_index = 50,
+		})
+		run.fade = {from = 1, to = 1, t0 = core.get_us_time(), dur = 1, color = "#000000"}
 	end
 	core.show_formspec(player:get_player_name(), FORM, skip_formspec())
 end
@@ -278,9 +349,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			nhv.sound.hush("opening")
 		end
 		set_words("")
-		if nhv.hud then
-			nhv.hud.fade(1, FADE_S)
-		end
+		fade(1, FADE_S)
 		local now = (core.get_us_time() - run.t0) / 1e6
 		run.events = {{t = now + FADE_S + 0.2, done = true}}
 		run.next_ev = 1
@@ -300,6 +369,7 @@ core.register_globalstep(function()
 		return
 	end
 	hide_huds(run.player)
+	draw_fade()
 	local now = (core.get_us_time() - run.t0) / 1e6
 	while run and run.events[run.next_ev] and run.events[run.next_ev].t <= now do
 		local ev = run.events[run.next_ev]
@@ -308,20 +378,19 @@ core.register_globalstep(function()
 			finish()
 		elseif ev.line ~= nil then
 			if ev.line then
+				run.saying = ev.line
 				set_words(wrap(ev.line.line))
 				if ev.voiced and nhv.sound then
 					local p = ev.line
 					nhv.sound.say(p.voice or "Narrator", p.line, "opening", p.mood ~= "" and p.mood or nil)
 				end
-			else
+			elseif ev.of == run.saying then
+				-- (its own line's done - not the next one's, already up)
+				run.saying = nil
 				set_words("")
 			end
-		elseif ev.fade and nhv.hud then
-			if ev.out then
-				nhv.hud.fade(1, FADE_S, ev.fade)
-			else
-				nhv.hud.fade(0, FADE_S, ev.fade)
-			end
+		elseif ev.fade then
+			fade(ev.out and 1 or 0, ev.dur or FADE_S, ev.fade)
 		end
 	end
 end)
