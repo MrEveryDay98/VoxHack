@@ -121,6 +121,24 @@ local function load_cast()
 end
 load_cast()
 
+-- moods (moods.json): how a line is said - angry, sad, a whisper... (a
+-- line's "mood" in the voice casting; the editor reads the same file)
+sound.moods = {}
+do
+	local f = io.open(MODPATH .. DIR_DELIM .. "moods.json", "rb")
+	local moods = f and core.parse_json(f:read("*a"))
+	if f then
+		f:close()
+	end
+	if type(moods) == "table" then
+		for k, v in pairs(moods) do
+			if type(v) == "table" then
+				sound.moods[k] = v
+			end
+		end
+	end
+end
+
 local reload_t = 0
 core.register_globalstep(function(dtime)
 	reload_t = reload_t + dtime
@@ -480,7 +498,7 @@ end
 -- line's real text as it happens (your name, your god...), nothing is
 -- recorded. The engine speaks a sound named
 -- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>,<effects>,<hifi>,
--- <brightness>,<breath>,<pitch movement>,<hiss>|<text>" (hi-fi's tuning in percent)
+-- <brightness>,<breath>,<pitch movement>,<hiss>,<whisper>|<text>" (hi-fi's tuning in percent)
 -- and reads its words through the pronunciation dictionary
 -- (mods/nhv_sounds/sam_dictionary.txt, edited in the editor).
 core.settings:set("nhv_sam_dict", MODPATH .. DIR_DELIM .. "sam_dictionary.txt")
@@ -567,7 +585,7 @@ function sam_settings(speaker, who, ln)
 		smooth = ss.smooth and 1 or 0, tone = ss.tone == false and 0 or 1, pitch_mul = 1,
 		hifi = ss.hifi and 1 or 0, -- (SAM in hi-fi: sam_hifi.h; tuned in percent)
 		bright = tonumber(ss.bright) or 100, breath = tonumber(ss.breath) or 100,
-		movement = tonumber(ss.movement) or 100, hiss = tonumber(ss.hiss) or 100,
+		movement = tonumber(ss.movement) or 100, hiss = tonumber(ss.hiss) or 100, whisper = 0,
 		effects = effect_chain(ss.effects),
 		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil}
 	-- a line can take another of SAM's named voices
@@ -593,6 +611,21 @@ function sam_settings(speaker, who, ln)
 	end
 	if mon and mon.mon and ss.size ~= false then
 		st.pitch_mul = SIZE_PITCH[mon.mon.size or 2] or 1
+	end
+	-- the line's mood: said quicker or slower, higher or lower, its hi-fi
+	-- tuning changed (and in hi-fi, whatever the speaker's sound)
+	local mood = sound.moods[ln.mood or ""]
+	if mood then
+		st.speed = st.speed * (tonumber(mood.speed) or 1)
+		st.pitch = st.pitch + (tonumber(mood.pitch) or 0)
+		-- (more: from at least as made - a speaker with no breath still
+		-- breathes when sad; less: the speaker's own, less)
+		for _, k in ipairs({"bright", "breath", "movement", "hiss"}) do
+			local pct = tonumber(mood[k]) or 100
+			st[k] = math.floor((pct > 100 and math.max(st[k], 100) or st[k]) * pct / 100 + 0.5)
+		end
+		st.hifi, st.smooth = 1, 0
+		st.whisper = mood.whisper and 1 or 0
 	end
 	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
 		st[k] = clamp255(st[k])
@@ -625,9 +658,9 @@ local function sam_name(st, text)
 	if not text:find("%w") then
 		return nil
 	end
-	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s,%d,%d,%d,%d,%d|%s"):format(st.speed, st.pitch, st.throat,
+	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s,%d,%d,%d,%d,%d,%d|%s"):format(st.speed, st.pitch, st.throat,
 		st.mouth, st.sing, st.smooth, st.tone, st.effects, st.hifi, st.bright, st.breath, st.movement,
-		st.hiss, text)
+		st.hiss, st.whisper or 0, text)
 end
 
 local function speak_sam(st, text, pos, key)
@@ -651,15 +684,16 @@ end
 
 -- A line said by a speaker of the voice casting (SAM, live), now: the
 -- ascension's god (cutscene.lua). False if that speaker isn't SAM's.
-function sound.say(speaker, text, key)
-	local st = sam_settings(speaker)
+-- mood: how it's said (moods.json), if not as the speaker always does.
+function sound.say(speaker, text, key, mood)
+	local st = sam_settings(speaker, nil, {mood = mood})
 	return st and speak_sam(st, text, nil, key or speaker) or false
 end
 
 -- how long that speaker takes to say it, in seconds (0: not SAM's, or
 -- nothing to say - or the voices are off)
-function sound.say_seconds(speaker, text)
-	local st = sam_settings(speaker)
+function sound.say_seconds(speaker, text, mood)
+	local st = sam_settings(speaker, nil, {mood = mood})
 	local name = st and sam_name(st, text)
 	return name and core.nhv_sam_seconds and core.nhv_sam_seconds(name) or 0
 end

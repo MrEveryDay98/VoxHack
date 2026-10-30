@@ -118,7 +118,7 @@ def migrate_cast(cast):
         if ln.get("spoken") and not ln.get("sam_text"):
             ln["sam_text"] = ln["spoken"]
         for k in list(ln):
-            if k not in ("cast", "sam_voice", "sam_text"):
+            if k not in ("cast", "sam_voice", "sam_text", "mood"):
                 del ln[k]
         if not ln:
             del cast["lines"][line_id]
@@ -144,9 +144,10 @@ def monster_dice(m_id):
     return out
 
 
-def settings_for(sam, m_id=0, female=False):
+def settings_for(sam, m_id=0, female=False, moods=None):
     """A speaker's SAM settings as the game works them out for a monster
-    (m_id) of that speaker: its variation, and higher if female."""
+    (m_id) of that speaker: its variation, and higher if female; and the
+    line's mood (sam["mood"], one of moods: moods.json) as sound.lua has it."""
     sam = sam or {}
     base = SAM_VOICES.get(sam.get("voice") or "SAM", SAM_VOICES["SAM"])
     st = {}
@@ -169,6 +170,15 @@ def settings_for(sam, m_id=0, female=False):
               tuning={k: int(sam.get(k, 100) or 0) for k in HIFI_TUNING},
               tone=sam.get("tone") is not False,
               effects=effect_chain(sam.get("effects")))
+    mood = (moods or {}).get(sam.get("mood") or "")
+    if isinstance(mood, dict):
+        st["speed"] = _clamp(st["speed"] * float(mood.get("speed", 1)))
+        st["pitch"] = _clamp(st["pitch"] + float(mood.get("pitch", 0)))
+        # (more: from at least as made; less: the speaker's own, less - sound.lua)
+        pct = {k: float(mood.get(k, 100)) for k in st["tuning"]}
+        st["tuning"] = {k: int((max(v, 100) if pct[k] > 100 else v) * pct[k] / 100 + 0.5)
+                        for k, v in st["tuning"].items()}
+        st.update(hifi=True, smooth=False, whisper=bool(mood.get("whisper")))
     return st
 
 
@@ -177,6 +187,7 @@ HIFI_TUNING = ("bright", "breath", "movement", "hiss")
 
 class Voices:
     def __init__(self, root, mod):
+        self.mod = mod
         self.cast_path = os.path.join(mod, "voice_cast.json")
         self.dict_path = os.path.join(mod, "sam_dictionary.txt")
         self.tool = os.path.join(root, "build", "sam", "samtool.exe")
@@ -210,6 +221,14 @@ class Voices:
         os.replace(tmp, self.dict_path)
 
     # -- SAM
+    def moods(self):
+        """moods.json: a line's moods (as the game has them)"""
+        try:
+            with open(os.path.join(self.mod, "moods.json"), encoding="utf-8") as f:
+                return {k: v for k, v in json.load(f).items() if isinstance(v, dict)}
+        except (OSError, ValueError):
+            return {}
+
     def installed(self):
         return os.path.exists(self.tool)
 
@@ -220,6 +239,7 @@ class Voices:
         args += (["--sing"] if st.get("sing") else []) + (["--smooth"] if st.get("smooth") else [])
         if st.get("hifi"):
             args += ["--hifi"] + [x for k, v in st.get("tuning", {}).items() for x in ("--" + k, str(v))]
+        args += ["--whisper"] if st.get("whisper") else []
         args += [] if st.get("tone", True) else ["--no-tone"]
         args += ["--fx", st["effects"]] if st.get("effects") else []
         r = subprocess.run(args + extra, input=text.encode("utf-8"), capture_output=True,
@@ -239,7 +259,7 @@ class Voices:
         frames = b""
         for i, m_id in enumerate(ids):
             part = self.sample_path + ".part"
-            r = self._run(settings_for(sam, m_id, female), text or SAMPLE_TEXT, ["--wav", part])
+            r = self._run(settings_for(sam, m_id, female, self.moods()), text or SAMPLE_TEXT, ["--wav", part])
             if r.returncode or not os.path.exists(part):
                 raise ValueError("SAM couldn't say that")
             with wave.open(part, "rb") as w:

@@ -6,7 +6,7 @@
 //
 //   samtool [--speed N] [--pitch N] [--throat N] [--mouth N] [--sing]
 //           [--phonetic] [--smooth] [--hifi] [--bright %] [--breath %] [--movement %]
-//           [--hiss %] [--no-tone] [--dict FILE] [--fx CHAIN]
+//           [--hiss %] [--whisper] [--no-tone] [--dict FILE] [--fx CHAIN]
 //           (--wav OUT.wav | --phonemes)    < text (UTF-8)
 //
 // --wav writes 16-bit mono at 22050 Hz; --phonemes prints the phonemes SAM
@@ -40,6 +40,7 @@ int main(int argc, char **argv)
 		else if (a == "--phonetic") s.phonetic = true;
 		else if (a == "--smooth") s.smooth = true;
 		else if (a == "--hifi") s.hifi = true;
+		else if (a == "--whisper") s.whisper = true;
 		else if (a == "--bright" || a == "--breath" || a == "--movement" || a == "--hiss") {
 			// (hi-fi's tuning, in percent)
 			int pct = 100;

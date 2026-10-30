@@ -70,7 +70,8 @@ const Voices = (() => {
   function samFor(d) {
     const ss = samOf(lineCast(d));
     const ln = cast.lines[d.id] || {};
-    return ln.sam_voice && sam.voices[ln.sam_voice] ? Object.assign({}, ss, { voice: ln.sam_voice }, sam.voices[ln.sam_voice]) : ss;
+    const own = ln.sam_voice && sam.voices[ln.sam_voice] ? Object.assign({}, ss, { voice: ln.sam_voice }, sam.voices[ln.sam_voice]) : ss;
+    return ln.mood ? Object.assign({}, own, { mood: ln.mood }) : own;
   }
   // what SAM reads for a line in the editor: its own SAM text, else the
   // catalog text (the game reads the real one, names and all)
@@ -126,7 +127,13 @@ const Voices = (() => {
       ...Object.keys(sam.voices).map((v) => el("option", { value: v, selected: v === ln.sam_voice || null }, v)));
     const hearBtn = el("button", { class: "icon", "aria-label": "Hear SAM say this line", title: "Hear SAM say this line",
       disabled: !sam.installed || null, onclick: () => hear(hearBtn, samFor(d), samText(d)) }, "▶");
+    // how it's said (moods.json; a mood says it in hi-fi)
+    const moodSel = el("select", { "aria-label": "Mood of this line", title: "How the line is said (in hi-fi)",
+      onchange: (e) => { setLine(d.id, "mood", e.target.value); redrawLine(d.id); } },
+      el("option", { value: "" }, "Normal"),
+      ...Object.entries(sam.moods || {}).map(([k, label]) => el("option", { value: k, selected: k === ln.mood || null }, label)));
     box.append(el("div", { class: "genpick" }, el("label", {}, el("span", {}, "SAM"), el("div", { class: "with-play" }, sel, hearBtn))),
+      el("div", { class: "genpick" }, el("label", {}, el("span", {}, "Mood"), moodSel)),
       el("div", { class: "jobnote" }, live ? "Spoken live by SAM in the game."
         : `Not spoken: tick “Speak live with SAM” for ${lineCast(d)} in Voice casting.`));
     return box;

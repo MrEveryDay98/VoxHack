@@ -1,0 +1,8 @@
+{
+  "_about": "A line's mood (Voice casting, per line): how its speaker says it. speed: times SAM's speed (higher: slower); pitch: added to SAM's pitch (lower: a higher voice); bright, breath, movement, hiss: percent of the speaker's hi-fi tuning; whisper: breath alone, no voice. A mood says its line in hi-fi. Read by the game (sound.lua) and the editor (samvoice.py).",
+  "angry":   {"label": "Angry",   "speed": 0.85, "pitch": -8,  "bright": 130, "breath": 60,  "movement": 190, "hiss": 130},
+  "sad":     {"label": "Sad",     "speed": 1.2,  "pitch": 10,  "bright": 75,  "breath": 250, "movement": 60,  "hiss": 80},
+  "afraid":  {"label": "Afraid",  "speed": 0.85, "pitch": -12, "bright": 110, "breath": 180, "movement": 260, "hiss": 100},
+  "calm":    {"label": "Calm",    "speed": 1.15, "pitch": 6,   "bright": 90,  "breath": 90,  "movement": 55,  "hiss": 90},
+  "whisper": {"label": "Whisper", "speed": 1.1,  "pitch": 0,   "bright": 100, "breath": 100, "movement": 100, "hiss": 70,  "whisper": true}
+}

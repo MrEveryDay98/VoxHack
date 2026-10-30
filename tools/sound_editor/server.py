@@ -343,7 +343,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/sam":
             return self.send(200, {"installed": VOICES.installed(), "voices": samvoice.SAM_VOICES,
                                    "effects": samvoice.EFFECTS, "presets": samvoice.EFFECT_PRESETS,
-                                   "dictionary": VOICES.load_dict()})
+                                   "dictionary": VOICES.load_dict(),
+                                   "moods": {k: v.get("label", k) for k, v in VOICES.moods().items()}})
         return self.send(404, {"error": "not found"})
 
     # -------------------------------------------------------------- PUT
