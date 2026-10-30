@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.11.0 (alpha) - 2026-10-29
+
+- **A new title screen and character creation.** Both stand under the Astral Plane's sky, with title music. Making a character, you see them close up on a pedestal, with your pet beside them (the role's own, a kitten or a little dog, or none). They change as you choose: role and gender pick the picture, and Random goes round them all.
+- **Demos.** Options > Record demos records each game you play, from when it starts, into the game's demos folder. Drop a demo onto "Play Demo.bat" in that folder to watch it, or run it on its own for the newest. Space pauses, W and S speed it up and slow it down, Esc leaves. A demo shows everything you saw: the level, the monsters, the sounds and music, the HUD, messages, menus and your inventory. It's played back as it was recorded, with no game running. Demos are compressed (a few hundred KB to a few MB), and they play in any VoxHack that speaks the same network protocol.
+
 ## v0.10.4 (alpha) - 2026-10-28
 
 - Fixed: the tunnels round the Oracle's Delphi had no ceiling. A special level filled in with rooms and corridors round its map (the Oracle's, Minetown) is no longer opened to the sky with it; levels set in rock, ice or the sea are as before.
