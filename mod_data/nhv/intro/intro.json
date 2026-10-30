@@ -44,6 +44,16 @@
 				"z" : 140
 			},
 			"texture" : "worldbuilding_sprites.png^[sheet:4x4:1,2"
+		},
+		{
+			"h" : 2,
+			"pos" : 
+			{
+				"x" : 64,
+				"y" : 0,
+				"z" : 217
+			},
+			"tile" : 2129
 		}
 	],
 	"fog" : 
@@ -158,6 +168,43 @@
 			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 3.6559412479400635
+		},
+		{
+			"delay" : 0,
+			"fade_in" : "black",
+			"index" : 6,
+			"line" : "Asking around, you hear about a bauble, called the Amulet of Yendor by some, which, if you can find it, will bring you great wealth. One legend you were told even mentioned that the one who finds the amulet will be granted immortality by the gods. The amulet is rumored to be somewhere beyond the Valley of Gehennom, deep within the Mazes of Menace.",
+			"mood" : "calm",
+			"pitch" : 0.032812189310789108,
+			"pos" : 
+			{
+				"x" : 15,
+				"y" : -14,
+				"z" : 58
+			},
+			"seconds" : 3,
+			"sync" : true,
+			"transition" : "glide",
+			"voice" : "Narrator",
+			"yaw" : 1.5622444152832031
+		},
+		{
+			"delay" : 0,
+			"index" : 7,
+			"line" : "",
+			"mood" : "calm",
+			"pitch" : 0.037524580955505371,
+			"pos" : 
+			{
+				"x" : -14,
+				"y" : -14,
+				"z" : 58
+			},
+			"seconds" : 1,
+			"sync" : false,
+			"transition" : "black",
+			"voice" : "Narrator",
+			"yaw" : 1.5908676385879517
 		},
 		{
 			"delay" : 0,
@@ -4408,5 +4455,5 @@
 			"z" : 240
 		}
 	],
-	"version" : 1793391726
+	"version" : 1793392986
 }
