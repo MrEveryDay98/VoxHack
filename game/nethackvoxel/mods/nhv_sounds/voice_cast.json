@@ -12,8 +12,9 @@
     "mouth": 187,
     "live": true,
     "variation": 0,
-    "smooth": true,
-    "female": 40
+    "smooth": false,
+    "female": 40,
+    "hifi": true
    }
   },
   "Quest (Rog)": {
@@ -48,7 +49,7 @@
     "throat": 145,
     "mouth": 145,
     "live": true,
-    "smooth": true,
+    "smooth": false,
     "effects": [
      {
       "type": "echo",
@@ -56,7 +57,8 @@
       "decay": 0.45,
       "repeats": 5
      }
-    ]
+    ],
+    "hifi": true
    }
   },
   "Wizard of Yendor": {
@@ -65,9 +67,9 @@
     "sing": false,
     "volume": 100,
     "speed": 72,
-    "pitch": 169,
-    "throat": 49,
-    "mouth": 169,
+    "pitch": 156,
+    "throat": 152,
+    "mouth": 255,
     "live": true,
     "effects": [
      {
@@ -81,10 +83,13 @@
      {
       "type": "reverb",
       "room": 46,
-      "mix": 30
+      "mix": 30,
+      "off": true
      }
     ],
-    "smooth": true
+    "smooth": false,
+    "hifi": true,
+    "female": 5
    }
   },
   "Text": {
@@ -94,8 +99,9 @@
     "pitch": 64,
     "throat": 128,
     "mouth": 128,
-    "smooth": true,
-    "live": false
+    "smooth": false,
+    "live": false,
+    "hifi": true
    }
   },
   "The Oracle": {
@@ -105,8 +111,9 @@
     "pitch": 32,
     "throat": 145,
     "mouth": 145,
-    "smooth": true,
-    "live": true
+    "smooth": false,
+    "live": true,
+    "hifi": true
    }
   },
   "Priest": {
@@ -116,8 +123,9 @@
     "pitch": 64,
     "throat": 96,
     "mouth": 83,
-    "smooth": true,
-    "live": true
+    "smooth": false,
+    "live": true,
+    "hifi": true
    }
   },
   "Mail daemon": {
@@ -144,8 +152,9 @@
     ],
     "sing": true,
     "tone": true,
-    "smooth": true,
-    "live": true
+    "smooth": false,
+    "live": true,
+    "hifi": true
    }
   },
   "Voice": {
@@ -207,7 +216,9 @@
     "pitch": 64,
     "throat": 128,
     "mouth": 128,
-    "live": true
+    "live": true,
+    "smooth": false,
+    "hifi": true
    }
   },
   "Monster": {
@@ -221,7 +232,8 @@
     "smooth": false,
     "variation": 75,
     "sing": false,
-    "effects": []
+    "effects": [],
+    "hifi": true
    }
   },
   "Minetown watch": {
@@ -232,19 +244,22 @@
     "throat": 100,
     "mouth": 112,
     "live": true,
-    "smooth": true,
+    "smooth": false,
     "variation": 40,
-    "female": 16
+    "female": 16,
+    "hifi": true
    }
   },
   "Quest (Val)": {
    "sam": {
     "voice": "Little Old Lady",
     "speed": 82,
-    "pitch": 79,
+    "pitch": 34,
     "throat": 145,
     "mouth": 145,
-    "live": true
+    "live": true,
+    "smooth": false,
+    "hifi": true
    }
   },
   "Narrator": {
@@ -254,17 +269,20 @@
     "pitch": 128,
     "throat": 145,
     "mouth": 145,
-    "smooth": true,
+    "smooth": false,
     "live": true,
     "effects": [
      {
       "type": "echo",
       "delay": 250,
       "decay": 0.4,
-      "repeats": 3
+      "repeats": 3,
+      "off": true
      }
     ],
-    "volume": 100
+    "volume": 100,
+    "hifi": true,
+    "tone": false
    }
   }
  },
