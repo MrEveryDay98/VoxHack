@@ -29,6 +29,8 @@
 --                          a form to set it, or 6:30, dawn, noon, dusk, night
 --   /intro_fog             the opening's fog: its colour, how far you see
 --                          through it, where it starts (or the game's)
+--   /sel, /copy, /paste, /fill, /clear, /replace, /walls, /undo, /desel:
+--                          the prefab editor's tools (editor_tools.lua)
 --   /intro_light [0-14]    the light that goes with the camera: how bright
 --                          (a light level; 0 none) - round you here too
 --   /intro_save [ymin ymax]  save it for the game (the forest from ymin to
@@ -36,6 +38,15 @@
 
 local intro_editor = {}
 nhv.intro_editor = intro_editor
+
+-- the prefab editor's tools work here too (editor_tools.lua: /sel, /copy,
+-- /paste, /fill, /replace, /undo...): what they ask of the prefab editor -
+-- nothing to mark for saving, no special level areas, the block last put
+-- down (the default for /fill)
+nhv.editor = nhv.editor or {
+	mark_box = function() end,
+	area_box = function() return nil end,
+}
 
 local AREA = 256
 local storage = core.get_mod_storage()
@@ -526,8 +537,10 @@ core.override_item("", {
 	},
 })
 
--- placing never uses up blocks (as in the prefab editor)
-core.register_on_placenode(function()
+-- placing never uses up blocks (as in the prefab editor; the last one put
+-- down is /fill's)
+core.register_on_placenode(function(_, newnode)
+	nhv.editor.last_placed = newnode and newnode.name
 	return true
 end)
 
@@ -668,9 +681,10 @@ core.register_chatcommand("intro_time", {
 })
 
 -- ---------------------------------------------------------------- the fog
--- the opening's ({on, color, distance (nodes: how far you see), start (0..1:
--- clear up to there)}; not on: the game's)
-local FOG_DEFAULT = {on = false, color = "#B8C4CC", distance = 120, start = 0.3}
+-- the opening's ({on, color, distance (nodes: how far it thickens to its
+-- most), start (0..1: clear up to there), max (0..100: how thick at most -
+-- what's further is drawn, through it)}; not on: the game's)
+local FOG_DEFAULT = {on = false, color = "#B8C4CC", distance = 120, start = 0.3, max = 85}
 local FOG_COLORS = {{"Mist", "#C8D0D8"}, {"Grey", "#808890"}, {"Dusk", "#C08870"}, {"Night", "#101828"},
 	{"Swamp", "#7C9068"}, {"Ghostly", "#9080B0"}}
 function intro_editor.fog()
@@ -689,7 +703,7 @@ local function set_fog(f)
 end
 local function fog_form()
 	local f = intro_editor.fog()
-	local fs = {"formspec_version[6]size[10.4,7.4]",
+	local fs = {"formspec_version[6]size[10.4,8.7]",
 		"checkbox[0.4,0.6;on;Fog of its own (otherwise the game's);", f.on and "true" or "false", "]",
 		"field[0.4,1.5;3,0.8;color;Colour;", esc(f.color), "]",
 		"button[3.6,1.5;1.6,0.8;setcolor;Set]"}
@@ -698,13 +712,16 @@ local function fog_form()
 		fs[#fs + 1] = ("style[fogc_%d;bgcolor=%s]"):format(i, c[2])
 		fs[#fs + 1] = ("button[%f,2.6;1.5,0.8;fogc_%d;%s]"):format(x, i, c[1])
 	end
-	fs[#fs + 1] = ("label[0.4,3.9;How far you can see: %d blocks]"):format(f.distance)
+	fs[#fs + 1] = ("label[0.4,3.9;Thickest from: %d blocks]"):format(f.distance)
 	fs[#fs + 1] = "scrollbaroptions[min=10;max=400;smallstep=5;largestep=25]"
 	fs[#fs + 1] = ("scrollbar[0.4,4.2;9.6,0.5;horizontal;distance;%d]"):format(f.distance)
 	fs[#fs + 1] = ("label[0.4,5.2;Clear up to: %d%% of that]"):format(math.floor(f.start * 100 + 0.5))
 	fs[#fs + 1] = "scrollbaroptions[min=0;max=95;smallstep=5;largestep=10]"
 	fs[#fs + 1] = ("scrollbar[0.4,5.5;9.6,0.5;horizontal;start;%d]"):format(math.floor(f.start * 100 + 0.5))
-	fs[#fs + 1] = "button_exit[7.8,6.4;2.2,0.8;close;Done]"
+	fs[#fs + 1] = ("label[0.4,6.5;How thick at most: %d%% (what's further shows through)]"):format(f.max or 85)
+	fs[#fs + 1] = "scrollbaroptions[min=10;max=100;smallstep=5;largestep=10]"
+	fs[#fs + 1] = ("scrollbar[0.4,6.8;9.6,0.5;horizontal;max;%d]"):format(f.max or 85)
+	fs[#fs + 1] = "button_exit[7.8,7.7;2.2,0.8;close;Done]"
 	return table.concat(fs)
 end
 core.register_on_player_receive_fields(function(player, formname, fields)
@@ -725,7 +742,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			f.color, f.on, changed = c[2], true, true
 		end
 	end
-	for _, k in ipairs({"distance", "start"}) do
+	for _, k in ipairs({"distance", "start", "max"}) do
 		local ev = fields[k] and core.explode_scrollbar_event(fields[k])
 		if ev and ev.type == "CHG" then
 			f[k] = k == "start" and ev.value / 100 or ev.value

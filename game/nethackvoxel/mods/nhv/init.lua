@@ -60,6 +60,7 @@ if nhv.INTRO_EDITOR then
 	dofile(path .. "sound.lua")
 	dofile(path .. "intro_play.lua")
 	dofile(path .. "intro_editor.lua")
+	dofile(path .. "editor_tools.lua")
 	return
 end
 if nhv.EDITOR then

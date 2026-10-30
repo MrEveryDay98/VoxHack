@@ -160,10 +160,18 @@ end
 function sky.apply(player, fog)
 	-- (sky.fog: a fog of its own instead - the opening's, intro_play.lua:
 	-- {on, color, distance, start})
+	-- (as far as it says without cutting the view short, and never thicker
+	-- than its max: the VoxHack engine's core.nhv_fog)
 	local own = sky.fog
 	if own and own.on then
-		fog = {fog_distance = tonumber(own.distance) or 120, fog_start = tonumber(own.start) or 0.3,
-			fog_color = own.color}
+		fog = {fog_distance = -1, fog_start = tonumber(own.start) or 0.3, fog_color = own.color}
+	end
+	if core.nhv_fog then
+		if own and own.on then
+			core.nhv_fog(tonumber(own.distance) or 120, (tonumber(own.max) or 85) / 100)
+		else
+			core.nhv_fog(-1)
+		end
 	end
 	local s = sky.def
 	local base = s and (open_sky() or sky.scene) and s.fog_color or "#000000"
