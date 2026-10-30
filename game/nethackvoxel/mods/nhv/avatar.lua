@@ -45,7 +45,8 @@ local function facing(player)
 	if not d or d.x * d.x + d.z * d.z < 0.09 then
 		return 180 -- (first person: not seen anyway)
 	end
-	local yaw = math.atan2(d.z, d.x) - math.pi / 2 - player:get_look_horizontal()
+	-- (its back to the camera: mobs.lua's FACING)
+	local yaw = math.atan2(d.z, d.x) + math.pi / 2 - player:get_look_horizontal()
 	return math.floor(math.deg(yaw) % 360 + 0.5)
 end
 

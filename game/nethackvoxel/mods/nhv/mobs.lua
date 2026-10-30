@@ -100,6 +100,11 @@ core.register_entity("nhv:feat", {
 	on_punch = function() return true end,
 })
 
+-- FACING: a sprite facing you has its back (-z) to you - an extruded one's
+-- picture is the right way round from there (wieldmesh's extrusion), the
+-- other way round from its front; a flat one is the right way round from
+-- both sides (its back drawn mirrored)
+
 -- ---------------------------------------------------------------- fading
 -- Monsters, objects and features NetHack starts or stops showing fade in
 -- and out instead of popping, as flat sprites (through transparency). 3D
@@ -410,6 +415,10 @@ function mobs.refresh_sizes()
 	nhv.sim.sync()
 	if nhv.nh.snap then
 		mobs.update(nhv.nh.snap, false)
+	end
+	-- (and you: your own sprite, seen in third person)
+	if nhv.avatar then
+		nhv.avatar.refresh()
 	end
 end
 
@@ -1451,7 +1460,7 @@ core.register_globalstep(function(dtime)
 			steer(e, pos, dtime)
 			if ppos then
 				local d = vector.subtract(ppos, pos)
-				local yaw = math.atan2(d.z, d.x) - math.pi / 2
+				local yaw = math.atan2(d.z, d.x) + math.pi / 2 -- (FACING)
 				if e.wavy or e.ghost then
 					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
 					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
@@ -1470,7 +1479,7 @@ core.register_globalstep(function(dtime)
 		elseif e.obj:get_pos() and ppos then
 			local pos = e.obj:get_pos()
 			local d = vector.subtract(ppos, pos)
-			e.obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
+			e.obj:set_yaw(math.atan2(d.z, d.x) + math.pi / 2) -- (FACING)
 		end
 	end
 	for _, e in pairs(mobs.objs) do
@@ -1485,7 +1494,7 @@ core.register_globalstep(function(dtime)
 		if not e.flat and e.obj:get_pos() and ppos then
 			local pos = e.obj:get_pos()
 			local d = vector.subtract(ppos, pos)
-			e.obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2)
+			e.obj:set_yaw(math.atan2(d.z, d.x) + math.pi / 2) -- (FACING)
 		end
 	end
 end)
