@@ -36,6 +36,9 @@ local DRAWN = {"Kept", "Removed (after a restart)"}
 -- start, to engine/demos; played with Launchers\Play Demo.bat)
 local DEMOS = {"Off", "On (next start)"}
 local RETRO = {"Off", "On"}
+-- light per texture pixel (the VoxHack engine's nhv_texel_light): like a
+-- lightmap, light and shadow in steps of the textures' own pixels
+local TEXEL_LIGHT = {{"off", "Smooth"}, {"on", "Per texture pixel"}, {"dither", "Per texture pixel, dithered"}}
 local RETRO_RES = {"640x480", "800x600", "1024x768"}
 local RETRO_PALETTE = {{"vga", "256 colours"}, {"ega", "16 colours"}, {"full", "Full colour"}}
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
@@ -145,6 +148,8 @@ function graphics.formspec()
 	else
 		add(row(y, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)))
 	end
+	add(row(y, "Light on surfaces", "texel_light", names(TEXEL_LIGHT),
+		choice(TEXEL_LIGHT, "nhv_texel_light", "off")))
 	add(row(y, "Distant textures", "distant", table.concat(DISTANT, ","),
 		core.settings:get_bool("mip_map", false) and 2 or 1))
 	add(row(y, "Shadows", "shadows", table.concat(SHADOWS, ","), core.settings:get_bool("nhv_shadows", false) and 1 or 2))
@@ -357,6 +362,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		changed = true
 	end
 	if set_num(RETRO_BANDS, fields.retro_bands, "nhv_retro_bands", 6) then
+		changed = true
+	end
+	local tl = tonumber(fields.texel_light)
+	if tl and TEXEL_LIGHT[tl] and TEXEL_LIGHT[tl][1] ~= core.settings:get("nhv_texel_light") then
+		core.settings:set("nhv_texel_light", TEXEL_LIGHT[tl][1]) -- (the engine, at once)
 		changed = true
 	end
 	local rs = tonumber(fields.retro_scale)
