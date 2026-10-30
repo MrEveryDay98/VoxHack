@@ -15,7 +15,11 @@
 --   skies:  {id, name, layers = {back, front}, horizon = {color, fade},
 --            pixels (pixels per repeat: sharp; 0 smooth), fog_color,
 --            daynight, sun, moon, stars, stars_always (by day too, or in
---            a plain sky), cloud_brightness (1: as drawn), lightning}
+--            a plain sky), cloud_brightness (1: as drawn), lightning,
+--            dawn (day and night skies)}
+--   dawn:   {on, sky, horizon (the sky's colours at dawn and dusk), sun (the
+--            glow on the horizon toward the sun), clouds (their colour then),
+--            strength (how strongly they take it, 0..1)}
 --     layer: kind ("generated" or "texture"), speed = {x, y} (repeats per
 --            second), scale, opacity (0..1), tint ("#RRGGBB");
 --            generated: coverage, softness (0..1), detail (1..6), shade
@@ -127,8 +131,11 @@ local function config(s)
 	end
 	local h = s.horizon or {}
 	local r, g, b = rgb(h.color or "#000000")
+	local dw = type(s.dawn) == "table" and s.dawn.on and s.dawn or nil
+	local gr, gg, gb = rgb(dw and dw.clouds or "#FFFFFF")
 	parts[3] = pairs_list({{"hr", r}, {"hg", g}, {"hb", b}, {"fade", num(h.fade, 0)},
-		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}, {"bright", num(s.cloud_brightness, 1)}})
+		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}, {"bright", num(s.cloud_brightness, 1)},
+		{"gr", gr}, {"gg", gg}, {"gb", gb}, {"ga", dw and num(dw.strength, 0.6) or 0}})
 	return table.concat(parts, ";")
 end
 
@@ -154,7 +161,12 @@ function sky.apply(player, fog)
 	local s = sky.def
 	local base = s and (open_sky() or sky.scene) and s.fog_color or "#000000"
 	if s and s.daynight then
-		player:set_sky({type = "regular", clouds = false, fog = fog})
+		-- (dawn and dusk coloured as the sky says, if it says: Luanti's own
+		-- otherwise)
+		local dw = type(s.dawn) == "table" and s.dawn.on and s.dawn or nil
+		player:set_sky({type = "regular", clouds = false, fog = fog,
+			sky_color = dw and {dawn_sky = dw.sky, dawn_horizon = dw.horizon} or {},
+			fog_sun_tint = dw and dw.sun or nil, fog_tint_type = dw and "custom" or "default"})
 	else
 		player:set_sky({type = "plain", base_color = base, clouds = false, fog = fog})
 	end

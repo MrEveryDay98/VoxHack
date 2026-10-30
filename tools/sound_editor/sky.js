@@ -69,7 +69,7 @@ const Sky = (() => {
 uniform sampler2D t0; uniform sampler2D t1;
 uniform vec4 l0; uniform vec4 l1; uniform vec4 tint0; uniform vec4 tint1;
 uniform vec4 gen0; uniform vec4 gen1; uniform vec4 shade0; uniform vec4 shade1;
-uniform vec4 hz; uniform vec4 misc; uniform vec3 bg; uniform vec3 bgTop;
+uniform vec4 hz; uniform vec4 misc; uniform vec3 bg; uniform vec3 bgTop; uniform vec4 glow;
 uniform vec2 res; uniform float yaw; uniform float pitch; uniform float stars;
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p) {
@@ -121,6 +121,7 @@ void main() {
   float low = 1.0 - smoothstep(0.05, 0.45, d.y);
   col = mix(col, hz.rgb, low * hz.a);
   a *= smoothstep(0.04, 0.28, d.y);
+  col *= mix(vec3(1.0), glow.rgb * 1.5, glow.a);
   gl_FragColor = vec4(mix(sky, col * misc.y, a), 1.0);
 }`;
 
@@ -213,15 +214,28 @@ void main() {
     });
     const hc = rgb(s.horizon.color);
     gl.uniform4f(u("hz"), hc[0], hc[1], hc[2], s.horizon.fade);
-    let bg = rgb(s.fog_color), top = bg, light = 1, stars = 0;
+    let bg = rgb(s.fog_color), top = bg, light = 1, stars = 0, glow = [1, 1, 1, 0];
     if (s.daynight) {
       const dn = dayNight(view.tod);
       bg = dn.bg; top = dn.top; light = dn.light; stars = s.stars ? dn.stars : 0;
+      // (dawn and dusk: most as the sun's on the horizon - as the game)
+      const dw = s.dawn;
+      if (dw && dw.on) {
+        const off = Math.min(Math.abs(view.tod - 0.2), Math.abs(view.tod - 0.8));
+        let k = Math.max(0, Math.min(1, 1 - off / 0.05));
+        k = k * k * (3 - 2 * k) * dw.strength;
+        bg = mix3(bg, rgb(dw.horizon), k);
+        top = mix3(top, rgb(dw.sky), k);
+        const c = rgb(dw.clouds);
+        glow = [c[0], c[1], c[2], k];
+        light = Math.max(light, 0.9 * k); // (lit up by the low sun)
+      }
     }
     if (s.stars_always) stars = 1;
     light *= s.cloud_brightness || 1;
     gl.uniform3f(u("bg"), bg[0], bg[1], bg[2]);
     gl.uniform3f(u("bgTop"), top[0], top[1], top[2]);
+    gl.uniform4f(u("glow"), glow[0], glow[1], glow[2], glow[3]);
     gl.uniform1f(u("stars"), stars);
     gl.uniform4f(u("misc"), s.pixels || 0, light, 0, 0);
     gl.uniform2f(u("res"), view.canvas.width, view.canvas.height);
@@ -319,6 +333,22 @@ void main() {
   }
 
   // ------------------------------------------------------------ editing
+  // dawn and dusk (a day and night sky): the sky's colours then, the glow
+  // toward the sun, the clouds' colour and how strongly they take it
+  function dawnEditor(s) {
+    if (!s.dawn) s.dawn = { on: false, sky: "#E8907A", horizon: "#FFB070", sun: "#FF6A2A", clouds: "#FF9A60", strength: 0.6 };
+    const dw = s.dawn;
+    return el("fieldset", { class: "sky-dawn" }, el("legend", {}, "Dawn and dusk"),
+      check(dw, "on", "Colour them (otherwise Luanti's own)", render),
+      dw.on ? el("div", {},
+        field("Sky", color(dw, "sky"), "Overhead, as the sun rises and sets."),
+        field("Horizon", color(dw, "horizon")),
+        field("Glow toward the sun", color(dw, "sun"), "The horizon on the sun's side."),
+        field("Clouds", color(dw, "clouds"), "Lit by the low sun."),
+        field("How strongly the clouds take it", slider(dw, "strength", 0, 1, 0.05, (v) => Math.round(v * 100) + "%"))) : null,
+      el("small", { class: "muted" }, "Set \"Preview at\" to about 04:50 or 19:10 to see it."));
+  }
+
   function field(label, input, hint) {
     return el("label", { class: "blk-field" }, label, input, hint ? el("small", { class: "muted" }, hint) : null);
   }
@@ -419,6 +449,7 @@ void main() {
           field("Horizon fade", slider(s.horizon, "fade", 0, 1, 0.01, (v) => Math.round(v * 100) + "%"), "How strongly the clouds fade into that colour low down."),
           check(s, "daynight", "Day and night (follows the real clock)", render),
           s.daynight ? el("div", { class: "inline" }, check(s, "sun", "Sun"), check(s, "moon", "Moon"), check(s, "stars", "Stars")) : null,
+          s.daynight ? dawnEditor(s) : null,
           check(s, "stars_always", "Stars all the time (by day too)", render),
           field("Cloud brightness", slider(s, "cloud_brightness", 0.2, 3, 0.05, (v) => Math.round(v * 100) + "%"),
             "100% is as the clouds are drawn; more makes them glow brighter."),

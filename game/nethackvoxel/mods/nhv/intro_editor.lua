@@ -600,7 +600,8 @@ local function clock(t)
 	local m = math.floor(t * 1440 + 0.5) % 1440
 	return ("%d:%02d"):format(math.floor(m / 60), m % 60)
 end
-local TIMES = {{"dawn", 0.25}, {"noon", 0.5}, {"dusk", 0.78}, {"night", 0}}
+-- (dawn and dusk as the sky colours them: sky.lua's dawn)
+local TIMES = {{"dawn", 0.2}, {"noon", 0.5}, {"dusk", 0.8}, {"night", 0}}
 local function time_form()
 	local t = intro_editor.time()
 	local fs = {"formspec_version[6]size[10,4.2]",

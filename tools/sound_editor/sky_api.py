@@ -199,6 +199,7 @@ def clean_sky(s):
         layers.append({})
     h = s.get("horizon") if isinstance(s.get("horizon"), dict) else {}
     lt = s.get("lightning") if isinstance(s.get("lightning"), dict) else {}
+    dw = s.get("dawn") if isinstance(s.get("dawn"), dict) else {}
     return {
         "id": sid,
         "name": str(s.get("name") or sid)[:60],
@@ -217,6 +218,12 @@ def clean_sky(s):
         # bolts across the sky now and then: how many a minute, thunder or not
         "lightning": {"on": bool(lt.get("on", False)), "rate": round(_num(lt.get("rate"), 0.5, 60, 4), 2),
                       "sound": bool(lt.get("sound", True))},
+        # dawn and dusk (day and night skies): the sky's colours then, the
+        # glow toward the sun, the clouds' colour and how strongly they take it
+        "dawn": {"on": bool(dw.get("on", False)), "sky": _color(dw.get("sky"), "#E8907A"),
+                 "horizon": _color(dw.get("horizon"), "#FFB070"), "sun": _color(dw.get("sun"), "#FF6A2A"),
+                 "clouds": _color(dw.get("clouds"), "#FF9A60"),
+                 "strength": round(_num(dw.get("strength"), 0, 1, 0.6), 2)},
     }
 
 
