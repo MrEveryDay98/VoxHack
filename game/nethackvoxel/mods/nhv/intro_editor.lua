@@ -14,8 +14,9 @@
 --     as you're looking now; "Look through it" puts you there to see.
 --     Points go in the order of their numbers.
 --   Sign: on a wall - right-click it for its words, a line each.
---   Monsters and items: the palette's Monsters and Items tabs have every
---     NetHack sprite - pick one, put it down: it stands there turned to you
+--   Monsters and items: the palette's Monsters, Statues, Items and Dungeon
+--     (fountains, altars, thrones, doors, traps...) tabs have every NetHack
+--     sprite - pick one, put it down: it stands there turned to you
 --     as they all are, as tall as the game makes it. Right-click it for
 --     another (by its name, as NetHack has it) or another height. (The
 --     Opening tab's "Monster or person" is one to name yourself.)
@@ -284,7 +285,9 @@ local DEFAULT_FIGURE = {name = "watchman", h = 1.8}
 -- it stands
 local MONSTERS, OBJECTS_END = nhv_tiles.monsters or 789, 1272
 local STATUES = 1515 -- (a monster's statue: its tile from here on, in the same order)
-local FEATURES = {{"S_fountain", 1313, "fountain"}, {"S_altar", 1307, "altar"},
+local DUNGEON = 1272 -- (the dungeon's own sprites, to the statues: features, traps, effects)
+local FEATURES = {{"S_fountain", 1313, "fountain"}, {"S_altar", 1307, "altar"}, {"S_altar", 1305, "altar"},
+	{"S_altar", 1306, "altar"}, {"S_altar", 1308, "altar"}, {"S_altar", 1309, "altar"},
 	{"S_throne", 1311, "throne"}, {"S_sink", 1312, "sink"}, {"S_grave", 1310, "grave"}}
 local function tile_height(tile)
 	if tile >= STATUES and tile < STATUES + MONSTERS then
@@ -299,6 +302,10 @@ local function tile_height(tile)
 		if f[2] == tile then
 			return nhv.scale.feature_height(f[1]) or 2
 		end
+	end
+	if tile >= DUNGEON and tile < STATUES then
+		-- (the rest of the dungeon's: a tree as the forest's, the others a block)
+		return nhv_tiles.name(tile) == "tree" and 3 or 1
 	end
 	return nhv_tiles.name(tile) == "boulder" and 1.6 or 0.6
 end
@@ -337,8 +344,14 @@ function intro_editor.sprite_tabs()
 	for t = MONSTERS, OBJECTS_END - 1 do
 		items[#items + 1] = sprite_entry(t, nhv_tiles.name(t) or "")
 	end
-	for _, f in ipairs(FEATURES) do
-		items[#items + 1] = sprite_entry(f[2], f[3])
+	-- the dungeon's (not its walls' pieces): the fountain, altars, the throne,
+	-- doors, stairs, traps, the spells' and explosions' pictures...
+	local dungeon = {}
+	for t = DUNGEON, STATUES - 1 do
+		local n = nhv_tiles.name(t) or ""
+		if n ~= "" and not n:find("walls") then
+			dungeon[#dungeon + 1] = sprite_entry(t, n)
+		end
 	end
 	local statues = {}
 	for t = 0, MONSTERS - 1 do
@@ -347,7 +360,8 @@ function intro_editor.sprite_tabs()
 			statues[#statues + 1] = sprite_entry(STATUES + t, "statue of " .. pretty(n))
 		end
 	end
-	return {{"monsters", "Monsters", monsters}, {"statues", "Statues", statues}, {"items", "Items", items}}
+	return {{"monsters", "Monsters", monsters}, {"statues", "Statues", statues}, {"items", "Items", items},
+		{"dungeon", "Dungeon", dungeon}}
 end
 local function figure_form(f)
 	local name = f.name or (f.tile and pretty(nhv_tiles.name(f.tile))) or ""
