@@ -7,6 +7,9 @@
 -- and signs (intro.json): the game puts the forest up out of the way
 -- (ORIGIN: once, and again when it's saved anew) and plays it there.
 --
+-- Its time of day: as set in the editor (/intro_time) - the sky's sun,
+-- moon and stars, and the light, as then.
+--
 -- Its music: the hook music_opening (the VoxHack Editor's Sound tab), or
 -- the title's if that has none; the title goes on with its own after.
 --
@@ -278,7 +281,7 @@ local function finish()
 	player:set_properties({is_visible = run.visible})
 	player:override_day_night_ratio(run.ratio)
 	if nhv.sky then
-		nhv.sky.scene = run.scene
+		nhv.sky.scene, nhv.sky.time = run.scene, run.sky_time
 		nhv.sky.update()
 	else
 		player:set_sky(run.sky)
@@ -294,7 +297,8 @@ end
 local function play(player, data, at, done)
 	intro_play.active = true
 	run = {player = player, t0 = core.get_us_time(), ids = {}, huds = {}, signs = {}, done = done,
-		ratio = player:get_day_night_ratio(), sky = player:get_sky(true)}
+		ratio = player:get_day_night_ratio(), sky = player:get_sky(true),
+		sky_time = nhv.sky and nhv.sky.time}
 	local cam, events = timeline(data.points, at)
 	run.events, run.next_ev = events, 1
 	-- the words: white, with a shadow, low in the middle (a longer line goes
@@ -312,12 +316,14 @@ local function play(player, data, at, done)
 		breathbar = false, chat = false, nhv_no_selection = true, nhv_camera_lock = true})
 	run.visible = player:get_properties().is_visible
 	player:set_properties({is_visible = false})
-	-- (daylight in the forest; the game's sky - the "opening" one, the
-	-- VoxHack Editor's Sky tab)
-	player:override_day_night_ratio(1)
+	-- (the light of its time of day - noon if it hasn't one; the game's sky -
+	-- the "opening" one, the VoxHack Editor's Sky tab)
+	player:override_day_night_ratio(nil)
+	core.set_timeofday(tonumber(data.time) or 0.5)
 	if nhv.sky then
 		run.scene = nhv.sky.scene
 		nhv.sky.scene = "opening"
+		nhv.sky.time = tonumber(data.time) or 0.5
 		nhv.sky.update()
 	else
 		player:set_sky({type = "regular", clouds = true})

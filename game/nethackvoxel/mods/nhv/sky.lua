@@ -206,7 +206,10 @@ function sky.update()
 		s = by_id(sky.data.levels[sky.scene]) or (sky.scene == "opening" and by_id(sky.data.levels.default)) or s
 	end
 	set(s or nil)
-	if s and s.daynight then
+	-- (sky.time: a time of day held instead - the opening's, intro_play.lua)
+	if sky.time then
+		core.set_timeofday(sky.time)
+	elseif s and s.daynight then
 		core.set_timeofday(real_time_of_day())
 	end
 end

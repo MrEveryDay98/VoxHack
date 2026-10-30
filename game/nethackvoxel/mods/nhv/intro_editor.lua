@@ -22,7 +22,11 @@
 --   The sky is the game's: the one the VoxHack Editor's Sky tab gives
 --   "opening" (the default sky if none).
 --
---   /intro_play            play it from the first point (Enter stops it)
+--   /intro_play            play it from the first point (Enter stops it),
+--                          as the game will: without the camera points'
+--                          boxes or the signs' blocks
+--   /intro_time [time]     the opening's time of day (its sky and light):
+--                          a form to set it, or 6:30, dawn, noon, dusk, night
 --   /intro_save [ymin ymax]  save it for the game (the forest from ymin to
 --                          ymax: -8 to 56 if not given) - mod_data/nhv/intro
 
@@ -89,10 +93,14 @@ core.register_on_joinplayer(function(player)
 	privs.fly, privs.fast, privs.noclip, privs.interact = true, true, true, true
 	core.set_player_privs(name, privs)
 	player:set_armor_groups({immortal = 1})
-	player:override_day_night_ratio(1)
+	-- (the light of the opening's time of day, the sky as then)
+	player:override_day_night_ratio(nil)
 	nhv.sky.scene = "opening"
+	nhv.sky.time = intro_editor.time()
 	nhv.sky.update()
-	core.set_timeofday(0.5)
+	-- (camera points and signs hidden for a preview that didn't finish:
+	-- back)
+	intro_editor.show_markers()
 	-- the palette (I): every block of the prefab editor's but its markers -
 	-- the game's - and the opening's own
 	local extra = {{"opening", "Opening", nhv.intro_blocks.PALETTE}}
@@ -119,12 +127,12 @@ core.register_on_joinplayer(function(player)
 		.. ". I = block palette (its Opening tab: camera points, signs, figures, the forest's own)."
 		.. " /intro_play plays it, /intro_save saves it.")
 end)
--- (always midday; the trees standing round you - the editor's whole forest
--- at once would be a lot)
+-- (the opening's time of day held; the trees standing round you - the
+-- editor's whole forest at once would be a lot)
 local TREES_AROUND = 96
 local tree_t = 0
 core.register_globalstep(function(dtime)
-	core.set_timeofday(0.5)
+	core.set_timeofday(intro_editor.time())
 	tree_t = tree_t + dtime
 	local player = core.get_connected_players()[1]
 	if tree_t < 1 or not player or (nhv.intro_play and nhv.intro_play.active) then
@@ -255,9 +263,13 @@ local DEFAULT_FIGURE = {name = "watchman", h = 1.8}
 -- its scale: /scale), a thing as an object on the floor is, a feature as
 -- it stands
 local MONSTERS, OBJECTS_END = nhv_tiles.monsters or 789, 1272
+local STATUES = 1515 -- (a monster's statue: its tile from here on, in the same order)
 local FEATURES = {{"S_fountain", 1313, "fountain"}, {"S_altar", 1307, "altar"},
 	{"S_throne", 1311, "throne"}, {"S_sink", 1312, "sink"}, {"S_grave", 1310, "grave"}}
 local function tile_height(tile)
+	if tile >= STATUES and tile < STATUES + MONSTERS then
+		tile = tile - STATUES -- (a statue: as big as the monster)
+	end
 	if tile < MONSTERS then
 		local mndx = math.floor(tile / 2)
 		local mi = core.nh_mon_info and core.nh_mon_info(mndx)
@@ -308,7 +320,14 @@ function intro_editor.sprite_tabs()
 	for _, f in ipairs(FEATURES) do
 		items[#items + 1] = sprite_entry(f[2], f[3])
 	end
-	return {{"monsters", "Monsters", monsters}, {"items", "Items", items}}
+	local statues = {}
+	for t = 0, MONSTERS - 1 do
+		local n = nhv_tiles.name(t) or ""
+		if not n:find(",female$") or nhv_tiles.sheet_index(t) ~= nhv_tiles.sheet_index(t - 1) then
+			statues[#statues + 1] = sprite_entry(STATUES + t, "statue of " .. pretty(n))
+		end
+	end
+	return {{"monsters", "Monsters", monsters}, {"statues", "Statues", statues}, {"items", "Items", items}}
 end
 local function figure_form(f)
 	local name = f.name or (f.tile and pretty(nhv_tiles.name(f.tile))) or ""
@@ -550,14 +569,140 @@ core.register_chatcommand("intro_play", {
 				figures[#figures + 1] = sp
 			end
 		end
+		-- (as in the game: the camera points' boxes and the signs' blocks
+		-- out of the way meanwhile)
+		intro_editor.hide_markers()
 		nhv.intro_play.preview(player, {points = list, signs = {}, trees = trees, figures = figures,
+			time = intro_editor.time(),
 			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1)}, function(p)
+			intro_editor.show_markers()
 			p:set_pos(back)
-			p:override_day_night_ratio(1)
+			p:override_day_night_ratio(nil)
+			nhv.sky.time = intro_editor.time()
 		end)
 		return true
 	end,
 })
+
+-- ---------------------------------------------------------------- the time of day
+-- the opening's (0 midnight, 0.5 noon)
+function intro_editor.time()
+	return tonumber(storage:get_string("time")) or 0.5
+end
+local function set_time(t)
+	t = t % 1
+	storage:set_string("time", tostring(t))
+	nhv.sky.time = t
+	core.set_timeofday(t)
+	nhv.sky.update()
+end
+local function clock(t)
+	local m = math.floor(t * 1440 + 0.5) % 1440
+	return ("%d:%02d"):format(math.floor(m / 60), m % 60)
+end
+local TIMES = {{"dawn", 0.25}, {"noon", 0.5}, {"dusk", 0.78}, {"night", 0}}
+local function time_form()
+	local t = intro_editor.time()
+	local fs = {"formspec_version[6]size[10,4.2]",
+		"label[0.4,0.5;The opening's time of day: ", clock(t), "]",
+		"scrollbaroptions[min=0;max=1439;smallstep=15;largestep=60]",
+		("scrollbar[0.4,1;9.2,0.6;horizontal;minute;%d]"):format(math.floor(t * 1440 + 0.5) % 1440)}
+	for i, p in ipairs(TIMES) do
+		fs[#fs + 1] = ("button[%f,2.2;2.1,0.8;time_%s;%s]"):format(0.4 + (i - 1) * 2.35, p[1],
+			p[1]:sub(1, 1):upper() .. p[1]:sub(2))
+	end
+	fs[#fs + 1] = "button_exit[7.4,3.2;2.2,0.8;close;Done]"
+	return table.concat(fs)
+end
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= "nhv:intro_time" then
+		return false
+	end
+	for _, p in ipairs(TIMES) do
+		if fields["time_" .. p[1]] then
+			set_time(p[2])
+		end
+	end
+	local ev = fields.minute and core.explode_scrollbar_event(fields.minute)
+	if ev and ev.type == "CHG" then
+		set_time(ev.value / 1440)
+	end
+	if not fields.close and not fields.quit then
+		core.show_formspec(player:get_player_name(), formname, time_form())
+	end
+	return true
+end)
+core.register_chatcommand("intro_time", {
+	params = "[h:mm | dawn | noon | dusk | night]",
+	description = "The opening's time of day (its sky and light)",
+	func = function(name, param)
+		param = param:lower():gsub("^%s+", ""):gsub("%s+$", "")
+		if param == "" then
+			core.show_formspec(name, "nhv:intro_time", time_form())
+			return true
+		end
+		for _, p in ipairs(TIMES) do
+			if p[1] == param then
+				set_time(p[2])
+				return true, "The opening's time: " .. clock(p[2])
+			end
+		end
+		local h, m = param:match("^(%d+):(%d%d)$")
+		if h and tonumber(h) < 24 and tonumber(m) < 60 then
+			local t = (tonumber(h) * 60 + tonumber(m)) / 1440
+			set_time(t)
+			return true, "The opening's time: " .. clock(t)
+		end
+		return false, "A time like 6:30, or dawn, noon, dusk or night."
+	end,
+})
+
+-- ---------------------------------------------------------------- markers out of the way
+-- The camera points' boxes and the signs' blocks are only the editor's: a
+-- preview takes them away (the signs' pictures stay) and puts them back
+-- after - kept in storage meanwhile, so a preview cut short (the game
+-- closed) gets them back next time.
+function intro_editor.hide_markers()
+	local hidden = load_list("hidden")
+	for k in pairs(cams()) do
+		local pos = core.string_to_pos("(" .. k .. ")")
+		local node = core.get_node(pos)
+		if node.name == "nhv:intro_cam" then
+			hidden[k] = {name = node.name, param2 = node.param2}
+			core.swap_node(pos, {name = "air"})
+		end
+	end
+	for k in pairs(load_list("signs")) do
+		local pos = core.string_to_pos("(" .. k .. ")")
+		local node = core.get_node(pos)
+		if node.name == "nhv:intro_sign" then
+			hidden[k] = {name = node.name, param2 = node.param2}
+			core.swap_node(pos, {name = "air"})
+		end
+	end
+	save_list("hidden", hidden)
+end
+function intro_editor.show_markers()
+	local hidden = load_list("hidden")
+	local list = cams()
+	local left = {} -- (where the map isn't loaded yet: next time)
+	for k, n in pairs(hidden) do
+		local pos = core.string_to_pos("(" .. k .. ")")
+		local here = core.get_node(pos).name
+		if here == "air" then
+			core.swap_node(pos, {name = n.name, param2 = n.param2})
+			if n.name == "nhv:intro_cam" and list[k] then
+				core.get_meta(pos):set_string("infotext", "Camera point " .. list[k].index)
+			end
+		elseif here == "ignore" then
+			left[k] = n
+		end
+	end
+	save_list("hidden", left)
+	if next(left) then
+		core.after(2, intro_editor.show_markers)
+	end
+end
 
 core.register_chatcommand("intro_save", {
 	params = "[ymin ymax]",
@@ -581,6 +726,7 @@ core.register_chatcommand("intro_save", {
 				return
 			end
 			local data = {version = os.time(), min = p1, max = p2, points = list, signs = signs(vector.zero()),
+				time = intro_editor.time(),
 				trees = core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"}), figures = {}}
 			for _, sp in ipairs(intro_editor.sprites(p1, p2, vector.zero())) do
 				if sp.tile ~= nhv.intro_blocks.tree(sp.pos).tile then
