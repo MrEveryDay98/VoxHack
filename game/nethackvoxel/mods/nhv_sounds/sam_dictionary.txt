@@ -60,3 +60,5 @@ roshi = {DXOW5SHIY}
 research = re serch
 Archeologist = arkyoligist
 creation = creashun
+wanderer = waunder rur
+heard = herd
