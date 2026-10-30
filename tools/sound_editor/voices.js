@@ -229,10 +229,21 @@ const Voices = (() => {
           el("span", {}, "Sound"), el("select", { onchange: (e) => {
             set("smooth", e.target.value === "1");
             set("hifi", e.target.value === "2");
+            render(); // (hi-fi's sliders shown or not)
           } },
             el("option", { value: "0", selected: (!ss.smooth && !ss.hifi) || null }, "Authentic (8-bit)"),
             el("option", { value: "1", selected: (ss.smooth && !ss.hifi) || null }, "Smoothed"),
             el("option", { value: "2", selected: ss.hifi || null }, "Hi-fi"))),
+        // (hi-fi's tuning: only with it on)
+        ss.hifi ? el("div", { class: "hifi-tuning" },
+          slider("Brightness", ss.bright ?? 100, 0, 200, 5, "%", (v) => set("bright", v),
+            "Hi-fi: the voice's upper resonances and highs (lower: duller, warmer)"),
+          slider("Breath", ss.breath ?? 100, 0, 300, 10, "%", (v) => set("breath", v),
+            "Hi-fi: the breathy noise under the voice (0: none)"),
+          slider("Pitch movement", ss.movement ?? 100, 0, 300, 10, "%", (v) => set("movement", v),
+            "Hi-fi: the pitch drifting down over a sentence and wavering (0: flat, like classic SAM)"),
+          slider("Hiss", ss.hiss ?? 100, 0, 300, 10, "%", (v) => set("hiss", v),
+            "Hi-fi: how loud s, sh, f, h and ch are")) : null,
         check("Size changes the voice", ss.size !== false, (on) => set("size", on), "Big monsters deeper, small ones higher"),
         check("Exclamations quicker and higher", ss.tone !== false, (on) => set("tone", on)),
         check("Sing mode", ss.sing, (on) => set("sing", on), "SAM's sing mode: the pitch follows the phonemes"),
