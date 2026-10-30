@@ -952,6 +952,14 @@
    "volume": 100,
    "pitch_var": 0,
    "loop": true
+  },
+  "music_opening": {
+   "sounds": [
+    "nhv_music_prologue"
+   ],
+   "volume": 85,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {},
