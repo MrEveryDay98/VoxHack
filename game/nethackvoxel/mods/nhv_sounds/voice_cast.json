@@ -14,7 +14,11 @@
     "variation": 0,
     "smooth": false,
     "female": 40,
-    "hifi": true
+    "hifi": true,
+    "breath": 100,
+    "hiss": 60,
+    "movement": 300,
+    "bright": 60
    }
   },
   "Quest (Rog)": {
@@ -113,7 +117,8 @@
     "mouth": 145,
     "smooth": false,
     "live": true,
-    "hifi": true
+    "hifi": true,
+    "hiss": 70
    }
   },
   "Priest": {
@@ -225,15 +230,24 @@
    "sam": {
     "voice": "Stuffy Guy",
     "speed": 82,
-    "pitch": 72,
-    "throat": 110,
-    "mouth": 58,
+    "pitch": 143,
+    "throat": 173,
+    "mouth": 175,
     "live": true,
     "smooth": false,
     "variation": 75,
     "sing": false,
-    "effects": [],
-    "hifi": true
+    "effects": [
+     {
+      "type": "lowpass",
+      "freq": 10000
+     }
+    ],
+    "hifi": true,
+    "bright": 55,
+    "breath": 100,
+    "hiss": 50,
+    "movement": 90
    }
   },
   "Minetown watch": {
@@ -259,7 +273,9 @@
     "mouth": 145,
     "live": true,
     "smooth": false,
-    "hifi": true
+    "hifi": true,
+    "hiss": 50,
+    "breath": 40
    }
   },
   "Narrator": {
@@ -282,7 +298,11 @@
     ],
     "volume": 100,
     "hifi": true,
-    "tone": false
+    "tone": false,
+    "breath": 0,
+    "movement": 300,
+    "hiss": 70,
+    "bright": 100
    }
   }
  },
