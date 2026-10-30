@@ -72,13 +72,18 @@ local function delete_save(name)
 	end
 end
 
-local function start(player, name)
-	nhv.showroom.hide(player)
+-- intro: a new character - the story told first (intro.lua)
+local function start(player, name, intro)
 	core.settings:set("nhv_last_character", name)
 	core.settings:write()
 	-- (whichever screen it was started from: the title, the new character
 	-- form or the replace question; only one with the right name closes)
 	core.close_formspec(player:get_player_name(), "")
+	if intro then
+		nhv.intro.start(player) -- (its own screen: "Press Enter to skip")
+	else
+		nhv.showroom.hide(player)
+	end
 	title.open, title.from_title = false, false
 	nhv.guide.first_run() -- (the guide, the very first time)
 	nhv.new_game(player, name)
@@ -236,8 +241,8 @@ local CREATE = {"role", "race", "gender", "align", "pettype"}
 
 -- NetHack's allowed combinations (role.c): each role's races, genders and
 -- alignments; each race's alignments. A choice is offered only if it fits
--- the ones above it (the role; for alignment, the race too). "Ask" and
--- "Random" always are: NetHack then picks something that fits.
+-- the ones above it (the role; for alignment, the race too).
+-- "Random" always is: NetHack then picks something that fits.
 local function set(...)
 	local t = {}
 	for _, v in ipairs({...}) do
@@ -435,7 +440,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 				pending = name
 				core.show_formspec(pname, CONFIRM, confirm_formspec(name))
 			else
-				start(player, name)
+				start(player, name, true)
 			end
 		elseif fields.back or fields.quit then
 			title.show(player)
@@ -446,7 +451,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	elseif formname == CONFIRM then
 		if fields.replace and pending then
 			delete_save(pending)
-			start(player, pending)
+			start(player, pending, true)
 		else
 			show_new(player)
 		end

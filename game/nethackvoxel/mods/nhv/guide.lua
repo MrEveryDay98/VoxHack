@@ -127,7 +127,8 @@ nhv.nh.on_snapshot(function(snap)
 		return
 	end
 	local player = nhv.player.get()
-	if player and nhv.nh.ready() and not nhv.ui.open and not (nhv.title and nhv.title.open) then
+	if player and nhv.nh.ready() and not nhv.ui.open and not (nhv.title and nhv.title.open)
+			and not (nhv.intro and nhv.intro.active) then
 		guide.pending = false
 		guide.show(player, 1)
 	end

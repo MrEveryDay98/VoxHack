@@ -126,6 +126,7 @@ dofile(path .. "avatar.lua")
 dofile(path .. "shadows.lua")
 dofile(path .. "sky.lua")
 dofile(path .. "showroom.lua")
+dofile(path .. "intro.lua")
 dofile(path .. "sound.lua")
 dofile(path .. "achievements.lua")
 dofile(path .. "cutscene.lua")
@@ -154,8 +155,11 @@ end
 -- start (or continue) NetHack as character `name` (default: the usual)
 function nhv.new_game(player, name)
 	-- (the title's backdrop gone - its sky, its held view, the HUD it
-	-- hides - however the game was started)
-	nhv.showroom.hide(player)
+	-- hides - however the game was started; a new character's intro
+	-- keeps it till it's told: intro.lua)
+	if not nhv.intro.active then
+		nhv.showroom.hide(player)
+	end
 	nhv.title.open = false
 	world.ledger = nil
 	nhv.player.ledger = nil

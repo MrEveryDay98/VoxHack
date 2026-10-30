@@ -85,6 +85,10 @@ local function teleport(player, pos)
 	local tx, ty = U.pos_to_tile(pos)
 	player_mod.trap_done = tx .. "," .. ty
 	local at = player_mod.free_spot(pos)
+	player_mod.arrived_at = at
+	if nhv.showroom.bd then
+		return -- (the scene holds you: you're put here after - intro.lua)
+	end
 	player:set_pos(at)
 	-- (where you're held while a new level loads: here, as NetHack said -
 	-- not read back from the body, which the client may still be
@@ -215,8 +219,12 @@ local function set_speed(player)
 	if h and stuck(h) then
 		speed = 0
 	end
-	if player_mod.frozen or nhv.clock.searching() or (nhv.cutscene and nhv.cutscene.active) then
-		speed = 0 -- (a prompt is up; searching; a cutscene)
+	-- (the title's scene up - showroom.lua - a new character's intro told
+	-- while the game starts behind it: still, and nothing pulls you down;
+	-- its hold and gravity would fight, the view shaking)
+	local scene = nhv.showroom and nhv.showroom.bd
+	if player_mod.frozen or nhv.clock.searching() or (nhv.cutscene and nhv.cutscene.active) or scene then
+		speed = 0 -- (a prompt is up; searching; a cutscene; the scene)
 	end
 	-- Only the walking speeds change: the engine's "speed" also scales how
 	-- fast you speed up AND slow down, so at 0 you'd keep sliding at
@@ -225,9 +233,10 @@ local function set_speed(player)
 	-- stop you walking off ledges into pits)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
-		new_move = true, gravity = ((h and not levitating(h)
+		new_move = true, gravity = ((h and not levitating(h) and not scene
 			and not (nhv.cutscene and nhv.cutscene.no_gravity)) and 1 or 0) * (player_mod.hop_g or 1)})
 end
+player_mod.set_speed = set_speed
 
 -- A jump (hold Space: jump.lua): the body hops to where NetHack landed
 -- you - fast, a short arc (gravity turned up for it, so it's quick and
@@ -613,8 +622,12 @@ nh.on_snapshot(function(snap, action)
 	player_mod.ledger = h.ledger
 
 	if level_changed or not prev then
-		-- (the new level is built now: black, held still, then fade in)
-		nhv.hud.fade(1, 0)
+		-- (the new level is built now: black, held still, then fade in -
+		-- a new character's intro is still being told over it: it goes
+		-- black itself, after - intro.lua)
+		if not (nhv.intro and nhv.intro.active) then
+			nhv.hud.fade(1, 0)
+		end
 		player_mod.level_hold = {t0 = core.get_us_time(), t_end = core.get_us_time() + BLACK_MAX_S * 1e6,
 			loading = true}
 	end
@@ -986,7 +999,8 @@ core.register_globalstep(function()
 	end
 	-- a new level is reaching the screen under the black: hold still (once
 	-- the arrival spot is settled), then fade in
-	local fz = player and player_mod.level_hold
+	-- (not while a new character's intro is told over it: intro.lua)
+	local fz = player and not (nhv.intro and nhv.intro.active) and player_mod.level_hold
 	if fz then
 		local now = core.get_us_time()
 		-- (the new level: until all of it is on the screen)
@@ -1005,6 +1019,11 @@ core.register_globalstep(function()
 		end
 		player_mod.level_hold = nil
 		nhv.hud.fade(0, FADE_IN_S)
+	end
+	-- the title's scene up (showroom.lua: a new character's intro told
+	-- while the game starts behind it): it holds you, not this
+	if nhv.showroom.bd then
+		return
 	end
 	-- wizard mode, flying free (wizard.lua): the hero stays where it is;
 	-- coming back down, you're back with it

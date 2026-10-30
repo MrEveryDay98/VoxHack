@@ -9,9 +9,11 @@
 --   showroom.show(player)   set it up (or update it to the choices now)
 --   showroom.title(player)  the backdrop alone (the title screen)
 --   showroom.hide(player)   take it away
+--   showroom.intro(player)  the figures in the middle at the bottom (the
+--                           intro's narration over them: intro.lua)
 
 local U = nhv.util
-local showroom = {}
+local showroom = {keep = {}} -- (keep: HUD elements shown over it)
 nhv.showroom = showroom
 
 local SIZE = {hero = 1.9, pet = {cat = 0.75, dog = 0.85, horse = 1.45}}
@@ -91,6 +93,11 @@ end
 local function places(player)
 	local p = player:get_pos()
 	local eye = vector.new(p.x, p.y + 1.6, p.z)
+	if showroom.centred then
+		-- (the intro: in the middle - the two figures either side of it -
+		-- low down, the narration above)
+		return eye, vector.new(p.x + 0.2, p.y - 1.9, p.z + 4.8)
+	end
 	-- (looking along +z: left is -x; close up, filling the left of the
 	-- screen)
 	local base = vector.new(p.x - 1.5, p.y - 0.45, p.z + 3.2)
@@ -159,11 +166,32 @@ local function pet_of(o, role)
 	return ROLE_PET[role] or (p ~= "" and p) or "cat"
 end
 
+-- the intro: the character NetHack made (Random picked), and its pet
+local function made()
+	local snap = nhv.nh.snap
+	local h = snap and snap.hero
+	if not (h and h.tile) then
+		return nil
+	end
+	for _, m in ipairs(snap.monsters or {}) do
+		if U.has(m.flags, U.MON_PET) then
+			local n = nhv_tiles.name(m.tile) or ""
+			local kind = n:find("pony") and "horse" or n:find("dog") and "dog" or "cat"
+			return h.tile, m.tile, kind
+		end
+	end
+	return h.tile
+end
+
 local function draw(player)
 	local o = nhv.nhopts
 	local eye, base = places(player)
 	local role, gender = chosen(o)
 	local pet = pet_of(o, role)
+	local htile, ptile_made, pet_made
+	if showroom.centred then
+		htile, ptile_made, pet_made = made()
+	end
 	local top = base.y + 0.3 -- (where the figures stand)
 	-- the pedestal; the character on it, the pet beside (on your left)
 	local half = (PEDESTAL.n - 1) / 2
@@ -185,8 +213,11 @@ local function draw(player)
 			end
 		end
 	end
-	sprite("hero", vector.new(base.x + 0.45, top, base.z), tile_of(ROLE_MON[role], gender), SIZE.hero, eye)
+	sprite("hero", vector.new(base.x + 0.45, top, base.z), htile or tile_of(ROLE_MON[role], gender), SIZE.hero, eye)
 	local ptile = pet and (tile_of(PET_MON[pet], "male") or tile_of(PET_MON[pet], "female"))
+	if htile then
+		ptile, pet = ptile_made, pet_made
+	end
 	sprite("pet", vector.new(base.x - 0.85, top, base.z - 0.15), ptile, pet and SIZE.pet[pet] or 1, eye)
 end
 
@@ -208,6 +239,7 @@ function showroom.backdrop(player)
 	player:set_velocity(vector.zero())
 	player:set_look_horizontal(0)
 	player:set_look_vertical(LOOK_DOWN)
+	nhv.player.set_speed(player) -- (still, no gravity: player.lua)
 	showroom.huds = {}
 	showroom.hide_huds(player)
 	if nhv.sky then
@@ -222,8 +254,10 @@ function showroom.hide_huds(player)
 	-- (by where it is, not its number: a removed element's number is
 	-- given to the next one made)
 	for id, def in pairs(player:hud_get_all() or {}) do
-		-- (not the black fade over the world: the title fades in with it)
-		if def.position and def.position.x ~= 9 and id ~= nhv.hud.ids.fade then
+		-- (not the black fade over the world: the title fades in with it;
+		-- nor what's shown over the scene: the intro's narration)
+		if def.position and def.position.x ~= 9 and id ~= nhv.hud.ids.fade
+				and not showroom.keep[id] then
 			showroom.huds[id] = def.position
 			player:hud_change(id, "position", {x = 9, y = 9})
 		end
@@ -250,11 +284,20 @@ end
 
 -- the title screen: the backdrop alone
 function showroom.title(player)
+	showroom.centred = nil
 	clear_figures()
 	showroom.backdrop(player)
 end
 
+-- the intro: the scene as it is, the figures moved to the middle
+function showroom.intro(player)
+	showroom.centred = true
+	clear_figures() -- (made again where they go: not sliding over there)
+	showroom.show(player)
+end
+
 function showroom.hide(player)
+	showroom.centred = nil
 	clear_figures()
 	if not showroom.bd then
 		return
@@ -270,6 +313,9 @@ function showroom.hide(player)
 		end
 	end
 	showroom.huds = nil
+	if player and player:is_player() then
+		nhv.player.set_speed(player) -- (walking, and gravity, again)
+	end
 	if nhv.sky then
 		nhv.sky.scene = nil
 		nhv.sky.update()

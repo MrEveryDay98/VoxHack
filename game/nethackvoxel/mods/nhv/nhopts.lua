@@ -25,7 +25,8 @@ local function list(...)
 	end
 	return out
 end
-local ASK_RANDOM = {{"", "Ask"}, {"random", "Random"}}
+-- (no "Ask": NetHack's own menus for it aren't VoxHack's; Random instead)
+local ASK_RANDOM = {{"random", "Random"}}
 local function choices(extra)
 	local out = {}
 	for _, c in ipairs(ASK_RANDOM) do
@@ -41,14 +42,14 @@ end
 nhopts.OPTIONS = {
 	{key = "name", kind = "text", label = "Character name", new = true, default = "",
 		note = "blank: your Windows name"},
-	{key = "role", kind = "choice", label = "Role", opt = "role", new = true, default = "",
+	{key = "role", kind = "choice", label = "Role", opt = "role", new = true, default = "random",
 		choices = choices(list("Archeologist", "Barbarian", "Caveman", "Healer", "Knight", "Monk",
 			"Priest", "Ranger", "Rogue", "Samurai", "Tourist", "Valkyrie", "Wizard"))},
-	{key = "race", kind = "choice", label = "Race", opt = "race", new = true, default = "",
+	{key = "race", kind = "choice", label = "Race", opt = "race", new = true, default = "random",
 		choices = choices(list("Human", "Elf", "Dwarf", "Gnome", "Orc"))},
-	{key = "gender", kind = "choice", label = "Gender", opt = "gender", new = true, default = "",
+	{key = "gender", kind = "choice", label = "Gender", opt = "gender", new = true, default = "random",
 		choices = choices(list("Male", "Female"))},
-	{key = "align", kind = "choice", label = "Alignment", opt = "align", new = true, default = "",
+	{key = "align", kind = "choice", label = "Alignment", opt = "align", new = true, default = "random",
 		choices = choices(list("Lawful", "Neutral", "Chaotic"))},
 	{key = "pettype", kind = "choice", label = "Pet", opt = "pettype", new = true, default = "",
 		-- (NetHack only takes a kitten, a little dog or none; the knight's
@@ -105,6 +106,10 @@ function nhopts.get(key)
 		return core.is_yes(v)
 	end
 	if v == nil then
+		return o.default
+	end
+	-- (a choice no longer offered - "Ask", once: the default)
+	if o.kind == "choice" and v == "" and o.default ~= "" then
 		return o.default
 	end
 	return v

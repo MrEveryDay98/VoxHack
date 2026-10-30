@@ -820,6 +820,7 @@ nhv_get_hero(nhv_hero *out)
     Snprintf(out->align, sizeof out->align, "%s",
              (u.ualign.type == A_CHAOTIC) ? "Chaotic"
              : (u.ualign.type == A_NEUTRAL) ? "Neutral" : "Lawful");
+    Snprintf(out->god, sizeof out->god, "%s", u_gname());
     Snprintf(out->dungeon_name, sizeof out->dungeon_name, "%s",
              svd.dungeons[u.uz.dnum].dname);
     (void) describe_level(out->level_desc, 0);

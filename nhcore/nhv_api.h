@@ -287,6 +287,7 @@ typedef struct nhv_hero {
     char name[32];
     char rank[32];
     char align[16];
+    char god[32];           /* your god's name (u_gname) */
     char dungeon_name[32];
     char level_desc[32];    /* e.g. "Dlvl:3" */
     char ability[24];       /* what #monster would do now ("Breathe",

@@ -607,17 +607,33 @@ local function start_voice(key, name, params)
 	voices[key] = core.sound_play(name, params)
 end
 
+-- a speaker's line cut off (the intro skipped: intro.lua)
+function sound.hush(key)
+	if voices[key] then
+		core.sound_stop(voices[key])
+		voices[key] = nil
+	end
+end
+
+-- the sound name SAM reads a line from (sam_voice.h), nil if nothing to say
+local function sam_name(st, text)
+	text = (st.text or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
+	if not text:find("%w") then
+		return nil
+	end
+	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
+		st.sing, st.smooth, st.tone, st.effects, text)
+end
+
 local function speak_sam(st, text, pos, key)
 	local p = player()
 	if not p then
 		return false
 	end
-	text = (st.text or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
-	if not text:find("%w") then
+	local name = sam_name(st, text)
+	if not name then
 		return false
 	end
-	local name = ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
-		st.sing, st.smooth, st.tone, st.effects, text)
 	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100), pitch = st.pitch_mul}
 	if pos then
 		params.pos, params.max_hear_distance, params.nhv_muffle = pos, 64, sound.muffle(pos)
@@ -633,6 +649,14 @@ end
 function sound.say(speaker, text, key)
 	local st = sam_settings(speaker)
 	return st and speak_sam(st, text, nil, key or speaker) or false
+end
+
+-- how long that speaker takes to say it, in seconds (0: not SAM's, or
+-- nothing to say - or the voices are off)
+function sound.say_seconds(speaker, text)
+	local st = sam_settings(speaker)
+	local name = st and sam_name(st, text)
+	return name and core.nhv_sam_seconds and core.nhv_sam_seconds(name) or 0
 end
 
 -- text: what the game actually said (SAM reads it; a recording ignores it)
@@ -977,7 +1001,8 @@ nh.on_snapshot(function(snap)
 	last = {hp = h.hp, hpmax = h.hpmax, gold = h.gold, hunger = h.hunger, flags = h.flags,
 		depth = h.depth, ledger = h.ledger, ninv = #snap.inventory}
 	sound.died = false
-	local music = music_for(h)
+	-- (a new character's intro told: the title's music goes on - intro.lua)
+	local music = (nhv.intro and nhv.intro.active) and "music_title" or music_for(h)
 	if music then
 		sound.set_music(music)
 	elseif sound.music then
@@ -1027,6 +1052,15 @@ nh.on_snapshot(function(snap)
 	flag_changed(U.HERO.LEVITATE, "levitation_start", "levitation_end")
 	flag_changed(U.HERO.DIED, "death", nil) -- (dying: not quitting, winning...)
 end)
+
+-- the level's music, now (the intro over: intro.lua)
+function sound.level_music()
+	local h = nh.snap and nh.snap.hero
+	local music = h and music_for(h)
+	if music then
+		sound.set_music(music)
+	end
+end
 
 -- before the dungeon exists (character selection)
 core.register_on_joinplayer(function()

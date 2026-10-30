@@ -1156,14 +1156,32 @@ local flash = nil -- {color=, t0=, strength=, full=}
 local flash_shown = nil
 -- Fading the whole screen to black and back (level changes, player.lua):
 -- hud.fade(1, s) to black over s seconds, hud.fade(0, s) back.
-local fade = {from = 0, to = 0, t0 = 0, dur = 0}
-function hud.fade_level()
+local fade = {from = 0, to = 0, t0 = 0, dur = 0, c0 = {0, 0, 0}, c1 = {0, 0, 0}}
+local function fade_t()
 	local t = fade.dur > 0 and (core.get_us_time() - fade.t0) / 1e6 / fade.dur or 1
-	t = math.max(0, math.min(1, t))
-	return fade.from + (fade.to - fade.from) * t
+	return math.max(0, math.min(1, t))
 end
-function hud.fade(to, seconds)
-	fade = {from = hud.fade_level(), to = to, t0 = core.get_us_time(), dur = seconds or 0}
+function hud.fade_level()
+	return fade.from + (fade.to - fade.from) * fade_t()
+end
+-- color ("#RRGGBB", black if not given): the fade's colour; from_color:
+-- the colour it turns from as it goes (white to black...)
+local function rgb(c)
+	return {tonumber(c:sub(2, 3), 16), tonumber(c:sub(4, 5), 16), tonumber(c:sub(6, 7), 16)}
+end
+function hud.fade(to, seconds, color, from_color)
+	local c1 = rgb(color or "#000000")
+	fade = {from = hud.fade_level(), to = to, t0 = core.get_us_time(), dur = seconds or 0,
+		c0 = from_color and rgb(from_color) or c1, c1 = c1}
+end
+local function fade_color()
+	-- (in 16 steps: few different textures)
+	local t = math.floor(fade_t() * 16 + 0.5) / 16
+	local c = {}
+	for i = 1, 3 do
+		c[i] = math.floor(fade.c0[i] + (fade.c1[i] - fade.c0[i]) * t + 0.5)
+	end
+	return ("#%02X%02X%02X"):format(c[1], c[2], c[3])
 end
 
 -- a flash of colour over the screen (full: all of it, else at its edges);
@@ -1214,7 +1232,7 @@ core.register_globalstep(function(dtime)
 	if hud.ids.fade then
 		-- (steps of 8 keep the number of different textures small)
 		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
-		local tex = a <= 0 and "blank.png" or ("[fill:16x16:#000000^[opacity:%d"):format(math.min(255, a))
+		local tex = a <= 0 and "blank.png" or ("[fill:16x16:%s^[opacity:%d"):format(fade_color(), math.min(255, a))
 		if tex ~= fade_shown then
 			fade_shown = tex
 			player:hud_change(hud.ids.fade, "text", tex)
