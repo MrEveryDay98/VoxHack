@@ -224,10 +224,15 @@ const Voices = (() => {
           "How much each monster of this kind differs from the others (pitch, speed, throat, mouth)"),
         slider("Female voice", ss.female ?? 12, 0, 40, 1, "", (v) => set("female", v),
           "How much higher a female monster speaks (SAM pitch steps)"),
-        el("label", { class: "sl sel", title: "SAM's harsh 8-bit sound as it was, or softened for long listening" },
-          el("span", {}, "Sound"), el("select", { onchange: (e) => set("smooth", e.target.value === "1") },
-            el("option", { value: "0", selected: !ss.smooth || null }, "Authentic (8-bit)"),
-            el("option", { value: "1", selected: ss.smooth || null }, "Smoothed"))),
+        el("label", { class: "sl sel", title: "SAM's harsh 8-bit sound as it was, softened for long listening, "
+            + "or Hi-fi: SAM's speech voiced anew in full quality (smooth, breathy, a natural pitch)" },
+          el("span", {}, "Sound"), el("select", { onchange: (e) => {
+            set("smooth", e.target.value === "1");
+            set("hifi", e.target.value === "2");
+          } },
+            el("option", { value: "0", selected: (!ss.smooth && !ss.hifi) || null }, "Authentic (8-bit)"),
+            el("option", { value: "1", selected: (ss.smooth && !ss.hifi) || null }, "Smoothed"),
+            el("option", { value: "2", selected: ss.hifi || null }, "Hi-fi"))),
         check("Size changes the voice", ss.size !== false, (on) => set("size", on), "Big monsters deeper, small ones higher"),
         check("Exclamations quicker and higher", ss.tone !== false, (on) => set("tone", on)),
         check("Sing mode", ss.sing, (on) => set("sing", on), "SAM's sing mode: the pitch follows the phonemes"),

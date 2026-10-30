@@ -22,7 +22,7 @@ if [ ! -f "$TOOL" ] || [ -n "$(find "$LUANTI/lib/sam" "$SND"/sam_* "$ROOT/tools/
 	mkdir -p "$ROOT/build/sam"
 	clang -Os -w -I"$LUANTI/lib/sam" -c -o "$ROOT/build/sam/sam_unity.o" "$SND/sam_unity.c"
 	clang++ -O2 -std=c++17 -static -I"$SND" -o "$TOOL" "$ROOT/tools/samtool.cpp" "$SND/sam_speech.cpp" \
-		"$ROOT/build/sam/sam_unity.o"
+		"$SND/sam_hifi.cpp" "$ROOT/build/sam/sam_unity.o"
 fi
 
 # 3. tiles

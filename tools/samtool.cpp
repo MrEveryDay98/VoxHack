@@ -5,7 +5,7 @@
 // sam_speech.cpp), so a preview sounds like the game.
 //
 //   samtool [--speed N] [--pitch N] [--throat N] [--mouth N] [--sing]
-//           [--phonetic] [--smooth] [--no-tone] [--dict FILE] [--fx CHAIN]
+//           [--phonetic] [--smooth] [--hifi] [--no-tone] [--dict FILE] [--fx CHAIN]
 //           (--wav OUT.wav | --phonemes)    < text (UTF-8)
 //
 // --wav writes 16-bit mono at 22050 Hz; --phonemes prints the phonemes SAM
@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 		else if (a == "--sing") s.sing = true;
 		else if (a == "--phonetic") s.phonetic = true;
 		else if (a == "--smooth") s.smooth = true;
+		else if (a == "--hifi") s.hifi = true;
 		else if (a == "--no-tone") s.tone = false;
 		else if (a == "--dict" && i + 1 < argc) dict_path = argv[++i];
 		else if (a == "--fx" && i + 1 < argc) s.effects = argv[++i];

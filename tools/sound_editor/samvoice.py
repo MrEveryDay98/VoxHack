@@ -165,7 +165,8 @@ def settings_for(sam, m_id=0, female=False):
     if female:
         st["pitch"] -= float(sam.get("female", 12) or 0)
     st = {k: _clamp(v) for k, v in st.items()}
-    st.update(sing=bool(sam.get("sing")), smooth=bool(sam.get("smooth")), tone=sam.get("tone") is not False,
+    st.update(sing=bool(sam.get("sing")), smooth=bool(sam.get("smooth")), hifi=bool(sam.get("hifi")),
+              tone=sam.get("tone") is not False,
               effects=effect_chain(sam.get("effects")))
     return st
 
@@ -213,6 +214,7 @@ class Voices:
             raise RuntimeError("SAM's preview tool isn't built: run tools/deploy.sh (it makes build/sam/samtool.exe)")
         args = [self.tool, "--dict", self.dict_path] + [x for k in KEYS for x in ("--" + k, str(st[k]))]
         args += (["--sing"] if st.get("sing") else []) + (["--smooth"] if st.get("smooth") else [])
+        args += ["--hifi"] if st.get("hifi") else []
         args += [] if st.get("tone", True) else ["--no-tone"]
         args += ["--fx", st["effects"]] if st.get("effects") else []
         r = subprocess.run(args + extra, input=text.encode("utf-8"), capture_output=True,

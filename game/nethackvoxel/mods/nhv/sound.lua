@@ -479,7 +479,7 @@ end
 -- SAM, the 1982 speech synth built into the VoxHack engine: it reads the
 -- line's real text as it happens (your name, your god...), nothing is
 -- recorded. The engine speaks a sound named
--- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>,<effects>|<text>"
+-- "nhv_sam:<speed>,<pitch>,<throat>,<mouth>,<sing>,<phonetic>,<smooth>,<tone>,<effects>,<hifi>|<text>"
 -- and reads its words through the pronunciation dictionary
 -- (mods/nhv_sounds/sam_dictionary.txt, edited in the editor).
 core.settings:set("nhv_sam_dict", MODPATH .. DIR_DELIM .. "sam_dictionary.txt")
@@ -564,6 +564,7 @@ function sam_settings(speaker, who, ln)
 	end
 	local st = {sing = ss.sing and 1 or 0, volume = tonumber(ss.volume) or 100,
 		smooth = ss.smooth and 1 or 0, tone = ss.tone == false and 0 or 1, pitch_mul = 1,
+		hifi = ss.hifi and 1 or 0, -- (SAM in hi-fi: sam_hifi.h)
 		effects = effect_chain(ss.effects),
 		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil}
 	-- a line can take another of SAM's named voices
@@ -621,8 +622,8 @@ local function sam_name(st, text)
 	if not text:find("%w") then
 		return nil
 	end
-	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
-		st.sing, st.smooth, st.tone, st.effects, text)
+	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s,%d|%s"):format(st.speed, st.pitch, st.throat, st.mouth,
+		st.sing, st.smooth, st.tone, st.effects, st.hifi, text)
 end
 
 local function speak_sam(st, text, pos, key)
