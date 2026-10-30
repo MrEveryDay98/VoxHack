@@ -450,6 +450,11 @@ core.register_chatcommand("nhvkey", {
 		if nhv.cutscene and nhv.cutscene.active then
 			return true -- (a cutscene: keys do nothing, and aren't kept)
 		end
+		local notches = param:match("^wheel (%-?%d+)$")
+		if notches then
+			nhv.hud.scroll_map(tonumber(notches)) -- (the big map, when it's wider than the screen)
+			return true
+		end
 		if param == "look" then
 			local player = core.get_player_by_name(pname)
 			if player and not nhv.ui.open and nh.ready() then

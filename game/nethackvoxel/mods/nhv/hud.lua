@@ -405,24 +405,43 @@ end
 -- the big map: its squares the tiles' own 16 pixels times a whole number
 -- (32, 48...), as big as the window takes - its width, most of its height
 -- - so the tiles are drawn sharp, every pixel the same size, with no gaps
--- between them; a small screen (retro mode's) 8, half a tile exactly; a
--- window too small even for that, whole pixels anyway. In HUD units (times
--- the HUD's scaling: pixels)
+-- between them. A screen too narrow for 16 (retro mode's) has them at 16
+-- anyway, the map wider than the screen: it follows you across as you go,
+-- and the mouse wheel scrolls it while you stand still (hud.map_scroll -
+-- the VoxHack engine moves its pictures there smoothly, every frame:
+-- core.nhv_map_scroll, HUD style MAP_SCROLLS); one too small even for
+-- that, 8, half a tile. In HUD units (times the HUD's scaling: pixels); and
+-- whether it scrolls.
+hud.map_scroll = 0 -- (squares the map is moved left: its middle shown off-centre)
+local MAP_SCROLLS = 256 -- (HUD style: moved across with the map, by the engine)
 local function big_map_scale(player)
 	local info = core.get_player_window_information(player:get_player_name())
 	if not info or not info.size or not info.real_hud_scaling then
-		return 10
+		return 10, false
 	end
-	local room = math.min(info.size.x / U.COLNO, 0.8 * info.size.y / U.ROWNO)
-	local px
-	if room >= 16 then
-		px = math.floor(room / 16) * 16
-	elseif room >= 8 then
+	local room_w, room_h = info.size.x / U.COLNO, 0.8 * info.size.y / U.ROWNO
+	local px, scrolls = nil, false
+	if room_w >= 16 and room_h >= 16 then
+		px = math.floor(math.min(room_w, room_h) / 16) * 16
+	elseif room_h >= 16 then
+		px, scrolls = 16, true
+	elseif math.min(room_w, room_h) >= 8 then
 		px = 8
 	else
-		px = math.max(2, math.floor(room))
+		px = math.max(2, math.floor(math.min(room_w, room_h)))
 	end
-	return px / info.real_hud_scaling
+	return px / info.real_hud_scaling, scrolls
+end
+
+-- how far the map can scroll each way (squares), 0 if it fits
+local function scroll_room(player)
+	local s, scrolls = big_map_scale(player)
+	local info = core.get_player_window_information(player:get_player_name())
+	if not scrolls or not info then
+		return 0
+	end
+	local seen = info.size.x / (s * info.real_hud_scaling) -- (squares across the screen)
+	return math.max(0, math.floor((U.COLNO - seen) / 2 + 0.5))
 end
 
 -- The big map is drawn with the NetHack tiles: one HUD picture per known
@@ -616,6 +635,7 @@ local function update_tiles(player, snap)
 						type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
 						offset = {x = (x + 0.5 - U.COLNO / 2) * s, y = (y + 0.5 - U.ROWNO / 2) * s},
 						scale = {x = s / TILE_PX, y = s / TILE_PX}, text = tex, z_index = 1,
+						style = MAP_SCROLLS,
 					})
 				end
 			end
@@ -674,7 +694,7 @@ local function update_map_icons(player)
 			icons[key] = {id = player:hud_add({
 				type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
 				offset = {x = x, y = y}, scale = {x = s / TILE_PX, y = s / TILE_PX},
-				text = tex, z_index = w.z,
+				text = tex, z_index = w.z, style = MAP_SCROLLS,
 			}), tex = tex, x = x, y = y, s = s}
 		else
 			if tex ~= ic.tex then
@@ -708,6 +728,9 @@ local arrow_shown = {}
 local function update_map_arrow(player)
 	if not hud.ids.map_arrow then
 		return
+	end
+	if hud.big_map then
+		hud.follow_map(player) -- (and the map kept on you as you go)
 	end
 	local h = nh.snap and nh.snap.hero
 	local tex, offset, sc = "", nil, nil
@@ -779,6 +802,7 @@ local function place_map(player)
 		-- (the backdrop: a 16x16 fill the size of the map)
 		player:hud_change(hud.ids.map, "scale", {x = s * U.COLNO / 16, y = s * U.ROWNO / 16})
 		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
+		player:hud_change(hud.ids.map, "style", MAP_SCROLLS) -- (the backdrop goes across with it)
 		player:hud_change(hud.ids.map, "text", BACKDROP)
 		update_tiles(player, nh.snap)
 	else
@@ -788,6 +812,7 @@ local function place_map(player)
 		-- (a hidden map is scaled to nothing)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = -10, y = 10})
+		player:hud_change(hud.ids.map, "style", 0)
 		clear_tiles(player)
 		if nh.snap and nh.snap.map then
 			player:hud_change(hud.ids.map, "text", map_png(nh.snap))
@@ -795,6 +820,57 @@ local function place_map(player)
 	end
 end
 hud.place_map = place_map
+
+-- the map's scroll to the engine, in pixels (it eases the pictures there)
+local scroll_sent
+local function send_scroll(player, instant)
+	local s = big_map_scale(player)
+	local info = core.get_player_window_information(player:get_player_name())
+	local px = info and info.real_hud_scaling and hud.map_scroll * s * info.real_hud_scaling or 0
+	if px ~= scroll_sent or instant then
+		scroll_sent = px
+		if core.nhv_map_scroll then
+			core.nhv_map_scroll(px, instant)
+		end
+	end
+end
+
+-- the mouse wheel on the big map, when it's wider than the screen: across
+-- it (notches: up/away, left)
+local SCROLL_STEP = 4 -- (squares a notch)
+function hud.scroll_map(notches)
+	local player = nhv.player.get()
+	if not (hud.big_map and player) then
+		return false
+	end
+	local room = scroll_room(player)
+	if room == 0 then
+		return false
+	end
+	hud.map_scroll = math.max(-room, math.min(room, hud.map_scroll - notches * SCROLL_STEP))
+	send_scroll(player, false)
+	return true
+end
+
+-- the big map, wider than the screen, kept on you as you go (from where
+-- you really are, not your square: smooth), and left where it is while you
+-- stand still (the wheel's); instant: there at once
+local followed_at
+function hud.follow_map(player, instant)
+	local room = hud.big_map and scroll_room(player) or 0
+	if room == 0 then
+		hud.map_scroll, followed_at = 0, nil
+		send_scroll(player, true)
+		return
+	end
+	local p = player:get_pos()
+	if instant or not followed_at or vector.distance(p, followed_at) > 0.01 then
+		followed_at = p
+		local fx = map_pos(p)
+		hud.map_scroll = math.max(-room, math.min(room, fx - U.COLNO / 2))
+		send_scroll(player, instant)
+	end
+end
 
 -- the status line's distance from the bottom of the screen (above the hotbar)
 function hud.place_status(player, above)
@@ -814,6 +890,8 @@ function hud.toggle_map()
 	hud.big_map = not hud.big_map
 	local player = nhv.player.get()
 	if player then
+		-- (opened: wider than the screen, you in the middle of it - at once)
+		hud.follow_map(player, true)
 		place_map(player)
 	end
 end
@@ -847,7 +925,7 @@ function hud.big_map_geometry(player)
 	local px = big_map_scale(player) * info.real_hud_scaling -- (a square)
 	return {
 		info = info, square = px,
-		left = 0.5 * info.size.x - U.COLNO / 2 * px,
+		left = 0.5 * info.size.x - (U.COLNO / 2 + hud.map_scroll) * px,
 		top = 0.45 * info.size.y - U.ROWNO / 2 * px,
 	}
 end
@@ -921,7 +999,7 @@ core.register_on_joinplayer(function(player)
 	-- the big map's facing arrow (over its squares and icons; update_map_arrow)
 	hud.ids.map_arrow = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
-		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "", z_index = 5,
+		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "", z_index = 5, style = MAP_SCROLLS,
 	})
 	arrow_shown = {}
 	hud.ids.map = player:hud_add({
