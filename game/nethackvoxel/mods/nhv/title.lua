@@ -127,8 +127,23 @@ function title.formspec(player, black)
 	local saved = title.saved_character(player)
 	-- (see-through: the Astral sky behind it - showroom.lua; Esc doesn't
 	-- close it - it would be gone a moment, the camera free)
+	-- (fading in: the world under the HUD's fade, and the menu's own parts
+	-- see-through - the logo, the buttons - no box over it all)
+	local fading = black and black > 0
+	local op = fading and math.floor((1 - black) * 255 + 0.5) or 255
+	local hex = ("%02X"):format(op)
 	local fs = {scene_screen(16, 10), "allow_close[false]",
-		"image[3,0.6;10,2.5;nhv_title_logo.png]"}
+		"image[3,0.6;10,2.5;nhv_title_logo.png" .. (fading and ("^[opacity:" .. op) or "") .. "]"}
+	if fading then
+		if theme.retro() then
+			fs[#fs + 1] = ("style_type[button;border=false;bgimg=nhv_ui_button.png^[opacity:%d;"
+				.. "bgimg_hovered=nhv_ui_button_hover.png^[opacity:%d;"
+				.. "bgimg_pressed=nhv_ui_button_pressed.png^[opacity:%d;bgimg_middle=2;textcolor=#FFFFFF%s]")
+				:format(op, op, op, hex)
+		else
+			fs[#fs + 1] = ("style_type[button;bgcolor=#303040%s;textcolor=#FFFFFF%s]"):format(hex, hex)
+		end
+	end
 	-- (five buttons fit above the update notice)
 	local y = 3.8
 	local function button(name, label)
@@ -142,6 +157,10 @@ function title.formspec(player, black)
 	button("options", "Options")
 	button("achievements", "Achievements")
 	button("quitgame", "Quit")
+	-- (the version and the update notice: once it's in)
+	if fading then
+		return table.concat(fs)
+	end
 	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E(title.VERSION .. " - based on NetHack 3.7")) .. "]"
 	-- a newer release out (update.lua): say so, with a link to get it
 	local upd = nhv.update and nhv.update.available
@@ -150,12 +169,6 @@ function title.formspec(player, black)
 			("<global valign=middle color=#FFD25A><tag name=action color=#78C8FF hovercolor=#FFFFFF>"
 			.. "A new version is available: <b>%s</b>   "
 			.. "<action name=get url=%s>Download it from GitHub</action>"):format(upd.tag, upd.url)))
-	end
-	-- (fading in: black over the menu, and over the screen round it)
-	if black and black > 0 then
-		local hex = ("%02X"):format(math.floor(black * 255 + 0.5))
-		fs[1] = fs[1]:gsub("bgcolor%[#00000000;false%]", "bgcolor[#000000" .. hex .. ";true]")
-		fs[#fs + 1] = ("box[0,0;16,10;#000000%s]"):format(hex)
 	end
 	return table.concat(fs)
 end
@@ -172,8 +185,8 @@ function title.back_from(player)
 end
 
 -- (fade: coming in from black - the game opening, back from a game - the
--- world under it with the HUD's fade, the menu with a black veil over it
--- thinning step by step)
+-- world under it with the HUD's fade, the menu's own parts coming
+-- through step by step)
 local FADE_S, FADE_STEPS = 1.2, 12
 
 function title.show(player, fade)
