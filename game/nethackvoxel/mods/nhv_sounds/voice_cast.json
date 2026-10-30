@@ -251,11 +251,20 @@
    "sam": {
     "voice": "Little Old Lady",
     "speed": 82,
-    "pitch": 104,
+    "pitch": 128,
     "throat": 145,
     "mouth": 145,
     "smooth": true,
-    "live": true
+    "live": true,
+    "effects": [
+     {
+      "type": "echo",
+      "delay": 250,
+      "decay": 0.4,
+      "repeats": 3
+     }
+    ],
+    "volume": 100
    }
   }
  },
