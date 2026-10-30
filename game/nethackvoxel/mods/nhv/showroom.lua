@@ -181,19 +181,13 @@ function showroom.backdrop(player)
 	-- spot - after a game too, away from the level you were on; kept
 	-- there, below)
 	showroom.spot = vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10)
+	-- (the mouse doesn't move the view: the VoxHack engine's camera lock -
+	-- first, so the look set below, and the globalstep's, are what it holds)
+	player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
 	player:set_pos(showroom.spot)
 	player:set_velocity(vector.zero())
 	player:set_look_horizontal(0)
 	player:set_look_vertical(LOOK_DOWN)
-	player:hud_set_flags({wielditem = false, crosshair = false})
-	-- (the mouse doesn't move the view: the VoxHack engine's camera lock -
-	-- once the view above has got to the screen, as it holds the view it
-	-- has when it's set)
-	core.after(0.2, function()
-		if showroom.bd and player:is_player() then
-			player:hud_set_flags({nhv_camera_lock = true})
-		end
-	end)
 	showroom.huds = {}
 	showroom.hide_huds(player)
 	if nhv.sky then
