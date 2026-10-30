@@ -982,6 +982,10 @@ core.register_on_joinplayer(function(player)
 	player:hud_set_flags({nhv_no_place_swing = true, nhv_no_dig_swing = true})
 	player:hud_set_flags({minimap = false, minimap_radar = false, healthbar = false,
 		breathbar = false, basic_debug = false})
+	-- (no outline round what you point at: the game's a game - but in
+	-- wizard mode's world, built and taken apart, it's there; the editor
+	-- worlds don't hide it)
+	player:hud_set_flags({nhv_no_selection = not (nhv.wizard and nhv.wizard.on)})
 	hud.ids.status = player:hud_add({
 		type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
