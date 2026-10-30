@@ -9,6 +9,11 @@
 --     HUD and menus stay full resolution)
 --   * sharp or smoothed distant textures (Luanti's "mip_map": mipmaps blur
 --     far-away textures to stop them shimmering)
+--   * retro mode (the VoxHack engine's nhv_retro): the whole game - world,
+--     HUD, menus - an 800x600 screen scaled up into the window with sharp
+--     pixels, in VGA's 256 colours (dithered or not), the light in bands.
+--     Each mode keeps its own HUD, menu, text and map sizes (an 800x600
+--     screen wants smaller ones than a big window).
 -- All apply immediately and are remembered in the settings.
 
 local graphics = {}
@@ -27,6 +32,10 @@ local DRAWN = {"Kept", "Removed (after a restart)"}
 -- recording demos (the VoxHack engine's nhv_demo: each session from its
 -- start, to engine/demos; played with Launchers\Play Demo.bat)
 local DEMOS = {"Off", "On (from the next start)"}
+local RETRO = {"Off", "On (800x600, VGA colours)"}
+local DITHER = {"On", "Off"}
+-- the sizes each mode keeps (setting, default in retro mode)
+local SIZES = {{"hud_scaling", 1}, {"gui_scaling", 1}, {"nhv_text_scale", 1}, {"nhv_map_scale", 3}}
 local RES = {
 	{1, "Full"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4 (retro)"}, {6, "1/6"}, {8, "1/8 (very chunky)"},
 }
@@ -69,7 +78,7 @@ end
 
 function graphics.formspec()
 	return table.concat({
-		theme.head(10, 16.6),
+		theme.head(10, 18.4),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		row(1.0, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1),
 		"label[0.5,2.1;", theme.dim("Graphics"), "]",
@@ -95,9 +104,37 @@ function graphics.formspec()
 			core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2),
 		row(14.1, "Record demos", "demos", table.concat(DEMOS, ","),
 			core.settings:get_bool("nhv_demo_record", false) and 2 or 1),
-		"button[0.5,15.6;4.4,0.8;guide;Controls & guide...]",
-		"button_exit[5.1,15.6;4.4,0.8;close;Done]",
+		row(15.0, "Retro mode", "retro", table.concat(RETRO, ","),
+			core.settings:get_bool("nhv_retro", false) and 2 or 1),
+		row(15.9, "Retro dithering", "dither", table.concat(DITHER, ","),
+			core.settings:get_bool("nhv_retro_dither", true) and 1 or 2),
+		"button[0.5,17.4;4.4,0.8;guide;Controls & guide...]",
+		"button_exit[5.1,17.4;4.4,0.8;close;Done]",
 	})
+end
+
+-- retro mode on or off: the sizes swapped for the other mode's (the ones
+-- left kept for coming back)
+function graphics.set_retro(player, on)
+	local from, to = on and "window" or "retro", on and "retro" or "window"
+	local kept = {}
+	for _, s in ipairs(SIZES) do
+		kept[#kept + 1] = core.settings:get(s[1]) or ""
+	end
+	core.settings:set("nhv_sizes_" .. from, table.concat(kept, "|"))
+	local saved = (core.settings:get("nhv_sizes_" .. to) or ""):split("|", true)
+	for i, s in ipairs(SIZES) do
+		local v = saved[i]
+		if v == nil and on then
+			v = tostring(s[2])
+		end
+		if v ~= nil and v ~= "" then
+			core.settings:set(s[1], v)
+		end
+	end
+	core.settings:set_bool("nhv_retro", on) -- (the engine switches at the next frame)
+	theme.apply(player)
+	nhv.hud.place_map(player)
 end
 
 function graphics.show(player)
@@ -202,6 +239,16 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if set_num(SHADOW_OPACITY, fields.shadow_opacity, "nhv_shadow_opacity", 60) then
 		changed = true -- (shadows.lua redraws them at once)
+	end
+	local rm = tonumber(fields.retro)
+	if rm and (rm == 2) ~= core.settings:get_bool("nhv_retro", false) then
+		graphics.set_retro(player, rm == 2)
+		changed, reshow = true, true
+	end
+	local di = tonumber(fields.dither)
+	if di and (di == 1) ~= core.settings:get_bool("nhv_retro_dither", true) then
+		core.settings:set_bool("nhv_retro_dither", di == 1) -- (the engine, at once)
+		changed = true
 	end
 
 	if changed then
