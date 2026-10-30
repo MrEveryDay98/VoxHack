@@ -3,7 +3,9 @@
 -- editor's (intro_editor.lua: not the markers - stair triggers, monster
 -- paths, carving: the game's - but its own blocks).
 --
---   palette.configure({skip = {tab id = true}, extra = {{id, name, {node names}}}})
+--   palette.configure({skip = {tab id = true}, extra = {{id, name, {entries}}}})
+--     an entry: a node's name, or {image=, tooltip=, give=function(player)
+--     -> ItemStack} (a picture: the opening's sprites, intro_editor.lua)
 --   palette.open(player)    make it the player's inventory screen (I)
 
 local palette_mod = {}
@@ -112,10 +114,16 @@ local function palette_formspec(pname)
 	for i, name in ipairs(list) do
 		local x = 0.1 + ((i - 1) % cols) * step
 		local y = 0.05 + math.floor((i - 1) / cols) * step
-		fs[#fs + 1] = ("item_image_button[%f,%f;0.95,0.95;%s;pal_%s;]"):format(x, y, name,
-			name:gsub(":", "__"))
-		fs[#fs + 1] = ("tooltip[pal_%s;%s]"):format(name:gsub(":", "__"),
-			core.formspec_escape(core.registered_nodes[name].description or name))
+		if type(name) == "table" then
+			fs[#fs + 1] = ("image_button[%f,%f;0.95,0.95;%s;palx_%d;]"):format(x, y,
+				core.formspec_escape(name.image), i)
+			fs[#fs + 1] = ("tooltip[palx_%d;%s]"):format(i, core.formspec_escape(name.tooltip or ""))
+		else
+			fs[#fs + 1] = ("item_image_button[%f,%f;0.95,0.95;%s;pal_%s;]"):format(x, y, name,
+				name:gsub(":", "__"))
+			fs[#fs + 1] = ("tooltip[pal_%s;%s]"):format(name:gsub(":", "__"),
+				core.formspec_escape(core.registered_nodes[name].description or name))
+		end
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
 	local overflow = math.max(0, rows * step + 0.1 - view_h)
@@ -140,6 +148,15 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		end
 	end
 	for k in pairs(fields) do
+		local n = tonumber(k:match("^palx_(%d+)$") or "")
+		if n then
+			local t = TABS[tab_of[pname] or first_tab()]
+			local e = t and palette[t[1]] and palette[t[1]][n]
+			if type(e) == "table" and e.give then
+				player:get_inventory():set_stack("main", player:get_wield_index(), e.give(player))
+			end
+			return true
+		end
 		local id = k:match("^pal_(.+)$")
 		if id then
 			local name = id:gsub("__", ":")

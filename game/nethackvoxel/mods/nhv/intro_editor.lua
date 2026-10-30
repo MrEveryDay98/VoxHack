@@ -14,9 +14,11 @@
 --     as you're looking now; "Look through it" puts you there to see.
 --     Points go in the order of their numbers.
 --   Sign: on a wall - right-click it for its words, a line each.
---   Monster or person: any NetHack monster's sprite standing there, turned
---     to you as they all are - right-click it for which (its name, as
---     NetHack has it) and how tall.
+--   Monsters and items: the palette's Monsters and Items tabs have every
+--     NetHack sprite - pick one, put it down: it stands there turned to you
+--     as they all are, as tall as the game makes it. Right-click it for
+--     another (by its name, as NetHack has it) or another height. (The
+--     Opening tab's "Monster or person" is one to name yourself.)
 --   The sky is the game's: the one the VoxHack Editor's Sky tab gives
 --   "opening" (the default sky if none).
 --
@@ -93,8 +95,11 @@ core.register_on_joinplayer(function(player)
 	core.set_timeofday(0.5)
 	-- the palette (I): every block of the prefab editor's but its markers -
 	-- the game's - and the opening's own
-	nhv.palette.configure({skip = {markers = true},
-		extra = {{"opening", "Opening", nhv.intro_blocks.PALETTE}}})
+	local extra = {{"opening", "Opening", nhv.intro_blocks.PALETTE}}
+	for _, t in ipairs(intro_editor.sprite_tabs()) do
+		extra[#extra + 1] = t
+	end
+	nhv.palette.configure({skip = {markers = true}, extra = extra})
 	nhv.palette.open(player)
 	player:hud_set_hotbar_itemcount(10)
 	local inv = player:get_inventory()
@@ -220,12 +225,74 @@ end
 
 local editing = {} -- player name -> {kind=, pos=}
 
--- the monsters and people: what each is ({name=, h=}), by place
+-- the monsters, people and things: what each is ({tile=, h=}, or {name=,
+-- h=} named in its settings), by place
 local DEFAULT_FIGURE = {name = "watchman", h = 1.8}
+
+-- how tall the game makes a tile's sprite: a monster by its size (and
+-- its scale: /scale), a thing as an object on the floor is, a feature as
+-- it stands
+local MONSTERS, OBJECTS_END = nhv_tiles.monsters or 789, 1272
+local FEATURES = {{"S_fountain", 1313, "fountain"}, {"S_altar", 1307, "altar"},
+	{"S_throne", 1311, "throne"}, {"S_sink", 1312, "sink"}, {"S_grave", 1310, "grave"}}
+local function tile_height(tile)
+	if tile < MONSTERS then
+		local mndx = math.floor(tile / 2)
+		local mi = core.nh_mon_info and core.nh_mon_info(mndx)
+		return nhv.scale.height(mi and mi.size, mndx)
+	end
+	for _, f in ipairs(FEATURES) do
+		if f[2] == tile then
+			return nhv.scale.feature_height(f[1]) or 2
+		end
+	end
+	return nhv_tiles.name(tile) == "boulder" and 1.6 or 0.6
+end
+local function round(h)
+	return math.floor(h * 100 + 0.5) / 100
+end
+
+-- the palette's sprites: an item each, the figure block carrying it
+local function sprite_entry(tile, label)
+	return {
+		image = nhv_tiles.texture(tile), tooltip = label,
+		give = function()
+			local stack = ItemStack("nhv:intro_figure 99")
+			local meta = stack:get_meta()
+			meta:set_int("tile", tile)
+			meta:set_string("description", label)
+			meta:set_string("inventory_image", nhv_tiles.texture(tile))
+			meta:set_string("wield_image", nhv_tiles.texture(tile))
+			return stack
+		end,
+	}
+end
+local function pretty(name)
+	return ((name or ""):gsub(",male$", ""):gsub(",female$", " (female)"))
+end
+function intro_editor.sprite_tabs()
+	local monsters, items = {}, {}
+	for t = 0, MONSTERS - 1 do
+		local n = nhv_tiles.name(t) or ""
+		-- (a female only where her sprite isn't his)
+		local female = n:find(",female$")
+		if not female or nhv_tiles.sheet_index(t) ~= nhv_tiles.sheet_index(t - 1) then
+			monsters[#monsters + 1] = sprite_entry(t, pretty(n))
+		end
+	end
+	for t = MONSTERS, OBJECTS_END - 1 do
+		items[#items + 1] = sprite_entry(t, nhv_tiles.name(t) or "")
+	end
+	for _, f in ipairs(FEATURES) do
+		items[#items + 1] = sprite_entry(f[2], f[3])
+	end
+	return {{"monsters", "Monsters", monsters}, {"items", "Items", items}}
+end
 local function figure_form(f)
+	local name = f.name or (f.tile and pretty(nhv_tiles.name(f.tile))) or ""
 	return table.concat({
 		"formspec_version[6]size[8,4.4]",
-		"field[0.4,0.8;5,0.8;name;Which (NetHack's name: newt, watchman, gnome leader...);", esc(f.name), "]",
+		"field[0.4,0.8;5,0.8;name;Which (NetHack's name: newt, watchman, gnome leader...);", esc(name), "]",
 		"field[5.8,0.8;1.8,0.8;h;Height;", esc(f.h), "]",
 		"label[0.4,2.2;", esc(f.bad and ("No monster called " .. f.bad) or ""), "]",
 		"button_exit[4.6,3.2;3,0.8;save;Save]",
@@ -245,18 +312,21 @@ function intro_editor.sprites(p1, p2, at)
 	local figs = load_list("figures")
 	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, {"nhv:intro_figure"})) do
 		local f = figs[key(pos)] or DEFAULT_FIGURE
-		local tile = nhv.intro_blocks.tile_named(f.name)
+		local tile = tonumber(f.tile) or nhv.intro_blocks.tile_named(f.name)
 		if tile then
-			list[#list + 1] = {pos = vector.subtract(pos, at), tile = tile, h = tonumber(f.h) or 1.8}
+			list[#list + 1] = {pos = vector.subtract(pos, at), tile = tile, h = tonumber(f.h) or tile_height(tile)}
 		end
 	end
 	return list
 end
 
 core.override_item("nhv:intro_figure", {
-	after_place_node = function(pos)
+	-- (from the palette's sprites: that one, as tall as the game makes it)
+	after_place_node = function(pos, _, itemstack)
 		local list = load_list("figures")
-		list[key(pos)] = table.copy(DEFAULT_FIGURE)
+		local tile = itemstack and itemstack:get_meta():get("tile")
+		tile = tonumber(tile)
+		list[key(pos)] = tile and {tile = tile, h = round(tile_height(tile))} or table.copy(DEFAULT_FIGURE)
 		save_list("figures", list)
 	end,
 	after_dig_node = function(pos)
@@ -329,10 +399,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if e.kind == "figure" then
 		if fields.name then
-			local f = {name = fields.name:lower(), h = tonumber(fields.h) or 1.8}
-			if not nhv.intro_blocks.tile_named(f.name) then
+			local tile = nhv.intro_blocks.tile_named(fields.name)
+			local f = {tile = tile, h = tonumber(fields.h) or (tile and round(tile_height(tile))) or 1.8}
+			if not tile then
 				-- (not a monster's name: asked again)
-				f.bad = fields.name
+				f.name, f.bad = fields.name, fields.name
 				core.show_formspec(name, formname, figure_form(f))
 				return true
 			end
