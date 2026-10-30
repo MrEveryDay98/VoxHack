@@ -12,6 +12,10 @@ nhv.theme = theme
 
 local FONT = core.get_modpath("nhv") .. DIR_DELIM .. "fonts" .. DIR_DELIM .. "nhv_retro.ttf"
 local FONT_PX = 14 -- the font's pixel height: sizes snap to multiples of it
+-- retro mode's (the small screen's) small font, for the messages: Luanti's
+-- "mono" font there (theme.small_messages)
+local SMALL_FONT = core.get_modpath("nhv") .. DIR_DELIM .. "fonts" .. DIR_DELIM .. "nhv_retro_small.ttf"
+local SMALL_PX = 8
 
 function theme.retro()
 	return core.settings:get("nhv_interface") ~= "modern"
@@ -80,13 +84,23 @@ function theme.box_scale()
 	return k
 end
 
+-- whether the messages are in the small font: retro mode, the retro
+-- interface (Luanti's "mono" font is it then: hud.lua's text styles)
+function theme.small_messages()
+	return theme.retro() and core.settings:get_bool("nhv_retro", false)
+end
+
 local function font_settings()
 	local k = theme.text_scale()
 	if theme.retro() then
 		local px = tostring(FONT_PX * k)
+		local mono, mono_px = FONT, FONT_PX
+		if theme.small_messages() then
+			mono, mono_px = SMALL_FONT, SMALL_PX
+		end
 		return {
-			font_path = FONT, mono_font_path = FONT, font_size = px, mono_font_size = px,
-			font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(FONT_PX),
+			font_path = FONT, mono_font_path = mono, font_size = px, mono_font_size = tostring(mono_px * k),
+			font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(mono_px),
 		}
 	end
 	local px = k ~= 1 and tostring(math.floor(MODERN_PX * k + 0.5)) or nil
@@ -122,6 +136,9 @@ function theme.apply(player)
 	end
 	if nhv.hud and nhv.hud.rebuild_meters then
 		nhv.hud.rebuild_meters(player) -- (HP / Pw bars too)
+	end
+	if nhv.hud and nhv.hud.text_styles then
+		nhv.hud.text_styles(player) -- (the messages' font)
 	end
 end
 

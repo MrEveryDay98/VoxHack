@@ -187,7 +187,7 @@ local function show_status(player, h)
 			cond_ids[i] = player:hud_add({
 				type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
 				offset = {x = 0, y = -status_above}, number = 0xFFFFFF, text = "",
-				style = 4, -- monospace
+				style = hud.status_style(),
 			})
 		end
 		local text = cd and only(at, #cd.text) or ""
@@ -291,6 +291,29 @@ local function update_here(player, snap)
 		invoke_shown = inv
 		player:hud_change(hud.ids.invoke_key, "text", inv)
 		player:hud_change(hud.ids.invoke_key_shadow, "text", inv)
+	end
+end
+
+-- The fonts of the status line (columns: monospace) and the messages. In
+-- retro mode Luanti's "mono" font is the small one, for the messages
+-- (theme.small_messages); the status line is in the retro font then, as
+-- monospace as it.
+local MONO = 4 -- (HUD text style: Luanti's mono font)
+function hud.status_style()
+	return nhv.theme.small_messages() and 0 or MONO
+end
+function hud.message_style()
+	return nhv.theme.small_messages() and MONO or 0
+end
+function hud.text_styles(player)
+	if hud.ids.msg then
+		player:hud_change(hud.ids.msg, "style", hud.message_style())
+	end
+	if hud.ids.status then
+		player:hud_change(hud.ids.status, "style", hud.status_style())
+	end
+	for _, id in pairs(cond_ids) do
+		player:hud_change(id, "style", hud.status_style())
 	end
 end
 
@@ -962,13 +985,14 @@ core.register_on_joinplayer(function(player)
 	hud.ids.status = player:hud_add({
 		type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
-		style = 4, -- monospace
+		style = hud.status_style(),
 	})
 	-- (z_index 1000 and up: the VoxHack build of Luanti draws it
 	-- above menus and prompts, so it can be read while answering them)
 	hud.ids.msg = player:hud_add({
 		type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
 		offset = {x = 0, y = 60}, number = 0xFFFFE0, text = "", z_index = 1000,
+		style = hud.message_style(),
 	})
 	msg_shown = nil
 	-- an inscription you're standing on: centred, in the lower part of the
