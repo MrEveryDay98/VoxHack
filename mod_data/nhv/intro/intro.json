@@ -46,6 +46,14 @@
 			"texture" : "worldbuilding_sprites.png^[sheet:4x4:1,2"
 		}
 	],
+	"fog" : 
+	{
+		"color" : "#C8D0D8",
+		"distance" : 105,
+		"on" : true,
+		"start" : 0.48999999999999999
+	},
+	"light" : 10,
 	"max" : 
 	{
 		"x" : 255,
@@ -150,25 +158,46 @@
 			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 3.6559412479400635
+		},
+		{
+			"delay" : 0,
+			"index" : 12,
+			"line" : "In the morning you awake, collect your belongings, and set off for the dungeon. After several days of uneventful travel, you see the ancient ruins that mark the entrance to the Mazes of Menace. It is late at night, so you make camp at the entrance and spend the night sleeping under the open skies. ",
+			"mood" : "calm",
+			"pitch" : 0.23038345575332642,
+			"pos" : 
+			{
+				"x" : 72,
+				"y" : -2,
+				"z" : 204
+			},
+			"seconds" : 3,
+			"sync" : true,
+			"transition" : "glide",
+			"voice" : "Narrator",
+			"yaw" : 0.91367995738983154
+		},
+		{
+			"delay" : 0,
+			"index" : 13,
+			"line" : "In the morning, you gather your gear, eat what may be your last meal outside, and enter the dungeon...",
+			"mood" : "calm",
+			"pitch" : 0.067020639777183533,
+			"pos" : 
+			{
+				"x" : 69,
+				"y" : -3,
+				"z" : 217
+			},
+			"seconds" : 3,
+			"sync" : true,
+			"transition" : "black",
+			"voice" : "Narrator",
+			"yaw" : 1.9659391641616821
 		}
 	],
 	"signs" : 
 	[
-		{
-			"dir" : 
-			{
-				"x" : -1,
-				"y" : 0,
-				"z" : 0
-			},
-			"pos" : 
-			{
-				"x" : 66,
-				"y" : -3,
-				"z" : 218
-			},
-			"text" : "WELCOME TO THE\nDUNGEON OF DOOM\n(and gift shop)"
-		},
 		{
 			"dir" : 
 			{
@@ -183,8 +212,24 @@
 				"z" : 207
 			},
 			"text" : "SOUVENIRS"
+		},
+		{
+			"dir" : 
+			{
+				"x" : -1,
+				"y" : 0,
+				"z" : 0
+			},
+			"pos" : 
+			{
+				"x" : 66,
+				"y" : -3,
+				"z" : 218
+			},
+			"text" : "WELCOME TO THE\nMAZES OF MENACE\n(and gift shop)"
 		}
 	],
+	"time" : 0.5,
 	"trees" : 
 	[
 		{
@@ -4363,5 +4408,5 @@
 			"z" : 240
 		}
 	],
-	"version" : 1793389818
+	"version" : 1793391726
 }

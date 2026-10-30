@@ -65,3 +65,5 @@ heard = herd
 vivid = vihvid
 terrified = terified
 recollection = rehcollection
+dungeon = dunjin
+cavern = cahvern
