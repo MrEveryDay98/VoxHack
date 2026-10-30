@@ -209,6 +209,31 @@ end
 -- trees and figures, signs); the trees, figures and signs put up where it
 -- is going, as it gets there.
 local FOLLOW_S = 0.3
+
+-- The whole forest kept going while it plays (the game keeps only what's
+-- near you going: further off, things go - and come back late), its map
+-- blocks force-loaded for now (not saved: transient; no limit) - a moment
+-- before it starts, the game taking a little while to set them going.
+local LOAD_S = 2.5
+local kept = {} -- block positions
+local function keep_loaded(p1, p2)
+	for x = math.floor(p1.x / 16), math.floor(p2.x / 16) do
+		for y = math.floor(p1.y / 16), math.floor(p2.y / 16) do
+			for z = math.floor(p1.z / 16), math.floor(p2.z / 16) do
+				local pos = vector.new(x * 16, y * 16, z * 16)
+				if core.forceload_block(pos, true, -1) then
+					kept[#kept + 1] = pos
+				end
+			end
+		end
+	end
+end
+local function let_go()
+	for _, pos in ipairs(kept) do
+		core.forceload_free_block(pos, true)
+	end
+	kept = {}
+end
 local function follow(dtime)
 	run.follow_t = (run.follow_t or 0) + dtime
 	if run.follow_t < FOLLOW_S or not core.nhv_camera then
@@ -353,6 +378,7 @@ local function finish()
 		end
 	end
 	nhv.intro_blocks.sprites({})
+	let_go()
 	-- (the editor's preview: quiet again; the game's title starts its own)
 	if nhv.INTRO_EDITOR and nhv.sound then
 		nhv.sound.stop_music()
@@ -550,13 +576,27 @@ function intro_play.start_game(player, done)
 			core.fix_light(p1, p2)
 			storage:set_string("opening_version", version)
 		end
-		play(player, data, ORIGIN, done)
+		keep_loaded(p1, p2)
+		core.after(LOAD_S, function()
+			if player:is_player() then
+				play(player, data, ORIGIN, done)
+			else
+				let_go()
+			end
+		end)
 	end)
 end
 
 -- the editor's: play these, where they are
 function intro_play.preview(player, data, done)
-	play(player, data, vector.zero(), done)
+	keep_loaded(data.forest_min or data.min, data.forest_max or data.max)
+	core.after(LOAD_S, function()
+		if player:is_player() then
+			play(player, data, vector.zero(), done)
+		else
+			let_go()
+		end
+	end)
 end
 
 return intro_play

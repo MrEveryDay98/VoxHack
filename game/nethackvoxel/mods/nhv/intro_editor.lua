@@ -632,7 +632,9 @@ core.register_chatcommand("intro_play", {
 		intro_editor.hide_markers()
 		nhv.intro_play.preview(player, {points = list, signs = {}, trees = trees, figures = figures,
 			time = intro_editor.time(), fog = intro_editor.fog(), light = intro_editor.light(),
-			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1)}, function(p)
+			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1),
+			-- (the forest the preview keeps going: intro_play.lua)
+			forest_min = vector.new(0, -8, 0), forest_max = vector.new(AREA - 1, 56, AREA - 1)}, function(p)
 			intro_editor.show_markers()
 			p:set_pos(back)
 			p:override_day_night_ratio(nil)
