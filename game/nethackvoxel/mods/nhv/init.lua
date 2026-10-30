@@ -153,6 +153,10 @@ end
 
 -- start (or continue) NetHack as character `name` (default: the usual)
 function nhv.new_game(player, name)
+	-- (the title's backdrop gone - its sky, its held view, the HUD it
+	-- hides - however the game was started)
+	nhv.showroom.hide(player)
+	nhv.title.open = false
 	world.ledger = nil
 	nhv.player.ledger = nil
 	nhv.player.hero = nil

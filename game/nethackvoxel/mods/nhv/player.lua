@@ -825,7 +825,10 @@ local z_next = 0
 local function helpless_view(player)
 	local h = player_mod.hero
 	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or nh.repeating or false
-	if helpless ~= camera_out then
+	-- (dying, or a cutscene: their camera, not this - no back to first
+	-- person over your death because you'd stopped being helpless)
+	local scene = (nhv.death and nhv.death.active) or (nhv.cutscene and nhv.cutscene.active)
+	if helpless ~= camera_out and not scene then
 		camera_out = helpless
 		player:set_camera({mode = helpless and "third" or "first"})
 		if not helpless then
