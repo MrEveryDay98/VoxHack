@@ -25,6 +25,10 @@ local LOOK_DOWN = 0.12 -- (radians: the camera a little down)
 -- figures are in the middle of the screen, low down, the narration above
 local INTRO_CAMERA = vector.new(-1.7, 1.45, -1.6)
 local GLIDE_S = 0.8 -- (the camera's move there)
+-- and there, held by hand: a slow bob (up and down) and sway (side to
+-- side), its look wavering a little - each on its own slow beat, so they
+-- never fall into a loop (nodes; radians)
+local SWAY = {bob = 0.035, side = 0.05, yaw = 0.012, pitch = 0.008}
 
 -- the role's NetHack monster (its tiles are "<monster>,<gender>")
 local ROLE_MON = {archeologist = "archeologist", barbarian = "barbarian", caveman = "cave dweller",
@@ -100,7 +104,8 @@ end
 local function places(player)
 	local p = showroom.spot
 	local base = vector.new(p.x - 1.5, p.y - 0.45, p.z + 3.2)
-	local cam = player:get_pos()
+	-- (the camera's place without its sway: the figures don't twitch with it)
+	local cam = showroom.cam or player:get_pos()
 	return vector.new(cam.x, cam.y + 1.6, cam.z), base
 end
 
@@ -348,17 +353,29 @@ core.register_globalstep(function(dtime)
 		else
 			showroom.cam = goal
 		end
-		if vector.distance(player:get_pos(), showroom.cam) > 0.01 then
-			player:set_pos(showroom.cam)
+		-- (the intro's hand-held camera: coming in as it glides there)
+		local at, yaw, pitch = showroom.cam, 0, LOOK_DOWN
+		if showroom.centred then
+			showroom.sway_t = (showroom.sway_t or 0) + dtime
+			local t = showroom.sway_t
+			local a = g and g.t * g.t * (3 - 2 * g.t) or 1
+			at = vector.offset(at, math.sin(t * 0.73) * SWAY.side * a, math.sin(t * 1.17) * SWAY.bob * a, 0)
+			yaw = math.sin(t * 0.41 + 1) * SWAY.yaw * a
+			pitch = pitch + math.sin(t * 0.89 + 2) * SWAY.pitch * a
+		else
+			showroom.sway_t = nil
+		end
+		if vector.distance(player:get_pos(), at) > 0.002 then
+			player:set_pos(at)
 			player:set_velocity(vector.zero())
 		end
-	end
-	-- (and looking the same way: the mouse doesn't turn it)
-	if player and (math.abs(player:get_look_horizontal()) > 0.001
-			and math.abs(player:get_look_horizontal() - 2 * math.pi) > 0.001
-			or math.abs(player:get_look_vertical() - LOOK_DOWN) > 0.001) then
-		player:set_look_horizontal(0)
-		player:set_look_vertical(LOOK_DOWN)
+		-- (and looking the same way: the mouse doesn't turn it)
+		local now = player:get_look_horizontal()
+		if math.abs(math.atan2(math.sin(now - yaw), math.cos(now - yaw))) > 0.0005
+				or math.abs(player:get_look_vertical() - pitch) > 0.0005 then
+			player:set_look_horizontal(yaw % (2 * math.pi))
+			player:set_look_vertical(pitch)
+		end
 	end
 	if player then
 		showroom.hide_huds(player)
