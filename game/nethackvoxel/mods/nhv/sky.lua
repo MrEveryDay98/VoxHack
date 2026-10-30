@@ -137,20 +137,31 @@ function sky.current()
 	return sky.def
 end
 
+-- the sun and the moon in every sky that has them (nhv_tiles/textures/
+-- sun_moon.png: the moon, then the sun)
+local MOON = "sun_moon.png^[sheet:2x1:0,0"
+local SUN = "sun_moon.png^[sheet:2x1:1,0"
+
+-- the level open to the sky somewhere (none in the intro editor: no levels)
+local function open_sky()
+	return nhv.terrain and nhv.terrain.open_sky
+end
+
 -- Luanti's own sky for the player (hud.apply_fog: fog as given): plain
 -- black - or, while a sky is shown, its fog colour (over the whole level),
 -- or the day and night sky with its sun, moon and stars.
 function sky.apply(player, fog)
 	local s = sky.def
-	local base = s and (nhv.terrain.open_sky or sky.scene) and s.fog_color or "#000000"
+	local base = s and (open_sky() or sky.scene) and s.fog_color or "#000000"
 	if s and s.daynight then
 		player:set_sky({type = "regular", clouds = false, fog = fog})
 	else
 		player:set_sky({type = "plain", base_color = base, clouds = false, fog = fog})
 	end
 	local dn = s and s.daynight
-	player:set_sun({visible = dn and s.sun ~= false or false, sunrise_visible = dn and s.sun ~= false or false})
-	player:set_moon({visible = dn and s.moon ~= false or false})
+	player:set_sun({visible = dn and s.sun ~= false or false, sunrise_visible = dn and s.sun ~= false or false,
+		texture = SUN, scale = 1})
+	player:set_moon({visible = dn and s.moon ~= false or false, texture = MOON, scale = 1})
 	-- (stars all the time: by day too - full strength - and in a plain sky)
 	local always = s and s.stars_always == true
 	player:set_stars({visible = always or (dn and s.stars ~= false) or false, day_opacity = always and 1 or 0})
@@ -158,7 +169,7 @@ end
 
 local function set(s)
 	local cfg = s and config(s) or ""
-	local open = nhv.terrain.open_sky or sky.scene ~= nil
+	local open = open_sky() or sky.scene ~= nil
 	local changed = s ~= sky.def or (s and s.daynight) ~= sky.daynight_shown
 		or (s and open) ~= sky.open_shown
 	if cfg ~= sky.shown then
@@ -169,9 +180,11 @@ local function set(s)
 		sky.def = s
 		sky.daynight_shown = s and s.daynight
 		sky.open_shown = s and open
-		local player = nhv.player.get()
-		if player and nhv.hud.apply_fog then
+		local player = nhv.player and nhv.player.get() or core.get_connected_players()[1]
+		if player and nhv.hud and nhv.hud.apply_fog then
 			nhv.hud.apply_fog(player)
+		elseif player then
+			sky.apply(player) -- (the intro editor: no HUD of the game's)
 		end
 	end
 end
@@ -183,13 +196,14 @@ local function real_time_of_day()
 end
 
 -- (sky.scene: a level's name - "astral" - whose sky is shown whatever
--- the level: the new character screen's scene, showroom.lua)
+-- the level: the new character screen's scene, showroom.lua; "opening":
+-- the opening's forest, intro_play.lua - the default sky if it has none)
 function sky.update()
-	local snap = nh.snap
+	local snap = nh and nh.snap
 	local hero = snap and snap.hero
 	local s = hero and not U.has(hero.flags, U.HERO.BLIND) and nhv.terrain.has_sky() and sky.for_level()
 	if sky.scene then
-		s = by_id(sky.data.levels[sky.scene]) or s
+		s = by_id(sky.data.levels[sky.scene]) or (sky.scene == "opening" and by_id(sky.data.levels.default)) or s
 	end
 	set(s or nil)
 	if s and s.daynight then
@@ -247,7 +261,7 @@ end
 core.register_globalstep(function(dtime)
 	local s = sky.def
 	local l = s and s.lightning
-	if not (l and l.on) then
+	if not (l and l.on) or not nhv.player then
 		return
 	end
 	local player = nhv.player.get()

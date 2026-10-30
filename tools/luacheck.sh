@@ -5,7 +5,7 @@
 cd "$(dirname "$0")/.." || exit 1
 ok=0
 # the globals the game may use: Lua's, Luanti's, and the game's own tables
-ALLOWED=" core nhv nhv_tiles vector VoxelArea ItemStack DIR_DELIM dofile math table string io os \
+ALLOWED=" core nhv nhv_tiles vector VoxelArea ItemStack PcgRandom DIR_DELIM dofile math table string io os \
 ipairs pairs next type tonumber tostring setmetatable getmetatable rawget rawset select \
 unpack error assert pcall xpcall print loadstring "
 for f in game/nethackvoxel/mods/*/*.lua; do

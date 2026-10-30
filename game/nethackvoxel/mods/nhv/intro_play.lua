@@ -1,0 +1,358 @@
+-- The opening: before the title, the camera flies through a forest along a
+-- path built in the intro editor (intro_editor.lua), the Narrator (or
+-- whoever's set) saying a line at each point, its words at the bottom of
+-- the screen. Nothing else: no HUD, no control - Enter skips it.
+--
+-- The editor saves the forest (mod_data/nhv/intro/forest.mts) and its path
+-- and signs (intro.json): the game puts the forest up out of the way
+-- (ORIGIN: once, and again when it's saved anew) and plays it there.
+--
+-- At each camera point: its line starts as the camera gets there; it waits
+-- (delay), then goes on to the next point - gliding there (in the line's
+-- time, or so many seconds), or fading to black or white for as long,
+-- jumping there and fading back. The VoxHack engine flies the camera
+-- (core.nhv_camera_path: smooth, every frame); this times the rest.
+--
+--   intro_play.ready()                the game has an opening to play
+--   intro_play.start_game(player, done)  put the forest up, play it, then done()
+--   intro_play.preview(player, data, done)  the editor's: play this, where it is
+--   intro_play.active                 true while it plays
+
+local intro_play = {active = false}
+nhv.intro_play = intro_play
+
+local DATA_DIR = core.get_mod_data_path() .. DIR_DELIM .. "intro"
+local SCHEMATIC = DATA_DIR .. DIR_DELIM .. "forest.mts"
+local JSON = DATA_DIR .. DIR_DELIM .. "intro.json"
+intro_play.DATA_DIR, intro_play.SCHEMATIC, intro_play.JSON = DATA_DIR, SCHEMATIC, JSON
+
+-- where the game puts the forest: far from the levels and the title's spot
+local ORIGIN = vector.new(-2048, 0, -2048)
+local FADE_S = 0.8     -- a fade to black or white (and back)
+local OPEN_S = 1.0     -- the first fade in
+local CLOSE_S = 1.2    -- after the last line, then the fade out
+local READ_S = 0.055   -- a character of a line, with the voices off
+local MIN_LINE_S = 2.0
+local WRAP = 60
+
+local storage = core.get_mod_storage()
+
+local function read_json()
+	local f = io.open(JSON, "r")
+	if not f then
+		return nil
+	end
+	local data = core.parse_json(f:read("*a") or "")
+	f:close()
+	return type(data) == "table" and type(data.points) == "table" and #data.points > 0 and data or nil
+end
+
+function intro_play.ready()
+	if not core.settings:get_bool("nhv_opening", true) or not core.nhv_camera_path then
+		return false
+	end
+	local f = io.open(SCHEMATIC, "rb")
+	if not f then
+		return false
+	end
+	f:close()
+	return read_json() ~= nil
+end
+
+local function wrap(text)
+	local lines, line = {}, ""
+	for word in text:gmatch("%S+") do
+		if line ~= "" and #line + 1 + #word > WRAP then
+			lines[#lines + 1] = line
+			line = word
+		else
+			line = line == "" and word or (line .. " " .. word)
+		end
+	end
+	if line ~= "" then
+		lines[#lines + 1] = line
+	end
+	return table.concat(lines, "\n")
+end
+
+-- how long a point's line takes to say (or to read, with no voice)
+local function line_seconds(p)
+	if not p.line or p.line == "" then
+		return 0
+	end
+	local s = nhv.sound and nhv.sound.say_seconds(p.voice or "Narrator", p.line, p.mood ~= "" and p.mood or nil) or 0
+	if s > 0 then
+		return s, true
+	end
+	return math.max(MIN_LINE_S, #p.line * READ_S), false
+end
+
+-- The timeline: the camera's points (for the engine) and what happens when
+-- (lines, fades) - times in seconds from the start; at: added to every
+-- point's place (where the forest is)
+local function timeline(points, at)
+	local cam, events = {}, {}
+	local function key(t, p, cut)
+		cam[#cam + 1] = {t = t, pos = vector.add(at, p.pos), yaw = p.yaw or 0, pitch = p.pitch or 0, cut = cut}
+	end
+	local t = OPEN_S
+	key(0, points[1])
+	for i, p in ipairs(points) do
+		local secs, voiced = line_seconds(p)
+		if secs > 0 then
+			events[#events + 1] = {t = t, line = p, voiced = voiced}
+			events[#events + 1] = {t = t + secs + 0.3, line = false}
+		end
+		local delay = tonumber(p.delay) or 0
+		local move = p.sync ~= false and secs > 0 and secs or (tonumber(p.seconds) or 3)
+		key(t, p)
+		if delay > 0 then
+			key(t + delay, p)
+		end
+		local nxt = points[i + 1]
+		if not nxt then
+			t = t + math.max(delay, secs) + CLOSE_S
+			events[#events + 1] = {t = t, fade = "#000000", out = true}
+			events[#events + 1] = {t = t + FADE_S + 0.2, done = true}
+			break
+		end
+		if p.transition == "black" or p.transition == "white" then
+			local color = p.transition == "white" and "#FFFFFF" or "#000000"
+			-- (it waits, then fades out for the time set - its line's, or
+			-- the seconds - jumps there and fades back in)
+			local out_t = t + delay + math.max(move - FADE_S, 0)
+			events[#events + 1] = {t = out_t, fade = color, out = true}
+			t = out_t + FADE_S
+			key(t, nxt, true)
+			events[#events + 1] = {t = t, fade = color, out = false}
+		else
+			t = t + delay + move
+		end
+	end
+	return cam, events
+end
+
+local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
+local FORM = "nhv:opening"
+
+local function skip_formspec()
+	return "formspec_version[6]size[5,1]position[1,1]anchor[1,1]padding[0.02,0.02]no_prepend[]"
+		.. "bgcolor[#00000000;false]allow_close[false]"
+		.. "label[0.4,0.5;" .. core.colorize("#AAAAAA", "Press Enter to skip") .. "]"
+end
+
+-- nothing of the HUD showing (but the fade, and the words): every element
+-- moved off the screen, put back after (and any made meanwhile)
+local function hide_huds(player)
+	local keep = {}
+	for _, id in ipairs(run.ids) do
+		keep[id] = true
+	end
+	for id, def in pairs(player:hud_get_all() or {}) do
+		-- (not the hotbar: off by its flag, below - moved away it's drawn
+		-- wrong)
+		if def.position and def.position.x ~= 9 and not keep[id] and def.type ~= "hotbar"
+				and not (nhv.hud and id == nhv.hud.ids.fade) then
+			run.huds[id] = def.position
+			player:hud_change(id, "position", {x = 9, y = 9})
+		end
+	end
+end
+
+local function set_words(text)
+	for _, id in ipairs(run.ids) do
+		run.player:hud_change(id, "text", text)
+	end
+end
+
+local function finish()
+	local player, done = run.player, run.done
+	core.nhv_camera_path(nil)
+	core.close_formspec(player:get_player_name(), FORM)
+	if nhv.sound then
+		nhv.sound.hush("opening")
+	end
+	for _, id in ipairs(run.ids) do
+		player:hud_remove(id)
+	end
+	for id, pos in pairs(run.huds) do
+		local def = player:hud_get(id)
+		if def and def.position and def.position.x == 9 then
+			player:hud_change(id, "position", pos)
+		end
+	end
+	for _, obj in ipairs(run.signs) do
+		if obj:get_pos() then
+			obj:remove()
+		end
+	end
+	nhv.intro_blocks.sprites({})
+	player:hud_set_flags({wielditem = run.flags.wielditem, crosshair = run.flags.crosshair,
+		hotbar = run.flags.hotbar, healthbar = run.flags.healthbar, breathbar = run.flags.breathbar,
+		chat = run.flags.chat, nhv_no_selection = run.flags.nhv_no_selection,
+		nhv_camera_lock = false})
+	player:set_properties({is_visible = run.visible})
+	player:override_day_night_ratio(run.ratio)
+	if nhv.sky then
+		nhv.sky.scene = run.scene
+		nhv.sky.update()
+	else
+		player:set_sky(run.sky)
+	end
+	run = nil
+	intro_play.active = false
+	if done then
+		done(player)
+	end
+end
+
+-- play these points (and signs), at: where the forest is
+local function play(player, data, at, done)
+	intro_play.active = true
+	run = {player = player, t0 = core.get_us_time(), ids = {}, huds = {}, signs = {}, done = done,
+		ratio = player:get_day_night_ratio(), sky = player:get_sky(true)}
+	local cam, events = timeline(data.points, at)
+	table.sort(events, function(a, b) return a.t < b.t end)
+	run.events, run.next_ev = events, 1
+	-- the words: white, with a shadow, low in the middle
+	for _, l in ipairs({{0x000000, 2}, {0xFFFFFF, 0}}) do
+		run.ids[#run.ids + 1] = player:hud_add({
+			type = "text", position = {x = 0.5, y = 0.84}, alignment = {x = 0, y = 1},
+			offset = {x = l[2], y = l[2]}, size = {x = 1, y = 0}, number = l[1], text = "",
+			z_index = 60,
+		})
+	end
+	hide_huds(player)
+	run.flags = player:hud_get_flags()
+	player:hud_set_flags({wielditem = false, crosshair = false, hotbar = false, healthbar = false,
+		breathbar = false, chat = false, nhv_no_selection = true, nhv_camera_lock = true})
+	run.visible = player:get_properties().is_visible
+	player:set_properties({is_visible = false})
+	-- (daylight in the forest; the game's sky - the "opening" one, the
+	-- VoxHack Editor's Sky tab)
+	player:override_day_night_ratio(1)
+	if nhv.sky then
+		run.scene = nhv.sky.scene
+		nhv.sky.scene = "opening"
+		nhv.sky.update()
+	else
+		player:set_sky({type = "regular", clouds = true})
+	end
+	if core.nhv_hero_light then
+		core.nhv_hero_light(0)
+	end
+	-- the trees, the monsters and people
+	local list = {}
+	for _, t in ipairs(data.trees or {}) do
+		list[#list + 1] = nhv.intro_blocks.tree(vector.add(at, t))
+	end
+	for _, f in ipairs(data.figures or {}) do
+		list[#list + 1] = {pos = vector.add(at, f.pos), tile = f.tile, h = f.h}
+	end
+	nhv.intro_blocks.sprites(list)
+	for _, s in ipairs(data.signs or {}) do
+		local obj = nhv.intro_blocks.board(vector.add(at, s.pos), s.dir, s.text)
+		if obj then
+			run.signs[#run.signs + 1] = obj
+		end
+	end
+	-- (you're out of sight in the middle of it, where all of it is sent to
+	-- you - the camera's where the engine says)
+	local mid = vector.add(at, vector.divide(vector.add(data.min, data.max), 2))
+	player:set_pos(vector.new(mid.x, at.y + data.max.y + 2, mid.z))
+	core.nhv_camera_path(cam)
+	if nhv.hud then
+		nhv.hud.fade(0, OPEN_S)
+	end
+	core.show_formspec(player:get_player_name(), FORM, skip_formspec())
+end
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= FORM then
+		return false
+	end
+	if run and fields.key_enter and not run.skipping then
+		-- (to black, then on)
+		run.skipping = true
+		if nhv.sound then
+			nhv.sound.hush("opening")
+		end
+		set_words("")
+		if nhv.hud then
+			nhv.hud.fade(1, FADE_S)
+		end
+		local now = (core.get_us_time() - run.t0) / 1e6
+		run.events = {{t = now + FADE_S + 0.2, done = true}}
+		run.next_ev = 1
+	elseif run then
+		core.show_formspec(player:get_player_name(), FORM, skip_formspec())
+	end
+	return true
+end)
+
+core.register_globalstep(function()
+	if not run then
+		return
+	end
+	if not run.player:is_player() then
+		run = nil
+		intro_play.active = false
+		return
+	end
+	hide_huds(run.player)
+	local now = (core.get_us_time() - run.t0) / 1e6
+	while run and run.events[run.next_ev] and run.events[run.next_ev].t <= now do
+		local ev = run.events[run.next_ev]
+		run.next_ev = run.next_ev + 1
+		if ev.done then
+			finish()
+		elseif ev.line ~= nil then
+			if ev.line then
+				set_words(wrap(ev.line.line))
+				if ev.voiced and nhv.sound then
+					local p = ev.line
+					nhv.sound.say(p.voice or "Narrator", p.line, "opening", p.mood ~= "" and p.mood or nil)
+				end
+			else
+				set_words("")
+			end
+		elseif ev.fade and nhv.hud then
+			if ev.out then
+				nhv.hud.fade(1, FADE_S, ev.fade)
+			else
+				nhv.hud.fade(0, FADE_S, ev.fade)
+			end
+		end
+	end
+end)
+
+-- the game's: the forest put up where it goes (once - again when the
+-- editor's saved it anew), loaded, then played; done(player) after
+function intro_play.start_game(player, done)
+	local data = read_json()
+	if not data then
+		done(player)
+		return
+	end
+	local p1 = vector.add(ORIGIN, data.min)
+	local p2 = vector.add(ORIGIN, data.max)
+	local version = tostring(data.version or "")
+	core.emerge_area(p1, p2, function(_, _, left)
+		if left > 0 or not player:is_player() then
+			return
+		end
+		if storage:get_string("opening_version") ~= version then
+			core.place_schematic(p1, SCHEMATIC, "0", {["nhv:intro_cam"] = "air", ["nhv:intro_sign"] = "air"}, true)
+			core.fix_light(p1, p2)
+			storage:set_string("opening_version", version)
+		end
+		play(player, data, ORIGIN, done)
+	end)
+end
+
+-- the editor's: play these, where they are
+function intro_play.preview(player, data, done)
+	play(player, data, vector.zero(), done)
+end
+
+return intro_play

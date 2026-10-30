@@ -154,6 +154,10 @@ def stage(out):
 	areas_dir = os.path.join(LUANTI, "mod_data", "nhv", "areas")
 	if os.path.isdir(areas_dir):
 		copytree(areas_dir, os.path.join(engine, "mod_data", "nhv", "areas"))
+	# the opening: its forest and camera path (the intro editor's /intro_save)
+	intro_dir = os.path.join(LUANTI, "mod_data", "nhv", "intro")
+	if os.path.isdir(intro_dir):
+		copytree(intro_dir, os.path.join(engine, "mod_data", "nhv", "intro"))
 	# an empty world for the game, and fresh settings
 	write(os.path.join(engine, "worlds", "nethack", "world.mt"), WORLD_MT, crlf=False)
 	write(os.path.join(engine, "minetest.conf"), CONF, crlf=False)

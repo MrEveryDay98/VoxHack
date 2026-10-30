@@ -12,6 +12,16 @@ do
 	end
 end
 
+-- A world with a file named "nhv_intro" in it is the intro editor: the
+-- opening's forest (tools/make_intro_world.py).
+do
+	local f = io.open(core.get_worldpath() .. DIR_DELIM .. "nhv_intro", "r")
+	nhv.INTRO_EDITOR = f ~= nil
+	if f then
+		f:close()
+	end
+end
+
 dofile(path .. "util.lua")
 dofile(path .. "theme.lua")
 dofile(path .. "blocks.lua")
@@ -34,6 +44,14 @@ if nhv.ATLAS and not nhv.EDITOR then
 	dofile(path .. "areas.lua")
 	dofile(path .. "doors.lua")
 	dofile(path .. "atlas.lua")
+	return
+end
+if nhv.INTRO_EDITOR then
+	dofile(path .. "signart.lua")
+	dofile(path .. "intro_blocks.lua")
+	dofile(path .. "sky.lua")
+	dofile(path .. "intro_play.lua")
+	dofile(path .. "intro_editor.lua")
 	return
 end
 if nhv.EDITOR then
@@ -116,6 +134,7 @@ dofile(path .. "rays.lua")
 dofile(path .. "effects.lua")
 dofile(path .. "msgfx.lua")
 dofile(path .. "holds.lua")
+dofile(path .. "signart.lua")
 dofile(path .. "signs.lua")
 -- (internet access - for the NetHackWiki viewer - is only granted to a
 -- request made right here, in the mod's own init.lua)
@@ -127,6 +146,8 @@ dofile(path .. "shadows.lua")
 dofile(path .. "sky.lua")
 dofile(path .. "showroom.lua")
 dofile(path .. "intro.lua")
+dofile(path .. "intro_blocks.lua")
+dofile(path .. "intro_play.lua")
 dofile(path .. "sound.lua")
 dofile(path .. "achievements.lua")
 dofile(path .. "cutscene.lua")
@@ -178,15 +199,24 @@ core.register_on_joinplayer(function(player)
 	-- park the player somewhere safe until the level is built
 	player:set_pos(vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10))
 	nhv.player.freeze(true)
-	-- (the title's backdrop at once: no hand, weapon or HUD showing before
-	-- the title screen comes)
-	nhv.showroom.title(player)
-	nhv.hud.fade(1, 0) -- (black until the title fades in)
+	nhv.hud.fade(1, 0) -- (black until the opening, or the title, fades in)
 	-- the title screen: continue, new character, options, quit
-	core.after(0.5, function()
-		if player:is_player() then
-			nhv.title.show(player, true)
-		end
-	end)
+	local function title(p)
+		-- (the title's backdrop: no hand, weapon or HUD showing before the
+		-- title screen comes)
+		nhv.showroom.title(p)
+		core.after(0.5, function()
+			if p:is_player() then
+				nhv.title.show(p, true)
+			end
+		end)
+	end
+	-- the opening first, if there's one (intro_play.lua)
+	if nhv.intro_play.ready() then
+		player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
+		nhv.intro_play.start_game(player, title)
+	else
+		title(player)
+	end
 end)
 
