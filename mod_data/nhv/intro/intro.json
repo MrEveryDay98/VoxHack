@@ -79,6 +79,47 @@
 	"points" : 
 	[
 		{
+			"blend" : true,
+			"delay" : 0,
+			"fade_in" : "black",
+			"index" : -1,
+			"line" : "",
+			"mood" : "calm",
+			"pitch" : -0.13543754816055298,
+			"pos" : 
+			{
+				"x" : 194,
+				"y" : -5,
+				"z" : 75
+			},
+			"seconds" : 3,
+			"sync" : true,
+			"time" : 0.16666666666666666,
+			"transition" : "glide",
+			"voice" : "Narrator",
+			"yaw" : 0.4953245222568512
+		},
+		{
+			"blend" : true,
+			"delay" : 0,
+			"index" : 0,
+			"line" : "",
+			"mood" : "calm",
+			"pitch" : 0.17174039781093597,
+			"pos" : 
+			{
+				"x" : 155,
+				"y" : 4,
+				"z" : 155
+			},
+			"seconds" : 0,
+			"sync" : true,
+			"time" : 0.95833333333333337,
+			"transition" : "black",
+			"voice" : "Narrator",
+			"yaw" : 0.50492364168167114
+		},
+		{
 			"delay" : 0,
 			"index" : 1,
 			"line" : "Recently, you have begun to find yourself unfulfilled and distant in your daily occupation. Strange dreams of prospecting, stealing, crusading, and combat have haunted you in your sleep for many months, but you aren't sure of the reason. You wonder whether you have in fact been having those dreams all your life, and somehow managed to forget about them until now.",
@@ -4455,5 +4496,5 @@
 			"z" : 240
 		}
 	],
-	"version" : 1793392986
+	"version" : 1793393674
 }
