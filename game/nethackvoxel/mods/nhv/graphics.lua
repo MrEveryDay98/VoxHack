@@ -15,7 +15,8 @@
 --     numbers), in 256 colours or the tiles' own 16 (dithered or not), the
 --     light in steps. Its HUD, menu, text and map sizes are fixed, made for
 --     it (the window's are kept for coming back).
--- The list scrolls (where it was is kept as it's redrawn).
+-- The list scrolls (where it was is kept as it's redrawn). It's the Game
+-- tab of the Options screen; NetHack's options are the other (nhopts.lua).
 -- All apply immediately and are remembered in the settings.
 
 local graphics = {}
@@ -165,6 +166,7 @@ function graphics.formspec()
 	scroll = math.min(scroll, max)
 	return table.concat({
 		theme.head(13, 12),
+		graphics.tabs(1),
 		"label[0.5,0.6;", theme.title("Options"), "]",
 		-- (the buttons first: a list opened from a dropdown near the bottom
 		-- is drawn over them, not under)
@@ -180,6 +182,11 @@ end
 
 function graphics.show(player)
 	core.show_formspec(player:get_player_name(), "nhv:graphics", graphics.formspec())
+end
+
+-- the Options screen's tabs: Game (this) and NetHack (nhopts.lua)
+function graphics.tabs(current)
+	return ("tabheader[0,0;options_tab;Game,NetHack;%d;false;true]"):format(current)
 end
 
 -- retro mode on or off: its sizes fixed (made for its small screen), the
@@ -239,6 +246,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.guide then
 		nhv.guide.from_options = true
 		nhv.guide.show(player, 1)
+		return true
+	end
+	if fields.options_tab == "2" then
+		nhv.nhopts.show(player) -- (the NetHack tab)
 		return true
 	end
 	if fields.scroll then

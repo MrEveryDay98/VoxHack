@@ -257,6 +257,7 @@ local VIEW_Y, VIEW_H = 1.7, 8.2
 
 function nhopts.formspec()
 	local fs = {theme.head(20, 11.6),
+		nhv.graphics.tabs(2), -- (the Options screen's NetHack tab: graphics.lua)
 		"label[0.5,0.6;", theme.title("NetHack options"), "]",
 		"label[0.5,1.3;", theme.dim("New characters"), "]",
 		"label[10.5,1.3;", theme.dim("Any time (your current game too)"), "]"}
@@ -305,7 +306,9 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			ticked[pname]["o_" .. o.key] = fields["o_" .. o.key]
 		end
 	end
-	if fields.save or fields.key_enter_field then
+	-- (the other tab, or Save: what's changed kept)
+	local to_game = fields.options_tab == "1"
+	if fields.save or fields.key_enter_field or to_game then
 		local changed = {}
 		for _, o in ipairs(nhopts.OPTIONS) do
 			local v = fields["o_" .. o.key]
@@ -332,8 +335,15 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			queue_runtime(changed)
 		end
 		ticked[pname] = nil
+		if to_game then
+			nhv.graphics.show(player)
+			return true
+		end
 		nhv.hud.message("NetHack options saved.")
 		core.close_formspec(pname, FORM)
+		if nhv.title then
+			nhv.title.back_from(player) -- (opened from the title screen: back to it)
+		end
 		return true
 	end
 	if fields.back or fields.quit then
@@ -342,16 +352,19 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.back then
 		core.close_formspec(pname, FORM)
 	end
+	if (fields.back or fields.quit) and nhv.title then
+		nhv.title.back_from(player)
+	end
 	return true
 end)
 
--- (the pause menu's NetHack Options button)
+-- (the pause menu's Options button: the Options screen, its Game tab)
 core.register_chatcommand("nhvoptions", {
-	description = "(VoxHack) NetHack's options (the pause menu's NetHack Options)",
+	description = "(VoxHack) the Options screen (the pause menu's Options)",
 	func = function(pname)
 		local player = core.get_player_by_name(pname)
 		if player then
-			nhopts.show(player)
+			nhv.graphics.show(player)
 		end
 		return true
 	end,
