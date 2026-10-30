@@ -1240,12 +1240,24 @@ end
 -- the light you carry: what NetHack says lights you up (lamps, candles,
 -- glowing), else the dim light to see the squares next to you
 terrain.hero_light_node = "nhv:hero_light"
+terrain.hero_light_level = 9
 local function is_hero_light(name)
 	local def = core.registered_nodes[name]
 	return def and def.groups and def.groups.nhv_hero_light
 end
 
 function terrain.place_hero_light(pos)
+	-- (the VoxHack engine lights round your head itself, exactly where it
+	-- is: the light you carry is just how bright - put out any block)
+	if core.nhv_hero_light then
+		core.nhv_hero_light(terrain.hero_light_level)
+		local old = terrain.hero_light_pos
+		if old and is_hero_light(core.get_node(old).name) then
+			core.set_node(old, {name = "air"})
+		end
+		terrain.hero_light_pos = nil
+		return
+	end
 	local p = vector.round(vector.new(pos.x, pos.y + 1.5, pos.z))
 	local old = terrain.hero_light_pos
 	local want = terrain.hero_light_node
@@ -1289,6 +1301,7 @@ function terrain.update_lights()
 	end
 	local level = carried > 0 and math.max(9, light_level(carried)) or 9
 	terrain.hero_light_node = level > 9 and ("nhv:hero_light_" .. level) or "nhv:hero_light"
+	terrain.hero_light_level = level
 	for k, p in pairs(ls_placed) do
 		local w = want[k]
 		local n = core.get_node(p).name
