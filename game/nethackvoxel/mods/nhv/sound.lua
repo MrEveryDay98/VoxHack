@@ -1105,7 +1105,8 @@ end
 -- before the dungeon exists (character selection)
 core.register_on_joinplayer(function()
 	core.after(1, function()
-		if not nh.snap and not nhv.INTRO_EDITOR then
+		-- (not over the opening's: intro_play.lua)
+		if not nh.snap and not nhv.INTRO_EDITOR and not (nhv.intro_play and nhv.intro_play.active) then
 			sound.set_music("music_title")
 		end
 	end)

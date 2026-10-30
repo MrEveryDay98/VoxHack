@@ -7,6 +7,9 @@
 -- and signs (intro.json): the game puts the forest up out of the way
 -- (ORIGIN: once, and again when it's saved anew) and plays it there.
 --
+-- Its music: the hook music_opening (the VoxHack Editor's Sound tab), or
+-- the title's if that has none; the title goes on with its own after.
+--
 -- At each camera point: it fades in as the camera gets there (from black or
 -- white, or not; as the last point faded out if it isn't said - the first:
 -- from black), and its line starts; it waits (delay), then goes on to the
@@ -168,6 +171,17 @@ end
 
 local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
 
+-- the opening's music: its own, if it has some, else the title's
+local function start_music()
+	local sound = nhv.sound
+	if not sound then
+		return
+	end
+	local hooks = sound.cfg and sound.cfg.hooks or {}
+	local own = hooks.music_opening
+	sound.set_music(own and type(own.sounds) == "table" and #own.sounds > 0 and "music_opening" or "music_title")
+end
+
 -- the fade (the game's: hud.fade; the intro editor has its own, here)
 local function fade(to, seconds, color)
 	if nhv.hud and nhv.hud.fade then
@@ -253,6 +267,10 @@ local function finish()
 		end
 	end
 	nhv.intro_blocks.sprites({})
+	-- (the editor's preview: quiet again; the game's title starts its own)
+	if nhv.INTRO_EDITOR and nhv.sound then
+		nhv.sound.stop_music()
+	end
 	player:hud_set_flags({wielditem = run.flags.wielditem, crosshair = run.flags.crosshair,
 		hotbar = run.flags.hotbar, healthbar = run.flags.healthbar, breathbar = run.flags.breathbar,
 		chat = run.flags.chat, nhv_no_selection = run.flags.nhv_no_selection,
@@ -327,6 +345,7 @@ local function play(player, data, at, done)
 	local mid = vector.add(at, vector.divide(vector.add(data.min, data.max), 2))
 	player:set_pos(vector.new(mid.x, at.y + data.max.y + 2, mid.z))
 	core.nhv_camera_path(cam)
+	start_music()
 	if not (nhv.hud and nhv.hud.fade) then
 		-- (the editor's own fade: over the whole screen, black to start)
 		run.fade_id = player:hud_add({

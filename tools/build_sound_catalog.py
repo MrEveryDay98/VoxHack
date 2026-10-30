@@ -62,6 +62,7 @@ GAME_HOOKS = [
 ]
 
 MUSIC = [
+    ("music_opening", "The opening, before the title (the title's music if none)"),
     ("music_title", "Character selection"),
     ("music_dungeon", "The Dungeons of Doom"),
     ("music_mines", "The Gnomish Mines"),

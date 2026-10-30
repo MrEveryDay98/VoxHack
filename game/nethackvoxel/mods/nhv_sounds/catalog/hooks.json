@@ -1747,6 +1747,11 @@
    "desc": "The Amulet is offered on your own god's high altar: the choir as the ascension cutscene starts"
   },
   {
+   "id": "music_opening",
+   "group": "music",
+   "desc": "The opening, before the title (the title's music if none)"
+  },
+  {
    "id": "music_title",
    "group": "music",
    "desc": "Character selection"
