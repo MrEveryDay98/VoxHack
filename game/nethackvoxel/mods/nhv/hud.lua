@@ -760,9 +760,27 @@ local function update_map_arrow(player)
 	end
 end
 
--- the corner map's pixels per square (Graphics > Map size; 0 hides it)
-local function corner_scale()
-	return tonumber(core.settings:get("nhv_map_scale")) or 3
+-- the corner map's pixels per square (Graphics > Map size; 0 hides it), in
+-- HUD units: whole pixels on the screen, whatever the HUD's scaling is
+-- (retro mode's isn't whole) - every square the same size, sharp - and
+-- its distance from the screen's corner, whole pixels too
+local function hud_px(player, units)
+	local info = player and core.get_player_window_information(player:get_player_name())
+	local k = info and info.real_hud_scaling
+	if not k or k <= 0 then
+		return units
+	end
+	local px = math.floor(units * k + 0.5)
+	if units > 0 then
+		px = math.max(1, px)
+	end
+	return (px + 0.001) / k -- (a hair over: the engine rounds the sizes down)
+end
+local function corner_scale(player)
+	return hud_px(player, tonumber(core.settings:get("nhv_map_scale")) or 3)
+end
+local function corner_offset(player)
+	return hud_px(player, 10)
 end
 
 -- under the corner map: the dungeon level ("Dlvl:3"), and the branch when
@@ -787,7 +805,8 @@ local function place_level(player)
 		level_shown = text
 		player:hud_change(hud.ids.level, "text", text)
 	end
-	player:hud_change(hud.ids.level, "offset", {x = -10, y = 10 + U.ROWNO * corner_scale() + 6})
+	local off = corner_offset(player)
+	player:hud_change(hud.ids.level, "offset", {x = -off, y = off + U.ROWNO * corner_scale(player) + 6})
 end
 
 local function place_map(player)
@@ -806,12 +825,12 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "text", BACKDROP)
 		update_tiles(player, nh.snap)
 	else
-		local s = corner_scale()
+		local s, off = corner_scale(player), corner_offset(player)
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
 		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
 		-- (a hidden map is scaled to nothing)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
-		player:hud_change(hud.ids.map, "offset", {x = -10, y = 10})
+		player:hud_change(hud.ids.map, "offset", {x = -off, y = off})
 		player:hud_change(hud.ids.map, "style", 0)
 		clear_tiles(player)
 		if nh.snap and nh.snap.map then
