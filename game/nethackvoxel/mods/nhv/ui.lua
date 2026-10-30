@@ -728,21 +728,23 @@ local W = {
 	RINGL = 0x20000, RINGR = 0x40000, TOOL = 0x80000,
 }
 -- armcat values: SUIT 0, SHIELD 1, HELM 2, GLOVES 3, BOOTS 4, CLOAK 5, SHIRT 6
+-- (short: the caption under the slot - narrow enough for it; label: the
+-- tooltip's and the item chooser's)
 local EQUIP = {
-	{id = "amulet", label = "Amulet", mask = W.AMUL, col = 0, row = 0, oclass = OC.AMULET, put = "P"},
-	{id = "helm", label = "Helmet", mask = W.ARMH, col = 1, row = 0, armcat = 2},
-	{id = "eyes", label = "Eyewear", mask = W.TOOL, col = 2, row = 0, eyewear = true, put = "P"},
-	{id = "cloak", label = "Cloak", mask = W.ARMC, col = 0, row = 1, armcat = 5},
-	{id = "suit", label = "Body armor", mask = W.ARM, col = 1, row = 1, armcat = 0},
-	{id = "shirt", label = "Shirt", mask = W.ARMU, col = 2, row = 1, armcat = 6},
-	{id = "gloves", label = "Gloves", mask = W.ARMG, col = 0, row = 2, armcat = 3},
-	{id = "shield", label = "Shield", mask = W.ARMS, col = 2, row = 2, armcat = 1},
-	{id = "lring", label = "Left ring", mask = W.RINGL, col = 0, row = 3, oclass = OC.RING, put = "P", hand = "l"},
-	{id = "boots", label = "Boots", mask = W.ARMF, col = 1, row = 3, armcat = 4},
-	{id = "rring", label = "Right ring", mask = W.RINGR, col = 2, row = 3, oclass = OC.RING, put = "P", hand = "r"},
-	{id = "wep", label = "Weapon", mask = W.WEP, col = 0, row = 4.3, weapon = true},
-	{id = "alt", label = "Alternate", mask = W.SWAPWEP, col = 1, row = 4.3, weapon = true},
-	{id = "quiver", label = "Quiver", mask = W.QUIVER, col = 2, row = 4.3, quiver = true},
+	{id = "amulet", short = "NECK", label = "Amulet", mask = W.AMUL, col = 0, row = 0, oclass = OC.AMULET, put = "P"},
+	{id = "helm", short = "HEAD", label = "Helmet", mask = W.ARMH, col = 1, row = 0, armcat = 2},
+	{id = "eyes", short = "EYES", label = "Eyewear", mask = W.TOOL, col = 2, row = 0, eyewear = true, put = "P"},
+	{id = "cloak", short = "CLOAK", label = "Cloak", mask = W.ARMC, col = 0, row = 1, armcat = 5},
+	{id = "suit", short = "BODY", label = "Body armor", mask = W.ARM, col = 1, row = 1, armcat = 0},
+	{id = "shirt", short = "SHIRT", label = "Shirt", mask = W.ARMU, col = 2, row = 1, armcat = 6},
+	{id = "gloves", short = "GLOVES", label = "Gloves", mask = W.ARMG, col = 0, row = 2, armcat = 3},
+	{id = "shield", short = "SHIELD", label = "Shield", mask = W.ARMS, col = 2, row = 2, armcat = 1},
+	{id = "lring", short = "RING1", label = "Left ring", mask = W.RINGL, col = 0, row = 3, oclass = OC.RING, put = "P", hand = "l"},
+	{id = "boots", short = "BOOTS", label = "Boots", mask = W.ARMF, col = 1, row = 3, armcat = 4},
+	{id = "rring", short = "RING2", label = "Right ring", mask = W.RINGR, col = 2, row = 3, oclass = OC.RING, put = "P", hand = "r"},
+	{id = "wep", short = "WPN", label = "Weapon", mask = W.WEP, col = 0, row = 4.3, weapon = true},
+	{id = "alt", short = "ALT", label = "Alternate", mask = W.SWAPWEP, col = 1, row = 4.3, weapon = true},
+	{id = "quiver", short = "QUIVER", label = "Quiver", mask = W.QUIVER, col = 2, row = 4.3, quiver = true},
 }
 local EQUIP_BY_ID = {}
 for _, e in ipairs(EQUIP) do
@@ -845,7 +847,7 @@ local function inventory_formspec(inv)
 			fs[#fs + 1] = ("tooltip[eq_%s;%s (empty)]"):format(slot.id, E(slot.label))
 		end
 		fs[#fs + 1] = ("label[%f,%f;%s]"):format(x, y + 1.45,
-			core.colorize("#B0B0B0", E(slot.label)))
+			core.colorize("#B0B0B0", E(slot.short)))
 	end
 	-- inventory list: one scrolling column, grouped by kind in NetHack's
 	-- usual order, letters in order within each group
