@@ -91,7 +91,14 @@ core.register_on_joinplayer(function(player)
 	nhv.sky.scene = "opening"
 	nhv.sky.update()
 	core.set_timeofday(0.5)
+	-- the palette (I): every block of the prefab editor's but its markers -
+	-- the game's - and the opening's own
+	nhv.palette.configure({skip = {markers = true},
+		extra = {{"opening", "Opening", nhv.intro_blocks.PALETTE}}})
+	nhv.palette.open(player)
+	player:hud_set_hotbar_itemcount(10)
 	local inv = player:get_inventory()
+	inv:set_size("main", 32)
 	for _, item in ipairs({"nhv:intro_cam 99", "nhv:intro_sign 99", "nhv:intro_figure 99", "nhv:intro_tree 99",
 			"nhv:intro_grass 99", "nhv:intro_dirt 99"}) do
 		if not inv:contains_item("main", ItemStack(item):get_name()) then
@@ -104,7 +111,8 @@ core.register_on_joinplayer(function(player)
 		player:set_pos(vector.new(AREA / 2, y + 2, AREA / 2))
 	end
 	core.chat_send_player(name, "Intro editor: the forest is x, z 0 to " .. (AREA - 1)
-		.. ". Camera points and signs are in your inventory. /intro_play plays it, /intro_save saves it.")
+		.. ". I = block palette (its Opening tab: camera points, signs, figures, the forest's own)."
+		.. " /intro_play plays it, /intro_save saves it.")
 end)
 -- (always midday; the trees standing round you - the editor's whole forest
 -- at once would be a lot)
@@ -230,6 +238,9 @@ function intro_editor.sprites(p1, p2, at)
 	local list = {}
 	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"})) do
 		list[#list + 1] = nhv.intro_blocks.tree(vector.subtract(pos, at))
+	end
+	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, nhv.intro_blocks.furniture_nodes())) do
+		list[#list + 1] = nhv.intro_blocks.furniture(core.get_node(pos).name, vector.subtract(pos, at))
 	end
 	local figs = load_list("figures")
 	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, {"nhv:intro_figure"})) do
@@ -374,6 +385,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	elseif fields.view then
 		core.show_formspec(name, formname, cam_form(e.pos, c))
 	end
+	return true
+end)
+
+-- placing never uses up blocks (as in the prefab editor)
+core.register_on_placenode(function()
 	return true
 end)
 

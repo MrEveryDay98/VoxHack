@@ -51,7 +51,7 @@ end
 -- billboard: e is turned to the camera by the engine (and its shadow so)
 local function place(e, ground, alpha, billboard)
 	local pos = e.obj:get_pos()
-	local tex = nhv_tiles.texture(e.tile) .. "^[multiply:#000000" .. ("^[opacity:%d"):format(alpha)
+	local tex = (e.texture or nhv_tiles.texture(e.tile)) .. "^[multiply:#000000" .. ("^[opacity:%d"):format(alpha)
 	-- (an extruded sprite's shadow is a voxel model's, as thick as it is)
 	local thick = nhv_tiles.flat() and 0 or e.h * EXTRUDED_THICK
 	local s = cast[e]

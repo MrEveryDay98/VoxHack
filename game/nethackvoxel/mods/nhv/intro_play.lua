@@ -247,7 +247,7 @@ local function play(player, data, at, done)
 		list[#list + 1] = nhv.intro_blocks.tree(vector.add(at, t))
 	end
 	for _, f in ipairs(data.figures or {}) do
-		list[#list + 1] = {pos = vector.add(at, f.pos), tile = f.tile, h = f.h}
+		list[#list + 1] = {pos = vector.add(at, f.pos), tile = f.tile, texture = f.texture, item = f.item, h = f.h}
 	end
 	nhv.intro_blocks.sprites(list)
 	for _, s in ipairs(data.signs or {}) do

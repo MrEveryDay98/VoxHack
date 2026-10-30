@@ -47,6 +47,12 @@ if nhv.ATLAS and not nhv.EDITOR then
 	return
 end
 if nhv.INTRO_EDITOR then
+	-- (the game's terrain blocks, for the palette - no game is started)
+	dofile(path .. "nh.lua")
+	dofile(path .. "scale.lua")
+	dofile(path .. "terrain.lua")
+	dofile(path .. "doors.lua")
+	dofile(path .. "palette.lua")
 	dofile(path .. "signart.lua")
 	dofile(path .. "intro_blocks.lua")
 	dofile(path .. "sky.lua")
@@ -61,6 +67,7 @@ if nhv.EDITOR then
 	dofile(path .. "areas.lua")
 	dofile(path .. "doors.lua")
 	dofile(path .. "scale.lua")
+	dofile(path .. "palette.lua")
 	dofile(path .. "editor.lua")
 	dofile(path .. "editor_tools.lua")
 	dofile(path .. "editor_draw.lua")

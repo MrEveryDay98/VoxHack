@@ -215,111 +215,6 @@ local function setup_world()
 end
 
 
--- ---------------------------------------------------------------- palette
--- Tabs of blocks (I to open). Click one to put it in your hotbar slot.
-local TABS = {
-	{"markers", "Markers"}, {"blocks", "Blocks"}, {"shapes", "Slabs, stairs, panes"},
-	{"terrain", "Terrain"}, {"custom", "Your blocks"}, {"objects", "Objects"},
-}
-local MARKERS = {["nhv:trigger"] = true, ["nhv:mpath"] = true, ["nhv:carve"] = true}
-local palette = {}     -- tab id -> sorted node names
-local tab_of = {}      -- player name -> tab index
-
-local function category(name, def)
-	if MARKERS[name] then
-		return "markers"
-	elseif def.groups and def.groups.nhv_prop then
-		return "objects"
-	elseif def.groups and def.groups.nhv_custom then
-		return "custom" -- made in the block editor
-	elseif name:match("^nhv:b_") then
-		for _, shape in ipairs({"_slab$", "_stair$", "_pane$", "_post$"}) do
-			if name:match(shape) then
-				return "shapes"
-			end
-		end
-		return "blocks"
-	end
-	return "terrain"
-end
-
-local function build_palette()
-	palette = {}
-	for _, t in ipairs(TABS) do
-		palette[t[1]] = {}
-	end
-	for name, def in pairs(core.registered_nodes) do
-		if name:match("^nhv:") and def.groups and def.groups.editor then
-			local list = palette[category(name, def)]
-			list[#list + 1] = name
-		end
-	end
-	for _, list in pairs(palette) do
-		table.sort(list)
-	end
-end
-
-local function palette_formspec(pname)
-	local ti = tab_of[pname] or 2
-	if not TABS[ti] then
-		ti = 2
-	end
-	local list = palette[TABS[ti][1]] or {}
-	local names = {}
-	for i, t in ipairs(TABS) do
-		-- (commas in a tab name would split it into more tabs)
-		names[i] = core.formspec_escape(("%s (%d)"):format(t[2], #(palette[t[1]] or {})))
-	end
-	local cols, step = 15, 1.05
-	local rows = math.ceil(#list / cols)
-	local view_h = 8.6
-	local fs = {"formspec_version[6]size[17.2,11]",
-		"tabheader[0.3,0.75;16.6,0.7;paltab;", table.concat(names, ","), ";", ti, ";false;true]",
-		"label[0.4,1.15;Click a block to put it in your hotbar slot.",
-		ti == 1 and " Red = stairs trigger, green = monster path, yellow = carve (overlays)." or "", "]",
-		("scroll_container[0.3,1.6;16.0,%f;palscroll;vertical;0.1]"):format(view_h)}
-	for i, name in ipairs(list) do
-		local x = 0.1 + ((i - 1) % cols) * step
-		local y = 0.05 + math.floor((i - 1) / cols) * step
-		fs[#fs + 1] = ("item_image_button[%f,%f;0.95,0.95;%s;pal_%s;]"):format(x, y, name,
-			name:gsub(":", "__"))
-		fs[#fs + 1] = ("tooltip[pal_%s;%s]"):format(name:gsub(":", "__"),
-			core.formspec_escape(core.registered_nodes[name].description or name))
-	end
-	fs[#fs + 1] = "scroll_container_end[]"
-	local overflow = math.max(0, rows * step + 0.1 - view_h)
-	fs[#fs + 1] = ("scrollbaroptions[max=%d;smallstep=10;largestep=60]"):format(math.ceil(overflow * 10))
-	fs[#fs + 1] = ("scrollbar[16.45,1.6;0.4,%f;vertical;palscroll;0]"):format(view_h)
-	if #list == 0 then
-		fs[#fs + 1] = "label[0.5,2.2;Nothing here yet.]"
-	end
-	return table.concat(fs)
-end
-
-core.register_on_player_receive_fields(function(player, formname, fields)
-	if formname ~= "" then
-		return
-	end
-	local pname = player:get_player_name()
-	if fields.paltab then
-		local t = tonumber(fields.paltab)
-		tab_of[pname] = (t and TABS[t]) and t or 2
-		player:set_inventory_formspec(palette_formspec(pname))
-		return true
-	end
-	for k in pairs(fields) do
-		local id = k:match("^pal_(.+)$")
-		if id then
-			local name = id:gsub("__", ":")
-			if core.registered_nodes[name] then
-				local inv = player:get_inventory()
-				inv:set_stack("main", player:get_wield_index(), ItemStack(name .. " 99"))
-				return true
-			end
-		end
-	end
-end)
-
 -- ---------------------------------------------------------------- commands
 core.register_chatcommand("prefab", {
 	params = "save | reset <slot> | swap <slot> <slot> | goto <slot> | list",
@@ -391,8 +286,7 @@ core.register_on_joinplayer(function(player)
 	player:hud_set_hotbar_itemcount(10)
 	local inv = player:get_inventory()
 	inv:set_size("main", 32)
-	build_palette()
-	player:set_inventory_formspec(palette_formspec(name))
+	nhv.palette.open(player)
 	core.chat_send_player(name, "Prefab editor. I = block palette, E = monster editor, K = toggle flying. "
 		.. "Cells save automatically. /prefab list, /prefab goto <slot>, /prefab reset <slot>.")
 	-- float until the editor area exists (nothing to stand on before)

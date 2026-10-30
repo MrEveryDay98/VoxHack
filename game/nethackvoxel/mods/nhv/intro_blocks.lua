@@ -2,7 +2,9 @@
 -- intro_editor.lua - and the game puts it up to play the opening in -
 -- intro_play.lua).
 --
---   grass (three kinds) over dirt: nhv_tiles/textures/worldbuilding_sprites.png
+--   grass (three kinds) over dirt, red bricks, a fireplace, red curtains,
+--     blue planks: nhv_tiles/textures/worldbuilding_sprites.png
+--   a chair, a table, a bed (the same sheet): sprites as trees are
 --   trees: NetHack's tree, a sprite as monsters and objects are - extruded or
 --     flat (Options > Sprites), always turned to you (the VoxHack engine
 --     turns an object marked "nhv:billboard" to the camera itself). The
@@ -30,6 +32,46 @@ for i = 1, 3 do
 		tiles = {cell(0, i - 1), DIRT, DIRT}, groups = DIG, is_ground_content = false,
 		drop = "nhv:intro_grass",
 	})
+end
+
+local STONE = {cracky = 3, oddly_breakable_by_hand = 3}
+local BRICKS = cell(1, 0)
+core.register_node(":nhv:intro_bricks", {
+	description = "Red bricks", tiles = {BRICKS}, groups = STONE, is_ground_content = false,
+})
+core.register_node(":nhv:intro_fireplace", {
+	description = "Fireplace", paramtype2 = "facedir", groups = STONE, is_ground_content = false,
+	-- (the fireplace on its front: toward you as it's put down)
+	tiles = {BRICKS, BRICKS, BRICKS, BRICKS, BRICKS, cell(2, 0)},
+})
+core.register_node(":nhv:intro_curtains", {
+	description = "Red curtains", tiles = {cell(3, 0)}, groups = DIG, is_ground_content = false,
+})
+core.register_node(":nhv:intro_planks", {
+	description = "Blue planks", tiles = {cell(3, 1)}, groups = DIG, is_ground_content = false,
+})
+
+-- the furniture: a sprite standing on its block (as a tree), extruded or
+-- flat as the others (its picture an item too, for extruding)
+local FURNITURE = {
+	{"chair", "Chair", cell(1, 1), 1},
+	{"table", "Table", cell(2, 1), 1},
+	{"bed", "Bed", cell(1, 2), 1},
+}
+local furniture = {} -- node name -> {item=, texture=, h=}
+for _, f in ipairs(FURNITURE) do
+	local node, item = "nhv:intro_" .. f[1], "nhv:intro_" .. f[1] .. "_picture"
+	core.register_craftitem(":" .. item, {
+		description = f[2], inventory_image = f[3], wield_image = f[3],
+		groups = {not_in_creative_inventory = 1},
+	})
+	core.register_node(":" .. node, {
+		description = f[2], drawtype = "airlike", paramtype = "light", sunlight_propagates = true,
+		walkable = false, inventory_image = f[3], wield_image = f[3], groups = {dig_immediate = 3},
+		selection_box = {type = "fixed", fixed = {-0.4, -0.5, -0.4, 0.4, f[4] - 0.5, 0.4}},
+		is_ground_content = false,
+	})
+	furniture[node] = {item = item, texture = f[3], h = f[4]}
 end
 
 local TREE_TILE = 1290
@@ -90,6 +132,40 @@ function intro_blocks.tree(pos)
 	return {pos = pos, tile = TREE_TILE, h = TREE_H}
 end
 
+-- the furniture's blocks, and a piece of it on one (pos: the block)
+function intro_blocks.furniture_nodes()
+	local list = {}
+	for node in pairs(furniture) do
+		list[#list + 1] = node
+	end
+	table.sort(list)
+	return list
+end
+function intro_blocks.furniture(node, pos)
+	local f = furniture[node]
+	return f and {pos = pos, item = f.item, texture = f.texture, h = f.h}
+end
+
+-- what the palette's Opening tab has (intro_editor.lua)
+intro_blocks.PALETTE = {"nhv:intro_cam", "nhv:intro_sign", "nhv:intro_figure", "nhv:intro_tree",
+	"nhv:intro_grass", "nhv:intro_grass2", "nhv:intro_grass3", "nhv:intro_dirt", "nhv:intro_bricks",
+	"nhv:intro_fireplace", "nhv:intro_curtains", "nhv:intro_planks", "nhv:intro_chair",
+	"nhv:intro_table", "nhv:intro_bed"}
+
+-- how a sprite looks: a NetHack tile (tile), or a picture of its own
+-- (texture, and the item that's it for extruding)
+local function look_of(sp)
+	if sp.tile then
+		return nhv_tiles.look(sp.tile, sp.h)
+	end
+	if nhv_tiles.flat() then
+		return {visual = "upright_sprite", textures = {sp.texture, sp.texture .. "^[transformFX"},
+			visual_size = {x = sp.h, y = sp.h, z = sp.h}}
+	end
+	local s = sp.h / 2
+	return {visual = "wielditem", wield_item = sp.item, visual_size = {x = s, y = s, z = s}}
+end
+
 -- a NetHack tile by its name ("watchman", "gnome leader"; a monster that
 -- has two, male and female: the male one), or nil
 function intro_blocks.tile_named(name)
@@ -112,7 +188,7 @@ function intro_blocks.sprites(list)
 	for _, sp in ipairs(list) do
 		local k = sp.pos.x .. "," .. sp.pos.y .. "," .. sp.pos.z
 		want[k] = true
-		local look = sp.tile .. "/" .. sp.h .. "/" .. tostring(flat)
+		local look = tostring(sp.tile or sp.texture) .. "/" .. sp.h .. "/" .. tostring(flat)
 		local st = standing[k]
 		if not (st and st.obj:get_pos() and st.look == look) then
 			if st and st.obj:get_pos() then
@@ -120,12 +196,13 @@ function intro_blocks.sprites(list)
 			end
 			local obj = core.add_entity(vector.new(sp.pos.x, sp.pos.y - 0.5 + sp.h / 2, sp.pos.z), "nhv:intro_sprite")
 			if obj then
-				local props = nhv_tiles.look(sp.tile, sp.h)
+				local props = look_of(sp)
 				props.infotext = "nhv:billboard"
 				obj:set_properties(props)
 				-- (how far round from facing the camera: mobs.lua's way)
 				obj:set_yaw(nhv_tiles.facing_turn())
-				standing[k] = {obj = obj, look = look, tile = sp.tile, h = sp.h, ground = sp.pos.y - 0.5}
+				standing[k] = {obj = obj, look = look, tile = sp.tile, h = sp.h, ground = sp.pos.y - 0.5,
+					texture = sp.texture or nhv_tiles.texture(sp.tile)}
 			else
 				standing[k] = nil
 			end
