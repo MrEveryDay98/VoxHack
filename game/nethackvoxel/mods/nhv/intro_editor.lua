@@ -388,6 +388,19 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	return true
 end)
 
+-- your hand digs anything here at once (as in the prefab editor - the
+-- palette's blocks are "editor" ones; the forest's its own kinds)
+local INSTANT = {times = {[1] = 0.15, [2] = 0.15, [3] = 0.15}, uses = 0}
+core.override_item("", {
+	range = 10,
+	tool_capabilities = {
+		full_punch_interval = 0.2, max_drop_level = 0,
+		groupcaps = {editor = INSTANT, crumbly = INSTANT, cracky = INSTANT, snappy = INSTANT,
+			choppy = INSTANT, oddly_breakable_by_hand = INSTANT, dig_immediate = INSTANT},
+		damage_groups = {},
+	},
+})
+
 -- placing never uses up blocks (as in the prefab editor)
 core.register_on_placenode(function()
 	return true

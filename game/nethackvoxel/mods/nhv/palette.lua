@@ -10,7 +10,7 @@ local palette_mod = {}
 nhv.palette = palette_mod
 
 local BASE_TABS = {
-	{"markers", "Markers"}, {"blocks", "Blocks"}, {"shapes", "Slabs, stairs, panes"},
+	{"markers", "Markers"}, {"blocks", "Blocks"}, {"shapes", "Shapes", "Slabs, stairs, panes"},
 	{"terrain", "Terrain"}, {"custom", "Your blocks"}, {"objects", "Objects"},
 }
 local TABS = BASE_TABS
@@ -87,20 +87,28 @@ local function palette_formspec(pname)
 		ti = first_tab()
 	end
 	local list = palette[TABS[ti][1]] or {}
-	local names = {}
-	for i, t in ipairs(TABS) do
-		-- (commas in a tab name would split it into more tabs)
-		names[i] = core.formspec_escape(("%s (%d)"):format(t[2], #(palette[t[1]] or {})))
-	end
 	local cols, step = 15, 1.05
 	local rows = math.ceil(#list / cols)
 	local view_h = 8.6
-	local fs = {"formspec_version[6]size[17.2,11]",
-		"tabheader[0.3,0.75;16.6,0.7;paltab;", table.concat(names, ","), ";", ti, ";false;true]",
-		"label[0.4,1.15;Click a block to put it in your hotbar slot.",
+	local fs = {"formspec_version[6]size[17.2,11]"}
+	-- the tabs: a row of buttons across the whole width, the one shown
+	-- pressed in (what each has, and how many: its tooltip)
+	local w = 16.6 / #TABS
+	for i, t in ipairs(TABS) do
+		if i == ti then
+			fs[#fs + 1] = ("style[paltab_%d;bgimg=nhv_ui_button_pressed.png;bgcolor=#5A5A78;textcolor=#FFFF55]")
+				:format(i)
+		end
+		fs[#fs + 1] = ("button[%f,0.25;%f,0.75;paltab_%d;%s]"):format(0.3 + (i - 1) * w, w, i,
+			core.formspec_escape(t[2]))
+		fs[#fs + 1] = ("tooltip[paltab_%d;%s]"):format(i,
+			core.formspec_escape(("%s (%d)"):format(t[3] or t[2], #(palette[t[1]] or {}))))
+	end
+	fs[#fs + 1] = "label[0.4,1.3;Click a block to put it in your hotbar slot."
+	fs[#fs + 1] = table.concat({
 		TABS[ti][1] == "markers" and " Red = stairs trigger, green = monster path, yellow = carve (overlays)."
 			or "", "]",
-		("scroll_container[0.3,1.6;16.0,%f;palscroll;vertical;0.1]"):format(view_h)}
+		("scroll_container[0.3,1.6;16.0,%f;palscroll;vertical;0.1]"):format(view_h)})
 	for i, name in ipairs(list) do
 		local x = 0.1 + ((i - 1) % cols) * step
 		local y = 0.05 + math.floor((i - 1) / cols) * step
@@ -124,11 +132,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		return
 	end
 	local pname = player:get_player_name()
-	if fields.paltab then
-		local t = tonumber(fields.paltab)
-		tab_of[pname] = (t and TABS[t]) and t or first_tab()
-		player:set_inventory_formspec(palette_formspec(pname))
-		return true
+	for i in ipairs(TABS) do
+		if fields["paltab_" .. i] then
+			tab_of[pname] = i
+			player:set_inventory_formspec(palette_formspec(pname))
+			return true
+		end
 	end
 	for k in pairs(fields) do
 		local id = k:match("^pal_(.+)$")
