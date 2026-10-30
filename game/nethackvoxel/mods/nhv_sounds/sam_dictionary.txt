@@ -17,3 +17,43 @@ lava = Lawhva
 creatures = creechurs
 return = re turn
 immortality = immorttalitey
+
+# Japanese (the Samurai: gods, titles, items, quest), made by rule from the
+# romaji - each syllable as Japanese says it (r: SAM's tap, DX). "sake" is left
+# out: it's an English word too ("for the sake of").
+Amaterasu = {AA5MAATEHDXAASUW}
+Omikami = {OW5MIYKAAMIY}
+Raijin = {DXAY5JIYN}
+Susanowo = {SUW5SAANOWWOW}
+Hatamoto = {/HAA5TAAMOWTOW}
+Ronin = {DXOW5NIYN}
+Ninja = {NIY5NJAA}
+Kunoichi = {KUW5NOYCHIY}
+Joshu = {JOW5SHUW}
+Ryoshu = {DXYOW5SHUW}
+Kokushu = {KOW5KUWSHUW}
+Daimyo = {DAY5MYOW}
+Kuge = {KUW5GEH}
+Shogun = {SHOW5GUWN}
+Samurai = {SAA5MUWDXAY}
+Sato = {SAA5TOW}
+Ashikaga = {AA5SHIYKAAGAA}
+Takauji = {TAA5KAAUWJIY}
+Taro = {TAA5DXOW}
+kyokaku = {KYOW5KAAKUW}
+Muramasa = {MUW5DXAAMAASAA}
+tsurugi = {TSUW5DXUWGIY}
+katana = {KAA5TAANAA}
+wakizashi = {WAA5KIYZAASHIY}
+naginata = {NAA5GIYNAATAA}
+nunchaku = {NUW5NCHAAKUW}
+shuriken = {SHUW5DXIYKEHN}
+yumi = {YUW5MIY}
+osaku = {OW5SAAKUW}
+koto = {KOW5TOW}
+shito = {SHIY5TOW}
+tanko = {TAA5NKOW}
+kabuto = {KAA5BUWTOW}
+yugake = {YUW5GAAKEH}
+gunyoki = {GUW5NYOWKIY}
+roshi = {DXOW5SHIY}
