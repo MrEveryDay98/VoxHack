@@ -10,6 +10,8 @@
 -- Its time of day: as set in the editor (/intro_time) - the sky's sun,
 -- moon and stars, and the light, as then. Its fog: its own, if it's set
 -- one (/intro_fog: colour, how far you see, where it starts), or the game's.
+-- A light goes with the camera, as bright as it's set (/intro_light: a light
+-- level, 0 none; 10 if it hasn't one).
 --
 -- Its music: the hook music_opening (the VoxHack Editor's Sound tab), or
 -- the title's if that has none; the title goes on with its own after.
@@ -289,6 +291,10 @@ local function finish()
 		chat = run.flags.chat, nhv_no_selection = run.flags.nhv_no_selection,
 		nhv_camera_lock = false})
 	player:set_properties({is_visible = run.visible})
+	if core.nhv_hero_light then
+		-- (the game's own, as it goes on - none before a game: the title's)
+		core.nhv_hero_light(nhv.INTRO_EDITOR and nhv.intro_editor.light() or 0)
+	end
 	player:override_day_night_ratio(run.ratio)
 	if nhv.sky then
 		nhv.sky.scene, nhv.sky.time, nhv.sky.fog = run.scene, run.sky_time, run.fog
@@ -342,8 +348,10 @@ local function play(player, data, at, done)
 	else
 		player:set_sky({type = "regular", clouds = true})
 	end
+	-- (the light with the camera: the engine puts the hero's light there
+	-- while it flies the camera)
 	if core.nhv_hero_light then
-		core.nhv_hero_light(0)
+		core.nhv_hero_light(tonumber(data.light) or 10)
 	end
 	-- the trees, the monsters and people
 	local list = {}

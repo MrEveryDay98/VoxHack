@@ -29,6 +29,8 @@
 --                          a form to set it, or 6:30, dawn, noon, dusk, night
 --   /intro_fog             the opening's fog: its colour, how far you see
 --                          through it, where it starts (or the game's)
+--   /intro_light [0-14]    the light that goes with the camera: how bright
+--                          (a light level; 0 none) - round you here too
 --   /intro_save [ymin ymax]  save it for the game (the forest from ymin to
 --                          ymax: -8 to 56 if not given) - mod_data/nhv/intro
 
@@ -102,6 +104,9 @@ core.register_on_joinplayer(function(player)
 	nhv.sky.fog = intro_editor.fog()
 	nhv.sky.update()
 	nhv.intro_play.apply_fog(player)
+	if core.nhv_hero_light then
+		core.nhv_hero_light(intro_editor.light())
+	end
 	-- (camera points and signs hidden for a preview that didn't finish:
 	-- back)
 	intro_editor.show_markers()
@@ -577,7 +582,7 @@ core.register_chatcommand("intro_play", {
 		-- out of the way meanwhile)
 		intro_editor.hide_markers()
 		nhv.intro_play.preview(player, {points = list, signs = {}, trees = trees, figures = figures,
-			time = intro_editor.time(), fog = intro_editor.fog(),
+			time = intro_editor.time(), fog = intro_editor.fog(), light = intro_editor.light(),
 			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1)}, function(p)
 			intro_editor.show_markers()
 			p:set_pos(back)
@@ -743,6 +748,28 @@ core.register_chatcommand("intro_fog", {
 	end,
 })
 
+-- ---------------------------------------------------------------- the camera's light
+-- how bright (a light level, 0 none)
+function intro_editor.light()
+	return tonumber(storage:get_string("light")) or 10
+end
+core.register_chatcommand("intro_light", {
+	params = "[0-14]",
+	description = "The light that goes with the opening's camera: how bright (0 none)",
+	func = function(_, param)
+		local n = tonumber(param)
+		if not n then
+			return true, "The camera's light: " .. intro_editor.light() .. " (0 none, 14 the brightest)."
+		end
+		n = math.max(0, math.min(14, math.floor(n + 0.5)))
+		storage:set_string("light", tostring(n))
+		if core.nhv_hero_light then
+			core.nhv_hero_light(n)
+		end
+		return true, "The camera's light: " .. n .. "."
+	end,
+})
+
 -- ---------------------------------------------------------------- markers out of the way
 -- The camera points' boxes and the signs' blocks are only the editor's: a
 -- preview takes them away (the signs' pictures stay) and puts them back
@@ -812,7 +839,7 @@ core.register_chatcommand("intro_save", {
 				return
 			end
 			local data = {version = os.time(), min = p1, max = p2, points = list, signs = signs(vector.zero()),
-				time = intro_editor.time(), fog = intro_editor.fog(),
+				time = intro_editor.time(), fog = intro_editor.fog(), light = intro_editor.light(),
 				trees = core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"}), figures = {}}
 			for _, sp in ipairs(intro_editor.sprites(p1, p2, vector.zero())) do
 				if sp.tile ~= nhv.intro_blocks.tree(sp.pos).tile then
