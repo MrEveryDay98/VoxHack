@@ -73,6 +73,7 @@ local function delete_save(name)
 end
 
 local function start(player, name)
+	nhv.showroom.hide(player)
 	core.settings:set("nhv_last_character", name)
 	core.settings:write()
 	-- (whichever screen it was started from: the title, the new character
@@ -115,9 +116,17 @@ local function screen(w, h)
 		.. theme.styles():gsub("bgcolor%[[^%]]*%]", ""):gsub("background9%[[^%]]*%]", "")
 end
 
+-- the same, see-through: a scene shows behind it (showroom.lua)
+local function scene_screen(w, h)
+	return ("formspec_version[6]size[%s,%s]no_prepend[]"):format(w, h)
+		.. "bgcolor[#00000000;false]"
+		.. theme.styles():gsub("bgcolor%[[^%]]*%]", ""):gsub("background9%[[^%]]*%]", "")
+end
+
 function title.formspec(player)
 	local saved = title.saved_character(player)
-	local fs = {screen(16, 10),
+	-- (see-through: the Astral sky behind it - showroom.lua)
+	local fs = {scene_screen(16, 10),
 		"image[3,0.6;10,2.5;nhv_title_logo.png]"}
 	-- (five buttons fit above the update notice)
 	local y = 3.8
@@ -157,6 +166,7 @@ end
 
 function title.show(player)
 	title.open, title.from_title = true, false
+	nhv.showroom.title(player) -- (the Astral sky behind it)
 	if nhv.update then
 		nhv.update.check() -- (once a session)
 	end
@@ -252,13 +262,15 @@ local function newchar_formspec(player)
 	if name == "" then
 		name = player:get_player_name()
 	end
-	local fs = {screen(16, 10),
-		"label[4,0.8;" .. theme.title("New character") .. "]"}
+	-- (see-through: the scene shows behind it, the form on the right -
+	-- showroom.lua)
+	local fs = {scene_screen(16, 10),
+		"label[8.4,0.8;" .. theme.title("New character") .. "]"}
 	local y = 1.4
 	if debug_world() then
-		fs[#fs + 1] = ("label[4,%s;%s]"):format(y + 0.4, E("Name: wizard (debug mode needs it)"))
+		fs[#fs + 1] = ("label[8.4,%s;%s]"):format(y + 0.4, E("Name: wizard (debug mode needs it)"))
 	else
-		fs[#fs + 1] = ("label[4,%s;Name]field[8,%s;4,0.8;name;;%s]field_close_on_enter[name;false]"):format(y + 0.4, y, E(name))
+		fs[#fs + 1] = ("label[8.4,%s;Name]field[11.6,%s;4,0.8;name;;%s]field_close_on_enter[name;false]"):format(y + 0.4, y, E(name))
 	end
 	y = y + 1
 	fix_choices(o)
@@ -274,16 +286,22 @@ local function newchar_formspec(player)
 				sel = i
 			end
 		end
-		fs[#fs + 1] = ("label[4,%s;%s]dropdown[8,%s;4,0.8;%s;%s;%d;true]"):format(
+		fs[#fs + 1] = ("label[8.4,%s;%s]dropdown[11.6,%s;4,0.8;%s;%s;%d;true]"):format(
 			y + 0.4, E(opt.label), y, k, table.concat(labels, ","), sel)
 		y = y + 1
 	end
 	local pet = o.get("dogname")
-	fs[#fs + 1] = ("label[4,%s;Pet's name]field[8,%s;4,0.8;petname;;%s]field_close_on_enter[petname;false]"):format(y + 0.4, y, E(pet))
+	fs[#fs + 1] = ("label[8.4,%s;Pet's name]field[11.6,%s;4,0.8;petname;;%s]field_close_on_enter[petname;false]"):format(y + 0.4, y, E(pet))
 	fs[#fs + 1] = ("tooltip[petname;%s]"):format(E("Blank: NetHack's usual name. Used whatever kind of pet you get."))
 	y = y + 1.4
-	fs[#fs + 1] = ("button[4,%s;3.8,0.9;begin;Start]button[8.2,%s;3.8,0.9;back;Back]"):format(y, y)
+	fs[#fs + 1] = ("button[8.4,%s;3.5,0.9;begin;Start]button[12.1,%s;3.5,0.9;back;Back]"):format(y, y)
 	return table.concat(fs)
+end
+
+-- the new character form, with its scene behind it
+local function show_new(player)
+	core.show_formspec(player:get_player_name(), NEW, newchar_formspec(player))
+	nhv.showroom.show(player)
 end
 
 local function confirm_formspec(name)
@@ -300,7 +318,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		if fields.continue then
 			start(player, title.saved_character(player))
 		elseif fields.new then
-			core.show_formspec(pname, NEW, newchar_formspec(player))
+			show_new(player)
 		elseif fields.options then
 			title.from_title = true
 			nhv.graphics.show(player)
@@ -356,7 +374,9 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			title.show(player)
 		elseif o.get("role") ~= before.role or o.get("race") ~= before.race then
 			-- (a new role or race: the choices below it change)
-			core.show_formspec(pname, NEW, newchar_formspec(player))
+			show_new(player)
+		else
+			nhv.showroom.show(player) -- (the scene, as now chosen)
 		end
 		return true
 	elseif formname == CONFIRM then
@@ -364,7 +384,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			delete_save(pending)
 			start(player, pending)
 		else
-			core.show_formspec(pname, NEW, newchar_formspec(player))
+			show_new(player)
 		end
 		pending = nil
 		return true

@@ -142,7 +142,7 @@ end
 -- or the day and night sky with its sun, moon and stars.
 function sky.apply(player, fog)
 	local s = sky.def
-	local base = s and nhv.terrain.open_sky and s.fog_color or "#000000"
+	local base = s and (nhv.terrain.open_sky or sky.scene) and s.fog_color or "#000000"
 	if s and s.daynight then
 		player:set_sky({type = "regular", clouds = false, fog = fog})
 	else
@@ -158,8 +158,9 @@ end
 
 local function set(s)
 	local cfg = s and config(s) or ""
+	local open = nhv.terrain.open_sky or sky.scene ~= nil
 	local changed = s ~= sky.def or (s and s.daynight) ~= sky.daynight_shown
-		or (s and nhv.terrain.open_sky) ~= sky.open_shown
+		or (s and open) ~= sky.open_shown
 	if cfg ~= sky.shown then
 		sky.shown = cfg
 		core.settings:set("nhv_sky", cfg)
@@ -167,7 +168,7 @@ local function set(s)
 	if changed then
 		sky.def = s
 		sky.daynight_shown = s and s.daynight
-		sky.open_shown = s and nhv.terrain.open_sky
+		sky.open_shown = s and open
 		local player = nhv.player.get()
 		if player and nhv.hud.apply_fog then
 			nhv.hud.apply_fog(player)
@@ -181,10 +182,15 @@ local function real_time_of_day()
 	return (t.hour * 3600 + t.min * 60 + t.sec) / 86400
 end
 
+-- (sky.scene: a level's name - "astral" - whose sky is shown whatever
+-- the level: the new character screen's scene, showroom.lua)
 function sky.update()
 	local snap = nh.snap
 	local hero = snap and snap.hero
 	local s = hero and not U.has(hero.flags, U.HERO.BLIND) and nhv.terrain.has_sky() and sky.for_level()
+	if sky.scene then
+		s = by_id(sky.data.levels[sky.scene]) or s
+	end
 	set(s or nil)
 	if s and s.daynight then
 		core.set_timeofday(real_time_of_day())
