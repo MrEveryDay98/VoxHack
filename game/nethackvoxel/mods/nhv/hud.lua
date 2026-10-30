@@ -946,6 +946,7 @@ core.register_on_joinplayer(function(player)
 		type = "image", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
 		offset = {x = 0, y = 2}, scale = {x = 1, y = 1}, text = "nhv_compass_mark.png",
 	})
+	hud.place_compass(player)
 	-- helpless: asleep or fainted, your eyes are shut (nearly black);
 	-- awake but frozen (a floating eye's gaze, paralysis), a cold grey-blue
 	-- you can still see through. (The messages show over both.)
@@ -1156,6 +1157,28 @@ local flash = nil -- {color=, t0=, strength=, full=}
 local flash_shown = nil
 -- Fading the whole screen to black and back (level changes, player.lua):
 -- hud.fade(1, s) to black over s seconds, hud.fade(0, s) back.
+-- the compass as the screen wants it: retro mode's small screens a small
+-- one (a pixel a degree, the font at its own size), else the big one
+local COMPASS = {
+	big = {strip = "nhv_compass.png", frame = "nhv_compass_frame.png", mark = "nhv_compass_mark.png",
+		size = {x = 480, y = 48}, y = 8, mark_y = 2},
+	small = {strip = "nhv_compass_small.png", frame = "nhv_compass_small_frame.png",
+		mark = "nhv_compass_small_mark.png", size = {x = 160, y = 24}, y = 4, mark_y = 1},
+}
+function hud.place_compass(player)
+	if not hud.ids.compass then
+		return
+	end
+	local c = core.settings:get_bool("nhv_retro", false) and COMPASS.small or COMPASS.big
+	player:hud_change(hud.ids.compass, "text", c.strip)
+	player:hud_change(hud.ids.compass, "size", c.size)
+	player:hud_change(hud.ids.compass, "offset", {x = 0, y = c.y})
+	player:hud_change(hud.ids.compass_frame, "text", c.frame)
+	player:hud_change(hud.ids.compass_frame, "offset", {x = 0, y = c.y})
+	player:hud_change(hud.ids.compass_mark, "text", c.mark)
+	player:hud_change(hud.ids.compass_mark, "offset", {x = 0, y = c.mark_y})
+end
+
 local fade = {from = 0, to = 0, t0 = 0, dur = 0, c0 = {0, 0, 0}, c1 = {0, 0, 0}}
 local function fade_t()
 	local t = fade.dur > 0 and (core.get_us_time() - fade.t0) / 1e6 / fade.dur or 1

@@ -166,13 +166,15 @@ function graphics.formspec()
 	return table.concat({
 		theme.head(13, 12),
 		"label[0.5,0.6;", theme.title("Options"), "]",
+		-- (the buttons first: a list opened from a dropdown near the bottom
+		-- is drawn over them, not under)
+		"button[0.5,11.0;5.6,0.8;guide;Controls & guide...]",
+		"button_exit[6.4,11.0;5.6,0.8;close;Done]",
 		("scrollbaroptions[max=%d;smallstep=9;largestep=45]"):format(max),
 		("scrollbar[12.3,1.0;0.4,%s;vertical;scroll;%d]"):format(VIEW_H, scroll),
 		("scroll_container[0,1.0;12.2,%s;scroll;vertical;0.1]"):format(VIEW_H),
 		table.concat(rows),
 		"scroll_container_end[]",
-		"button[0.5,11.0;5.6,0.8;guide;Controls & guide...]",
-		"button_exit[6.4,11.0;5.6,0.8;close;Done]",
 	})
 end
 
@@ -207,6 +209,7 @@ function graphics.set_retro(player, on)
 		end
 	end
 	core.settings:set_bool("nhv_retro", on) -- (the engine switches at the next frame)
+	nhv.hud.place_compass(player)
 	if on then
 		retro_sizes(player)
 	else
