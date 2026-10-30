@@ -62,3 +62,6 @@ Archeologist = arkyoligist
 creation = creashun
 wanderer = waunder rur
 heard = herd
+vivid = vihvid
+terrified = terified
+recollection = rehcollection

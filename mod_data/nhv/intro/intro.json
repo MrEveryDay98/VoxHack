@@ -63,8 +63,8 @@
 		{
 			"delay" : 0,
 			"index" : 1,
-			"line" : "",
-			"mood" : "",
+			"line" : "Recently, you have begun to find yourself unfulfilled and distant in your daily occupation. Strange dreams of prospecting, stealing, crusading, and combat have haunted you in your sleep for many months, but you aren't sure of the reason. You wonder whether you have in fact been having those dreams all your life, and somehow managed to forget about them until now.",
+			"mood" : "calm",
 			"pitch" : -0.086742863059043884,
 			"pos" : 
 			{
@@ -74,15 +74,52 @@
 			},
 			"seconds" : 3,
 			"sync" : true,
-			"transition" : "glide",
+			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 2.523047924041748
 		},
 		{
 			"delay" : 0,
+			"fade_in" : "black",
 			"index" : 2,
+			"line" : "Some nights you awaken suddenly and cry out, terrified at the vivid recollection of the strange and powerful creatures that seem to be lurking behind every corner of the dungeon in your dream. Could these details haunting your dreams be real? As each night passes, you feel the desire to enter the mysterious caverns near the ruins grow stronger. ",
+			"mood" : "calm",
+			"pitch" : 0.052534408867359161,
+			"pos" : 
+			{
+				"x" : 55,
+				"y" : -12,
+				"z" : 146
+			},
+			"seconds" : 3,
+			"sync" : true,
+			"transition" : "glide",
+			"voice" : "Narrator",
+			"yaw" : 4.4336600303649902
+		},
+		{
+			"delay" : 0,
+			"index" : 3,
 			"line" : "",
-			"mood" : "",
+			"mood" : "calm",
+			"pitch" : 0.1054178848862648,
+			"pos" : 
+			{
+				"x" : 55,
+				"y" : -12,
+				"z" : 144
+			},
+			"seconds" : 2,
+			"sync" : false,
+			"transition" : "black",
+			"voice" : "Narrator",
+			"yaw" : 5.0534262657165527
+		},
+		{
+			"delay" : 0,
+			"index" : 4,
+			"line" : "Each morning, however, you quickly put the idea out of your head as you recall the tales of those who entered the caverns before you and did not return. Eventually you can resist the yearning to seek out the fantastic place in your dreams no longer. After all, when other adventurers came back this way after spending time in the caverns, they usually seemed better off than when they passed through the first time. And who was to say that all of those who did not return had not just kept going?",
+			"mood" : "calm",
 			"pitch" : 0.30229100584983826,
 			"pos" : 
 			{
@@ -98,9 +135,9 @@
 		},
 		{
 			"delay" : 0,
-			"index" : 3,
+			"index" : 5,
 			"line" : "",
-			"mood" : "",
+			"mood" : "calm",
 			"pitch" : 0.20141099393367767,
 			"pos" : 
 			{
@@ -108,9 +145,9 @@
 				"y" : 0,
 				"z" : 141
 			},
-			"seconds" : 3,
-			"sync" : true,
-			"transition" : "glide",
+			"seconds" : 1,
+			"sync" : false,
+			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 3.6559412479400635
 		}
@@ -1354,6 +1391,11 @@
 			"z" : 105
 		},
 		{
+			"x" : 95,
+			"y" : 1,
+			"z" : 108
+		},
+		{
 			"x" : 83,
 			"y" : 0,
 			"z" : 109
@@ -1362,6 +1404,16 @@
 			"x" : 90,
 			"y" : 1,
 			"z" : 110
+		},
+		{
+			"x" : 104,
+			"y" : 1,
+			"z" : 107
+		},
+		{
+			"x" : 102,
+			"y" : 1,
+			"z" : 111
 		},
 		{
 			"x" : 123,
@@ -1649,9 +1701,44 @@
 			"z" : 126
 		},
 		{
+			"x" : 111,
+			"y" : 1,
+			"z" : 114
+		},
+		{
+			"x" : 100,
+			"y" : 1,
+			"z" : 115
+		},
+		{
+			"x" : 106,
+			"y" : 1,
+			"z" : 116
+		},
+		{
+			"x" : 103,
+			"y" : 1,
+			"z" : 119
+		},
+		{
 			"x" : 96,
 			"y" : 0,
 			"z" : 121
+		},
+		{
+			"x" : 102,
+			"y" : 1,
+			"z" : 122
+		},
+		{
+			"x" : 105,
+			"y" : 1,
+			"z" : 123
+		},
+		{
+			"x" : 109,
+			"y" : 1,
+			"z" : 123
 		},
 		{
 			"x" : 127,
@@ -1822,6 +1909,26 @@
 			"x" : 78,
 			"y" : 0,
 			"z" : 133
+		},
+		{
+			"x" : 87,
+			"y" : 5,
+			"z" : 138
+		},
+		{
+			"x" : 84,
+			"y" : 7,
+			"z" : 141
+		},
+		{
+			"x" : 99,
+			"y" : 0,
+			"z" : 128
+		},
+		{
+			"x" : 102,
+			"y" : 0,
+			"z" : 129
 		},
 		{
 			"x" : 107,
@@ -2052,6 +2159,16 @@
 			"x" : 81,
 			"y" : -1,
 			"z" : 157
+		},
+		{
+			"x" : 82,
+			"y" : 8,
+			"z" : 147
+		},
+		{
+			"x" : 83,
+			"y" : 7,
+			"z" : 148
 		},
 		{
 			"x" : 109,
@@ -4229,5 +4346,5 @@
 			"z" : 240
 		}
 	],
-	"version" : 1793350964
+	"version" : 1793388500
 }
