@@ -944,6 +944,14 @@
    ],
    "volume": 100,
    "pitch_var": 0.05
+  },
+  "music_title": {
+   "sounds": [
+    "nhv_music_title"
+   ],
+   "volume": 100,
+   "pitch_var": 0,
+   "loop": true
   }
  },
  "voices": {},
