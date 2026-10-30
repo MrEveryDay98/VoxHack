@@ -269,6 +269,14 @@ function nhv_tiles.flat()
 	return nhv_tiles.ascii ~= nil or core.settings:get_bool("nhv_flat_sprites", false)
 end
 
+-- how far a sprite facing you is turned from having its front (+z) to you:
+-- an extruded one has its back to you - its picture is the right way round
+-- from there (wieldmesh's extrusion), the other way round from its front;
+-- a flat one has its front to you (from behind, its picture is mirrored)
+function nhv_tiles.facing_turn()
+	return nhv_tiles.flat() and 0 or math.pi
+end
+
 function nhv_tiles.look(tile, height, kind)
 	if nhv_tiles.flat() then
 		local tex = nhv_tiles.texture(tile) .. (kind and nhv_tiles.FLASH[kind] or "")

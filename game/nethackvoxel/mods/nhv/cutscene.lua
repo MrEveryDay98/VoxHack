@@ -498,7 +498,7 @@ local function asc_step(player, dtime)
 		-- (turned to the camera, wherever the engine has it)
 		local cam = core.nhv_camera and core.nhv_camera()
 		if cam then
-			asc.hero:set_rotation(vector.new(0, math.atan2(-(cam.x - feet.x), cam.z - feet.z) + math.pi, 0))
+			asc.hero:set_rotation(vector.new(0, math.atan2(-(cam.x - feet.x), cam.z - feet.z) + nhv_tiles.facing_turn(), 0))
 		end
 	end
 	player:set_velocity(vector.zero())

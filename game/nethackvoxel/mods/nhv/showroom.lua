@@ -141,7 +141,7 @@ local function sprite(part, pos, tile, h, eye)
 	end
 	obj:set_pos(vector.new(pos.x, pos.y + h / 2 + 0.12, pos.z)) -- (feet on the top, not in it)
 	-- (its front to the camera)
-	obj:set_rotation(vector.new(0, math.atan2(-(eye.x - pos.x), eye.z - pos.z) + math.pi, 0))
+	obj:set_rotation(vector.new(0, math.atan2(-(eye.x - pos.x), eye.z - pos.z) + nhv_tiles.facing_turn(), 0))
 end
 
 -- the role and gender to show now (Random: going round them)
