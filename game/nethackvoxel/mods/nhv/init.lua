@@ -170,6 +170,9 @@ core.register_on_joinplayer(function(player)
 	-- park the player somewhere safe until the level is built
 	player:set_pos(vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10))
 	nhv.player.freeze(true)
+	-- (the title's backdrop at once: no hand, weapon or HUD showing before
+	-- the title screen comes)
+	nhv.showroom.title(player)
 	-- the title screen: continue, new character, options, quit
 	core.after(0.5, function()
 		if player:is_player() then

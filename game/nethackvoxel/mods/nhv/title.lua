@@ -125,8 +125,9 @@ end
 
 function title.formspec(player)
 	local saved = title.saved_character(player)
-	-- (see-through: the Astral sky behind it - showroom.lua)
-	local fs = {scene_screen(16, 10),
+	-- (see-through: the Astral sky behind it - showroom.lua; Esc doesn't
+	-- close it - it would be gone a moment, the camera free)
+	local fs = {scene_screen(16, 10), "allow_close[false]",
 		"image[3,0.6;10,2.5;nhv_title_logo.png]"}
 	-- (five buttons fit above the update notice)
 	local y = 3.8

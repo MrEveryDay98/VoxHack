@@ -17,6 +17,7 @@ nhv.showroom = showroom
 local SIZE = {hero = 1.9, pet = {cat = 0.75, dog = 0.85, horse = 1.45}}
 local PEDESTAL = {w = 2.6, h = 0.6, d = 1.6}
 local CYCLE_S = 1.4 -- Random: a new role (or gender) this often
+local LOOK_DOWN = 0.12 -- (radians: the camera a little down)
 
 -- the role's NetHack monster (its tiles are "<monster>,<gender>")
 local ROLE_MON = {archeologist = "archeologist", barbarian = "barbarian", caveman = "cave dweller",
@@ -183,7 +184,7 @@ function showroom.backdrop(player)
 	player:set_pos(showroom.spot)
 	player:set_velocity(vector.zero())
 	player:set_look_horizontal(0)
-	player:set_look_vertical(0.12)
+	player:set_look_vertical(LOOK_DOWN)
 	player:hud_set_flags({wielditem = false, crosshair = false})
 	showroom.huds = {}
 	showroom.hide_huds(player)
@@ -259,6 +260,13 @@ core.register_globalstep(function(dtime)
 	if player and vector.distance(player:get_pos(), showroom.spot) > 0.05 then
 		player:set_pos(showroom.spot)
 		player:set_velocity(vector.zero())
+	end
+	-- (and looking the same way: the mouse doesn't turn it)
+	if player and (math.abs(player:get_look_horizontal()) > 0.001
+			and math.abs(player:get_look_horizontal() - 2 * math.pi) > 0.001
+			or math.abs(player:get_look_vertical() - LOOK_DOWN) > 0.001) then
+		player:set_look_horizontal(0)
+		player:set_look_vertical(LOOK_DOWN)
 	end
 	if player then
 		showroom.hide_huds(player)
