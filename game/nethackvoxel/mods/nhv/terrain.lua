@@ -561,6 +561,22 @@ function terrain.rewrite_outer()
 	terrain.write_squares(sqs)
 end
 
+-- a lit square's light: the whole of it under the ceiling, block by block
+-- (where there's air) - one in its middle alone left its corners darker,
+-- light fading a level a block
+function terrain.light_square(data, area, tx, ty)
+	local air, light = cid("air"), cid("nhv:room_light")
+	local ox, oz = U.tile_origin(tx, ty)
+	for lx = 0, U.TILE - 1 do
+		for lz = 0, U.TILE - 1 do
+			local vi = area:index(ox + lx, U.CEIL_Y - 1, oz + lz)
+			if data.ids[vi] == air then
+				data.ids[vi] = light
+			end
+		end
+	end
+end
+
 -- the Plane of Air's open air (describe): a layer of sky blocks to walk on
 -- - the sky shows through them, under your feet as all round - and nothing
 -- else (but the light over a lit square, as in a lit room: what's in the
@@ -581,8 +597,7 @@ local function write_sky_floor(data, area, sq)
 		end
 	end
 	if sq.lit then
-		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
-		data.ids[area:index(c.x, c.y, c.z)] = cid("nhv:room_light")
+		terrain.light_square(data, area, sq.tx, sq.ty)
 	end
 end
 
@@ -651,11 +666,7 @@ local function write_square(data, area, sq)
 	-- (the open-sky levels' ceilings aren't taken off here any more: they're
 	-- built open in the prefab editor's areas)
 	if sq.lit and open_typ(sq.typ) then
-		local c = U.tile_center(sq.tx, sq.ty, U.CEIL_Y - 1)
-		local vi = area:index(c.x, c.y, c.z)
-		if data.ids[vi] == cid("air") then
-			data.ids[vi] = cid("nhv:room_light")
-		end
+		terrain.light_square(data, area, sq.tx, sq.ty)
 	end
 end
 
