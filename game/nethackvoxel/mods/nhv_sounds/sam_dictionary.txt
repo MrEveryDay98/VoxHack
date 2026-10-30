@@ -57,3 +57,5 @@ kabuto = {KAA5BUWTOW}
 yugake = {YUW5GAAKEH}
 gunyoki = {GUW5NYOWKIY}
 roshi = {DXOW5SHIY}
+research = re serch
+Archeologist = arkyoligist

@@ -29,7 +29,10 @@
     "speed": 72,
     "pitch": 64,
     "throat": 128,
-    "mouth": 128
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
    }
   },
   "Quest (Pri)": {
@@ -40,7 +43,10 @@
     "speed": 72,
     "pitch": 64,
     "throat": 128,
-    "mouth": 128
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
    }
   },
   "God": {
@@ -211,7 +217,9 @@
       "repeats": 3
      }
     ],
-    "smooth": true
+    "smooth": false,
+    "hifi": true,
+    "live": true
    }
   },
   "Vault guard": {
@@ -281,9 +289,9 @@
   "Narrator": {
    "sam": {
     "voice": "Little Old Lady",
-    "speed": 82,
+    "speed": 70,
     "pitch": 128,
-    "throat": 145,
+    "throat": 120,
     "mouth": 145,
     "smooth": false,
     "live": true,
@@ -298,17 +306,225 @@
     ],
     "volume": 100,
     "hifi": true,
-    "tone": false,
+    "tone": true,
     "breath": 0,
     "movement": 300,
     "hiss": 70,
     "bright": 100
+   }
+  },
+  "Quest (Tou)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Ran)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Mon)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Kni)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Arc)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Wiz)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Bar)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Cav)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (common)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Sam)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest (Hea)": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Djinni / ghost": {
+   "sam": {
+    "voice": "Stuffy Guy",
+    "speed": 82,
+    "pitch": 72,
+    "throat": 110,
+    "mouth": 105,
+    "live": true,
+    "smooth": false,
+    "hifi": true
+   }
+  },
+  "Quest leader": {
+   "sam": {
+    "voice": "SAM",
+    "speed": 72,
+    "pitch": 64,
+    "throat": 128,
+    "mouth": 128,
+    "smooth": false,
+    "hifi": true,
+    "female": 11
    }
   }
  },
  "lines": {
   "spoken.6e500ce192": {
    "sam_text": "So thou thought thou couldst kill me?? fool!"
+  },
+  "quest.Arc.assignquest": {
+   "mood": "sad"
+  },
+  "quest.Arc.badalign": {
+   "mood": "angry"
+  },
+  "quest.Arc.badlevel": {
+   "mood": "calm"
+  },
+  "quest.Arc.discourage.1": {
+   "mood": "angry",
+   "sam_voice": "Extra-Terrestrial"
+  },
+  "quest.Arc.discourage.2": {
+   "mood": "angry",
+   "sam_voice": "Extra-Terrestrial"
+  },
+  "quest.Arc.discourage.3": {
+   "mood": "angry",
+   "sam_voice": "Extra-Terrestrial"
+  },
+  "quest.Arc.discourage.4": {
+   "mood": "afraid",
+   "sam_voice": "Extra-Terrestrial"
+  },
+  "quest.Arc.discourage.5": {
+   "mood": "angry",
+   "sam_voice": "Extra-Terrestrial"
+  },
+  "quest.Arc.discourage.6": {
+   "sam_voice": "Extra-Terrestrial",
+   "mood": "angry"
+  },
+  "quest.Arc.discourage.7": {
+   "sam_voice": "Extra-Terrestrial",
+   "mood": "angry"
+  },
+  "quest.Arc.discourage.8": {
+   "sam_voice": "Extra-Terrestrial",
+   "mood": "angry"
+  },
+  "quest.Arc.discourage.9": {
+   "sam_voice": "Extra-Terrestrial",
+   "mood": "angry"
+  },
+  "quest.Arc.discourage.10": {
+   "sam_voice": "Extra-Terrestrial",
+   "mood": "angry"
+  },
+  "quest.Arc.encourage.1": {
+   "mood": "calm"
+  },
+  "quest.Arc.encourage.8": {
+   "mood": "calm"
+  },
+  "quest.Arc.encourage.9": {
+   "mood": "calm"
   }
  }
 }
