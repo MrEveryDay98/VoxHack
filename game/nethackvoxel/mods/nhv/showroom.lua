@@ -105,6 +105,9 @@ local function sprite(part, pos, tile, h, eye)
 			obj:remove()
 			objs[part] = nil
 		end
+		-- (forgotten too: a new one is given its picture - not left the
+		-- entity's own, tile 0, the giant ant)
+		showroom.shown[part] = nil
 		return
 	end
 	if not (obj and obj:get_pos()) then
@@ -114,6 +117,15 @@ local function sprite(part, pos, tile, h, eye)
 		end
 		obj:get_luaentity().part = part
 		objs[part] = obj
+		showroom.shown[part] = nil
+		-- (unseen until it's turned to the camera: a frame of it at its
+		-- first angle, otherwise)
+		obj:set_properties({is_visible = false})
+		core.after(0.15, function()
+			if obj:get_pos() then
+				obj:set_properties({is_visible = true})
+			end
+		end)
 	end
 	local key = tile .. "/" .. h
 	if showroom.shown[part] ~= key then

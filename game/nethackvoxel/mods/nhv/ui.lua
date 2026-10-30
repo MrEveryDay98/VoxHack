@@ -124,7 +124,7 @@ function ui.yn_fading(req, a)
 	local n = #req.choices
 	local w = math.max(8, n * 2.2 + 1)
 	local fs = {("formspec_version[6]size[%s,4]no_prepend[]"):format(w),
-		("bgcolor[#000000%s;true]"):format(hex(0xA0))}
+		("bgcolor[#000000%s;true]"):format(hex(0xA0)), nhv.theme.CLICK}
 	if nhv.theme.retro() then
 		fs[#fs + 1] = ("background9[0,0;0,0;nhv_ui_panel.png^[opacity:%d;true;4]"):format(op)
 		fs[#fs + 1] = ("style_type[button;border=false;bgimg=nhv_ui_button.png^[opacity:%d;"

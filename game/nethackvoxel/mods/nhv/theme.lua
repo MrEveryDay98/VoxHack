@@ -29,6 +29,11 @@ local RETRO = table.concat({
 })
 local MODERN = "bgcolor[#000000C0;true]style_type[button;bgcolor=#303040]"
 	.. "style_type[label;textcolor=#E0E0E0]"
+-- a click as you choose something in a menu (either style)
+local CLICK = "style_type[button,button_exit,image_button,image_button_exit,item_image_button,"
+	.. "checkbox,dropdown,tabheader;sound=nhv_ui_click]"
+RETRO, MODERN = RETRO .. CLICK, MODERN .. CLICK
+theme.CLICK = CLICK -- (for screens without the style: no_prepend)
 
 -- the style elements every screen starts with
 function theme.styles()
