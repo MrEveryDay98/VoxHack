@@ -167,6 +167,9 @@ end
 function title.show(player)
 	title.open, title.from_title = true, false
 	nhv.showroom.title(player) -- (the Astral sky behind it)
+	if nhv.sound then
+		nhv.sound.set_music("music_title") -- (back from a game too)
+	end
 	if nhv.update then
 		nhv.update.check() -- (once a session)
 	end
