@@ -1093,7 +1093,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		if nhv.death then
 			nhv.death.finish()
 		end
-		nhv.title.show(player)
+		nhv.title.show(player, true)
 	elseif fields.quit and ui.dead then
 		ui.show_death()
 	end
@@ -1116,7 +1116,7 @@ nh.on_snapshot(function(snap, info)
 		nhv.hud.messages = {} -- (a fresh start on the title screen)
 		local player = nhv.player.get()
 		if player then
-			core.after(0.2, nhv.title.show, player)
+			core.after(0.2, nhv.title.show, player, true)
 		end
 		return
 	end

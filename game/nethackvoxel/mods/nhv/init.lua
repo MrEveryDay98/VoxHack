@@ -173,10 +173,11 @@ core.register_on_joinplayer(function(player)
 	-- (the title's backdrop at once: no hand, weapon or HUD showing before
 	-- the title screen comes)
 	nhv.showroom.title(player)
+	nhv.hud.fade(1, 0) -- (black until the title fades in)
 	-- the title screen: continue, new character, options, quit
 	core.after(0.5, function()
 		if player:is_player() then
-			nhv.title.show(player)
+			nhv.title.show(player, true)
 		end
 	end)
 end)

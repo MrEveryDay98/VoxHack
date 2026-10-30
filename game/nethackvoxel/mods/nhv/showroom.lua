@@ -186,6 +186,14 @@ function showroom.backdrop(player)
 	player:set_look_horizontal(0)
 	player:set_look_vertical(LOOK_DOWN)
 	player:hud_set_flags({wielditem = false, crosshair = false})
+	-- (the mouse doesn't move the view: the VoxHack engine's camera lock -
+	-- once the view above has got to the screen, as it holds the view it
+	-- has when it's set)
+	core.after(0.2, function()
+		if showroom.bd and player:is_player() then
+			player:hud_set_flags({nhv_camera_lock = true})
+		end
+	end)
 	showroom.huds = {}
 	showroom.hide_huds(player)
 	if nhv.sky then
@@ -200,7 +208,8 @@ function showroom.hide_huds(player)
 	-- (by where it is, not its number: a removed element's number is
 	-- given to the next one made)
 	for id, def in pairs(player:hud_get_all() or {}) do
-		if def.position and def.position.x ~= 9 then
+		-- (not the black fade over the world: the title fades in with it)
+		if def.position and def.position.x ~= 9 and id ~= nhv.hud.ids.fade then
 			showroom.huds[id] = def.position
 			player:hud_change(id, "position", {x = 9, y = 9})
 		end
@@ -238,7 +247,7 @@ function showroom.hide(player)
 	end
 	showroom.bd = nil
 	if player and player:is_player() then
-		player:hud_set_flags({wielditem = true, crosshair = true})
+		player:hud_set_flags({wielditem = true, crosshair = true, nhv_camera_lock = false})
 		for id, pos in pairs(showroom.huds or {}) do
 			local def = player:hud_get(id)
 			if def and def.position and def.position.x == 9 then

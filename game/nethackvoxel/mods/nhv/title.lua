@@ -101,7 +101,7 @@ core.register_chatcommand("nhvtitle", {
 		if not nhv.nh.save_game() then
 			-- (no game running: just the title)
 			nhv.ui.to_title = false
-			title.show(player)
+			title.show(player, true)
 		end
 		return true
 	end,
@@ -123,7 +123,7 @@ local function scene_screen(w, h)
 		.. theme.styles():gsub("bgcolor%[[^%]]*%]", ""):gsub("background9%[[^%]]*%]", "")
 end
 
-function title.formspec(player)
+function title.formspec(player, black)
 	local saved = title.saved_character(player)
 	-- (see-through: the Astral sky behind it - showroom.lua; Esc doesn't
 	-- close it - it would be gone a moment, the camera free)
@@ -151,6 +151,12 @@ function title.formspec(player)
 			.. "A new version is available: <b>%s</b>   "
 			.. "<action name=get url=%s>Download it from GitHub</action>"):format(upd.tag, upd.url)))
 	end
+	-- (fading in: black over the menu, and over the screen round it)
+	if black and black > 0 then
+		local hex = ("%02X"):format(math.floor(black * 255 + 0.5))
+		fs[1] = fs[1]:gsub("bgcolor%[#00000000;false%]", "bgcolor[#000000" .. hex .. ";true]")
+		fs[#fs + 1] = ("box[0,0;16,10;#000000%s]"):format(hex)
+	end
 	return table.concat(fs)
 end
 
@@ -165,8 +171,18 @@ function title.back_from(player)
 	return false
 end
 
-function title.show(player)
+-- (fade: coming in from black - the game opening, back from a game - the
+-- world under it with the HUD's fade, the menu with a black veil over it
+-- thinning step by step)
+local FADE_S, FADE_STEPS = 1.2, 12
+
+function title.show(player, fade)
 	title.open, title.from_title = true, false
+	if fade then
+		nhv.hud.fade(1, 0)
+		nhv.hud.fade(0, FADE_S)
+		title.fade_t0, title.fade_step = core.get_us_time(), nil
+	end
 	nhv.showroom.title(player) -- (the Astral sky behind it)
 	if nhv.sound then
 		nhv.sound.set_music("music_title") -- (back from a game too)
@@ -175,8 +191,31 @@ function title.show(player)
 		nhv.update.check() -- (once a session)
 	end
 	nhv.player.freeze(true)
-	core.show_formspec(player:get_player_name(), FORM, title.formspec(player))
+	core.show_formspec(player:get_player_name(), FORM, title.formspec(player, fade and 1 or nil))
 end
+
+-- the menu coming in from black, a step at a time (closed meanwhile - a
+-- button pressed: done)
+core.register_globalstep(function()
+	if not title.fade_t0 then
+		return
+	end
+	local player = nhv.player.get()
+	if not (player and title.open) then
+		title.fade_t0 = nil
+		return
+	end
+	local k = (core.get_us_time() - title.fade_t0) / 1e6 / FADE_S
+	local step = math.min(FADE_STEPS, math.floor(k * FADE_STEPS))
+	if step ~= title.fade_step then
+		title.fade_step = step
+		core.show_formspec(player:get_player_name(), FORM,
+			title.formspec(player, step < FADE_STEPS and 1 - step / FADE_STEPS or nil))
+		if step >= FADE_STEPS then
+			title.fade_t0 = nil
+		end
+	end
+end)
 
 -- character creation: what's chosen is stored as the NetHack options
 -- (the pause menu > NetHack Options shows the same)
