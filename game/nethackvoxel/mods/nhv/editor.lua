@@ -555,14 +555,17 @@ local function build_area(t, build, done)
 						end
 					end
 				end
-				-- a light under the ceiling of open squares, as the game puts
-				-- in lit rooms (not saved with the area: the game adds its own)
+				-- lights under the ceiling and over the floor of open squares,
+				-- as the game puts in lit rooms (not saved with the area: the
+				-- game adds its own)
 				if typ >= U.TYP.POOL and typ ~= U.TYP.IRONBARS and typ ~= U.TYP.LAVAWALL then
-					for lx = 0, U.TILE - 1 do
-						for lz = 0, U.TILE - 1 do
-							local vi = va:index(so.x + lx, so.y + prefabs.CEIL - 1, so.z + lz)
-							if data.ids[vi] == cid("air") then
-								data.ids[vi] = cid("nhv:room_light")
+					for _, ly in ipairs({prefabs.FLOOR + 1, prefabs.CEIL - 1}) do
+						for lx = 0, U.TILE - 1 do
+							for lz = 0, U.TILE - 1 do
+								local vi = va:index(so.x + lx, so.y + ly, so.z + lz)
+								if data.ids[vi] == cid("air") then
+									data.ids[vi] = cid("nhv:room_light")
+								end
 							end
 						end
 					end
