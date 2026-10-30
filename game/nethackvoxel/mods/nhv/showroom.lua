@@ -9,8 +9,9 @@
 --   showroom.show(player)   set it up (or update it to the choices now)
 --   showroom.title(player)  the backdrop alone (the title screen)
 --   showroom.hide(player)   take it away
---   showroom.intro(player)  the figures in the middle at the bottom (the
---                           intro's narration over them: intro.lua)
+--   showroom.intro(player)  the camera moved so the figures are in the
+--                           middle at the bottom (the intro's narration
+--                           over them: intro.lua) - they stay as they are
 
 local U = nhv.util
 local showroom = {keep = {}} -- (keep: HUD elements shown over it)
@@ -20,6 +21,10 @@ local SIZE = {hero = 1.9, pet = {cat = 0.75, dog = 0.85, horse = 1.45}}
 local PEDESTAL = {n = 3, h = 1} -- (blocks across and deep; tall)
 local CYCLE_S = 1.4 -- Random: a new role (or gender) this often
 local LOOK_DOWN = 0.12 -- (radians: the camera a little down)
+-- the intro's camera, from the creator's: back, up and across, so the
+-- figures are in the middle of the screen, low down, the narration above
+local INTRO_CAMERA = vector.new(-1.7, 1.45, -1.6)
+local GLIDE_S = 0.8 -- (the camera's move there)
 
 -- the role's NetHack monster (its tiles are "<monster>,<gender>")
 local ROLE_MON = {archeologist = "archeologist", barbarian = "barbarian", caveman = "cave dweller",
@@ -88,20 +93,20 @@ local function pedestal_look()
 	return {textures = {top, top, side, side, side, side}}
 end
 
--- where the scene stands, from where you are: ahead of you and to your left
--- (the form covers the right of the screen), a little below your eyes
+-- where the scene stands: ahead of the creator's camera and to its left
+-- (the form covers the right of the screen), a little below its eyes -
+-- looking along +z: left is -x; close up, filling the left of the screen.
+-- And the camera's eyes now (the figures turned to them).
 local function places(player)
-	local p = player:get_pos()
-	local eye = vector.new(p.x, p.y + 1.6, p.z)
-	if showroom.centred then
-		-- (the intro: in the middle - the two figures either side of it -
-		-- low down, the narration above)
-		return eye, vector.new(p.x + 0.2, p.y - 1.9, p.z + 4.8)
-	end
-	-- (looking along +z: left is -x; close up, filling the left of the
-	-- screen)
+	local p = showroom.spot
 	local base = vector.new(p.x - 1.5, p.y - 0.45, p.z + 3.2)
-	return eye, base
+	local cam = player:get_pos()
+	return vector.new(cam.x, cam.y + 1.6, cam.z), base
+end
+
+-- where the camera is to be (the creator's spot, or the intro's)
+local function camera_goal()
+	return showroom.centred and vector.add(showroom.spot, INTRO_CAMERA) or showroom.spot
 end
 
 local function sprite(part, pos, tile, h, eye)
@@ -232,6 +237,7 @@ function showroom.backdrop(player)
 	-- spot - after a game too, away from the level you were on; kept
 	-- there, below)
 	showroom.spot = vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10)
+	showroom.cam, showroom.glide = showroom.spot, nil
 	-- (the mouse doesn't move the view: the VoxHack engine's camera lock -
 	-- first, so the look set below, and the globalstep's, are what it holds)
 	player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
@@ -284,20 +290,22 @@ end
 
 -- the title screen: the backdrop alone
 function showroom.title(player)
-	showroom.centred = nil
+	showroom.centred, showroom.glide = nil, nil
+	showroom.cam = showroom.spot
 	clear_figures()
 	showroom.backdrop(player)
 end
 
--- the intro: the scene as it is, the figures moved to the middle
+-- the intro: the scene as it is - the figures not touched - the camera
+-- gliding to where they're in the middle, low down
 function showroom.intro(player)
 	showroom.centred = true
-	clear_figures() -- (made again where they go: not sliding over there)
 	showroom.show(player)
+	showroom.glide = {from = showroom.cam or showroom.spot, t = 0}
 end
 
 function showroom.hide(player)
-	showroom.centred = nil
+	showroom.centred, showroom.glide = nil, nil
 	clear_figures()
 	if not showroom.bd then
 		return
@@ -322,13 +330,28 @@ function showroom.hide(player)
 	end
 end
 
--- (Random goes round: redrawn now and then; you're kept on your spot)
+-- (Random goes round: redrawn now and then; you're kept on your spot - the
+-- camera's, gliding to the intro's)
 local since = 0
 core.register_globalstep(function(dtime)
 	local player = showroom.bd and nhv.player.get()
-	if player and vector.distance(player:get_pos(), showroom.spot) > 0.05 then
-		player:set_pos(showroom.spot)
-		player:set_velocity(vector.zero())
+	if player then
+		local goal = camera_goal()
+		local g = showroom.glide
+		if g then
+			g.t = math.min(1, g.t + dtime / GLIDE_S)
+			local k = g.t * g.t * (3 - 2 * g.t) -- (eased in and out)
+			showroom.cam = vector.add(g.from, vector.multiply(vector.subtract(goal, g.from), k))
+			if g.t >= 1 then
+				showroom.glide = nil
+			end
+		else
+			showroom.cam = goal
+		end
+		if vector.distance(player:get_pos(), showroom.cam) > 0.01 then
+			player:set_pos(showroom.cam)
+			player:set_velocity(vector.zero())
+		end
 	end
 	-- (and looking the same way: the mouse doesn't turn it)
 	if player and (math.abs(player:get_look_horizontal()) > 0.001
@@ -344,7 +367,8 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	since = since + dtime
-	if since > 0.25 then
+	-- (while the camera moves, every step: the figures kept turned to it)
+	if since > 0.25 or showroom.glide then
 		since = 0
 		local player = nhv.player.get()
 		if player then
