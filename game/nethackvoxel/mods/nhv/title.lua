@@ -330,20 +330,23 @@ local function newchar_formspec(player)
 	end
 	y = y + 1
 	fix_choices(o)
+	-- each choice:  Role   < Knight >  (the arrows go round the allowed ones)
 	for _, k in ipairs(CREATE) do
 		local opt = o.BY_KEY[k]
-		local labels, sel = {}, 1
-		for i, c in ipairs(allowed_choices(k, o.get)) do
-			labels[i] = E(c[2])
-			if k == "pettype" and c[1] == "" and ROLE_PET[o.get("role")] then
-				labels[i] = E("Usual: " .. ROLE_PET[o.get("role")])
-			end
+		local shown = o.get(k)
+		for _, c in ipairs(allowed_choices(k, o.get)) do
 			if c[1] == o.get(k) then
-				sel = i
+				shown = c[2]
+				if k == "pettype" and c[1] == "" and ROLE_PET[o.get("role")] then
+					shown = "Usual: " .. ROLE_PET[o.get("role")]
+				end
 			end
 		end
-		fs[#fs + 1] = ("label[8.4,%s;%s]dropdown[11.6,%s;4,0.8;%s;%s;%d;true]"):format(
-			y + 0.4, E(opt.label), y, k, table.concat(labels, ","), sel)
+		fs[#fs + 1] = ("label[8.4,%s;%s]button[11.6,%s;0.8,0.8;%s_prev;<]"
+			.. "hypertext[12.4,%s;2.4,0.8;%s_shown;%s]button[14.8,%s;0.8,0.8;%s_next;>]"):format(
+			y + 0.4, E(opt.label), y, k,
+			y, k, E("<global halign=center valign=middle color=#FFFFFF>" .. shown),
+			y, k)
 		y = y + 1
 	end
 	local pet = o.get("dogname")
@@ -371,6 +374,10 @@ local pending -- name waiting for the replace confirmation
 core.register_on_player_receive_fields(function(player, formname, fields)
 	local pname = player:get_player_name()
 	if formname == FORM then
+		-- (left before it had faded in: no more of it shown over what's next)
+		if not fields.quit then
+			title.fade_t0 = nil
+		end
 		if fields.continue then
 			start(player, title.saved_character(player))
 		elseif fields.new then
@@ -389,19 +396,23 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		return true
 	elseif formname == NEW then
 		local o = nhv.nhopts
-		-- (each dropdown's number counts the choices it showed: the allowed
-		-- ones, worked out top-down as they were shown)
-		local before = {}
+		-- (an arrow: the next or the one before among the allowed choices,
+		-- round and round)
+		local changed = false
 		for _, k in ipairs(CREATE) do
-			before[k] = o.get(k)
-		end
-		local function shown(k)
-			return before[k]
-		end
-		for _, k in ipairs(CREATE) do
-			local c = allowed_choices(k, shown)[tonumber(fields[k] or "") or 0]
-			if c then
-				o.set(k, c[1])
+			local step = fields[k .. "_next"] and 1 or fields[k .. "_prev"] and -1
+			if step then
+				local list = allowed_choices(k, o.get)
+				local at = 1
+				for i, c in ipairs(list) do
+					if c[1] == o.get(k) then
+						at = i
+					end
+				end
+				if #list > 0 then
+					o.set(k, list[(at - 1 + step) % #list + 1][1])
+					changed = true
+				end
 			end
 		end
 		fix_choices(o)
@@ -428,11 +439,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			end
 		elseif fields.back or fields.quit then
 			title.show(player)
-		elseif o.get("role") ~= before.role or o.get("race") ~= before.race then
-			-- (a new role or race: the choices below it change)
-			show_new(player)
-		else
-			nhv.showroom.show(player) -- (the scene, as now chosen)
+		elseif changed then
+			show_new(player) -- (the form showing it, and the scene)
 		end
 		return true
 	elseif formname == CONFIRM then

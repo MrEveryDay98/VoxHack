@@ -15,7 +15,7 @@ local showroom = {}
 nhv.showroom = showroom
 
 local SIZE = {hero = 1.9, pet = {cat = 0.75, dog = 0.85, horse = 1.45}}
-local PEDESTAL = {w = 2.6, h = 0.6, d = 1.6}
+local PEDESTAL = {n = 3, h = 1} -- (blocks across and deep; tall)
 local CYCLE_S = 1.4 -- Random: a new role (or gender) this often
 local LOOK_DOWN = 0.12 -- (radians: the camera a little down)
 
@@ -63,18 +63,18 @@ core.register_entity("nhv:showroom", {
 core.register_entity("nhv:showroom_pedestal", {
 	initial_properties = {
 		visual = "cube", glow = 6, textures = {"blank.png"}, -- (the game's own: look_of, below)
-		visual_size = {x = PEDESTAL.w, y = PEDESTAL.h, z = PEDESTAL.d},
+		visual_size = {x = 1, y = 1, z = 1}, -- (one block)
 		physical = false, pointable = false, static_save = false,
 		collisionbox = {0, 0, 0, 0, 0, 0},
 	},
 	on_step = function(self)
-		if not showroom.objs or showroom.objs.pedestal ~= self.object then
+		if not showroom.objs or showroom.objs[self.part] ~= self.object then
 			self.object:remove()
 		end
 	end,
 })
 
--- the pedestal's look: the dungeon's floor on top, its wall on the sides
+-- the pedestal: 3 x 3 of the dungeon's wall blocks, its floor on top
 -- (the game's own blocks' pictures)
 local function tile_name(node)
 	local def = core.registered_nodes[node]
@@ -164,18 +164,26 @@ local function draw(player)
 	local eye, base = places(player)
 	local role, gender = chosen(o)
 	local pet = pet_of(o, role)
-	local top = base.y + PEDESTAL.h / 2
+	local top = base.y + 0.3 -- (where the figures stand)
 	-- the pedestal; the character on it, the pet beside (on your left)
-	local ped = showroom.objs.pedestal
-	if not (ped and ped:get_pos()) then
-		ped = core.add_entity(base, "nhv:showroom_pedestal")
-		showroom.objs.pedestal = ped
-		if ped then
-			ped:set_properties(pedestal_look())
+	local half = (PEDESTAL.n - 1) / 2
+	for i = 0, PEDESTAL.n - 1 do
+		for j = 0, PEDESTAL.n - 1 do
+			local part = "ped" .. i .. "_" .. j
+			local at = vector.new(base.x - 0.2 + i - half, top - PEDESTAL.h / 2, base.z + 0.9 + j - half)
+			local ped = showroom.objs[part]
+			if not (ped and ped:get_pos()) then
+				ped = core.add_entity(at, "nhv:showroom_pedestal")
+				showroom.objs[part] = ped
+				if ped then
+					ped:get_luaentity().part = part
+					ped:set_properties(pedestal_look())
+				end
+			end
+			if ped then
+				ped:set_pos(at)
+			end
 		end
-	end
-	if ped then
-		ped:set_pos(base)
 	end
 	sprite("hero", vector.new(base.x + 0.45, top, base.z), tile_of(ROLE_MON[role], gender), SIZE.hero, eye)
 	local ptile = pet and (tile_of(PET_MON[pet], "male") or tile_of(PET_MON[pet], "female"))
