@@ -402,14 +402,27 @@ function hud.message(text)
 	end
 end
 
--- the big map fills most of the window's width (in whole pixels per square)
+-- the big map: its squares the tiles' own 16 pixels times a whole number
+-- (32, 48...), as big as the window takes - its width, most of its height
+-- - so the tiles are drawn sharp, every pixel the same size, with no gaps
+-- between them; a small screen (retro mode's) 8, half a tile exactly; a
+-- window too small even for that, whole pixels anyway. In HUD units (times
+-- the HUD's scaling: pixels)
 local function big_map_scale(player)
 	local info = core.get_player_window_information(player:get_player_name())
 	if not info or not info.size or not info.real_hud_scaling then
 		return 10
 	end
-	local fit = math.min(0.92 * info.size.x / U.COLNO, 0.8 * info.size.y / U.ROWNO)
-	return math.max(2, math.floor(fit / info.real_hud_scaling))
+	local room = math.min(info.size.x / U.COLNO, 0.8 * info.size.y / U.ROWNO)
+	local px
+	if room >= 16 then
+		px = math.floor(room / 16) * 16
+	elseif room >= 8 then
+		px = 8
+	else
+		px = math.max(2, math.floor(room))
+	end
+	return px / info.real_hud_scaling
 end
 
 -- The big map is drawn with the NetHack tiles: one HUD picture per known
