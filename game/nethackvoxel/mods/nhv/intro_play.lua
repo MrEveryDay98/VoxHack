@@ -8,7 +8,8 @@
 -- (ORIGIN: once, and again when it's saved anew) and plays it there.
 --
 -- Its time of day: as set in the editor (/intro_time) - the sky's sun,
--- moon and stars, and the light, as then.
+-- moon and stars, and the light, as then. Its fog: its own, if it's set
+-- one (/intro_fog: colour, how far you see, where it starts), or the game's.
 --
 -- Its music: the hook music_opening (the VoxHack Editor's Sound tab), or
 -- the title's if that has none; the title goes on with its own after.
@@ -174,6 +175,15 @@ end
 
 local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
 
+-- the fog as it is now (sky.fog's, or the game's): put on the player
+function intro_play.apply_fog(player)
+	if nhv.hud and nhv.hud.apply_fog then
+		nhv.hud.apply_fog(player)
+	elseif nhv.sky then
+		nhv.sky.apply(player)
+	end
+end
+
 -- the opening's music: its own, if it has some, else the title's
 local function start_music()
 	local sound = nhv.sound
@@ -281,8 +291,9 @@ local function finish()
 	player:set_properties({is_visible = run.visible})
 	player:override_day_night_ratio(run.ratio)
 	if nhv.sky then
-		nhv.sky.scene, nhv.sky.time = run.scene, run.sky_time
+		nhv.sky.scene, nhv.sky.time, nhv.sky.fog = run.scene, run.sky_time, run.fog
 		nhv.sky.update()
+		intro_play.apply_fog(player)
 	else
 		player:set_sky(run.sky)
 	end
@@ -324,7 +335,10 @@ local function play(player, data, at, done)
 		run.scene = nhv.sky.scene
 		nhv.sky.scene = "opening"
 		nhv.sky.time = tonumber(data.time) or 0.5
+		run.fog = nhv.sky.fog
+		nhv.sky.fog = type(data.fog) == "table" and data.fog or nil
 		nhv.sky.update()
+		intro_play.apply_fog(player)
 	else
 		player:set_sky({type = "regular", clouds = true})
 	end

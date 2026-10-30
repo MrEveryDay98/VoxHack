@@ -27,6 +27,8 @@
 --                          boxes or the signs' blocks
 --   /intro_time [time]     the opening's time of day (its sky and light):
 --                          a form to set it, or 6:30, dawn, noon, dusk, night
+--   /intro_fog             the opening's fog: its colour, how far you see
+--                          through it, where it starts (or the game's)
 --   /intro_save [ymin ymax]  save it for the game (the forest from ymin to
 --                          ymax: -8 to 56 if not given) - mod_data/nhv/intro
 
@@ -97,7 +99,9 @@ core.register_on_joinplayer(function(player)
 	player:override_day_night_ratio(nil)
 	nhv.sky.scene = "opening"
 	nhv.sky.time = intro_editor.time()
+	nhv.sky.fog = intro_editor.fog()
 	nhv.sky.update()
+	nhv.intro_play.apply_fog(player)
 	-- (camera points and signs hidden for a preview that didn't finish:
 	-- back)
 	intro_editor.show_markers()
@@ -573,7 +577,7 @@ core.register_chatcommand("intro_play", {
 		-- out of the way meanwhile)
 		intro_editor.hide_markers()
 		nhv.intro_play.preview(player, {points = list, signs = {}, trees = trees, figures = figures,
-			time = intro_editor.time(),
+			time = intro_editor.time(), fog = intro_editor.fog(),
 			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1)}, function(p)
 			intro_editor.show_markers()
 			p:set_pos(back)
@@ -658,6 +662,87 @@ core.register_chatcommand("intro_time", {
 	end,
 })
 
+-- ---------------------------------------------------------------- the fog
+-- the opening's ({on, color, distance (nodes: how far you see), start (0..1:
+-- clear up to there)}; not on: the game's)
+local FOG_DEFAULT = {on = false, color = "#B8C4CC", distance = 120, start = 0.3}
+local FOG_COLORS = {{"Mist", "#C8D0D8"}, {"Grey", "#808890"}, {"Dusk", "#C08870"}, {"Night", "#101828"},
+	{"Swamp", "#7C9068"}, {"Ghostly", "#9080B0"}}
+function intro_editor.fog()
+	local f = core.parse_json(storage:get_string("fog") ~= "" and storage:get_string("fog") or "null")
+	if type(f) ~= "table" then
+		f = table.copy(FOG_DEFAULT)
+	end
+	return f
+end
+local function set_fog(f)
+	storage:set_string("fog", core.write_json(f))
+	nhv.sky.fog = f
+	for _, player in ipairs(core.get_connected_players()) do
+		nhv.intro_play.apply_fog(player)
+	end
+end
+local function fog_form()
+	local f = intro_editor.fog()
+	local fs = {"formspec_version[6]size[10.4,7.4]",
+		"checkbox[0.4,0.6;on;Fog of its own (otherwise the game's);", f.on and "true" or "false", "]",
+		"field[0.4,1.5;3,0.8;color;Colour;", esc(f.color), "]",
+		"button[3.6,1.5;1.6,0.8;setcolor;Set]"}
+	for i, c in ipairs(FOG_COLORS) do
+		local x = 0.4 + (i - 1) * 1.62
+		fs[#fs + 1] = ("style[fogc_%d;bgcolor=%s]"):format(i, c[2])
+		fs[#fs + 1] = ("button[%f,2.6;1.5,0.8;fogc_%d;%s]"):format(x, i, c[1])
+	end
+	fs[#fs + 1] = ("label[0.4,3.9;How far you can see: %d blocks]"):format(f.distance)
+	fs[#fs + 1] = "scrollbaroptions[min=10;max=400;smallstep=5;largestep=25]"
+	fs[#fs + 1] = ("scrollbar[0.4,4.2;9.6,0.5;horizontal;distance;%d]"):format(f.distance)
+	fs[#fs + 1] = ("label[0.4,5.2;Clear up to: %d%% of that]"):format(math.floor(f.start * 100 + 0.5))
+	fs[#fs + 1] = "scrollbaroptions[min=0;max=95;smallstep=5;largestep=10]"
+	fs[#fs + 1] = ("scrollbar[0.4,5.5;9.6,0.5;horizontal;start;%d]"):format(math.floor(f.start * 100 + 0.5))
+	fs[#fs + 1] = "button_exit[7.8,6.4;2.2,0.8;close;Done]"
+	return table.concat(fs)
+end
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= "nhv:intro_fog" then
+		return false
+	end
+	local f = intro_editor.fog()
+	local changed = false
+	if fields.on then
+		f.on, changed = fields.on == "true", true
+	end
+	if fields.color and (fields.setcolor or fields.key_enter_field == "color")
+			and fields.color:match("^#%x%x%x%x%x%x$") then
+		f.color, changed = fields.color:upper(), true
+	end
+	for i, c in ipairs(FOG_COLORS) do
+		if fields["fogc_" .. i] then
+			f.color, f.on, changed = c[2], true, true
+		end
+	end
+	for _, k in ipairs({"distance", "start"}) do
+		local ev = fields[k] and core.explode_scrollbar_event(fields[k])
+		if ev and ev.type == "CHG" then
+			f[k] = k == "start" and ev.value / 100 or ev.value
+			changed = true
+		end
+	end
+	if changed then
+		set_fog(f)
+	end
+	if not fields.close and not fields.quit then
+		core.show_formspec(player:get_player_name(), formname, fog_form())
+	end
+	return true
+end)
+core.register_chatcommand("intro_fog", {
+	description = "The opening's fog: its colour, how far you see, where it starts",
+	func = function(name)
+		core.show_formspec(name, "nhv:intro_fog", fog_form())
+		return true
+	end,
+})
+
 -- ---------------------------------------------------------------- markers out of the way
 -- The camera points' boxes and the signs' blocks are only the editor's: a
 -- preview takes them away (the signs' pictures stay) and puts them back
@@ -727,7 +812,7 @@ core.register_chatcommand("intro_save", {
 				return
 			end
 			local data = {version = os.time(), min = p1, max = p2, points = list, signs = signs(vector.zero()),
-				time = intro_editor.time(),
+				time = intro_editor.time(), fog = intro_editor.fog(),
 				trees = core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"}), figures = {}}
 			for _, sp in ipairs(intro_editor.sprites(p1, p2, vector.zero())) do
 				if sp.tile ~= nhv.intro_blocks.tree(sp.pos).tile then

@@ -158,6 +158,13 @@ end
 -- black - or, while a sky is shown, its fog colour (over the whole level),
 -- or the day and night sky with its sun, moon and stars.
 function sky.apply(player, fog)
+	-- (sky.fog: a fog of its own instead - the opening's, intro_play.lua:
+	-- {on, color, distance, start})
+	local own = sky.fog
+	if own and own.on then
+		fog = {fog_distance = tonumber(own.distance) or 120, fog_start = tonumber(own.start) or 0.3,
+			fog_color = own.color}
+	end
 	local s = sky.def
 	local base = s and (open_sky() or sky.scene) and s.fog_color or "#000000"
 	if s and s.daynight then
