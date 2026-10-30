@@ -12,7 +12,7 @@
 --   * retro mode (the VoxHack engine's nhv_retro): the whole game - world,
 --     HUD, menus - a small screen (640x480, 800x600, 1024x768) scaled up
 --     into the window with sharp pixels (as big as fits, or by whole
---     numbers), in VGA's 256 colours or EGA's 16 (dithered or not), the
+--     numbers), in 256 colours or the tiles' own 16 (dithered or not), the
 --     light in steps. Its HUD, menu, text and map sizes are fixed, made for
 --     it (the window's are kept for coming back).
 -- The list scrolls (where it was is kept as it's redrawn).
@@ -36,7 +36,7 @@ local DRAWN = {"Kept", "Removed (after a restart)"}
 local DEMOS = {"Off", "On (next start)"}
 local RETRO = {"Off", "On"}
 local RETRO_RES = {"640x480", "800x600", "1024x768"}
-local RETRO_PALETTE = {{"vga", "VGA (256 colours)"}, {"ega", "EGA (16 colours)"}, {"full", "Full colour"}}
+local RETRO_PALETTE = {{"vga", "256 (VGA, the tiles' first)"}, {"ega", "16 (the tiles' own)"}, {"full", "Full colour"}}
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
 local RETRO_BANDS = {{0, "Smooth"}, {4, "4 steps"}, {6, "6 steps"}, {8, "8 steps"}, {12, "12 steps"}}
 local RETRO_SCALE = {"As big as fits", "Whole pixels"}
