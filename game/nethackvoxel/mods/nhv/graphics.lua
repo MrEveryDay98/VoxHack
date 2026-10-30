@@ -39,6 +39,7 @@ local RETRO = {"Off", "On"}
 -- light per texture pixel (the VoxHack engine's nhv_texel_light): like a
 -- lightmap, light and shadow in steps of the textures' own pixels
 local TEXEL_LIGHT = {{"off", "Smooth"}, {"on", "Per texture pixel"}, {"dither", "Per texture pixel, dithered"}}
+local TEXEL_SIZE = {"Texture pixels", "Half (8x8 a block)"}
 local TEXEL_STEPS = {{2, "2"}, {3, "3"}, {4, "4"}, {6, "6"}, {8, "8"}, {12, "12"}, {16, "16"}, {32, "32"}}
 local TEXEL_PATTERN = {{"bayer2", "Ordered 2x2"}, {"bayer4", "Ordered 4x4"}, {"bayer8", "Ordered 8x8"},
 	{"lines", "Lines"}, {"noise", "Noise"}}
@@ -154,6 +155,8 @@ function graphics.formspec()
 	add(row(y, "Light on surfaces", "texel_light", names(TEXEL_LIGHT),
 		choice(TEXEL_LIGHT, "nhv_texel_light", "off")))
 	add(row(y, "Light steps", "texel_steps", labels(TEXEL_STEPS), pick(TEXEL_STEPS, "nhv_texel_steps", 8)))
+	add(row(y, "Light resolution", "texel_size", table.concat(TEXEL_SIZE, ","),
+		core.settings:get_bool("nhv_texel_half", false) and 2 or 1))
 	add(row(y, "Light dithering", "texel_pattern", names(TEXEL_PATTERN),
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
 	add(row(y, "Distant textures", "distant", table.concat(DISTANT, ","),
@@ -377,6 +380,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if set_num(TEXEL_STEPS, fields.texel_steps, "nhv_texel_steps", 8) then
 		changed = true -- (the engine, at once)
+	end
+	local ts = tonumber(fields.texel_size)
+	if ts and (ts == 2) ~= core.settings:get_bool("nhv_texel_half", false) then
+		core.settings:set_bool("nhv_texel_half", ts == 2) -- (the engine, at once)
+		changed = true
 	end
 	local tp = tonumber(fields.texel_pattern)
 	if tp and TEXEL_PATTERN[tp] and TEXEL_PATTERN[tp][1] ~= core.settings:get("nhv_texel_pattern") then
