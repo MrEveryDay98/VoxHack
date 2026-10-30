@@ -2,6 +2,14 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.11.1 (alpha) - 2026-10-29
+
+- **A new loading screen:** just "LOADING..." in white retro italics on black, its letters hopping in a wave.
+- **The title fades in from black.** Moving the mouse while the game opens no longer turns the view behind the title, no weapon flashes up as it opens, and Esc no longer closes the title (no flicker).
+- **Character creation:** each choice is picked with < and > arrows (Role < Knight >). The pedestal is a 3 x 3 of the dungeon's wall blocks with its floor on top.
+- **Menus click** when you choose something. The mouse wheel no longer changes a dropdown you happen to be pointing at.
+- Fixed: switching your pet to none and back could turn it into a giant ant; the figures could face the wrong way for a moment as the screen opened; clicking New game before the title had finished fading in showed the title's buttons over the character screen.
+
 ## v0.11.0 (alpha) - 2026-10-29
 
 - **A new title screen and character creation.** Both stand under the Astral Plane's sky, with title music. Making a character, you see them close up on a pedestal, with your pet beside them (the role's own, a kitten or a little dog, or none). They change as you choose: role and gender pick the picture, and Random goes round them all.
