@@ -50,6 +50,7 @@ if nhv.INTRO_EDITOR then
 	dofile(path .. "signart.lua")
 	dofile(path .. "intro_blocks.lua")
 	dofile(path .. "sky.lua")
+	dofile(path .. "shadows.lua")
 	dofile(path .. "intro_play.lua")
 	dofile(path .. "intro_editor.lua")
 	return

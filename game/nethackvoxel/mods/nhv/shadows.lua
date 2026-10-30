@@ -47,8 +47,9 @@ local function drop(e)
 	end
 end
 
--- e's shadow where it is now (made the first time); ground: the floor's top
-local function place(e, ground, alpha)
+-- e's shadow where it is now (made the first time); ground: the floor's top;
+-- billboard: e is turned to the camera by the engine (and its shadow so)
+local function place(e, ground, alpha, billboard)
 	local pos = e.obj:get_pos()
 	local tex = nhv_tiles.texture(e.tile) .. "^[multiply:#000000" .. ("^[opacity:%d"):format(alpha)
 	-- (an extruded sprite's shadow is a voxel model's, as thick as it is)
@@ -58,6 +59,9 @@ local function place(e, ground, alpha)
 		local obj = core.add_entity(pos, "nhv:shadow")
 		if not obj then
 			return
+		end
+		if billboard then
+			obj:set_properties({infotext = "nhv:shadow_billboard"})
 		end
 		s = {obj = obj}
 		cast[e] = s
@@ -80,10 +84,18 @@ end
 
 core.register_globalstep(function()
 	local mobs = nhv.mobs
-	local on = core.settings:get_bool("nhv_shadows", false) and mobs
+	local on = core.settings:get_bool("nhv_shadows", false)
 	local alpha = math.floor(shadows.strength() * 255 + 0.5)
 	local keep = {}
-	if on and alpha > 0 then
+	-- (the opening's trees and figures: turned to the camera by the engine,
+	-- their shadows with them)
+	if on and alpha > 0 and nhv.intro_blocks then
+		for _, sp in ipairs(nhv.intro_blocks.standing()) do
+			keep[sp] = true
+			place(sp, sp.ground, alpha, true)
+		end
+	end
+	if on and alpha > 0 and mobs then
 		for _, e in pairs(mobs.mons) do
 			if e.h and e.tile and not e.ghost and not e.fuzz and e.obj:get_pos() then
 				keep[e] = true

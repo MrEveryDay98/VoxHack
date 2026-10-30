@@ -125,7 +125,7 @@ function intro_blocks.sprites(list)
 				obj:set_properties(props)
 				-- (how far round from facing the camera: mobs.lua's way)
 				obj:set_yaw(nhv_tiles.facing_turn())
-				standing[k] = {obj = obj, look = look}
+				standing[k] = {obj = obj, look = look, tile = sp.tile, h = sp.h, ground = sp.pos.y - 0.5}
 			else
 				standing[k] = nil
 			end
@@ -143,6 +143,17 @@ function intro_blocks.sprites(list)
 		end
 	end
 	return n
+end
+
+-- the sprites standing ({obj=, tile=, h=, ground=}: shadows.lua)
+function intro_blocks.standing()
+	local list = {}
+	for _, st in pairs(standing) do
+		if st.obj:get_pos() then
+			list[#list + 1] = st
+		end
+	end
+	return list
 end
 
 function intro_blocks.board(pos, dir, text)
