@@ -2,6 +2,15 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.12.0 (alpha) - 2026-10-29
+
+- **Your story is told as you begin.** Start a new character and the legacy of the Amulet is narrated, a paragraph at a time, over your character and pet on their pedestal, with your own god and title ("It is written in the Book of Amaterasu Omikami..."), the title music playing. Then the screen goes white, then black, and you're on the first level. Press Enter to skip it.
+- **Hi-fi voices.** In the VoxHack Editor's Voice casting, a SAM voice's Sound can now be Hi-fi: SAM's own words and timing, voiced in full quality instead of 8-bit, with real intonation (phrases settling, rising before commas and at questions, falling at statements, stressed syllables peaking). Brightness, Breath, Pitch movement and Hiss sliders tune each voice.
+- **Moods.** Any line can be said Angry, Sad, Afraid, Calm or as a Whisper (Voice casting, per line).
+- **The Samurai's Japanese** (gods, titles, items, the quest) is pronounced as Japanese.
+- Character creation: no "Ask" choices (Random instead); the replace-your-saved-game question matches the new look.
+- Fixed: dying while helpless (smitten while praying) put the death scene in first person.
+
 ## v0.11.1 (alpha) - 2026-10-29
 
 - **A new loading screen:** just "LOADING..." in white retro italics on black, its letters hopping in a wave.
