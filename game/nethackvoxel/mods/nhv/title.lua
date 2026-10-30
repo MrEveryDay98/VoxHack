@@ -1,8 +1,8 @@
 -- Title screen: shown when the game opens (and after a game ends), before
 -- NetHack starts. Continue a saved character, make a new one, open the
--- options, or quit. The logo and background are textures in nhv_tiles
--- (nhv_title_logo.png, nhv_title_bg.png; placeholders for now, made by
--- tools/make_title_placeholders.py).
+-- options, or quit. The logo is a texture in nhv_tiles (nhv_title_logo.png,
+-- made by tools/make_title_placeholders.py); behind it all, the Astral
+-- Plane's sky (showroom.lua).
 
 local nh = nhv.nh
 local theme = nhv.theme
@@ -113,15 +113,7 @@ core.register_chatcommand("nhvtitle", {
 })
 
 -- ---------------------------------------------------------------- screens
-local function screen(w, h)
-	-- (full screen: the background covers the waiting world)
-	return ("formspec_version[6]size[%s,%s]no_prepend[]"):format(w, h)
-		.. "bgcolor[#000000FF;both;#000000FF]"
-		.. "background[0,0;" .. w .. "," .. h .. ";nhv_title_bg.png;true]"
-		.. theme.styles():gsub("bgcolor%[[^%]]*%]", ""):gsub("background9%[[^%]]*%]", "")
-end
-
--- the same, see-through: a scene shows behind it (showroom.lua)
+-- see-through: a scene shows behind it (showroom.lua)
 local function scene_screen(w, h)
 	return ("formspec_version[6]size[%s,%s]no_prepend[]"):format(w, h)
 		.. "bgcolor[#00000000;false]"
@@ -368,10 +360,14 @@ local function show_new(player)
 	nhv.showroom.show(player)
 end
 
+-- (where the new character form was: the scene still beside it)
 local function confirm_formspec(name)
-	return screen(16, 10)
-		.. "label[3,4;" .. E(("There's a saved game for %s. Starting a new %s replaces it."):format(name, name)) .. "]"
-		.. "button[3,5.2;4.8,0.9;replace;Replace it]button[8.2,5.2;4.8,0.9;back;Back]"
+	return scene_screen(16, 10)
+		.. "label[8.4,0.8;" .. theme.title("Replace your saved game?") .. "]"
+		.. ("hypertext[8.4,1.6;7.2,2.4;msg;%s]"):format(E("<global color=#AAAAAA>"
+			.. ("There's a saved game for <style color=#FFFFFF>%s</style>. Starting a new %s"
+			.. " replaces it."):format(name, name)))
+		.. "button[8.4,4.2;3.5,0.9;replace;Replace it]button[12.1,4.2;3.5,0.9;back;Back]"
 end
 
 local pending -- name waiting for the replace confirmation
