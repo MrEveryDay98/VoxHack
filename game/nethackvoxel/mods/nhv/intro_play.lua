@@ -8,7 +8,9 @@
 -- (ORIGIN: once, and again when it's saved anew) and plays it there.
 --
 -- Its time of day: as set in the editor (/intro_time) - the sky's sun,
--- moon and stars, and the light, as then. Its fog: its own, if it's set
+-- moon and stars, and the light, as then; a camera point can set its own
+-- (as the camera gets there - or, blended, the clock running there from
+-- the point before while the camera goes). Its fog: its own, if it's set
 -- one (/intro_fog: colour, how far you see, where it starts), or the game's.
 -- A light goes with the camera, as bright as it's set (/intro_light: a light
 -- level, 0 none; 10 if it hasn't one).
@@ -129,6 +131,11 @@ local function timeline(points, at)
 		elseif last_out then
 			event({t = t, fade = COLOR[last_out], out = false, dur = 0})
 		end
+		-- (its time of day: now - unless the point before blends into it)
+		local prev = points[i - 1]
+		if p.time and not (prev and prev.blend) then
+			event({t = t, time = p.time})
+		end
 		if i == 1 and COLOR[fade_in] then
 			t = t + OPEN_S
 		end
@@ -145,6 +152,13 @@ local function timeline(points, at)
 			key(t + delay, p)
 		end
 		local nxt = points[i + 1]
+		-- (blending: from as it is to the next point's time, while the
+		-- camera goes there - a glide's, or a cut's wait and fade)
+		local function blend(t1, t2)
+			if p.blend and nxt and nxt.time and t2 > t1 then
+				event({t = t1, blend = nxt.time, dur = t2 - t1})
+			end
+		end
 		if not nxt then
 			t = t + math.max(delay, secs) + CLOSE_S
 			event({t = t, fade = "#000000", out = true})
@@ -156,13 +170,16 @@ local function timeline(points, at)
 			-- the seconds - and cuts there)
 			local out_t = t + delay + math.max(move - FADE_S, 0)
 			event({t = out_t, fade = COLOR[p.transition], out = true})
+			blend(t + delay, out_t + FADE_S)
 			t = out_t + FADE_S
 			key(t, nxt, true)
 			last_out = p.transition
 		elseif p.transition == "cut" then
+			blend(t + delay, t + delay + move)
 			t = t + delay + move
 			key(t, nxt, true)
 		else
+			blend(t + delay, t + delay + move)
 			t = t + delay + move
 		end
 	end
@@ -176,6 +193,60 @@ local function timeline(points, at)
 end
 
 local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
+
+-- the time of day now (sky.time: held there - sky.lua)
+local function set_time(t)
+	t = t % 1
+	core.set_timeofday(t)
+	if nhv.sky then
+		nhv.sky.time = t
+	end
+end
+
+-- What's round the camera: you (out of sight) go where it goes, looking
+-- its way, so the map there is loaded and sent, and kept going (the game
+-- keeps what's round you, and ahead of you, going - far behind, things go:
+-- trees and figures, signs); the trees, figures and signs put up where it
+-- is going, as it gets there.
+local FOLLOW_S = 0.3
+local function follow(dtime)
+	run.follow_t = (run.follow_t or 0) + dtime
+	if run.follow_t < FOLLOW_S or not core.nhv_camera then
+		return
+	end
+	run.follow_t = 0
+	local cam, dir = core.nhv_camera()
+	if not cam then
+		return
+	end
+	local player = run.player
+	player:set_pos(vector.offset(cam, 0, -1.6, 0))
+	if dir then
+		player:set_look_horizontal(math.atan2(-dir.x, dir.z) % (2 * math.pi))
+		player:set_look_vertical(-math.asin(math.max(-1, math.min(1, dir.y))))
+	end
+	local function going(pos)
+		if core.compare_block_status then
+			return core.compare_block_status(pos, "active")
+		end
+		return vector.distance(pos, cam) < 64
+	end
+	local wanted = {}
+	for _, sp in ipairs(run.sprite_list or {}) do
+		if going(sp.pos) then
+			wanted[#wanted + 1] = sp
+		end
+	end
+	nhv.intro_blocks.sprites(wanted)
+	for _, s in ipairs(run.sign_list or {}) do
+		if going(s.pos) and not (s.obj and s.obj:get_pos()) then
+			s.obj = nhv.intro_blocks.board(s.pos, s.dir, s.text)
+			if s.obj then
+				run.signs[#run.signs + 1] = s.obj
+			end
+		end
+	end
+end
 
 -- the fog as it is now (sky.fog's, or the game's): put on the player
 function intro_play.apply_fog(player)
@@ -361,12 +432,11 @@ local function play(player, data, at, done)
 	for _, f in ipairs(data.figures or {}) do
 		list[#list + 1] = {pos = vector.add(at, f.pos), tile = f.tile, texture = f.texture, item = f.item, h = f.h}
 	end
-	nhv.intro_blocks.sprites(list)
+	-- (put up where the camera is, as it goes: follow())
+	run.sprite_list = list
+	run.sign_list = {}
 	for _, s in ipairs(data.signs or {}) do
-		local obj = nhv.intro_blocks.board(vector.add(at, s.pos), s.dir, s.text)
-		if obj then
-			run.signs[#run.signs + 1] = obj
-		end
+		run.sign_list[#run.sign_list + 1] = {pos = vector.add(at, s.pos), dir = s.dir, text = s.text}
 	end
 	-- (you're out of sight in the middle of it, where all of it is sent to
 	-- you - the camera's where the engine says)
@@ -406,7 +476,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	return true
 end)
 
-core.register_globalstep(function()
+core.register_globalstep(function(dtime)
 	if not run then
 		return
 	end
@@ -417,6 +487,16 @@ core.register_globalstep(function()
 	end
 	hide_huds(run.player)
 	draw_fade()
+	follow(dtime)
+	-- (the clock running between camera points)
+	local b = run.blending
+	if b then
+		local k = math.min(1, (core.get_us_time() - b.t0) / b.dur)
+		set_time(b.from + b.span * k)
+		if k >= 1 then
+			run.blending = nil
+		end
+	end
 	local now = (core.get_us_time() - run.t0) / 1e6
 	while run and run.events[run.next_ev] and run.events[run.next_ev].t <= now do
 		local ev = run.events[run.next_ev]
@@ -438,6 +518,14 @@ core.register_globalstep(function()
 			end
 		elseif ev.fade then
 			fade(ev.out and 1 or 0, ev.dur or FADE_S, ev.fade)
+		elseif ev.time then
+			run.blending = nil
+			set_time(ev.time)
+		elseif ev.blend then
+			-- (forward, round the clock: from now to its time)
+			local from = core.get_timeofday()
+			run.blending = {from = from, span = (ev.blend - from) % 1, t0 = core.get_us_time(),
+				dur = math.max(1, ev.dur * 1e6)}
 		end
 	end
 end)

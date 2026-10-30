@@ -153,7 +153,10 @@ end)
 local TREES_AROUND = 96
 local tree_t = 0
 core.register_globalstep(function(dtime)
-	core.set_timeofday(intro_editor.time())
+	-- (not over a preview's: its camera points' own times)
+	if not (nhv.intro_play and nhv.intro_play.active) then
+		core.set_timeofday(intro_editor.time())
+	end
 	tree_t = tree_t + dtime
 	local player = core.get_connected_players()[1]
 	if tree_t < 1 or not player or (nhv.intro_play and nhv.intro_play.active) then
@@ -202,6 +205,12 @@ local TRANSITIONS = {{"glide", "Glide to the next point"}, {"cut", "Cut to the n
 local FADE_INS = {{nil, "As the last point faded out"}, {"", "No fade"}, {"black", "Fade in from black"},
 	{"white", "Fade in from white"}}
 
+-- a time of day (0..1) as h:mm
+local function clock(t)
+	local m = math.floor(t * 1440 + 0.5) % 1440
+	return ("%d:%02d"):format(math.floor(m / 60), m % 60)
+end
+
 local function esc(s)
 	return core.formspec_escape(tostring(s or ""))
 end
@@ -231,22 +240,25 @@ local function cam_form(pos, c)
 		end
 	end
 	return table.concat({
-		"formspec_version[6]size[11,10.6]",
+		"formspec_version[6]size[11,11.9]",
 		"label[0.4,0.5;Camera point ", esc(key(pos)), "]",
 		"field[0.4,1.3;2,0.8;index;Number (order);", esc(c.index), "]",
 		"field[2.8,1.3;3.6,0.8;voice;Said by;", esc(c.voice or "Narrator"), "]",
 		"field[6.8,1.3;3.8,0.8;mood;Mood (angry, sad, afraid, calm, whisper);", esc(c.mood), "]",
 		"textarea[0.4,2.6;10.2,2.2;line;What's said here;", esc(c.line), "]",
 		"checkbox[0.4,5.4;sync;Go on to the next point in the time it takes to say;", c.sync ~= false and "true" or "false", "]",
+
 		"field[0.4,6.4;3,0.8;seconds;Otherwise: seconds;", esc(c.seconds or 3), "]",
 		"field[3.8,6.4;3,0.8;delay;Wait first: seconds;", esc(c.delay or 0), "]",
 		"label[0.4,7.6;How it goes on]",
 		"dropdown[0.4,7.9;5.1,0.8;transition;", table.concat(names, ","), ";", sel, ";true]",
 		"label[5.8,7.6;How it starts here]",
 		"dropdown[5.8,7.9;4.8,0.8;fade_in;", fade_in_names(), ";", fade_in_index(c.fade_in), ";true]",
-		"button[0.4,9.3;3,0.8;view;Take my view]",
-		"button[3.6,9.3;3.4,0.8;look;Look through it]",
-		"button_exit[7.6,9.3;3,0.8;save;Save]",
+		"field[0.4,9.4;3,0.8;time;Time of day here (h:mm);", esc(c.time and clock(c.time) or ""), "]",
+		"checkbox[3.8,9.8;blend;Blend into the next point's time on the way;", c.blend and "true" or "false", "]",
+		"button[0.4,10.7;3,0.8;view;Take my view]",
+		"button[3.6,10.7;3.4,0.8;look;Look through it]",
+		"button_exit[7.6,10.7;3,0.8;save;Save]",
 	})
 end
 
@@ -508,6 +520,16 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		c.line = fields.line or ""
 		c.seconds = tonumber(fields.seconds) or c.seconds
 		c.delay = tonumber(fields.delay) or c.delay
+		-- (its time of day: "h:mm", or nothing - as it is)
+		local h, m = (fields.time or ""):match("^%s*(%d+):(%d%d)%s*$")
+		if h and tonumber(h) < 24 and tonumber(m) < 60 then
+			c.time = (tonumber(h) * 60 + tonumber(m)) / 1440
+		elseif (fields.time or ""):match("^%s*$") then
+			c.time = nil
+		end
+	end
+	if fields.blend then
+		c.blend = fields.blend == "true"
 	end
 	if fields.sync then
 		c.sync = fields.sync == "true"
@@ -631,10 +653,6 @@ local function set_time(t)
 	nhv.sky.time = t
 	core.set_timeofday(t)
 	nhv.sky.update()
-end
-local function clock(t)
-	local m = math.floor(t * 1440 + 0.5) % 1440
-	return ("%d:%02d"):format(math.floor(m / 60), m % 60)
 end
 -- (dawn and dusk as the sky colours them: sky.lua's dawn)
 local TIMES = {{"dawn", 0.2}, {"noon", 0.5}, {"dusk", 0.8}, {"night", 0}}
