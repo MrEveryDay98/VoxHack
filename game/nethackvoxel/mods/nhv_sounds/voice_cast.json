@@ -300,8 +300,7 @@
       "type": "echo",
       "delay": 250,
       "decay": 0.4,
-      "repeats": 3,
-      "off": true
+      "repeats": 3
      }
     ],
     "volume": 100,
