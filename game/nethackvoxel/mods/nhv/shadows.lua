@@ -1,10 +1,10 @@
--- Shadows: every monster and object standing up casts one on the floor, its
--- own picture laid flat behind it in black, see-through - one light high up
--- at an angle (SUN_*), the same for everything, VoxHack's own: nothing to do
--- with the sky or the time of day. A shadow is the floor's texture pixels,
--- whole ones: one pixel of the picture to one of the floor's (a 16th of a
--- block), lined up with them - the VoxHack engine keeps an object marked
--- "nhv:texel" on them as it moves (content_cao.h).
+-- Shadows: every monster and object standing up casts one on the floor:
+-- its own picture, turned as it is, thrown along the ground from one light
+-- high up at an angle (SUN_*), the same for everything, VoxHack's own -
+-- nothing to do with the sky or the time of day - black, see-through. The
+-- VoxHack engine lays an object marked "nhv:shadow" out so (content_cao.h)
+-- and draws it on the floor's texture pixels, whole ones
+-- (nhv_shadow_shader): a 16th of a block in it or not.
 -- Setting nhv_shadows (Options > Shadows; default off) turns them on,
 -- nhv_shadow_opacity (Options > Shadow opacity) sets how dark they are.
 
@@ -13,7 +13,6 @@ nhv.shadows = shadows
 
 local U = nhv.util
 
-local TEXEL = 16 -- (a block's texture pixels across)
 local SUN_STRETCH = 0.75 -- (a shadow's length, for a thing's height: the sun's height)
 local SUN_YAW = 0 -- (where the shadows point: 0 north, +z)
 
@@ -30,19 +29,14 @@ core.register_entity("nhv:shadow", {
 		physical = false, collide_with_objects = false, pointable = false,
 		collisionbox = {0, 0, 0, 0, 0, 0}, selectionbox = {0, 0, 0, 0, 0, 0},
 		use_texture_alpha = true, shaded = false, static_save = false,
-		infotext = "nhv:texel",
+		infotext = "nhv:shadow",
 	},
 	on_activate = function(self)
 		self.object:set_armor_groups({immortal = 1})
 	end,
 })
 
--- whole texture pixels, an even number of them (the middle on a pixel's edge)
-local function texels(nodes)
-	return math.max(2, 2 * math.floor(nodes * TEXEL / 2 + 0.5))
-end
-
-local cast = {} -- thing (mobs' e) -> {obj=, look=, pos=}
+local cast = {} -- thing (mobs' e) -> {obj=, look=, pos=, yaw=}
 
 local function drop(e)
 	local s = cast[e]
@@ -55,29 +49,36 @@ end
 -- e's shadow where it is now (made the first time); ground: the floor's top
 local function place(e, ground, alpha)
 	local pos = e.obj:get_pos()
-	local w, l = texels(e.h), texels(e.h * SUN_STRETCH)
-	local look = ("%s^[resize:%dx%d^[transformFY^[multiply:#000000^[opacity:%d"):format(nhv_tiles.texture(e.tile), w, l, alpha)
+	-- (the picture as the thing shows it: an extruded one's runs the other
+	-- way to a flat sprite's - mobs.lua's FACING)
+	local tex = nhv_tiles.texture(e.tile) .. "^[multiply:#000000" .. ("^[opacity:%d"):format(alpha)
+	local front, back = tex, tex .. "^[transformFX"
+	if not nhv_tiles.flat() then
+		front, back = back, front
+	end
 	local s = cast[e]
 	if not s or not s.obj:get_pos() then
 		local obj = core.add_entity(pos, "nhv:shadow")
 		if not obj then
 			return
 		end
-		-- (lying flat; its picture upside down, the top away from the thing)
-		obj:set_rotation(vector.new(math.pi / 2, SUN_YAW, 0))
 		s = {obj = obj}
 		cast[e] = s
 	end
-	if s.look ~= look then
-		s.look = look
-		s.obj:set_properties({textures = {look, look .. "^[transformFX"},
-			visual_size = {x = w / TEXEL, y = l / TEXEL}})
+	if s.look ~= front or s.h ~= e.h then
+		s.look, s.h = front, e.h
+		s.obj:set_properties({textures = {front, back},
+			visual_size = {x = e.h, y = e.h, z = SUN_STRETCH}})
 	end
-	local half = l / TEXEL / 2
-	local at = vector.new(pos.x - math.sin(SUN_YAW) * half, ground, pos.z + math.cos(SUN_YAW) * half)
+	local at = vector.new(pos.x, ground, pos.z)
 	if not s.pos or vector.distance(s.pos, at) > 1e-3 then
 		s.pos = at
 		s.obj:set_pos(at)
+	end
+	local yaw = e.obj:get_yaw() or 0
+	if s.yaw ~= yaw then
+		s.yaw = yaw
+		s.obj:set_rotation(vector.new(0, yaw, SUN_YAW))
 	end
 end
 
