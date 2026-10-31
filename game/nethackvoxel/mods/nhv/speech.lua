@@ -76,7 +76,7 @@ end
 -- When each character of a line is said, in seconds from its start, the
 -- way the engine says it (sam_voice.cpp's script): a letter one letter's
 -- time, a number its word's letters in Animalese (one beep a digit), a
--- full stop three, a comma two, a space one - the gaps never piling up.
+-- full stop a pause of seven, a comma four, a space one - the gaps never piling up.
 local DIGIT_LEN = {[0] = 4, 3, 3, 5, 4, 4, 3, 5, 5, 4}
 function speech.times(text, unit, spell_digits)
 	local out, slots, trailing, in_word = {}, 0, 0, false
@@ -100,9 +100,9 @@ function speech.times(text, unit, spell_digits)
 		elseif c == "'" and in_word then -- luacheck: ignore 542
 			-- (one word: don't)
 		elseif c:match("[%.!%?]") then
-			gap(3)
+			gap(7)
 		elseif c:match("[,;:%-]") then
-			gap(2)
+			gap(4)
 		else
 			gap(1)
 		end
