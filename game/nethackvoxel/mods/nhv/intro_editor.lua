@@ -3,8 +3,9 @@
 -- generator - rolling grass, NetHack's trees - and the camera's way through
 -- it, put down point by point.
 --
--- The forest is the AREA from x, z 0 to 255 (the rest goes on, but isn't
--- kept). Fly about (you can), build and dig with what's in your inventory:
+-- The forest is the AREA from x, z 0 to 255 and on round whatever's put
+-- down outside it (intro_editor.bounds: what's played and kept - the rest
+-- goes on, but isn't). Fly about (you can), build and dig with what's in your inventory:
 --
 --   Camera point: put it where the camera's to be. It looks the way you were
 --     looking; right-click it to set its line (what's said there, and by
@@ -145,7 +146,7 @@ core.register_on_joinplayer(function(player)
 		player:set_pos(vector.new(AREA / 2, y + 2, AREA / 2))
 	end
 	core.chat_send_player(name, "Intro editor: the forest is x, z 0 to " .. (AREA - 1)
-		.. ". I = block palette (its Opening tab: camera points, signs, figures, the forest's own)."
+		.. " (and round anything put down further). I = block palette (its Opening tab: camera points, signs, figures, the forest's own)."
 		.. " /intro_play plays it, /intro_save saves it.")
 end)
 -- (the opening's time of day held; the trees standing round you - the
@@ -268,6 +269,16 @@ local function sign_form(pos, s)
 		"textarea[0.4,0.7;7.2,2.6;text;The sign's words (a line each - three at most);", esc(s.text), "]",
 		"button_exit[4.6,4;3,0.8;save;Save]",
 	})
+end
+
+-- the node there, the map read in first if it isn't loaded (far from you)
+local function node_at(pos)
+	local node = core.get_node(pos)
+	if node.name == "ignore" then
+		core.load_area(pos)
+		node = core.get_node(pos)
+	end
+	return node
 end
 
 -- the sign's picture on its wall (put up again as the map loads)
@@ -602,13 +613,31 @@ local function signs(origin)
 	local list = {}
 	for k, s in pairs(load_list("signs")) do
 		local pos = core.string_to_pos("(" .. k .. ")")
-		local node = core.get_node(pos)
+		local node = node_at(pos)
 		if node.name == "nhv:intro_sign" then
 			list[#list + 1] = {pos = vector.subtract(pos, origin), dir = core.wallmounted_to_dir(node.param2),
 				text = s.text}
 		end
 	end
 	return list
+end
+
+-- What's played and saved: the AREA, from y ymin to ymax, and round every
+-- camera point, sign and figure put down, wherever (MARGIN on round them -
+-- the trees and land they look at)
+local MARGIN = vector.new(64, 16, 64)
+function intro_editor.bounds(ymin, ymax)
+	local p1, p2 = vector.new(0, ymin, 0), vector.new(AREA - 1, ymax, AREA - 1)
+	for _, name in ipairs({"cams", "signs", "figures"}) do
+		for k in pairs(load_list(name)) do
+			local pos = core.string_to_pos("(" .. k .. ")")
+			if pos then
+				p1 = vector.combine(p1, vector.subtract(pos, MARGIN), math.min)
+				p2 = vector.combine(p2, vector.add(pos, MARGIN), math.max)
+			end
+		end
+	end
+	return p1, p2
 end
 
 core.register_chatcommand("intro_play", {
@@ -622,7 +651,8 @@ core.register_chatcommand("intro_play", {
 		local back = player:get_pos()
 		-- (the signs are on the walls already)
 		-- (the trees and figures all over the forest, while it plays)
-		local all = intro_editor.sprites(vector.new(0, -32, 0), vector.new(AREA - 1, 96, AREA - 1), vector.zero(), true)
+		local p1, p2 = intro_editor.bounds(-8, 56)
+		local all = intro_editor.sprites(p1, p2, vector.zero(), true)
 		local trees, figures = {}, {}
 		for _, sp in ipairs(all) do
 			if sp.tile == nhv.intro_blocks.tree(sp.pos).tile then
@@ -632,13 +662,14 @@ core.register_chatcommand("intro_play", {
 			end
 		end
 		-- (as in the game: the camera points' boxes and the signs' blocks
-		-- out of the way meanwhile)
+		-- out of the way meanwhile, the signs put up by the preview)
+		local sign_list = signs(vector.zero())
 		intro_editor.hide_markers()
-		nhv.intro_play.preview(player, {points = list, signs = {}, trees = trees, figures = figures,
+		nhv.intro_play.preview(player, {points = list, signs = sign_list, trees = trees, figures = figures,
 			time = intro_editor.time(), fog = intro_editor.fog(), light = intro_editor.light(),
-			min = vector.new(0, back.y, 0), max = vector.new(AREA - 1, back.y, AREA - 1),
+			min = vector.new(p1.x, back.y, p1.z), max = vector.new(p2.x, back.y, p2.z),
 			-- (the forest the preview keeps going: intro_play.lua)
-			forest_min = vector.new(0, -8, 0), forest_max = vector.new(AREA - 1, 56, AREA - 1)}, function(p)
+			forest_min = p1, forest_max = p2}, function(p)
 			intro_editor.show_markers()
 			p:set_pos(back)
 			p:override_day_night_ratio(nil)
@@ -832,9 +863,15 @@ core.register_chatcommand("intro_light", {
 -- closed) gets them back next time.
 function intro_editor.hide_markers()
 	local hidden = load_list("hidden")
+	for _, obj in pairs(boards) do
+		if obj:get_pos() then
+			obj:remove()
+		end
+	end
+	boards = {}
 	for k in pairs(cams()) do
 		local pos = core.string_to_pos("(" .. k .. ")")
-		local node = core.get_node(pos)
+		local node = node_at(pos)
 		if node.name == "nhv:intro_cam" then
 			hidden[k] = {name = node.name, param2 = node.param2}
 			core.swap_node(pos, {name = "air"})
@@ -842,7 +879,7 @@ function intro_editor.hide_markers()
 	end
 	for k in pairs(load_list("signs")) do
 		local pos = core.string_to_pos("(" .. k .. ")")
-		local node = core.get_node(pos)
+		local node = node_at(pos)
 		if node.name == "nhv:intro_sign" then
 			hidden[k] = {name = node.name, param2 = node.param2}
 			core.swap_node(pos, {name = "air"})
@@ -856,11 +893,13 @@ function intro_editor.show_markers()
 	local left = {} -- (where the map isn't loaded yet: next time)
 	for k, n in pairs(hidden) do
 		local pos = core.string_to_pos("(" .. k .. ")")
-		local here = core.get_node(pos).name
+		local here = node_at(pos).name
 		if here == "air" then
 			core.swap_node(pos, {name = n.name, param2 = n.param2})
 			if n.name == "nhv:intro_cam" and list[k] then
 				core.get_meta(pos):set_string("infotext", "Camera point " .. list[k].index)
+			elseif n.name == "nhv:intro_sign" then
+				show_board(pos)
 			end
 		elseif here == "ignore" then
 			left[k] = n
@@ -878,7 +917,7 @@ core.register_chatcommand("intro_save", {
 	func = function(name, param)
 		local ymin, ymax = param:match("^%s*(%-?%d+)%s+(%-?%d+)%s*$")
 		ymin, ymax = tonumber(ymin) or -8, tonumber(ymax) or 56
-		local p1, p2 = vector.new(0, ymin, 0), vector.new(AREA - 1, ymax, AREA - 1)
+		local p1, p2 = intro_editor.bounds(ymin, ymax)
 		local list = points(vector.zero())
 		if #list == 0 then
 			return false, "Put down some camera points first."
@@ -913,7 +952,7 @@ core.register_chatcommand("intro_save", {
 			f:write(core.write_json(data, true))
 			f:close()
 			core.chat_send_player(name, ("Saved: %d camera points, %d signs, %d trees, %d figures,"
-				.. " the forest from y %d to %d."):format(#list, #data.signs, #data.trees, #data.figures, ymin, ymax))
+				.. " the forest from y %d to %d."):format(#list, #data.signs, #data.trees, #data.figures, p1.y, p2.y))
 		end)
 		return true
 	end,
