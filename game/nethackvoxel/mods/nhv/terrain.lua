@@ -441,11 +441,25 @@ local OPEN_SKY = {
 -- plane's name ("air", "water") or false.
 local SKY_FLOOR = {["air"] = "air", ["water"] = "water"}
 -- Levels open to the sky everywhere, with nothing hand-built to say where
--- (no area: areas.lua): no ceiling over any square, and their rock - the
--- level's edge - an invisible wall with the sea past it (sea.lua), not a
--- cliff: Juiblex's swamp, water to the horizon. terrain.no_roof
+-- (no area: areas.lua): no ceiling over any square (terrain.no_roof). On
+-- Juiblex's swamp its rock - the level's edge - is an invisible wall too,
+-- with the sea past it (sea.lua), not a cliff: water to the horizon
+-- (terrain.open_edge).
 local NO_ROOF = {["juiblex"] = true}
-terrain.no_roof = false
+local OPEN_EDGE = {["juiblex"] = true}
+terrain.no_roof, terrain.open_edge = false, false
+-- Gehennom's ordinary levels (its mazes and caves: NetHack's hellfill - not a
+-- special level, so not the Wizard's Tower) have no ceiling half the time,
+-- the same each time you're there: decided by the game and the level
+local function open_hell_level()
+	local h = nhv.nh.snap and nhv.nh.snap.hero
+	if not (h and h.dungeon_name == "Gehennom" and h.ledger and core.nh_game_id
+			and core.nh_level_proto and core.nh_level_proto(h.dnum, h.dlevel) == "") then
+		return false
+	end
+	-- (Luanti's PCG, seeded by the game and the level: well mixed)
+	return PcgRandom((core.nh_game_id() % 1000003) * 64 + h.ledger):next(0, 1) == 0
+end
 local SKY_FLOOR_TYP = {[T.AIR] = true, [T.CLOUD] = true, [T.WATER] = true}
 terrain.sky_floor = false
 terrain.OPEN_SKY = OPEN_SKY
@@ -459,13 +473,17 @@ local function level_open_sky()
 	if nhv.EDITOR or not nhv.areas or not nhv.areas.level_variants then
 		return false, false
 	end
-	local open, sky_floor, no_roof = false, false, false
+	local open, sky_floor, no_roof, open_edge = false, false, false, false
 	for v in pairs(nhv.areas.level_variants()) do
 		open = open or OPEN_SKY[v] or false
 		sky_floor = sky_floor or SKY_FLOOR[v] or false
 		no_roof = no_roof or NO_ROOF[v] or false
+		open_edge = open_edge or OPEN_EDGE[v] or false
 	end
-	return open, sky_floor, no_roof
+	if open_hell_level() then
+		open, no_roof = true, true
+	end
+	return open, sky_floor, no_roof, open_edge
 end
 
 -- the doors' prefabs: in a hand-built area, a door's own prefab gives the
@@ -957,7 +975,7 @@ local function describe(map, tx, ty)
 	-- the rock round a special level's map (and any on the Plane of Air,
 	-- which has none): an invisible wall (and the sea, on a level standing
 	-- in one: sea.lua), not a cliff
-	if typ == T.STONE and (nhv.areas.outside_special(tx, ty) or terrain.sky_floor or terrain.no_roof) then
+	if typ == T.STONE and (nhv.areas.outside_special(tx, ty) or terrain.sky_floor or terrain.open_edge) then
 		sq.outer = true
 	end
 	-- the Plane of Air's open air and clouds: the sky as the floor
@@ -1088,15 +1106,16 @@ function terrain.update(map, force)
 	end
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
-	local open, sky_floor, no_roof = level_open_sky()
+	local open, sky_floor, no_roof, open_edge = level_open_sky()
 	-- (a hand-built area open to the sky opens the level round it too -
 	-- its rim, its rock - unless the level is made up round it: the
 	-- Oracle's rooms and tunnels keep their ceilings)
 	local open_area = open or (not nhv.EDITOR and nhv.areas.open_to_sky()
 		and not nhv.areas.made_round_level()) or false
 	if open ~= terrain.open_sky or open_area ~= terrain.open_area or sky_floor ~= terrain.sky_floor
-			or no_roof ~= terrain.no_roof then
-		terrain.open_sky, terrain.open_area, terrain.sky_floor, terrain.no_roof = open, open_area, sky_floor, no_roof
+			or no_roof ~= terrain.no_roof or open_edge ~= terrain.open_edge then
+		terrain.open_sky, terrain.open_area, terrain.sky_floor = open, open_area, sky_floor
+		terrain.no_roof, terrain.open_edge = no_roof, open_edge
 		force = true
 	end
 	terrain.map = map
