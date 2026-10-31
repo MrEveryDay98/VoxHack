@@ -48,8 +48,10 @@ local function drop(e)
 end
 
 -- e's shadow where it is now (made the first time); ground: the floor's top;
--- billboard: e is turned to the camera by the engine (and its shadow so)
-local function place(e, ground, alpha, billboard)
+-- turned: e is turned by the engine - "billboard" to the camera, or "spin"
+-- (mobs.lua) - and its shadow so
+local SHADOW_OF = {billboard = "nhv:shadow_billboard", spin = "nhv:shadow_spin"}
+local function place(e, ground, alpha, turned)
 	local pos = e.obj:get_pos()
 	local tex = (e.texture or nhv_tiles.texture(e.tile)) .. "^[multiply:#000000" .. ("^[opacity:%d"):format(alpha)
 	-- (an extruded sprite's shadow is a voxel model's, as thick as it is)
@@ -60,11 +62,13 @@ local function place(e, ground, alpha, billboard)
 		if not obj then
 			return
 		end
-		if billboard then
-			obj:set_properties({infotext = "nhv:shadow_billboard"})
-		end
-		s = {obj = obj}
+		s = {obj = obj, kind = "nhv:shadow"}
 		cast[e] = s
+	end
+	local kind = SHADOW_OF[turned] or "nhv:shadow"
+	if s.kind ~= kind then
+		s.kind = kind
+		s.obj:set_properties({infotext = kind})
 	end
 	if s.look ~= tex or s.h ~= e.h or s.thick ~= thick then
 		s.look, s.h, s.thick = tex, e.h, thick
@@ -99,13 +103,14 @@ core.register_globalstep(function()
 		for _, e in pairs(mobs.mons) do
 			if e.h and e.tile and not e.ghost and not e.fuzz and e.obj:get_pos() then
 				keep[e] = true
-				place(e, e.ground_y or U.STAND_Y, alpha)
+				place(e, e.ground_y or U.STAND_Y, alpha, e.turned_by == "nhv:billboard" and "billboard")
 			end
 		end
 		for _, e in pairs(mobs.objs) do
 			if e.h and e.tile and not e.flat and e.obj:get_pos() then
 				keep[e] = true
-				place(e, e.ground or U.STAND_Y, alpha)
+				place(e, e.ground or U.STAND_Y, alpha, e.turned_by == "nhv:spin" and "spin"
+					or e.turned_by == "nhv:billboard" and "billboard")
 			end
 		end
 	end

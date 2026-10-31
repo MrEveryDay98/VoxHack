@@ -182,4 +182,82 @@ function U.has(flags, bit)
 	return flags and (flags % (bit * 2)) >= bit
 end
 
+-- ---------------------------------------------------------------- HUD
+-- A HUD change that changes nothing isn't sent: the game sets its status
+-- line, hotbar, meters and map after every turn whether they changed or
+-- not, and every one sent went over the network - and into a demo, most of
+-- what its HUD took. What each element was last given is kept (from its
+-- definition when it's added), and the same again is left out.
+local HUD_STATS = {"position", "name", "scale", "text", "number", "item", "direction", "alignment",
+	"offset", "world_pos", "size", "z_index", "text2", "style"}
+local hud_sent = {} -- player name -> {[id] = {[stat] = value}}
+
+local function same(a, b)
+	if type(a) ~= "table" or type(b) ~= "table" then
+		return a == b
+	end
+	for k, v in pairs(a) do
+		if b[k] ~= v then
+			return false
+		end
+	end
+	for k in pairs(b) do
+		if a[k] == nil then
+			return false
+		end
+	end
+	return true
+end
+
+local function copy(v)
+	return type(v) == "table" and table.copy(v) or v
+end
+
+local hud_wrapped = false
+core.register_on_joinplayer(function(player)
+	if hud_wrapped then
+		return
+	end
+	hud_wrapped = true
+	-- (every player object's methods: one table for them all)
+	local mt = getmetatable(player)
+	local m = type(mt.__index) == "table" and mt.__index or mt
+	local add, change, remove = m.hud_add, m.hud_change, m.hud_remove
+	m.hud_add = function(self, def)
+		local id = add(self, def)
+		if id and self:is_player() then
+			local name = self:get_player_name()
+			local el = {}
+			for _, k in ipairs(HUD_STATS) do
+				el[k] = copy(def[k])
+			end
+			hud_sent[name] = hud_sent[name] or {}
+			hud_sent[name][id] = el
+		end
+		return id
+	end
+	m.hud_change = function(self, id, stat, value)
+		local sent = self:is_player() and hud_sent[self:get_player_name()]
+		local el = sent and id and sent[id]
+		if el then
+			if el[stat] ~= nil and same(el[stat], value) then
+				return
+			end
+			el[stat] = copy(value)
+		end
+		return change(self, id, stat, value)
+	end
+	m.hud_remove = function(self, id)
+		local sent = self:is_player() and hud_sent[self:get_player_name()]
+		if sent and id then
+			sent[id] = nil
+		end
+		return remove(self, id)
+	end
+end)
+
+core.register_on_leaveplayer(function(player)
+	hud_sent[player:get_player_name()] = nil
+end)
+
 return U

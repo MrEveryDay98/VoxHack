@@ -135,7 +135,10 @@ local function start_roll(info)
 	local pos = U.tile_center(info.x, info.y, roll_y())
 	local obj = core.add_entity(pos, "nhv:rolling")
 	if obj then
-		obj:set_properties(nhv_tiles.look(info.tile, BOULDER_H))
+		-- (facing the camera, as boulders do: the engine turns it - mobs.lua)
+		local props = nhv_tiles.look(info.tile, BOULDER_H)
+		props.infotext = "nhv:billboard"
+		obj:set_properties(props)
 	end
 	local dir = vector.direction(pos, U.tile_center(info.x + info.dx, info.y + info.dy, roll_y()))
 	missiles.rolls[info.pid] = {pid = info.pid, obj = obj, pos = pos, dir = dir, tile = info.tile,
@@ -287,7 +290,6 @@ function missiles.update(dturns)
 			end
 		end
 	end
-	local cam = U.camera_pos()
 	for _, r in pairs(missiles.rolls) do
 		roll(r, missiles.ROLL_SPEED * dturns, hp)
 		-- (into another square: the map shows it there - hud.lua)
@@ -297,10 +299,6 @@ function missiles.update(dturns)
 		end
 		if r.obj and r.obj:get_pos() then
 			r.obj:move_to(r.pos, true)
-			-- (facing the camera, as boulders do)
-			if cam then
-				r.obj:set_yaw(math.atan2(cam.z - r.pos.z, cam.x - r.pos.x) - math.pi / 2)
-			end
 		end
 	end
 	if missiles.map_moved then

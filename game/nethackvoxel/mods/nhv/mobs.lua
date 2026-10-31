@@ -24,6 +24,19 @@ nhv.mobs = mobs
 -- see-through flat picture that shows through walls (infotext "nhv:xray":
 -- the VoxHack build of Luanti draws it over everything) and wavers.
 local GHOST_ALPHA = 128
+
+-- Sprites face the camera. The VoxHack engine turns them itself, every
+-- frame, those marked "nhv:billboard" (content_cao.h; their yaw how far
+-- round from facing it: nhv_tiles.facing_turn) - small items on the floor
+-- marked "nhv:spin" it spins - so their turning isn't sent every step (it
+-- was most of a demo, and of what the game sends). A monster that wavers -
+-- a ghost, or wavy: hallucinated, invisible, detected - is still turned
+-- here (the globalstep below).
+local face -- (below)
+local function turned_here(e)
+	return e.ghost or e.wavy
+end
+
 local function look_for(e, kind)
 	if e.ghost then
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(GHOST_ALPHA)
@@ -31,14 +44,16 @@ local function look_for(e, kind)
 			visual_size = {x = e.h, y = e.h, z = e.h}, use_texture_alpha = true,
 			infotext = "nhv:xray", glow = 6}
 	end
+	local infotext = turned_here(e) and "" or "nhv:billboard"
+	e.turned_by = infotext -- (the globalstep: turned here, or by the engine)
 	if e.fuzz then -- (invisible, seen anyway: see-through, no flashes)
 		local props = nhv_tiles.fuzz_look(e.tile, e.h)
-		props.infotext, props.glow = "", 0
+		props.infotext, props.glow = infotext, 0
 		e.fuzz_frame = nhv_tiles.fuzz_frame()
 		return props
 	end
 	local props = nhv_tiles.look(e.tile, e.h, kind or (e.silhouette and "k" or nil))
-	props.use_texture_alpha, props.infotext, props.glow = false, "", 0
+	props.use_texture_alpha, props.infotext, props.glow = false, infotext, 0
 	return props
 end
 
@@ -278,7 +293,8 @@ local function apply_sprite(e, m)
 	local fuzz = U.has(m.flags, U.MON_SEEINVIS)
 	local silhouette = m.silhouette == true
 	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost
-			or e.fuzz ~= fuzz or e.silhouette ~= silhouette then
+			or e.fuzz ~= fuzz or e.silhouette ~= silhouette or e.turned_by ~= (e.wavy and "" or "nhv:billboard")
+			and not ghost then
 		e.tile, e.h, e.ghost, e.fuzz, e.silhouette = m.tile, h, ghost, fuzz, silhouette
 		local props = monster_props(e)
 		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
@@ -1087,10 +1103,11 @@ local function update_rolls(now)
 		else
 			local pos = vector.add(r.from, vector.multiply(vector.subtract(r.to, r.from), t))
 			r.obj:move_to(pos, true)
-			-- (facing the camera, as boulders do)
-			local pp = U.camera_pos()
-			if pp then
-				r.obj:set_yaw(math.atan2(pp.z - pos.z, pp.x - pos.x) - math.pi / 2)
+			-- (facing the camera, as boulders do: the engine turns it)
+			if not r.facing then
+				r.facing = true
+				r.obj:set_properties({infotext = "nhv:billboard"})
+				r.obj:set_yaw(0)
 			end
 		end
 	end
@@ -1405,6 +1422,17 @@ end
 
 mobs.wall_between = wall_between -- (speech.lua: a speaker in plain view)
 
+-- a billboard's yaw: how far round from facing the camera (the engine
+-- turns it the rest of the way) - set once, and again if that changes
+-- (Sprites: extruded or flat)
+function face(e)
+	local turn = nhv_tiles.facing_turn()
+	if e.facing ~= turn then
+		e.facing = turn
+		e.obj:set_yaw(turn)
+	end
+end
+
 -- sensed monsters: in plain view, or behind a wall (a ghost)? checked a few
 -- times a second
 local occl_t = 0
@@ -1469,28 +1497,32 @@ core.register_globalstep(function(dtime)
 		if obj:get_pos() and e.h then
 			local pos = mon_draw_pos(e)
 			steer(e, pos, dtime)
-			if ppos then
+			if e.turned_by == "nhv:billboard" then
+				face(e)
+			elseif ppos then
 				local d = vector.subtract(ppos, pos)
 				local yaw = math.atan2(d.z, d.x) - math.pi / 2 + nhv_tiles.facing_turn()
-				if e.wavy or e.ghost then
-					yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
-					local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
-					obj:set_properties({visual_size = size_for(e, w)})
-				end
+				yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
+				local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
+				obj:set_properties({visual_size = size_for(e, w)})
 				obj:set_yaw(yaw)
+				e.facing = nil
 			end
 		end
 	end
-	-- small items spin, the rest face you, corpses lie still
+	-- small items spin, the rest face you, corpses lie still (the engine
+	-- turns them: marked so)
 	local function turn_obj(e)
-		if e.flat then -- luacheck: ignore 542
-			-- lies still
-		elseif e.spin and e.obj:get_pos() then
-			e.obj:set_yaw((clock_t * 0.8) % (2 * math.pi))
-		elseif e.obj:get_pos() and ppos then
-			local pos = e.obj:get_pos()
-			local d = vector.subtract(ppos, pos)
-			e.obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2 + nhv_tiles.facing_turn())
+		if not e.obj:get_pos() then
+			return
+		end
+		local want = e.flat and "" or e.spin and "nhv:spin" or "nhv:billboard"
+		if e.turned_by ~= want then
+			e.turned_by, e.facing = want, nil
+			e.obj:set_properties({infotext = want})
+		end
+		if want == "nhv:billboard" then
+			face(e)
 		end
 	end
 	for _, e in pairs(mobs.objs) do
@@ -1502,11 +1534,7 @@ core.register_globalstep(function(dtime)
 		end
 	end
 	for _, e in pairs(mobs.feats) do
-		if not e.flat and e.obj:get_pos() and ppos then
-			local pos = e.obj:get_pos()
-			local d = vector.subtract(ppos, pos)
-			e.obj:set_yaw(math.atan2(d.z, d.x) - math.pi / 2 + nhv_tiles.facing_turn())
-		end
+		turn_obj(e)
 	end
 end)
 
