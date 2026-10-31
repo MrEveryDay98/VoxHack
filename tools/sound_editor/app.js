@@ -77,7 +77,7 @@ async function load() {
   config = cfg;
   config.hooks = config.hooks || {};
   config.voices = config.voices || {};
-  config.master = Object.assign({ effects: 100, music: 60, voices: 100 }, config.master || {});
+  config.master = Object.assign({ effects: 100, music: 60, voices: 100, typed_pitch_max: 180 }, config.master || {});
   renderMasters();
   renderGroups();
   renderHooks();
@@ -143,6 +143,14 @@ function renderMasters() {
       oninput: (e) => { config.master[key] = +e.target.value; out.textContent = e.target.value; markDirty(); } });
     box.append(el("label", {}, el("span", {}, label + " ", out), input));
   }
+  // the highest the voices that type (Animalese, Beeps and boops) go, in
+  // percent of their own pitch: a speaker's, a female's, a mood's or a small
+  // monster's raise stops there (sound.lua)
+  const out = el("span", {}, config.master.typed_pitch_max + "%");
+  const input = el("input", { type: "range", min: 60, max: 300, step: 5, value: config.master.typed_pitch_max,
+    "aria-label": "Highest pitch of Animalese and beeps",
+    oninput: (e) => { config.master.typed_pitch_max = +e.target.value; out.textContent = e.target.value + "%"; markDirty(); } });
+  box.append(el("label", {}, el("span", {}, "Animalese / beeps highest pitch ", out), input));
 }
 
 // ------------------------------------------------------------ sound picker

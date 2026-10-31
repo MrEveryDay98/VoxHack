@@ -58,6 +58,7 @@ if nhv.INTRO_EDITOR then
 	dofile(path .. "sky.lua")
 	dofile(path .. "shadows.lua")
 	dofile(path .. "sound.lua")
+	dofile(path .. "speech.lua")
 	dofile(path .. "intro_play.lua")
 	dofile(path .. "intro_editor.lua")
 	dofile(path .. "editor_tools.lua")

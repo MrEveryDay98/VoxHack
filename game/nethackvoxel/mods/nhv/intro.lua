@@ -66,12 +66,25 @@ local function skip_formspec()
 		.. "label[0.4,0.5;" .. core.colorize("#AAAAAA", "Press Enter to skip") .. "]"
 end
 
+-- the paragraphs told so far, the last as much as it's been said (typed
+-- a letter at a time in Animalese and beeps: speech.lua)
 local function set_text(player)
 	local parts = {}
-	for i = 1, run.shown do
+	for i = 1, run.shown - 1 do
 		parts[i] = wrap(run.paras[i])
 	end
+	if run.shown > 0 then
+		if run.typing_of ~= run.shown then
+			run.typing_of = run.shown
+			run.typer = nhv.speech.typer(wrap(run.paras[run.shown]), run.paras[run.shown])
+		end
+		parts[run.shown] = (nhv.speech.typed_text(run.typer))
+	end
 	local text = table.concat(parts, "\n\n")
+	if text == run.text_shown then
+		return
+	end
+	run.text_shown = text
 	for _, id in ipairs(run.ids) do
 		player:hud_change(id, "text", text)
 	end
@@ -150,6 +163,9 @@ core.register_globalstep(function()
 		return
 	end
 	local now = core.get_us_time()
+	if run.phase == "tell" and run.typer then
+		set_text(player)
+	end
 	if run.phase == "wait" then
 		-- (NetHack making the character: then the god and the title are known)
 		local h = nh.snap and nh.snap.hero
@@ -163,11 +179,13 @@ core.register_globalstep(function()
 			run.shown = run.shown + 1
 			set_text(player)
 			local text = run.paras[run.shown]
-			local secs = nhv.sound.say_seconds(SPEAKER, text)
+			-- (Options > Prologue and intro voices off: only shown)
+			local secs = nhv.sound.story_voices() and nhv.sound.say_seconds(SPEAKER, text, nil, true) or 0
 			if secs > 0 then
-				nhv.sound.say(SPEAKER, text, "intro")
+				nhv.sound.say(SPEAKER, text, "intro", nil, true)
 			else
-				secs = math.max(MIN_S, #text * READ_S)
+				-- (no voice: time to read it - or to type it)
+				secs = math.max(MIN_S, #text * READ_S, nhv.speech.typing_seconds(text) + 1)
 			end
 			run.next_t = now + (secs + GAP_S) * 1e6
 		else

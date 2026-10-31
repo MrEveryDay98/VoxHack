@@ -584,23 +584,34 @@ end
 -- Options > Voices (graphics.lua): the speakers SAM voices are spoken by
 -- SAM, or in Animalese (sam_voice.h: every letter a little sound of its
 -- own, the same speaker's pitch and pace), or Beeps and boops (a beep a
--- character, each a little higher or lower), or not at all ("off")
-function sound.voice_mode()
+-- character, each a little higher or lower), or not at all ("off").
+-- story: for the prologue's and the intro's lines, which have their own
+-- switch (sound.story_voices) - in-game voices off, they're still SAM's
+function sound.voice_mode(story)
 	local v = core.settings:get("nhv_voice")
-	if v == "sam" or v == "animalese" or v == "beeps" or v == "off" then
-		return v
+	if not (v == "sam" or v == "animalese" or v == "beeps" or v == "off") then
+		-- (before there was a choice: NetHack options' Spoken lines)
+		v = core.settings:get_bool("nhv_nh_sam_voices", true) and "sam" or "off"
 	end
-	-- (before there was a choice: NetHack options' Spoken lines)
-	return core.settings:get_bool("nhv_nh_sam_voices", true) and "sam" or "off"
+	if story and v == "off" then
+		return "sam"
+	end
+	return v
+end
+
+-- Options > Prologue and intro voices: off, their lines aren't said (only
+-- shown, for as long as it takes to read them). The intro editor has no
+-- options of its own: it speaks.
+function sound.story_voices()
+	return nhv.INTRO_EDITOR or core.settings:get_bool("nhv_story_voices", true)
 end
 
 -- the SAM settings for a speaker of the voice casting (ln: a line's own
 -- settings, if any), or nil if it isn't voiced live by SAM
 function sam_settings(speaker, who, ln)
 	ln = ln or {}
-	-- (Options > Voices off: nothing's said - the intro editor has no
-	-- options of its own: it speaks)
-	if sound.voice_mode() == "off" then
+	-- (Options > Voices off: nothing's said in the game)
+	if sound.voice_mode(ln.story) == "off" then
 		return nil
 	end
 	local sc = sound.cast.speakers[speaker]
@@ -614,7 +625,8 @@ function sam_settings(speaker, who, ln)
 		bright = tonumber(ss.bright) or 100, breath = tonumber(ss.breath) or 100,
 		movement = tonumber(ss.movement) or 100, hiss = tonumber(ss.hiss) or 100, whisper = 0,
 		effects = effect_chain(ss.effects),
-		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil}
+		text = type(ln.sam_text) == "string" and ln.sam_text ~= "" and ln.sam_text or nil,
+		story = ln.story}
 	-- a line can take another of SAM's named voices
 	local named = SAM_VOICES[ln.sam_voice or ""]
 	local base = named or SAM_VOICES[ss.voice or ""] or SAM_VOICES.SAM
@@ -704,7 +716,7 @@ end
 -- can to SAM's pitch, pace and effects; then for those, a letter's length
 -- in seconds (as played: speech.lua types it at that pace)
 local function sam_name(st, text)
-	local mode = sound.voice_mode()
+	local mode = sound.voice_mode(st.story)
 	local typed = mode == "animalese" or mode == "beeps"
 	-- (those say what's written, not how SAM's told to say it)
 	text = ((typed and text or st.text) or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
@@ -714,7 +726,10 @@ local function sam_name(st, text)
 	if typed then
 		-- (SAM: a lower pitch number is a higher voice, 64 its own; a higher
 		-- speed number is slower, 72 its own; Options > Typing speed on top)
-		local pitch = math.max(60, math.min(180, (64 / st.pitch) ^ 0.6 * 100))
+		-- (no higher, as heard - a small speaker's played higher still:
+		-- the editor's highest pitch, config.json's master.typed_pitch_max)
+		local top = tonumber(sound.cfg.master.typed_pitch_max) or 180
+		local pitch = math.min(math.max(60, (64 / st.pitch) ^ 0.6 * 100), top / (st.pitch_mul or 1))
 		local length = math.max(60, math.min(180, st.speed / 72 * 100))
 		length = math.max(25, math.min(400, length * nhv.speech.letter_pct() / 100))
 		return ("nhv_%s:%d,%d,0,%s|%s"):format(mode, pitch, length, st.effects, text),
@@ -758,15 +773,16 @@ end
 -- A line said by a speaker of the voice casting (SAM, live), now: the
 -- ascension's god (cutscene.lua). False if that speaker isn't SAM's.
 -- mood: how it's said (moods.json), if not as the speaker always does.
-function sound.say(speaker, text, key, mood)
-	local st = sam_settings(speaker, nil, {mood = mood})
+-- story: one of the prologue's or the intro's (sound.voice_mode)
+function sound.say(speaker, text, key, mood, story)
+	local st = sam_settings(speaker, nil, {mood = mood, story = story})
 	return st and speak_sam(st, text, nil, key or speaker) or false
 end
 
 -- how long that speaker takes to say it, in seconds (0: not SAM's, or
 -- nothing to say - or the voices are off)
-function sound.say_seconds(speaker, text, mood)
-	local st = sam_settings(speaker, nil, {mood = mood})
+function sound.say_seconds(speaker, text, mood, story)
+	local st = sam_settings(speaker, nil, {mood = mood, story = story})
 	local name = st and sam_name(st, text)
 	return name and core.nhv_sam_seconds and core.nhv_sam_seconds(name) or 0
 end

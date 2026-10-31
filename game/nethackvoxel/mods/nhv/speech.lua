@@ -9,7 +9,9 @@
 --   is just its words.
 -- Both off, they're messages like any other. They're always in the message
 -- log (T). Spoken in Animalese or Beeps and boops (Options > Voices), the
--- words come up a letter at a time as they're said (Options > Typing speed).
+-- words come up a letter at a time as they're said (Options > Typing speed)
+-- - the prologue's and the intro's too (speech.typer: intro_play.lua,
+-- intro.lua).
 --
 -- NetHack puts a spoken line as a message (with its quotes), then the
 -- sound event saying who said it (nhv_sound.c's "verbal|..."): hud.lua
@@ -186,50 +188,79 @@ function speech.add(id, who, seen, name, text)
 			table.remove(lines, k)
 		end
 	end
-	lines[#lines + 1] = {id = id, label = label, text = text, t0 = core.get_us_time() / 1e6,
+	lines[#lines + 1] = {id = id, label = label, text = text, tp = speech.typer(text),
 		head = obj and true or false, obj = obj or nil}
 	speech.refresh()
 	return true
 end
 
--- when its letters come (typed: on the first refresh, as its voice starts
--- - sound.lua says at what pace)
-local function time_line(ln, now)
-	if ln.times ~= nil then
-		return
-	end
-	local unit, spell = LETTER_S * speech.letter_pct() / 100, nhv.sound and nhv.sound.voice_mode() == "animalese"
-	local said = nhv.sound and nhv.sound.spoken and nhv.sound.spoken[ln.text]
-	said = said and math.abs(said.t - ln.t0) < 1 and said
-	if speech.typed() and not said and now - ln.t0 < 0.2 then
-		-- (its voice may start in a moment: wait for it, showing nothing yet)
-		ln.ttl = math.huge
-		return
-	end
-	if said then
-		unit, ln.t0 = said.unit, said.t
-	end
-	if speech.typed() then
-		ln.times, ln.length = speech.times(ln.text, unit, spell)
-	else
-		ln.times, ln.length = false, 0
-	end
-	-- (then a while to read it: longer for a long one)
-	ln.ttl = ln.length + math.min(9, 3 + #ln.text * 0.05)
+-- A line typed a letter at a time as it's said (Animalese, beeps; with
+-- the other voices it's all there at once). display: as it's shown (line
+-- breaks where it had spaces: the same characters); spoken: as its voice
+-- was given it (sound.spoken's key), if not the same
+function speech.typer(display, spoken)
+	return {display = display, key = speech.clean(spoken or display), t0 = core.get_us_time() / 1e6}
 end
 
--- the characters of it said by now
-local function said_by(ln, now)
-	if ln.times == nil then
-		return 0 -- (not yet timed: time_line)
-	elseif not ln.times then
-		return #ln.text
+local function letter_s()
+	return LETTER_S * speech.letter_pct() / 100
+end
+
+-- when its letters come: known once its voice has started (sound.lua says
+-- when, and at what pace - it may start a moment after the words are put
+-- up: till then, nothing's shown), or it's plainly not going to
+local function resolve(tp, now)
+	if tp.times ~= nil then
+		return true
 	end
-	local t, n = now - ln.t0, 0
-	while n < #ln.text and ln.times[n + 1] <= t do
+	if not speech.typed() then
+		tp.times, tp.length = false, 0
+		return true
+	end
+	local said = nhv.sound.spoken[tp.key]
+	said = said and math.abs(said.t - tp.t0) < 1 and said
+	if not said and now - tp.t0 < 0.2 then
+		return false
+	end
+	local unit = letter_s()
+	if said then
+		unit, tp.t0 = said.unit, said.t
+	end
+	tp.times, tp.length = speech.times(tp.display, unit, nhv.sound.voice_mode() == "animalese")
+	return true
+end
+
+-- what's been said of it by now, and whether that's all of it. Text
+-- centred where it's shown keeps its place as it's said: the lines yet to
+-- come there already, empty
+function speech.typed_padded(tp, now)
+	local text, done = speech.typed_text(tp, now)
+	local _, more = tp.display:sub(#text + 1):gsub("\n", "")
+	return text .. ("\n"):rep(more), done
+end
+
+function speech.typed_text(tp, now)
+	now = now or core.get_us_time() / 1e6
+	if not resolve(tp, now) then
+		return "", false
+	elseif not tp.times then
+		return tp.display, true
+	end
+	local t, n = now - tp.t0, tp.n or 0
+	while n < #tp.display and tp.times[n + 1] <= t do
 		n = n + 1
 	end
-	return n
+	tp.n = n
+	return tp.display:sub(1, n), n == #tp.display
+end
+
+-- how long typing a line with no voice takes (0: not typed)
+function speech.typing_seconds(text)
+	if not speech.typed() then
+		return 0
+	end
+	local _, length = speech.times(text, letter_s(), nhv.sound.voice_mode() == "animalese")
+	return length
 end
 
 -- ---------------------------------------------------------------- the box
@@ -302,8 +333,9 @@ function speech.refresh()
 	local box = {}
 	for k = #lines, 1, -1 do
 		local ln = lines[k]
-		time_line(ln, now)
-		if now - ln.t0 > ln.ttl then
+		-- (said, then a while to read it: longer for a long one)
+		local ttl = resolve(ln.tp, now) and ln.tp.length + math.min(9, 3 + #ln.text * 0.05) or math.huge
+		if now - ln.tp.t0 > ttl then
 			drop(ln)
 			table.remove(lines, k)
 		elseif ln.head then
@@ -321,10 +353,12 @@ function speech.refresh()
 	end
 	for _, ln in ipairs(lines) do
 		ln.wrapped = ln.wrapped or {head = wrap(ln.text, HEAD_WRAP), box = wrap(ln.text, BOX_WRAP)}
-		local n = said_by(ln, now)
+		local n = #speech.typed_text(ln.tp, now)
+		local _, more = ln.wrapped.head:sub(n + 1):gsub("\n", "")
 		if ln.head then
 			if ln.obj then
-				local text = ln.wrapped.head:sub(1, n)
+				-- (centred over the head: the lines to come there already)
+				local text = ln.wrapped.head:sub(1, n) .. ("\n"):rep(more)
 				if text ~= ln.on_head then
 					ln.on_head = text
 					set_head(ln.obj, text)

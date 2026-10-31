@@ -105,11 +105,14 @@ local function line_seconds(p)
 	if not p.line or p.line == "" then
 		return 0
 	end
-	local s = nhv.sound and nhv.sound.say_seconds(p.voice or "Narrator", p.line, p.mood ~= "" and p.mood or nil) or 0
+	-- (Options > Prologue and intro voices off: only shown)
+	local s = nhv.sound and nhv.sound.story_voices()
+		and nhv.sound.say_seconds(p.voice or "Narrator", p.line, p.mood ~= "" and p.mood or nil, true) or 0
 	if s > 0 then
 		return s, true
 	end
-	return math.max(MIN_LINE_S, #p.line * READ_S), false
+	-- (no voice: time to read it - or to type it, speech.lua)
+	return math.max(MIN_LINE_S, #p.line * READ_S, nhv.speech.typing_seconds(p.line) + 1), false
 end
 
 -- The timeline: the camera's points (for the engine) and what happens when
@@ -360,6 +363,10 @@ local function hide_huds(player)
 end
 
 local function set_words(text)
+	if text == run.words then
+		return
+	end
+	run.words = text
 	for _, id in ipairs(run.ids) do
 		run.player:hud_change(id, "text", text)
 	end
@@ -555,14 +562,16 @@ core.register_globalstep(function(dtime)
 		elseif ev.line ~= nil then
 			if ev.line then
 				run.saying = ev.line
-				set_words(wrap(ev.line.line))
+				-- (typed a letter at a time in Animalese and beeps: below)
+				run.typer = nhv.speech.typer(wrap(ev.line.line), ev.line.line)
+				set_words("")
 				if ev.voiced and nhv.sound then
 					local p = ev.line
-					nhv.sound.say(p.voice or "Narrator", p.line, "opening", p.mood ~= "" and p.mood or nil)
+					nhv.sound.say(p.voice or "Narrator", p.line, "opening", p.mood ~= "" and p.mood or nil, true)
 				end
 			elseif ev.of == run.saying then
 				-- (its own line's done - not the next one's, already up)
-				run.saying = nil
+				run.saying, run.typer = nil, nil
 				set_words("")
 			end
 		elseif ev.fade then
@@ -576,6 +585,9 @@ core.register_globalstep(function(dtime)
 			run.blending = {from = from, span = (ev.blend - from) % 1, t0 = core.get_us_time(),
 				dur = math.max(1, ev.dur * 1e6)}
 		end
+	end
+	if run and run.typer then
+		set_words((nhv.speech.typed_padded(run.typer)))
 	end
 end)
 
