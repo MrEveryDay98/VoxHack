@@ -2,6 +2,19 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.14.0 (alpha) - 2026-10-31
+
+- **Choose your voices.** Options > Voices: SAM, **Animalese** (every letter a little sound of its own, as in Animal Crossing - its letters are from animalese.js by Josh Simmons, CC BY 4.0), **Beeps and boops** (an 8-bit beep a character, each a few notes higher or lower than the speaker's own), or Off. Every speaker keeps their own pitch, pace and effects. Prologue and intro voices can be muted on their own.
+- **Dialogue is said where it's said.** A line someone speaks shows above their head while you can see them, and otherwise in a box of its own on the right, with their name once you've seen them (Options > Spoken lines, Speech above heads). Dialogue is always in the message log too.
+- **Typed as it's said.** In Animalese and beeps the words come up a letter at a time, in step with the voice, pausing at commas and full stops - dialogue, the prologue and the intro alike. Options > Typing speed.
+- **Demos on the title.** The Demos button lists what's been recorded, newest first, each with its class's picture, name, depth, level and date. Click one to watch it, then you're back at the title. Record demos in future runs is a checkbox there. A saved game continued later carries on in the same demo. Demos from versions this one can't play are red and offer to be deleted.
+- **Monsters coming out of the dark are seen coming.** A monster in plain view that NetHack says you can't see (beyond the light) is drawn where it is, all black, instead of appearing in the doorway. Not on the map; never one that's invisible, mimicking or hiding.
+- **Rolling boulders can be dodged.** A boulder trap's boulder rolls along the ground in game time and only hits you if it reaches you: step aside, or jump over it.
+- **Long actions hold you still.** Reading a spellbook, eating a big meal or putting on armour fast-forwards while it plays out, as being helpless does, instead of leaving you on a long cooldown.
+- **A changelog** on the title, next to the version.
+- The VoxHack Editor: a highest pitch for Animalese and beeps; in the intro editor, a new line in a camera point's words is a new page, shown for 2 seconds before the next.
+- Fixed: a female shopkeeper's voice broke up; a voice right beside you could sound muffled through a wall's corner; after the prologue, far halls faded to its mist instead of black; leaving a demo and playing it again just went back to the title; the demo's pause menu offered Change Password.
+
 ## v0.13.0 (alpha) - 2026-10-30
 
 - **A prologue.** Before the title, NetHack's opening story is told by the narrator as the camera travels through a forest: past a lone house, through a town where the watch keep the road, to the ruins at the entrance to the Mazes of Menace (and their gift shop), from dawn to night, with its own music. Press Enter to skip it. NetHack Options > Prologue at startup turns it off, and the title's new Prologue button plays it again.
