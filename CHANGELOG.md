@@ -2,6 +2,10 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.14.3 (alpha) - 2026-10-31
+
+- **VoxHack has its own icon**, on its window, the taskbar, the program and the Play shortcut. If you made a shortcut with Create Play Shortcut.bat before, run it again to get the new icon.
+
 ## v0.14.2 (alpha) - 2026-10-31
 
 - **Much smaller demos** - a long game's about a third of the size. Most of a demo was the game sending what hadn't changed:
