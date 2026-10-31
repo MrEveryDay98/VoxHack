@@ -2,6 +2,16 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.14.2 (alpha) - 2026-10-31
+
+- **Much smaller demos** - a long game's about a third of the size. Most of a demo was the game sending what hadn't changed:
+  - Monsters, items and features are turned to face you by the engine itself (small items spun by it), instead of every one being sent again each step as it turned.
+  - The camera's recorded at most 60 times a second, and played back gliding smoothly between.
+  - The HUD isn't sent again when nothing in it changed (the status line, hotbar, meters and map were, after every turn).
+  - The big map keeps its squares while it's closed, so opening it sends only what changed instead of the whole map.
+- All of this also cuts what the game sends every frame while you play.
+- The soldier's sprite is redrawn.
+
 ## v0.14.1 (alpha) - 2026-10-31
 
 - **Fixed: a boulder you pushed onto a rolling boulder trap could hit you as it rolled away.** A rolling boulder now only hits you in the square it's rolling through, coming towards you - not from the square beside its path, and never rolling away.
