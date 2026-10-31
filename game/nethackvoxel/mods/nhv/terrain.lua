@@ -116,12 +116,31 @@ local function flowing(tex, opacity)
 	}
 end
 terrain.flowing = flowing
+-- Pouring down: the tile sliding down a pixel a frame, round and round (16
+-- frames, each a [combine of its own in the strip - escaped twice over)
+local function escape_twice(t)
+	return (t:gsub("\\", "\\\\"):gsub("%^", "\\^"):gsub(":", "\\:"))
+end
+local function pouring(tex, opacity)
+	local once, frames = escape_combine(tex), {}
+	for i = 0, 15 do
+		-- (the part come round from the bottom; none on the first)
+		local frame = ("[combine:16x16:0,%d=%s"):format(i, once)
+			.. (i > 0 and (":0,%d=%s"):format(i - 16, once) or "")
+		frames[#frames + 1] = ("0,%d=%s"):format(i * 16, escape_twice(frame))
+	end
+	return {
+		name = "[combine:16x256:" .. table.concat(frames, ":") .. "^[opacity:" .. opacity,
+		animation = {type = "vertical_frames", aspect_w = 16, aspect_h = 16, length = 1.6},
+	}
+end
 
 liquid_node("water", "Water", flowing(tile_tex(1314), 200), nil)
 liquid_node("lava", "Molten lava", flowing(tile_tex(1316), 255), 10)
 liquid_node("void_liquid", "Unexplored", BLACK, nil)
-liquid_node("waterwall", "Wall of water", flowing(tile_tex(1324), 180), nil)
-reg("lavawall", {description = "Wall of lava", tiles = {flowing(tile_tex(1317), 255)},
+-- (walls of water and lava: the water's and the lava's own look, pouring down)
+liquid_node("waterwall", "Wall of water", pouring(tile_tex(1314), 180), nil)
+reg("lavawall", {description = "Wall of lava", tiles = {pouring(tile_tex(1316), 255)},
 	light_source = 8})
 
 -- invisible light carried with the hero: just enough to see the squares
@@ -526,6 +545,11 @@ local function top_part(cell)
 	return part
 end
 
+-- Under an open sky, walls of water and lava, and iron bars, keep a ceiling
+-- one block thick over them (the layer at ceiling height, as built):
+-- nothing over them but that
+local CAPPED = {[T.WATER] = true, [T.LAVAWALL] = true, [T.IRONBARS] = true}
+
 -- ASCII mode (ascii.lua): the square as blocks of its character - black
 -- under the floor, the character for the floor; a wall, rock or a closed
 -- door the character up TILE blocks (one character on each face, as on the
@@ -534,7 +558,7 @@ end
 local function write_ascii(data, area, sq)
 	local code, color, solid = sq.ascii[1], sq.ascii[2], sq.ascii[3]
 	local ch, black, air = cid(nhv.ascii.block(code, color)), cid(nhv.ascii.block(32)), cid("air")
-	local roof = not (terrain.open_sky or sq.roofless or (terrain.open_area and solid))
+	local roof = CAPPED[sq.typ] or not (terrain.open_sky or sq.roofless or (terrain.open_area and solid))
 	local ox, oz = U.tile_origin(sq.tx, sq.ty)
 	for ly = 0, prefabs.H - 1 do
 		local id, p2 = air, 0
@@ -677,7 +701,8 @@ local function write_square(data, area, sq)
 			-- in an area open to the sky, the usual prefabs have nothing
 			-- over them)
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
-			clear_from(data, area, vector.new(ox, prefabs.Y0, oz), prefabs.CEIL)
+			clear_from(data, area, vector.new(ox, prefabs.Y0, oz),
+				CAPPED[sq.typ] and prefabs.CEIL + 1 or prefabs.CEIL)
 		end
 		if sq.door_top ~= nil then
 			local ox, oz = U.tile_origin(sq.tx, sq.ty)
