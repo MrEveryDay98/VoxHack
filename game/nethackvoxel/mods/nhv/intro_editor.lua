@@ -387,8 +387,12 @@ local function figure_form(f)
 end
 
 -- the trees and figures between p1 and p2, for intro_blocks.sprites (at:
--- taken off their places)
-function intro_editor.sprites(p1, p2, at)
+-- taken off their places; load: the map there read in first - finding sees
+-- only what's loaded, round you)
+function intro_editor.sprites(p1, p2, at, load)
+	if load then
+		core.load_area(p1, p2)
+	end
 	local list = {}
 	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"})) do
 		list[#list + 1] = nhv.intro_blocks.tree(vector.subtract(pos, at))
@@ -618,7 +622,7 @@ core.register_chatcommand("intro_play", {
 		local back = player:get_pos()
 		-- (the signs are on the walls already)
 		-- (the trees and figures all over the forest, while it plays)
-		local all = intro_editor.sprites(vector.new(0, -32, 0), vector.new(AREA - 1, 96, AREA - 1), vector.zero())
+		local all = intro_editor.sprites(vector.new(0, -32, 0), vector.new(AREA - 1, 96, AREA - 1), vector.zero(), true)
 		local trees, figures = {}, {}
 		for _, sp in ipairs(all) do
 			if sp.tile == nhv.intro_blocks.tree(sp.pos).tile then
@@ -891,9 +895,13 @@ core.register_chatcommand("intro_save", {
 			end
 			local data = {version = os.time(), min = p1, max = p2, points = list, signs = signs(vector.zero()),
 				time = intro_editor.time(), fog = intro_editor.fog(), light = intro_editor.light(),
-				trees = core.find_nodes_in_area(p1, p2, {"nhv:intro_tree"}), figures = {}}
-			for _, sp in ipairs(intro_editor.sprites(p1, p2, vector.zero())) do
-				if sp.tile ~= nhv.intro_blocks.tree(sp.pos).tile then
+				trees = {}, figures = {}}
+			-- (the map's all read in again first: the emerging went on a while,
+			-- and some of it may have gone)
+			for _, sp in ipairs(intro_editor.sprites(p1, p2, vector.zero(), true)) do
+				if sp.tile == nhv.intro_blocks.tree(sp.pos).tile then
+					data.trees[#data.trees + 1] = sp.pos
+				else
 					data.figures[#data.figures + 1] = sp
 				end
 			end
