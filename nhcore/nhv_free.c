@@ -779,6 +779,139 @@ nhv_clear_missiles(void)
         }
 }
 
+/* ---------------------------------------------------------------- rolling boulders
+ * A boulder a rolling boulder trap set rolling, handed over by launch_obj
+ * (trap.c): the host rolls it, "#nhvbroll pid" as it rolls into the next
+ * square (nhv_roll_step there), "#nhvbhit pid" when it reaches the hero's
+ * body; each says how it went in an NHV_EV_MISSILE event, "roll <what>
+ * <pid> <x> <y>" (what: on - rolling on from x,y; stop - it stopped at
+ * x,y; gone - used up at x,y; hit, miss - the hero). */
+#define MAXROLLS 8
+static struct nhv_roll rolls[MAXROLLS];
+static unsigned next_roll = 1;
+
+boolean
+nhv_roll_launch(struct obj *obj, int glyph, coordxy x, coordxy y, coordxy x2,
+                coordxy y2, int dx, int dy, int dist)
+{
+    int i;
+
+    for (i = 0; i < MAXROLLS; i++)
+        if (!rolls[i].obj) {
+            struct nhv_roll *r = &rolls[i];
+
+            r->pid = next_roll++;
+            r->obj = obj;
+            r->tile = glyphmap[glyph].tileidx;
+            r->x = x, r->y = y, r->x2 = x2, r->y2 = y2;
+            r->dx = dx, r->dy = dy, r->dist = dist;
+            r->fresh = TRUE;
+            return TRUE;
+        }
+    return FALSE; /* (no room: it rolls at once, as NetHack's own) */
+}
+
+static struct nhv_roll *
+roll_by_pid(unsigned pid)
+{
+    int i;
+
+    for (i = 0; i < MAXROLLS; i++)
+        if (rolls[i].obj && rolls[i].pid == pid)
+            return &rolls[i];
+    return (struct nhv_roll *) 0;
+}
+
+static void
+roll_event(const char *what, unsigned pid, int x, int y)
+{
+    char buf[80];
+
+    Sprintf(buf, "roll %s %u %d %d", what, pid, x, y);
+    nhv_push_event(NHV_EV_MISSILE, 0, buf);
+}
+
+/* #nhvbroll pid: the rolling boulder rolls into the next square */
+int
+donhvbroll(void)
+{
+    unsigned pid = (unsigned) nhv_cmd_args[0];
+    struct nhv_roll *r = roll_by_pid(pid);
+    int x = 0, y = 0, res;
+
+    if (!r) {
+        roll_event("gone", pid, 0, 0);
+        return nhv_ok();
+    }
+    /* (whatever it does - a monster it crushes - is a trap's doing, not
+       the hero's) */
+    monster_acting(TRUE);
+    res = nhv_roll_step(r, &x, &y);
+    monster_acting(FALSE);
+    roll_event(res == 1 ? "on" : res == 0 ? "stop" : "gone", pid, x, y);
+    return nhv_ok();
+}
+
+/* #nhvbhit pid: the rolling boulder reached the hero's body */
+int
+donhvbhit(void)
+{
+    unsigned pid = (unsigned) nhv_cmd_args[0];
+    struct nhv_roll *r = roll_by_pid(pid);
+    int res;
+
+    if (!r)
+        return nhv_ok();
+    monster_acting(TRUE);
+    res = nhv_roll_hits_you(r);
+    monster_acting(FALSE);
+    roll_event(res == 1 ? "hit" : res == 0 ? "miss" : "gone", pid, r->x, r->y);
+    return nhv_ok();
+}
+
+/* the rolling boulders stopped where they are (the hero leaving the level,
+   the game saved or over: they stay on it) */
+void
+nhv_finish_rolls(void)
+{
+    int i;
+
+    for (i = 0; i < MAXROLLS; i++) {
+        struct nhv_roll *r = &rolls[i];
+
+        if (r->obj) {
+            r->obj->otrapped = 0;
+            place_object(r->obj, r->x, r->y);
+            newsym(r->x, r->y);
+            r->obj = 0;
+        }
+    }
+}
+
+NHV_API int
+nhv_get_rolls(nhv_rolling *buf, int max)
+{
+    int i, n = 0;
+
+    if (nhv_state() != NHV_WAITING)
+        return 0;
+    for (i = 0; i < MAXROLLS && n < max; i++) {
+        struct nhv_roll *r = &rolls[i];
+
+        if (!r->obj || !r->fresh)
+            continue;
+        r->fresh = FALSE;
+        memset(&buf[n], 0, sizeof buf[n]);
+        buf[n].pid = r->pid;
+        buf[n].x = r->x, buf[n].y = r->y;
+        buf[n].dx = r->dx, buf[n].dy = r->dy;
+        buf[n].dist = r->dist;
+        buf[n].tile = r->tile;
+        n++;
+    }
+    return n;
+}
+
 /* ---------------------------------------------------------------- rays
  * Rays (wands, spells, breath) handed over by dobuzz(); the host flies
  * and bounces them and reports what they reach. */

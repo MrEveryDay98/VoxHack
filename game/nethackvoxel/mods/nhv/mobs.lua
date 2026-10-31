@@ -1005,6 +1005,8 @@ nhv.nh.on_event(function(evs)
 end)
 
 -- ---------------------------------------------------------------- rolling boulders
+-- (Rolling boulders are rolled - dodgeably - by missiles.lua; this draws
+-- one NetHack rolled at once itself, with no room to hand it over.)
 -- A rolling boulder trap's boulder (NetHack's "roll" event: tile, from,
 -- to, gone) slides along the ground from where it started to where it
 -- stopped, at ROLL_SPEED (facing you, like any boulder - not turning over);

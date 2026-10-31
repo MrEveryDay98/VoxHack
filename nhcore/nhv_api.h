@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-#define NHV_API_VERSION 17
+#define NHV_API_VERSION 18
 #define NHV_COLNO 80
 #define NHV_ROWNO 21
 
@@ -125,7 +125,8 @@ enum nhv_event_kind {
     NHV_EV_LEVEL_CHANGE,/* hero arrived on a different level */
     NHV_EV_BELL,
     NHV_EV_DELAY,       /* animation frame boundary (delay_output) */
-    NHV_EV_MISSILE,     /* missile outcome: "hit|miss|stop|pass|land <pid>" */
+    NHV_EV_MISSILE,     /* missile outcome: "hit|miss|stop|pass|land <pid>";
+                           a rolling boulder's: "roll <what> <pid> <x> <y>" */
     NHV_EV_COMBAT,      /* "attack <attacker m_id> <target m_id, 0 = hero> <melee>" */
     NHV_EV_SOUND,       /* sound/voice hook, see nhv_sound.c */
     NHV_EV_RAY,         /* ray outcome: "hit|miss|reflect|stop <rid>" */
@@ -441,6 +442,23 @@ typedef struct nhv_missile {
 /* missiles launched since the last call */
 NHV_API int nhv_get_missiles(nhv_missile *buf, int max);
 NHV_API void nhv_clear_missiles(void);
+
+/* Boulders a rolling boulder trap sets rolling don't roll on the grid
+ * either: the host rolls them, "#nhvbroll pid" as one rolls into the next
+ * square (NetHack's rules there: monsters, traps, doors, other boulders,
+ * walls), "#nhvbhit pid" when it reaches the hero's body. Each gives an
+ * NHV_EV_MISSILE event "roll <what> <pid> <x> <y>": on (rolling on from
+ * x,y), stop (stopped at x,y: placed there), gone (used up there), hit or
+ * miss (the hero: it rolls on either way). */
+typedef struct nhv_rolling {
+    unsigned pid;
+    int x, y;           /* the square it starts from */
+    int dx, dy;         /* the way it rolls */
+    int dist;           /* squares at most */
+    int tile;
+} nhv_rolling;
+/* rolling boulders set rolling since the last call */
+NHV_API int nhv_get_rolls(nhv_rolling *buf, int max);
 
 /* Light sources on the level: lit lamps and candles (carried, on the
  * floor, carried by monsters), glowing monsters, the hero if glowing.
