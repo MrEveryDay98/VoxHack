@@ -90,6 +90,9 @@ nhopts.OPTIONS = {
 	{key = "sam_voices", kind = "bool", label = "Spoken lines (SAM voices)", default = true, vox = true},
 	{key = "hallu_effects", kind = "bool", label = "Hallucination screen waves and colours",
 		default = true, vox = true},
+	-- (intro_play.lua reads it: off, the game starts at the title - the
+	-- title's Prologue button still plays it)
+	{key = "prologue", kind = "bool", label = "Prologue at startup", default = true, vox = true},
 }
 local BY_KEY = {}
 for _, o in ipairs(nhopts.OPTIONS) do

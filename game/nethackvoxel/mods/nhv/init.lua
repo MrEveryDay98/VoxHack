@@ -210,23 +210,13 @@ core.register_on_joinplayer(function(player)
 	player:set_pos(vector.new(U.TILE * 40, U.CEIL_Y + 300, U.TILE * 10))
 	nhv.player.freeze(true)
 	nhv.hud.fade(1, 0) -- (black until the opening, or the title, fades in)
-	-- the title screen: continue, new character, options, quit
-	local function title(p)
-		-- (the title's backdrop: no hand, weapon or HUD showing before the
-		-- title screen comes)
-		nhv.showroom.title(p)
-		core.after(0.5, function()
-			if p:is_player() then
-				nhv.title.show(p, true)
-			end
-		end)
-	end
-	-- the opening first, if there's one (intro_play.lua)
+	-- the opening first, if there's one (intro_play.lua), then the title
+	-- screen: continue, new character, options, quit
 	if nhv.intro_play.ready() then
 		player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
-		nhv.intro_play.start_game(player, title)
+		nhv.intro_play.start_game(player, nhv.title.enter)
 	else
-		title(player)
+		nhv.title.enter(player)
 	end
 end)
 

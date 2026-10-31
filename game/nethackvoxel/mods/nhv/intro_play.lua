@@ -26,10 +26,15 @@
 -- and cutting to it. The VoxHack engine flies the camera
 -- (core.nhv_camera_path: smooth, every frame); this times the rest.
 --
---   intro_play.ready()                the game has an opening to play
+--   intro_play.available()            the game has an opening (the title's
+--                                     Prologue button plays it again)
+--   intro_play.ready()                ... and plays it at startup (the
+--                                     NetHack option "Prologue at startup")
 --   intro_play.start_game(player, done)  put the forest up, play it, then done()
 --   intro_play.preview(player, data, done)  the editor's: play this, where it is
 --   intro_play.active                 true while it plays
+--   intro_play.pending                true while it's getting ready to (no
+--                                     title music meanwhile: sound.lua)
 
 local intro_play = {active = false}
 nhv.intro_play = intro_play
@@ -60,8 +65,8 @@ local function read_json()
 	return type(data) == "table" and type(data.points) == "table" and #data.points > 0 and data or nil
 end
 
-function intro_play.ready()
-	if not core.settings:get_bool("nhv_opening", true) or not core.nhv_camera_path then
+function intro_play.available()
+	if not core.nhv_camera_path then
 		return false
 	end
 	local f = io.open(SCHEMATIC, "rb")
@@ -70,6 +75,13 @@ function intro_play.ready()
 	end
 	f:close()
 	return read_json() ~= nil
+end
+function intro_play.ready()
+	if not core.settings:get_bool("nhv_opening", true)
+			or (nhv.nhopts and not nhv.nhopts.get("prologue")) then
+		return false
+	end
+	return intro_play.available()
 end
 
 local function wrap(text)
@@ -408,8 +420,20 @@ local function finish()
 end
 
 -- play these points (and signs), at: where the forest is
+-- you (out of sight) where the camera starts, looking its way: the map
+-- there's sent to you before it plays (follow() takes you on from there)
+local function to_first_point(player, data, at)
+	local p = data.points and data.points[1]
+	if not p then
+		return
+	end
+	player:set_pos(vector.offset(vector.add(at, p.pos), 0, -1.6, 0))
+	player:set_look_horizontal((p.yaw or 0) % (2 * math.pi))
+	player:set_look_vertical(p.pitch or 0)
+end
+
 local function play(player, data, at, done)
-	intro_play.active = true
+	intro_play.active, intro_play.pending = true, nil
 	run = {player = player, t0 = core.get_us_time(), ids = {}, huds = {}, signs = {}, done = done,
 		ratio = player:get_day_night_ratio(), sky = player:get_sky(true),
 		sky_time = nhv.sky and nhv.sky.time}
@@ -464,10 +488,9 @@ local function play(player, data, at, done)
 	for _, s in ipairs(data.signs or {}) do
 		run.sign_list[#run.sign_list + 1] = {pos = vector.add(at, s.pos), dir = s.dir, text = s.text}
 	end
-	-- (you're out of sight in the middle of it, where all of it is sent to
-	-- you - the camera's where the engine says)
-	local mid = vector.add(at, vector.divide(vector.add(data.min, data.max), 2))
-	player:set_pos(vector.new(mid.x, at.y + data.max.y + 2, mid.z))
+	-- (you're out of sight where the camera is - the camera's where the
+	-- engine says)
+	to_first_point(player, data, at)
 	core.nhv_camera_path(cam)
 	start_music()
 	if not (nhv.hud and nhv.hud.fade) then
@@ -564,6 +587,7 @@ function intro_play.start_game(player, done)
 		done(player)
 		return
 	end
+	intro_play.pending = true
 	local p1 = vector.add(ORIGIN, data.min)
 	local p2 = vector.add(ORIGIN, data.max)
 	local version = tostring(data.version or "")
@@ -577,10 +601,13 @@ function intro_play.start_game(player, done)
 			storage:set_string("opening_version", version)
 		end
 		keep_loaded(p1, p2)
+		-- (meanwhile, under the black, you're where it starts)
+		to_first_point(player, data, ORIGIN)
 		core.after(LOAD_S, function()
 			if player:is_player() then
 				play(player, data, ORIGIN, done)
 			else
+				intro_play.pending = nil
 				let_go()
 			end
 		end)

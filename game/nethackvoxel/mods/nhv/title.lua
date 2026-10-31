@@ -141,16 +141,21 @@ function title.formspec(player, black)
 			fs[#fs + 1] = ("style_type[button;bgcolor=#303040%s;textcolor=#FFFFFF%s]"):format(hex, hex)
 		end
 	end
-	-- (five buttons fit above the update notice)
-	local y = 3.8
+	-- (five buttons fit above the update notice; six closer together)
+	local prologue = nhv.intro_play and nhv.intro_play.available()
+	local six = saved and prologue
+	local y, step, h = six and 3.4 or 3.8, six and 0.9 or 1.0, six and 0.8 or 0.9
 	local function button(name, label)
-		fs[#fs + 1] = ("button[5.5,%s;5,0.9;%s;%s]"):format(y, name, E(label))
-		y = y + 1.0
+		fs[#fs + 1] = ("button[5.5,%s;5,%s;%s;%s]"):format(y, h, name, E(label))
+		y = y + step
 	end
 	if saved then
 		button("continue", "Continue (" .. saved .. ")")
 	end
 	button("new", "New game")
+	if prologue then
+		button("prologue", "Prologue")
+	end
 	button("options", "Options")
 	button("achievements", "Achievements")
 	button("quitgame", "Quit")
@@ -168,6 +173,34 @@ function title.formspec(player, black)
 			.. "<action name=get url=%s>Download it from GitHub</action>"):format(upd.tag, upd.url)))
 	end
 	return table.concat(fs)
+end
+
+-- the title screen coming in from black (the game starting, the opening
+-- over)
+function title.enter(player)
+	-- (the title's backdrop: no hand, weapon or HUD showing before the
+	-- title screen comes)
+	nhv.showroom.title(player)
+	core.after(0.5, function()
+		if player:is_player() then
+			title.show(player, true)
+		end
+	end)
+end
+
+-- the opening again (the Prologue button): out of the title's backdrop
+-- (it holds you there - the opening takes you round its forest), the
+-- screen and the music going, then back to the title
+function title.prologue(player)
+	title.open, title.fade_t0 = false, nil
+	core.close_formspec(player:get_player_name(), FORM)
+	nhv.showroom.hide(player)
+	player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
+	nhv.hud.fade(1, 0.6)
+	if nhv.sound then
+		nhv.sound.stop_music()
+	end
+	nhv.intro_play.start_game(player, title.enter)
 end
 
 -- Options or Achievements closed: back to the title screen if that's where
@@ -383,6 +416,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			start(player, title.saved_character(player))
 		elseif fields.new then
 			show_new(player)
+		elseif fields.prologue then
+			title.prologue(player)
 		elseif fields.options then
 			title.from_title = true
 			nhv.graphics.show(player)
