@@ -585,8 +585,8 @@ end
 -- settings, if any), or nil if it isn't voiced live by SAM
 function sam_settings(speaker, who, ln)
 	ln = ln or {}
-	-- (NetHack options > Spoken lines off: SAM says nothing - the intro
-	-- editor has no options of its own: it speaks)
+	-- (Options > SAM voice off: SAM says nothing - the intro editor has no
+	-- options of its own: it speaks)
 	if nhv.nhopts and not nhv.nhopts.get("sam_voices") then
 		return nil
 	end
@@ -652,12 +652,25 @@ end
 -- Voices play over each other; a speaker's new line cuts off their last
 -- (key: who's speaking - a monster, or a speaker of the catalog)
 local voices = {} -- key -> sound handle
+local by_sam = {} -- key -> true: that voice is SAM's
 local function start_voice(key, name, params)
 	key = key or "?"
 	if voices[key] then
 		core.sound_stop(voices[key])
 	end
 	voices[key] = core.sound_play(name, params)
+	by_sam[key] = name:sub(1, 8) == "nhv_sam:" or nil
+end
+
+-- everything SAM's saying cut off (SAM's voice turned off: graphics.lua)
+function sound.hush_sam()
+	for key in pairs(by_sam) do
+		if voices[key] then
+			core.sound_stop(voices[key])
+			voices[key] = nil
+		end
+	end
+	by_sam = {}
 end
 
 -- a speaker's line cut off (the intro skipped: intro.lua)
@@ -666,6 +679,7 @@ function sound.hush(key)
 		core.sound_stop(voices[key])
 		voices[key] = nil
 	end
+	by_sam[key] = nil
 end
 
 -- the sound name SAM reads a line from (sam_voice.h), nil if nothing to say
