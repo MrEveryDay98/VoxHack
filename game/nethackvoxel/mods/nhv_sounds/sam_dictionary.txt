@@ -67,3 +67,5 @@ terrified = terified
 recollection = rehcollection
 dungeon = dunjin
 cavern = cahvern
+aren't = arnt
+wealth = welth
