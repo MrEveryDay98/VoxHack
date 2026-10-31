@@ -268,7 +268,7 @@ function showroom.hide_huds(player)
 		-- (not the black fade over the world: the title fades in with it;
 		-- nor what's shown over the scene: the intro's narration)
 		if def.position and def.position.x ~= 9 and id ~= nhv.hud.ids.fade
-				and not showroom.keep[id] then
+				and not showroom.keep[id] and not nhv.hud.hidden_square(player, def) then
 			showroom.huds[id] = def.position
 			player:hud_change(id, "position", {x = 9, y = 9})
 		end

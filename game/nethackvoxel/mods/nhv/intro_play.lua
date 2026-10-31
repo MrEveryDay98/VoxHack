@@ -375,7 +375,7 @@ local function hide_huds(player)
 		-- (not the hotbar: off by its flag, below - moved away it's drawn
 		-- wrong)
 		if def.position and def.position.x ~= 9 and not keep[id] and def.type ~= "hotbar"
-				and not (nhv.hud and id == nhv.hud.ids.fade) then
+				and not (nhv.hud and (id == nhv.hud.ids.fade or nhv.hud.hidden_square(player, def))) then
 			run.huds[id] = def.position
 			player:hud_change(id, "position", {x = 9, y = 9})
 		end

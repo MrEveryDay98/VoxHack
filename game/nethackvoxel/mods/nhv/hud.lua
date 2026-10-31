@@ -452,6 +452,18 @@ end
 -- whether it scrolls.
 hud.map_scroll = 0 -- (squares the map is moved left: its middle shown off-centre)
 local MAP_SCROLLS = 256 -- (HUD style: moved across with the map, by the engine)
+-- (HUD style: drawn only while the big map's open - the HUD flag
+-- nhv_big_map. Its squares are kept while it's closed, and only the ones
+-- that changed sent when it opens again, not all of them each time: they
+-- were much of what a demo was)
+local BIG_MAP_ONLY = 512
+
+-- one of the big map's squares, hidden already - the map's closed: not to
+-- be moved off the screen with the rest of the HUD (showroom.lua,
+-- intro_play.lua), all 1600 of them
+function hud.hidden_square(player, def)
+	return math.floor((def.style or 0) / BIG_MAP_ONLY) % 2 == 1 and not player:hud_get_flags().nhv_big_map
+end
 local function big_map_scale(player)
 	local info = core.get_player_window_information(player:get_player_name())
 	if not info or not info.size or not info.real_hud_scaling then
@@ -638,8 +650,7 @@ end
 
 local function update_tiles(player, snap)
 	if not (hud.big_map and snap and snap.map) then
-		clear_tiles(player)
-		return
+		return -- (closed: they're kept, hidden, till it opens)
 	end
 	local s = big_map_scale(player)
 	if s ~= tiles.scale then
@@ -678,7 +689,7 @@ local function update_tiles(player, snap)
 						type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
 						offset = {x = (x + 0.5 - U.COLNO / 2) * s, y = (y + 0.5 - U.ROWNO / 2) * s},
 						scale = {x = s / TILE_PX, y = s / TILE_PX}, text = tex, z_index = 1,
-						style = MAP_SCROLLS,
+						style = MAP_SCROLLS + BIG_MAP_ONLY,
 					})
 				end
 			end
@@ -871,6 +882,7 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "style", MAP_SCROLLS) -- (the backdrop goes across with it)
 		player:hud_change(hud.ids.map, "text", BACKDROP)
 		update_tiles(player, nh.snap)
+		player:hud_set_flags({nhv_big_map = true})
 	else
 		local s, off = corner_scale(player), corner_offset(player)
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
@@ -879,7 +891,7 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = -off, y = off})
 		player:hud_change(hud.ids.map, "style", 0)
-		clear_tiles(player)
+		player:hud_set_flags({nhv_big_map = false}) -- (its squares hidden, kept)
 		if nh.snap and nh.snap.map then
 			player:hud_change(hud.ids.map, "text", map_png(nh.snap))
 		end
@@ -1024,6 +1036,8 @@ core.register_on_joinplayer(function(player)
 	-- wizard mode's world, built and taken apart, it's there; the editor
 	-- worlds don't hide it)
 	player:hud_set_flags({nhv_no_selection = not (nhv.wizard and nhv.wizard.on)})
+	-- (the big map's squares: none yet, for this player's HUD)
+	tiles.ids, tiles.shown, tiles.scale = {}, {}, nil
 	hud.ids.status = player:hud_add({
 		type = "text", position = {x = 0.5, y = 1}, alignment = {x = 0, y = -1},
 		offset = {x = 0, y = -90}, number = 0xFFFFFF, text = "",
