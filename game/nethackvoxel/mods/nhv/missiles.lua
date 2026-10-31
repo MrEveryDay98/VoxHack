@@ -55,6 +55,7 @@ local function remove_roll(r)
 		r.hidden:set_properties({is_visible = true})
 	end
 	missiles.rolls[r.pid] = nil
+	missiles.map_moved = true -- (off the map: missiles.update)
 end
 
 function missiles.clear()
@@ -137,7 +138,7 @@ local function start_roll(info)
 		obj:set_properties(nhv_tiles.look(info.tile, BOULDER_H))
 	end
 	local dir = vector.direction(pos, U.tile_center(info.x + info.dx, info.y + info.dy, roll_y()))
-	missiles.rolls[info.pid] = {pid = info.pid, obj = obj, pos = pos, dir = dir,
+	missiles.rolls[info.pid] = {pid = info.pid, obj = obj, pos = pos, dir = dir, tile = info.tile,
 		x = info.x, y = info.y, dx = info.dx, dy = info.dy, waiting = false}
 end
 
@@ -210,11 +211,36 @@ local function fly(m, dist, hp)
 	end
 end
 
--- its body against yours (yours above its top - jumping over it - misses)
+-- its body against yours (yours above its top - jumping over it - misses),
+-- and only in the square it's rolling through: its path, as NetHack's. (A
+-- square's 3 nodes across: beside its path - next to a diagonal one,
+-- where squares touch at their corners - the two bodies could still meet.)
+-- Never one rolling away from you: a boulder you pushed onto a rolling
+-- boulder trap starts right in front of you, rolling off.
 local function roll_touches(r, hp)
 	local dx, dz = r.pos.x - hp.x, r.pos.z - hp.z
-	return dx * dx + dz * dz < (ROLL_R + nhv.sim.HERO_R) ^ 2
-		and hp.y < r.pos.y + BOULDER_H / 2
+	if dx * dx + dz * dz >= (ROLL_R + nhv.sim.HERO_R) ^ 2 or hp.y >= r.pos.y + BOULDER_H / 2
+			or -dx * r.dir.x - dz * r.dir.z <= 0 then
+		return false
+	end
+	local rx, ry = U.pos_to_tile(r.pos)
+	local hx, hy = U.pos_to_tile(hp)
+	return rx == hx and ry == hy
+end
+
+-- The rolling boulders where they are, for the map (hud.lua): square index
+-- -> {tile, pos} (NetHack's own boulder is off its map till it stops)
+function missiles.rolling()
+	local out = {}
+	for _, r in pairs(missiles.rolls) do
+		if r.obj and r.tile then
+			local x, y = U.pos_to_tile(r.pos)
+			if U.in_map(x, y) then
+				out[U.idx(x, y)] = {tile = r.tile, pos = r.pos, pid = r.pid}
+			end
+		end
+	end
+	return out
 end
 
 -- on along the ground; into the next square: NetHack says what happens
@@ -264,6 +290,11 @@ function missiles.update(dturns)
 	local cam = U.camera_pos()
 	for _, r in pairs(missiles.rolls) do
 		roll(r, missiles.ROLL_SPEED * dturns, hp)
+		-- (into another square: the map shows it there - hud.lua)
+		local sx, sy = U.pos_to_tile(r.pos)
+		if r.sq ~= sx .. "," .. sy then
+			r.sq, missiles.map_moved = sx .. "," .. sy, true
+		end
 		if r.obj and r.obj:get_pos() then
 			r.obj:move_to(r.pos, true)
 			-- (facing the camera, as boulders do)
@@ -271,6 +302,10 @@ function missiles.update(dturns)
 				r.obj:set_yaw(math.atan2(cam.z - r.pos.z, cam.x - r.pos.x) - math.pi / 2)
 			end
 		end
+	end
+	if missiles.map_moved then
+		missiles.map_moved = false
+		nhv.hud.redraw_map()
 	end
 	-- outcomes need NetHack; these take no game time
 	while #missiles.queue > 0 and nh.ready() do

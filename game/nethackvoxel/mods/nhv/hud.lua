@@ -80,14 +80,29 @@ local function color_for(map, i)
 	return COL.unknown
 end
 
+-- the boulders rolling where you can see them (missiles.lua): square -> roll
+local function rolling_seen(map)
+	local out = {}
+	for i, r in pairs(nhv.missiles and nhv.missiles.rolling() or {}) do
+		if U.has(map.flags[i] or 0, U.LOC_CANSEE) then
+			out[i] = r
+		end
+	end
+	return out
+end
+hud.rolling_seen = rolling_seen
+
 local function map_png(snap)
 	local map, h = snap.map, snap.hero
 	local data = {}
+	local rolling = rolling_seen(map)
 	for y = 0, U.ROWNO - 1 do
 		for x = 0, U.COLNO - 1 do
 			local c
 			if x == h.x and y == h.y then
 				c = COL.hero
+			elseif rolling[U.idx(x, y)] then
+				c = COL.boulder
 			elseif x == 0 then
 				c = COL.unknown
 			else
@@ -523,13 +538,15 @@ end
 
 -- (bare: leave you and the monsters off it - the big map draws them where
 -- they really are instead: Options > Map icons)
-function hud.square_tex(map, h, x, y, bare)
+function hud.square_tex(map, h, x, y, bare, rolling)
 	local i = U.idx(x, y)
-	local top -- (you or a monster)
+	local top -- (you, a monster or a boulder rolling)
 	if bare then -- luacheck: ignore 542
 		-- (nothing on top)
 	elseif x == h.x and y == h.y then
 		top = h.tile
+	elseif rolling and rolling[i] then
+		top = rolling[i].tile
 	else
 		local c = color_for(map, i)
 		if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
@@ -633,6 +650,9 @@ local function update_tiles(player, snap)
 	-- (with the icons where they really are, the squares they're drawn
 	-- for - yours, the monsters' you see - leave them off)
 	local bare = {}
+	-- (boulders rolling: on their squares - or, with the icons where things
+	-- really are, as icons of their own)
+	local rolling = not hud.exact_icons() and rolling_seen(map) or nil
 	if hud.exact_icons() then
 		bare[U.idx(h.x, h.y)] = true
 		for _, e in pairs(nhv.mobs.mons) do
@@ -644,7 +664,7 @@ local function update_tiles(player, snap)
 	for y = 0, U.ROWNO - 1 do
 		for x = 1, U.COLNO - 1 do
 			local i = U.idx(x, y)
-			local tex = hud.square_tex(map, h, x, y, bare[i])
+			local tex = hud.square_tex(map, h, x, y, bare[i], rolling)
 			if tex ~= tiles.shown[i] then
 				tiles.shown[i] = tex
 				local id = tiles.ids[i]
@@ -703,6 +723,9 @@ local function update_map_icons(player)
 		if p then
 			want[key] = {tile = e.tile, p = p, z = 3}
 		end
+	end
+	for _, r in pairs(nh.snap.map and rolling_seen(nh.snap.map) or {}) do
+		want["roll" .. r.pid] = {tile = r.tile, p = r.pos, z = 3}
 	end
 	want.hero = {tile = h.tile, p = player:get_pos(), z = 4} -- (you on top)
 	for key, w in pairs(want) do
@@ -863,6 +886,20 @@ local function place_map(player)
 	end
 end
 hud.place_map = place_map
+
+-- the map drawn again between NetHack's snapshots (a boulder rolling into
+-- another square, or done: missiles.lua)
+function hud.redraw_map()
+	local player = nhv.player.get()
+	if not (player and hud.ids.map and nh.snap and nh.snap.map) then
+		return
+	end
+	if hud.big_map then
+		update_tiles(player, nh.snap)
+	else
+		player:hud_change(hud.ids.map, "text", map_png(nh.snap))
+	end
+end
 
 -- the map's scroll to the engine, in pixels (it eases the pictures there)
 local scroll_sent
