@@ -1,5 +1,5 @@
--- The sea round a level: Medusa's island stands in an ocean and the Plane
--- of Fire in a sea of lava, going on past the level's edge (its invisible
+-- The sea round a level: Medusa's island and Juiblex's swamp stand in an
+-- ocean and the Plane of Fire in a sea of lava, going on past the level's edge (its invisible
 -- walls: terrain.lua's bounds) as far as you can see, into the fog.
 --
 -- The sea is the level's own pool (or lava): the column of nodes built for
@@ -22,6 +22,7 @@ local storage = core.get_mod_storage()
 -- the levels and what they stand in
 local SEAS = {
 	["medusa-1"] = "water", ["medusa-2"] = "water", ["medusa-3"] = "water", ["medusa-4"] = "water",
+	["juiblex"] = "water",
 	["fire"] = "lava",
 }
 local LIQUID = {water = {[T.POOL] = true, [T.MOAT] = true}, lava = {[T.LAVAPOOL] = true}}
