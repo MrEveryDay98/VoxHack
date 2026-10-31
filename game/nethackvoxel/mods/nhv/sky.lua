@@ -165,6 +165,12 @@ function sky.apply(player, fog)
 	local own = sky.fog
 	if own and own.on then
 		fog = {fog_distance = -1, fog_start = tonumber(own.start) or 0.3, fog_color = own.color}
+	elseif fog then
+		-- (none of its own: the sky's colour - black, below ground. Said
+		-- every time: the engine keeps a colour it was given, so the
+		-- opening's mist would stay over the game's far halls)
+		fog = table.copy(fog)
+		fog.fog_color = "#00000000"
 	end
 	if core.nhv_fog then
 		if own and own.on then
