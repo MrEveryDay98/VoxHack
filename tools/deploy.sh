@@ -10,8 +10,12 @@ GAME=$ROOT/game/nethackvoxel
 [ -f "$ROOT/build/nhcore/build.ninja" ] || cmake -S "$ROOT/nhcore" -B "$ROOT/build/nhcore" -G Ninja -DCMAKE_BUILD_TYPE=Release
 ninja -C "$ROOT/build/nhcore"
 
-# 2. Luanti (its icon first: VoxHack's, from the game's ICON.png)
-python -I "$ROOT/tools/make_icon.py"
+# 2. Luanti (its icon first: VoxHack's, from the game's ICON.png - with a
+# Python that has Pillow: this shell's own may not, Windows' py may; the
+# icons made last are in the repository, so without one they stay as they are)
+ICON_PY=python
+python -c "import PIL" 2>/dev/null || ICON_PY="py -3"
+$ICON_PY -I "$ROOT/tools/make_icon.py" || echo "(icon not remade: no Python with Pillow)"
 [ -f "$LUANTI/build/build.ninja" ] || cmake -S "$LUANTI" -B "$LUANTI/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=TRUE -DBUILD_UNITTESTS=FALSE
 ninja -C "$LUANTI/build"
 
