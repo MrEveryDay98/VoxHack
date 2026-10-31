@@ -13,3 +13,5 @@ __pycache__/
 /mod_data/nhv/areas_backup_*/
 # generated voice lines (not published yet; takes are kept in voice_work)
 /game/nethackvoxel/mods/nhv_sounds/sounds/voices/
+# the changelog's copy the game reads (tools/deploy.sh, make_release.py)
+/game/nethackvoxel/CHANGELOG.md

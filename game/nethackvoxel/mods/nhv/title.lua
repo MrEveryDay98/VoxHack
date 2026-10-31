@@ -170,7 +170,11 @@ function title.formspec(player, black)
 	if fading then
 		return table.concat(fs)
 	end
-	fs[#fs + 1] = "label[0.4,9.6;" .. theme.dim(E(title.VERSION .. " - based on NetHack 3.7")) .. "]"
+	-- (and what's new in it, and before: changelog.lua)
+	fs[#fs + 1] = ("hypertext[0.4,9.35;12,0.55;version;%s]"):format(E(("<global valign=middle color=%s>"
+		.. "<tag name=action color=#78C8FF hovercolor=#FFFFFF>%s - based on NetHack 3.7   "
+		.. "<action name=changelog>Changelog</action>"):format(theme.retro() and "#55FFFF" or "#A0A0A0",
+		title.VERSION)))
 	-- a newer release out (update.lua): say so, with a link to get it
 	local upd = nhv.update and nhv.update.available
 	if upd then
@@ -427,6 +431,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			title.prologue(player)
 		elseif fields.demos then
 			nhv.demos.show(player)
+		elseif fields.version == "action:changelog" then
+			nhv.changelog.show(player)
 		elseif fields.options then
 			title.from_title = true
 			nhv.graphics.show(player)

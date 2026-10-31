@@ -34,6 +34,8 @@ python -I "$ROOT/tools/make_wall_textures.py" "$GAME/mods/nhv_tiles/textures"
 
 # 4. assemble
 cp "$ROOT/build/nhcore/nethack.dll" "$LUANTI/bin/"
+# (the title's Changelog reads the game's own copy: changelog.lua)
+cp "$ROOT/CHANGELOG.md" "$GAME/CHANGELOG.md"
 rm -rf "$GAME/mods/nhv/nhdata"
 cp -r "$ROOT/build/nhcore/nhdata" "$GAME/mods/nhv/nhdata"
 # the editors' data (prefabs, areas, sizes) lives in the repository's mod_data;

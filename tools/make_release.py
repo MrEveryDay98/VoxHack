@@ -146,6 +146,8 @@ def stage(out):
 	for d in ENGINE_DIRS:
 		copytree(os.path.join(LUANTI, d), os.path.join(engine, d))
 	# the game
+	# (the title's Changelog reads the game's own copy: changelog.lua)
+	shutil.copy2(os.path.join(ROOT, "CHANGELOG.md"), os.path.join(GAME, "CHANGELOG.md"))
 	copytree(GAME, os.path.join(engine, "games", "nethackvoxel"),
 			lambda _d, names: [n for n in names if skip(n)])
 	for f in MOD_DATA:
