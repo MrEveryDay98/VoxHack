@@ -223,8 +223,9 @@ local function set_speed(player)
 	-- while the game starts behind it: still, and nothing pulls you down;
 	-- its hold and gravity would fight, the view shaking)
 	local scene = nhv.showroom and nhv.showroom.bd
-	if player_mod.frozen or nhv.clock.searching() or (nhv.cutscene and nhv.cutscene.active) or scene then
-		speed = 0 -- (a prompt is up; searching; a cutscene; the scene)
+	if player_mod.frozen or nhv.clock.searching() or nhv.clock.occupied
+			or (nhv.cutscene and nhv.cutscene.active) or scene then
+		speed = 0 -- (a prompt is up; searching; occupied - clock.lua; a cutscene; the scene)
 	end
 	-- Only the walking speeds change: the engine's "speed" also scales how
 	-- fast you speed up AND slow down, so at 0 you'd keep sliding at
@@ -989,8 +990,9 @@ end)
 local was_searching, was_dragging = false
 core.register_globalstep(function()
 	local player = player_mod.get()
-	-- (searching started or ended: stand still / walk again)
-	local searching = nhv.clock.searching()
+	-- (searching or occupied - clock.lua - started or ended: stand still /
+	-- walk again)
+	local searching = nhv.clock.searching() or nhv.clock.occupied
 	-- (or started or stopped dragging the iron ball: slower / faster)
 	local dragging = nhv.mobs.dragging or false
 	if player and (searching ~= was_searching or dragging ~= was_dragging) then

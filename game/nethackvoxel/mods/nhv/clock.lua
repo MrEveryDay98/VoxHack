@@ -12,6 +12,11 @@
 -- until it's paid. So game time never runs ahead of or behind the clock,
 -- however fast you act.
 --
+-- An action that took many turns - an occupation: reading a spellbook,
+-- eating a big meal, putting on armour (NetHack plays it out at once) -
+-- holds you still while its time plays out, fast, as being helpless does:
+-- not a long wait you could walk about in (clock.occupied).
+--
 -- Options > Time "Real time" (setting nhv_time_mode = realtime) turns the
 -- Superhot part off: time always runs at the full rate. (Menus and prompts
 -- still pause it, and the action wheel still slows it.)
@@ -35,7 +40,9 @@ clock.MIN_SCALE = tonumber(core.settings:get("nhv_time_min")) or 0
 clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
-clock.FAST = 6              -- searching, or helpless: time runs this x the full rate
+clock.FAST = 6              -- searching, helpless or occupied: time runs this x the full rate
+clock.OCCUPIED_TURNS = 3    -- an action owing more than this: you're occupied until it's paid
+clock.occupied = false
 
 -- Searching passes time fast: while Search is held (one search after
 -- another; hotbar.lua) and while a counted search (Ctrl+X) plays out, time
@@ -154,9 +161,9 @@ function clock.update(dtime, player)
 	if nhv.wheel and nhv.wheel.is_open() then
 		target = clock.MIN_SCALE * clock.WHEEL_SLOW -- choosing an action: nearly frozen
 	end
-	-- (searching, or helpless - asleep, frozen...: fast forward, the world
-	-- keeping up, until it ends)
-	local fast = clock.searching() or helpless
+	-- (searching, or helpless - asleep, frozen... - or occupied: fast
+	-- forward, the world keeping up, until it ends)
+	local fast = clock.searching() or helpless or clock.occupied
 	if fast then
 		target = clock.FAST
 		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
@@ -174,6 +181,9 @@ function clock.update(dtime, player)
 		if clock.debt < 0 then
 			clock.acc = clock.acc - clock.debt
 			clock.debt = 0
+		end
+		if clock.debt <= 0 then
+			clock.occupied = false
 		end
 	else
 		clock.acc = clock.acc + dtg
@@ -247,6 +257,9 @@ nh.on_snapshot(function(snap, action)
 			local paid = math.min(clock.acc, owed)
 			clock.acc = clock.acc - paid
 			clock.add_debt(owed - paid)
+			if owed - paid > clock.OCCUPIED_TURNS then
+				clock.occupied = true
+			end
 		end
 	end
 end)
