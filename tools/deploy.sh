@@ -10,7 +10,8 @@ GAME=$ROOT/game/nethackvoxel
 [ -f "$ROOT/build/nhcore/build.ninja" ] || cmake -S "$ROOT/nhcore" -B "$ROOT/build/nhcore" -G Ninja -DCMAKE_BUILD_TYPE=Release
 ninja -C "$ROOT/build/nhcore"
 
-# 2. Luanti
+# 2. Luanti (its icon first: VoxHack's, from the game's ICON.png)
+python -I "$ROOT/tools/make_icon.py"
 [ -f "$LUANTI/build/build.ninja" ] || cmake -S "$LUANTI" -B "$LUANTI/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRUN_IN_PLACE=TRUE -DBUILD_UNITTESTS=FALSE
 ninja -C "$LUANTI/build"
 
