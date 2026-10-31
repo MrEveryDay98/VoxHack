@@ -966,7 +966,8 @@
  "master": {
   "effects": 100,
   "music": 60,
-  "voices": 100
+  "voices": 100,
+  "typed_pitch_max": 100
  },
  "acoustics": {
   "room": {
