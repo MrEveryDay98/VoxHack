@@ -512,6 +512,11 @@ local SAM_VOICES = {
 	["Little Old Lady"] = {speed = 82, pitch = 32, throat = 145, mouth = 145},
 	["Extra-Terrestrial"] = {speed = 100, pitch = 64, throat = 150, mouth = 200},
 }
+-- the highest SAM says cleanly (a lower number is a higher voice; its own
+-- highest, the Little Old Lady, is 32): a female's or a mood's raise goes
+-- no higher - beyond it SAM's voice breaks up. A speaker tuned higher than
+-- that keeps its own. (The VoxHack Editor's samvoice.py has the same.)
+local SAM_HIGHEST = 30
 -- playback pitch by NetHack size class (tiny .. gigantic): big ones deeper
 local SIZE_PITCH = {[0] = 1.2, 1.1, 1.0, 0.93, 0.86, 0.8}
 
@@ -595,6 +600,7 @@ function sam_settings(speaker, who, ln)
 	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
 		st[k] = named and base[k] or tonumber(ss[k]) or base[k]
 	end
+	local own_pitch = st.pitch
 	local mon = who and who.m_id and who.m_id > 0
 		and nhv.mobs and nhv.mobs.mons["id" .. who.m_id]
 	if who and who.m_id and who.m_id > 0 then
@@ -628,6 +634,7 @@ function sam_settings(speaker, who, ln)
 		st.hifi, st.smooth = 1, 0
 		st.whisper = mood.whisper and 1 or 0
 	end
+	st.pitch = math.max(st.pitch, math.min(SAM_HIGHEST, own_pitch))
 	for _, k in ipairs({"speed", "pitch", "throat", "mouth"}) do
 		st[k] = clamp255(st[k])
 	end

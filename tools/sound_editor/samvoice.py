@@ -144,6 +144,11 @@ def monster_dice(m_id):
     return out
 
 
+# the highest SAM says cleanly: a female's or a mood's raise goes no higher
+# (a speaker tuned higher keeps its own) - sound.lua's SAM_HIGHEST
+SAM_HIGHEST = 30
+
+
 def settings_for(sam, m_id=0, female=False, moods=None):
     """A speaker's SAM settings as the game works them out for a monster
     (m_id) of that speaker: its variation, and higher if female; and the
@@ -156,6 +161,7 @@ def settings_for(sam, m_id=0, female=False, moods=None):
             st[k] = float(sam.get(k, base[k]))
         except (TypeError, ValueError):
             st[k] = base[k]
+    own_pitch = st["pitch"]
     if m_id:
         var = float(sam.get("variation", 25) or 0) / 100
         d1, d2, d3, d4 = monster_dice(m_id)
@@ -179,6 +185,7 @@ def settings_for(sam, m_id=0, female=False, moods=None):
         st["tuning"] = {k: int((max(v, 100) if pct[k] > 100 else v) * pct[k] / 100 + 0.5)
                         for k, v in st["tuning"].items()}
         st.update(hifi=True, smooth=False, whisper=bool(mood.get("whisper")))
+    st["pitch"] = _clamp(max(st["pitch"], min(SAM_HIGHEST, own_pitch)))
     return st
 
 
