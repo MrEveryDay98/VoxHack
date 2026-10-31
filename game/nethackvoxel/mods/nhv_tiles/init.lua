@@ -225,6 +225,9 @@ end
 nhv_tiles.FLASH = {
 	w = "^[colorize:#ffffff:70",
 	r = "^[colorize:#ff2020:150",
+	-- (not a flash: a monster in plain view that NetHack says you can't
+	-- see - in the dark - drawn all black, mobs.lua)
+	k = "^[multiply:#000000",
 }
 
 -- Something invisible that you see anyway (See_invisible): Doom's

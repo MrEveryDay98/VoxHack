@@ -548,6 +548,9 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
             f.flags |= NHV_MF_HIDER;
         if (m->mundetected)
             f.flags |= NHV_MF_HIDDEN;
+        if ((m->minvis && !See_invisible) || M_AP_TYPE(m) != M_AP_NOTHING
+            || m->mundetected)
+            f.flags |= NHV_MF_CONCEALED;
         if (!m->mpeaceful && nhv_mon_keeps_distance(m))
             f.flags |= NHV_MF_KEEPAWAY;
         if (m->msleeping)

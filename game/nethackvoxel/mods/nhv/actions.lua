@@ -472,7 +472,8 @@ local function pole_target(player, prefer_id)
 	local look = player:get_look_dir()
 	local best, best_a
 	for _, e in pairs(nhv.mobs.mons) do
-		local body = e.id and e.id > 0 and nhv.sim.body(e.id)
+		-- (not one only seen in the dark: NetHack's applying needs it seen)
+		local body = e.id and e.id > 0 and not e.silhouette and nhv.sim.body(e.id)
 		if body and nhv.sim.in_reach(e.id, pos, mult) then
 			local a = swing_angle(look, body, pos)
 			if e.id == prefer_id then

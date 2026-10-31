@@ -32,6 +32,7 @@ local MF = {
 	TAME = 0x001, PEACEFUL = 0x002, FLEE = 0x004, CANMOVE = 0x008,
 	SEES_U = 0x010, GRID = 0x020, VISIBLE = 0x040, CONFUSED = 0x080,
 	HIDER = 0x100, HIDDEN = 0x200, KEEPAWAY = 0x400, ASLEEP = 0x800,
+	CONCEALED = 0x1000, -- (invisible, mimicking, hiding: not to be seen)
 }
 sim.MF = MF
 

@@ -37,7 +37,7 @@ local function look_for(e, kind)
 		e.fuzz_frame = nhv_tiles.fuzz_frame()
 		return props
 	end
-	local props = nhv_tiles.look(e.tile, e.h, kind)
+	local props = nhv_tiles.look(e.tile, e.h, kind or (e.silhouette and "k" or nil))
 	props.use_texture_alpha, props.infotext, props.glow = false, "", 0
 	return props
 end
@@ -276,9 +276,10 @@ local function apply_sprite(e, m)
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
 	local ghost = U.has(m.flags, U.MON_SENSED) and (U.has(m.flags, U.MON_UNSEEN) or e.occluded == true)
 	local fuzz = U.has(m.flags, U.MON_SEEINVIS)
+	local silhouette = m.silhouette == true
 	if e.tile ~= m.tile or e.h ~= h or e.solid ~= solid or e.shk ~= shk or e.ghost ~= ghost
-			or e.fuzz ~= fuzz then
-		e.tile, e.h, e.ghost, e.fuzz = m.tile, h, ghost, fuzz
+			or e.fuzz ~= fuzz or e.silhouette ~= silhouette then
+		e.tile, e.h, e.ghost, e.fuzz, e.silhouette = m.tile, h, ghost, fuzz, silhouette
 		local props = monster_props(e)
 		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
 		props.physical = solid
@@ -289,15 +290,26 @@ local function apply_sprite(e, m)
 	end
 end
 
--- Noclipping in wizard mode (wizard.lua), you see every monster in plain
--- view of where you are, as if you were there - not through walls - besides
--- what the hero sees: each {id, x, y, mndx, size, tile, flags = 0,
--- noclip_only}. Looked for a few times a second (the globalstep below).
+-- Monsters in plain view of where you are - not through walls, as far as
+-- the fog - that NetHack says you can't see (in the dark, beyond its light)
+-- are drawn where they are anyway, all black: one coming up a dark hallway
+-- is seen coming, not appearing in the doorway. Not on the map (hud.lua),
+-- and not one that's hidden whatever the light - invisible, mimicking,
+-- hiding - nor while you're blind or hallucinating. Noclipping in wizard
+-- mode (wizard.lua) they're seen as they are, as if you were there. Each
+-- {id, x, y, mndx, size, tile, flags = 0, noclip_only, silhouette}; looked
+-- for a few times a second (the globalstep below).
 local noclip_seen, noclip_sig = {}, ""
 local wall_between
+local CONCEALED = 0x1000 -- (sim.MF.CONCEALED)
 local function find_noclip_seen(snap)
 	local player = core.get_connected_players()[1]
-	if not (player and nhv.wizard and nhv.wizard.noclipping()) then
+	if not player then
+		return {}
+	end
+	local noclip = nhv.wizard and nhv.wizard.noclipping()
+	local hf = snap.hero.flags or 0
+	if not noclip and (U.has(hf, U.HERO.BLIND) or U.has(hf, U.HERO.HALLU)) then
 		return {}
 	end
 	local known = {}
@@ -310,14 +322,17 @@ local function find_noclip_seen(snap)
 	local far = nhv.hud.fog_distance()
 	local out = {}
 	for _, m in ipairs(core.nh_get_all_monsters and core.nh_get_all_monsters() or {}) do
-		if not known[m.id] and m.x > 0 then
-			local p = U.tile_center(m.x, m.y, U.STAND_Y + 1)
+		if not known[m.id] and m.x > 0 and (noclip or not U.has(m.flags or 0, CONCEALED)) then
+			-- (where its body really is: the middle of it)
+			local body = nhv.sim.body(m.id)
+			local p = body and vector.new(body.pos.x, U.STAND_Y + 1, body.pos.z)
+				or U.tile_center(m.x, m.y, U.STAND_Y + 1)
 			if vector.distance(eye, p) < far and not wall_between(eye, p) then
 				-- (its picture: the monster's own glyph, male or female - the
 				-- glyphs start with every monster, then again female)
 				local gi = core.nh_glyph_info(m.mndx)
 				out[#out + 1] = {id = m.id, x = m.x, y = m.y, mndx = m.mndx, size = m.size,
-					tile = gi and gi.tile or 0, flags = 0, noclip_only = true}
+					tile = gi and gi.tile or 0, flags = 0, noclip_only = true, silhouette = not noclip}
 			end
 		end
 	end
@@ -1418,9 +1433,6 @@ local function update_noclip(dtime)
 		return
 	end
 	noclip_t = 0
-	if #noclip_seen == 0 and not (nhv.wizard and nhv.wizard.noclipping()) then
-		return
-	end
 	if noclip_signature(find_noclip_seen(snap)) ~= noclip_sig then
 		update_monsters(snap)
 	end

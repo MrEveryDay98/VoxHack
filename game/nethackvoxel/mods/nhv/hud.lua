@@ -636,7 +636,7 @@ local function update_tiles(player, snap)
 	if hud.exact_icons() then
 		bare[U.idx(h.x, h.y)] = true
 		for _, e in pairs(nhv.mobs.mons) do
-			if e.x and e.tile then
+			if e.x and e.tile and not e.silhouette then
 				bare[U.idx(e.x, e.y)] = true
 			end
 		end
@@ -698,7 +698,8 @@ local function update_map_icons(player)
 	local s = big_map_scale(player)
 	local want = {}
 	for key, e in pairs(nhv.mobs.mons) do
-		local p = e.tile and e.obj and e.obj:get_pos()
+		-- (not one only seen in the dark: NetHack says you don't see it)
+		local p = e.tile and not e.silhouette and e.obj and e.obj:get_pos()
 		if p then
 			want[key] = {tile = e.tile, p = p, z = 3}
 		end
