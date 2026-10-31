@@ -229,6 +229,14 @@ function sound.muffle(pos)
 		return 0
 	end
 	local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
+	-- (right next to you, a diagonal too, it isn't behind anything: a
+	-- shopkeeper beside the door greeting you as you step in, the line to
+	-- them across the doorframe's corner, came out muffled)
+	local ex, ey = U.pos_to_tile(eye)
+	local sx, sy = U.pos_to_tile(pos)
+	if math.abs(ex - sx) <= 1 and math.abs(ey - sy) <= 1 then
+		return 0
+	end
 	local blocked = 0
 	for _, off in ipairs(AROUND) do
 		if not clear_path(eye, vector.add(pos, off)) then
