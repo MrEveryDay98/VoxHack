@@ -2,6 +2,21 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.13.0 (alpha) - 2026-10-30
+
+- **A prologue.** Before the title, NetHack's opening story is told by the narrator as the camera travels through a forest: past a lone house, through a town where the watch keep the road, to the ruins at the entrance to the Mazes of Menace (and their gift shop), from dawn to night, with its own music. Press Enter to skip it. NetHack Options > Prologue at startup turns it off, and the title's new Prologue button plays it again.
+- **Retro mode** (Options): the game as an 800x600 screen, scaled up by whole pixels to fill yours. Colours come from the tiles' own palette (16 colours, or 256 in steps of brightness), with banded, dithered light. It has its own HUD, menus, text and map sizes, a small compass, and messages in a small 8x8 font (IBM EGA 8x8, CC BY-SA 4.0). The corner map is pixel-perfect.
+- **Shadows** (Options > Shadows): monsters, objects and the prologue's trees cast their own silhouette on the floor's texture pixels, solid and as thick as the sprite, turning as they turn.
+- **Light on surfaces** (Options): smooth, per texture pixel, or per texture pixel dithered, in any mode, with the number of light steps, the dithering pattern and the light's resolution (texture pixels, or half) to choose.
+- **Lit rooms are lit evenly.** No darker corners on floors and walls, lit floors fully bright, and no ambient occlusion. The light you carry follows you exactly, not block by block.
+- **The big map is pixel-perfect:** each square is the tile's 16 pixels times a whole number, with no gaps. On small screens it's wider than the screen and follows you as you go; the mouse wheel scrolls it while you stand still.
+- **One Options screen,** with Game and NetHack tabs (changes on the NetHack tab are kept when you switch tabs). The pause menu's Options opens it.
+- **Skies:** a sun and moon of their own, and dawn and dusk coloured as each sky says.
+- **Character creation to the intro:** your character, pet and pedestal stay as they are while the camera glides round to frame them, held by hand (a slow bob and sway).
+- Equipment slots have short captions (NECK, HEAD, EYES ... WPN, ALT, QUIVER).
+- No outline round what you point at, outside wizard mode.
+- Fixed: extruded sprites were mirrored (their backs were turned to you), flat ones were flipped after switching sprite style, and your own sprite kept its old style after switching.
+
 ## v0.12.0 (alpha) - 2026-10-29
 
 - **Your story is told as you begin.** Start a new character and the legacy of the Amulet is narrated, a paragraph at a time, over your character and pet on their pedestal, with your own god and title ("It is written in the Book of Amaterasu Omikami..."), the title music playing. Then the screen goes white, then black, and you're on the first level. Press Enter to skip it.
