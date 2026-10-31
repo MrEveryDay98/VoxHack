@@ -131,6 +131,7 @@ dofile(path .. "help.lua")
 dofile(path .. "commands.lua")
 dofile(path .. "nhopts.lua")
 dofile(path .. "title.lua")
+dofile(path .. "demos.lua")
 dofile(path .. "hotbar.lua")
 dofile(path .. "containers.lua")
 dofile(path .. "actions.lua")
@@ -211,8 +212,11 @@ core.register_on_joinplayer(function(player)
 	nhv.player.freeze(true)
 	nhv.hud.fade(1, 0) -- (black until the opening, or the title, fades in)
 	-- the opening first, if there's one (intro_play.lua), then the title
-	-- screen: continue, new character, options, quit
-	if nhv.intro_play.ready() then
+	-- screen: continue, new character, options, quit (back from a demo
+	-- played from the title's Demos - the engine says: straight to the title)
+	local from_demo = core.settings:get_bool("nhv_from_demo", false)
+	core.settings:remove("nhv_from_demo")
+	if nhv.intro_play.ready() and not from_demo then
 		player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
 		nhv.intro_play.start_game(player, nhv.title.enter)
 	else

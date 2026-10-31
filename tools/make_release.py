@@ -83,10 +83,12 @@ levels, /atlas <number> goes to one, /atlas ceilings takes the ceilings off.
 
 Demos
 -----
-Options > Record demos records each game you play, from when it starts, to
-engine\demos. Drop a demo onto "Play Demo.bat" in that folder to watch it
-(run on its own, it plays the newest): Space pauses, W and S speed it up
-and slow it down, Esc leaves. A demo plays only in the version that
+Options > Record demos (or the checkbox on the title's Demos) records each
+game you play, from when it starts, to engine\demos. The title's Demos lists
+them, each with who played it, how deep they got and their level; click one
+to watch it. Or drop a demo onto "Play Demo.bat" in that folder (run on its
+own, it plays the newest). Space pauses, W and S speed it up and slow it
+down, Esc leaves. A demo plays only in the version that
 recorded it.
 
 Starting over

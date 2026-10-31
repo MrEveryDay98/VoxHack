@@ -1,6 +1,6 @@
 -- Title screen: shown when the game opens (and after a game ends), before
--- NetHack starts. Continue a saved character, make a new one, open the
--- options, or quit. The logo is a texture in nhv_tiles (nhv_title_logo.png,
+-- NetHack starts. Continue a saved character, make a new one, see the
+-- prologue again, watch a demo (demos.lua), open the options, or quit. The logo is a texture in nhv_tiles (nhv_title_logo.png,
 -- made by tools/make_title_placeholders.py); behind it all, the Astral
 -- Plane's sky (showroom.lua).
 
@@ -141,10 +141,16 @@ function title.formspec(player, black)
 			fs[#fs + 1] = ("style_type[button;bgcolor=#303040%s;textcolor=#FFFFFF%s]"):format(hex, hex)
 		end
 	end
-	-- (five buttons fit above the update notice; six closer together)
+	-- (five buttons fit above the update notice; six or seven closer
+	-- together)
 	local prologue = nhv.intro_play and nhv.intro_play.available()
-	local six = saved and prologue
-	local y, step, h = six and 3.4 or 3.8, six and 0.9 or 1.0, six and 0.8 or 0.9
+	local n = 5 + (saved and 1 or 0) + (prologue and 1 or 0)
+	local y, step, h = 3.8, 1.0, 0.9
+	if n == 6 then
+		y, step, h = 3.4, 0.9, 0.8
+	elseif n >= 7 then
+		y, step, h = 3.2, 0.8, 0.72
+	end
 	local function button(name, label)
 		fs[#fs + 1] = ("button[5.5,%s;5,%s;%s;%s]"):format(y, h, name, E(label))
 		y = y + step
@@ -156,6 +162,7 @@ function title.formspec(player, black)
 	if prologue then
 		button("prologue", "Prologue")
 	end
+	button("demos", "Demos")
 	button("options", "Options")
 	button("achievements", "Achievements")
 	button("quitgame", "Quit")
@@ -418,6 +425,8 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			show_new(player)
 		elseif fields.prologue then
 			title.prologue(player)
+		elseif fields.demos then
+			nhv.demos.show(player)
 		elseif fields.options then
 			title.from_title = true
 			nhv.graphics.show(player)

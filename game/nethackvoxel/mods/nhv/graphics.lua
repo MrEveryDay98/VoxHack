@@ -33,7 +33,8 @@ local SHADOWS = {"On", "Off"}
 local SHADOW_OPACITY = {{20, "20%"}, {40, "40%"}, {60, "60%"}, {80, "80%"}, {100, "100% (solid)"}}
 local DRAWN = {"Kept", "Removed (after a restart)"}
 -- recording demos (the VoxHack engine's nhv_demo: each session from its
--- start, to engine/demos; played with Launchers\Play Demo.bat)
+-- start, to engine/demos; played from the title's Demos, demos.lua - where
+-- this is too - or with engine/demos/Play Demo.bat)
 local DEMOS = {"Off", "On (next start)"}
 local RETRO = {"Off", "On"}
 -- light per texture pixel (the VoxHack engine's nhv_texel_light): like a
