@@ -39,7 +39,13 @@ local DEMOS = {"Off", "On (next start)"}
 local RETRO = {"Off", "On"}
 -- the voice lines are spoken in (sound.voice_mode): SAM, Animalese, or
 -- none - what's said is still written; recorded voices still play
-local VOICES = {{"sam", "SAM"}, {"animalese", "Animalese"}, {"off", "Off (muted)"}}
+local VOICES = {{"sam", "SAM"}, {"animalese", "Animalese"}, {"beeps", "Beeps and boops"}, {"off", "Off (muted)"}}
+-- spoken lines (speech.lua): in a box of their own on the right, or with
+-- the messages; above the speaker's head while they're in sight; how fast
+-- Animalese and beeps say them, a letter at a time (a letter's length, %)
+local SPEECH_BOX = {"In their own box", "With the messages"}
+local SPEECH_HEADS = {"On", "Off"}
+local SPEECH_SPEED = {{160, "Slow"}, {100, "Normal"}, {70, "Fast"}, {45, "Very fast"}}
 -- light per texture pixel (the VoxHack engine's nhv_texel_light): like a
 -- lightmap, light and shadow in steps of the textures' own pixels
 local TEXEL_LIGHT = {{"off", "Smooth"}, {"on", "Per texture pixel"}, {"dither", "Per texture pixel, dithered"}}
@@ -136,6 +142,12 @@ function graphics.formspec()
 	add(row(y, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1))
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Sound") .. "]", 1.0)
 	add(row(y, "Voices", "voices", names(VOICES), choice(VOICES, "nhv_voice", nhv.sound.voice_mode())))
+	add(row(y, "Typing speed", "speech_speed", labels(SPEECH_SPEED),
+		pick(SPEECH_SPEED, "nhv_speech_speed", 100)))
+	add(row(y, "Spoken lines", "speech_box", table.concat(SPEECH_BOX, ","),
+		core.settings:get_bool("nhv_speech_box", true) and 1 or 2))
+	add(row(y, "Speech above heads", "speech_heads", table.concat(SPEECH_HEADS, ","),
+		core.settings:get_bool("nhv_speech_heads", true) and 1 or 2))
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Graphics") .. "]", 1.0)
 	add(row(y, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2))
 	if retro then
@@ -349,6 +361,21 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if vc and vc[1] ~= nhv.sound.voice_mode() then
 		core.settings:set("nhv_voice", vc[1])
 		nhv.sound.hush_sam() -- (what's being said now stops: the next line's in the new voice)
+		changed = true
+	end
+	if set_num(SPEECH_SPEED, fields.speech_speed, "nhv_speech_speed", 100) then
+		changed = true
+	end
+	local sb = tonumber(fields.speech_box)
+	if sb and (sb == 1) ~= core.settings:get_bool("nhv_speech_box", true) then
+		core.settings:set_bool("nhv_speech_box", sb == 1)
+		nhv.speech.clear()
+		changed = true
+	end
+	local sh = tonumber(fields.speech_heads)
+	if sh and (sh == 1) ~= core.settings:get_bool("nhv_speech_heads", true) then
+		core.settings:set_bool("nhv_speech_heads", sh == 1)
+		nhv.speech.clear()
 		changed = true
 	end
 	local dm = tonumber(fields.demos)

@@ -583,10 +583,11 @@ end
 
 -- Options > Voices (graphics.lua): the speakers SAM voices are spoken by
 -- SAM, or in Animalese (sam_voice.h: every letter a little sound of its
--- own, the same speaker's pitch and pace), or not at all ("off")
+-- own, the same speaker's pitch and pace), or Beeps and boops (a beep a
+-- character, each a little higher or lower), or not at all ("off")
 function sound.voice_mode()
 	local v = core.settings:get("nhv_voice")
-	if v == "sam" or v == "animalese" or v == "off" then
+	if v == "sam" or v == "animalese" or v == "beeps" or v == "off" then
 		return v
 	end
 	-- (before there was a choice: NetHack options' Spoken lines)
@@ -661,6 +662,8 @@ function sam_settings(speaker, who, ln)
 	return st
 end
 
+sound.spoken = {} -- text -> {t, unit}: a line being said a letter at a time (speech.lua)
+
 -- Voices play over each other; a speaker's new line cuts off their last
 -- (key: who's speaking - a monster, or a speaker of the catalog)
 local voices = {} -- key -> sound handle
@@ -671,7 +674,8 @@ local function start_voice(key, name, params)
 		core.sound_stop(voices[key])
 	end
 	voices[key] = core.sound_play(name, params)
-	by_sam[key] = (name:find("^nhv_sam:") or name:find("^nhv_animalese:")) and true or nil
+	by_sam[key] = (name:find("^nhv_sam:") or name:find("^nhv_animalese:") or name:find("^nhv_beeps:"))
+		and true or nil
 end
 
 -- everything SAM (or Animalese) is saying cut off (Options > Voices
@@ -696,21 +700,25 @@ function sound.hush(key)
 end
 
 -- the sound name SAM reads a line from (sam_voice.h), nil if nothing to say
--- - or Animalese (Options > Voices), as near as it can to SAM's pitch,
--- pace and effects
+-- - or Animalese, or Beeps and boops (Options > Voices), as near as they
+-- can to SAM's pitch, pace and effects; then for those, a letter's length
+-- in seconds (as played: speech.lua types it at that pace)
 local function sam_name(st, text)
-	local animalese = sound.voice_mode() == "animalese"
-	-- (Animalese spells what's written, not how SAM's told to say it)
-	text = ((animalese and text or st.text) or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
+	local mode = sound.voice_mode()
+	local typed = mode == "animalese" or mode == "beeps"
+	-- (those say what's written, not how SAM's told to say it)
+	text = ((typed and text or st.text) or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
 	if not text:find("%w") then
 		return nil
 	end
-	if animalese then
+	if typed then
 		-- (SAM: a lower pitch number is a higher voice, 64 its own; a higher
-		-- speed number is slower, 72 its own)
+		-- speed number is slower, 72 its own; Options > Typing speed on top)
 		local pitch = math.max(60, math.min(180, (64 / st.pitch) ^ 0.6 * 100))
 		local length = math.max(60, math.min(180, st.speed / 72 * 100))
-		return ("nhv_animalese:%d,%d,0,%s|%s"):format(pitch, length, st.effects, text)
+		length = math.max(25, math.min(400, length * nhv.speech.letter_pct() / 100))
+		return ("nhv_%s:%d,%d,0,%s|%s"):format(mode, pitch, length, st.effects, text),
+			0.075 * math.floor(length) / 100
 	end
 	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s,%d,%d,%d,%d,%d,%d|%s"):format(st.speed, st.pitch, st.throat,
 		st.mouth, st.sing, st.smooth, st.tone, st.effects, st.hifi, st.bright, st.breath, st.movement,
@@ -722,9 +730,20 @@ local function speak_sam(st, text, pos, key)
 	if not p then
 		return false
 	end
-	local name = sam_name(st, text)
+	local name, letter = sam_name(st, text)
 	if not name then
 		return false
+	end
+	if letter then
+		-- (when it started, and its pace - played faster for a small
+		-- speaker: speech.lua types it along)
+		local now = core.get_us_time() / 1e6
+		for k, v in pairs(sound.spoken) do
+			if now - v.t > 5 then
+				sound.spoken[k] = nil
+			end
+		end
+		sound.spoken[nhv.speech.clean(text)] = {t = now, unit = letter / st.pitch_mul}
 	end
 	local params = {gain = st.volume / 100 * ((sound.cfg.master.voices or 100) / 100), pitch = st.pitch_mul}
 	if pos then
@@ -904,7 +923,8 @@ nh.on_event(function(evs)
 				-- an instrument played: its notes (improvised or a tune)
 				sound.tune(tonumber(parts[2]) or 74, parts[4] or "", tonumber(parts[3]) or 50)
 			elseif kind == "verbal" then
-				local text = table.concat(parts, "|", 7)
+				-- (parts[7], [8]: seen, the speaker's name - speech.lua)
+				local text = table.concat(parts, "|", 9)
 				-- (the ascension's lines are said in its scene: cutscene.lua)
 				if nhv.cutscene and nhv.cutscene.ascended then
 					goto next_ev

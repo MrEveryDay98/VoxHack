@@ -7,7 +7,9 @@
  *
  * Event text formats (fields separated by '|'):
  *   effect|<name>|<volume>[|<x>|<y>|<m_id or 0>]   (where it happens, if known)
- *   verbal|<speaker m_id or 0>|<speaker monster name>|<gender>|<tone>|<volume>|<text>
+ *   verbal|<speaker m_id or 0>|<speaker monster name>|<gender>|<tone>|<volume>|<seen 0|1>|<name>|<text>
+ *       (seen: the hero can see or sense the speaker; name: as a message
+ *       would put it then - "Asidonhopo", "The watchman" - or empty)
  *   achievement|<a>|<b>|<c>
  *   ambience|<action>|<id>|<proximity>
  *   notes|<instrument>|<volume>|<notes>
@@ -101,7 +103,8 @@ nhv_snd_verbal(char *text, int32_t gender, int32_t tone, int32_t vol,
                int32_t moreinfo)
 {
     unsigned id = (unsigned) gv.voice.serialno;
-    const char *who = "";
+    const char *who = "", *name = "";
+    int seen = 0;
     struct monst *m;
 
     /* the Oracle's rumors are said with no speaker set, only her voice:
@@ -119,12 +122,15 @@ nhv_snd_verbal(char *text, int32_t gender, int32_t tone, int32_t vol,
     for (m = fmon; m; m = m->nmon)
         if (m->m_id == id && !DEADMONSTER(m)) {
             who = pmname(m->data, m->female ? FEMALE : MALE);
+            seen = canspotmon(m) ? 1 : 0;
+            if (seen)
+                name = noit_Monnam(m);
             break;
         }
     if (!*who)
         who = (id == 4) ? "deity" : (id == 3) ? "artifact" : "voice";
-    sound_event("verbal|%u|%s|%d|%d|%d|%s", id, who, (int) gender, (int) tone,
-                (int) vol, text ? text : "");
+    sound_event("verbal|%u|%s|%d|%d|%d|%d|%s|%s", id, who, (int) gender, (int) tone,
+                (int) vol, seen, name, text ? text : "");
 }
 
 struct sound_procs vissound_procs = {

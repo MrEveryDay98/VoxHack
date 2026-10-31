@@ -1544,7 +1544,7 @@ nh.on_event(function(evs)
 	-- (offering the Amulet on your own high altar: the ascension's scene,
 	-- its lines said there: cutscene.lua)
 	nhv.cutscene.ascension_check(evs)
-	for _, ev in ipairs(evs) do
+	for i, ev in ipairs(evs) do
 		if (ev.kind == "message" or ev.kind == "raw") and not hud.silenced(ev.text) then
 			if hud.amulet_feel(ev.text) then -- luacheck: ignore 542
 				-- (its own line: above)
@@ -1553,8 +1553,10 @@ nh.on_event(function(evs)
 				if player then
 					core.chat_send_player(player:get_player_name(), ev.text)
 				end
-			elseif hud.inscription(ev.text) then
-				-- (not with the messages, but still in the log)
+			elseif hud.inscription(ev.text) or (nhv.speech and nhv.speech.take(evs, i)) then
+				-- (not with the messages - an inscription, or a spoken line:
+				-- over the speaker's head or in its own box, speech.lua -
+				-- but still in the log)
 				local player = nhv.player.get()
 				if player then
 					core.chat_send_player(player:get_player_name(), ev.text)

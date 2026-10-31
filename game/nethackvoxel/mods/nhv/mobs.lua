@@ -1403,6 +1403,8 @@ function wall_between(eye, p)
 	return false
 end
 
+mobs.wall_between = wall_between -- (speech.lua: a speaker in plain view)
+
 -- sensed monsters: in plain view, or behind a wall (a ghost)? checked a few
 -- times a second
 local occl_t = 0
