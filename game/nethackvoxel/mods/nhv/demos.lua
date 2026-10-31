@@ -2,12 +2,14 @@
 -- VoxHack engine records them, client/nhv_demo.h), newest first, each with
 -- its class's picture and "<name>-<dlvl>-<xl>-<date>". One is played with
 -- the game let go meanwhile (no game runs as a demo plays), then it's back
--- to the title. One from an older version of VoxHack is red: it asks to be
--- deleted - one this VoxHack can't play (another network protocol), or one
--- from before demos kept their details (it can still be played).
+-- to the title. One this VoxHack can't play - from an older version, whose
+-- demos were of another format - is red: it asks to be deleted.
 --
 -- As you play, the game's details go to the engine (core.nhv_demo_info),
--- kept beside the demo being recorded - what the list shows.
+-- kept beside the demo being recorded - what the list shows; with NetHack's
+-- id for the game, so a saved game continued later goes on in its demo.
+-- Back to the title from a game being recorded, the session starts again
+-- (demos.to_title): its demo's kept then, and shows in the list.
 
 local nh = nhv.nh
 local theme = nhv.theme
@@ -38,13 +40,35 @@ nh.on_snapshot(function(snap)
 		gender = U.has(h.flags or 0, U.HERO.FEMALE) and "female" or "male"
 	end
 	local info = {name = h.name, role = role or "", gender = gender or "", dlvl = h.depth,
-		xl = h.xlvl, version = nhv.title.TAG}
-	local key = table.concat({info.name, info.role, info.gender, info.dlvl, info.xl}, "|")
+		xl = h.xlvl, version = nhv.title.TAG,
+		game = core.nh_game_id and ("%d"):format(core.nh_game_id()) or ""}
+	local key = table.concat({info.name, info.role, info.gender, info.dlvl, info.xl, info.game}, "|")
 	if key ~= sent then
 		sent = key
 		core.nhv_demo_info(info)
 	end
 end)
+
+-- back to the title from a game (saved, or over): a game being recorded -
+-- the session started again, its demo kept (the engine's; the title comes
+-- with it, straight away - init.lua); otherwise just the title
+function demos.to_title(player)
+	if not (core.nhv_demo_recording and core.nhv_demo_recording()) then
+		nhv.title.show(player, true)
+		return
+	end
+	local pname = player:get_player_name()
+	nhv.hud.fade(1, 0.4)
+	if nhv.sound then
+		nhv.sound.stop_music()
+	end
+	core.nhv_demo_restart()
+	core.after(0.5, function()
+		if core.get_player_by_name(pname) then
+			core.disconnect_player(pname, "nhv:restart")
+		end
+	end)
+end
 
 -- ---------------------------------------------------------------- the list
 local SHEET
@@ -69,9 +93,9 @@ function demos.title(d)
 		d.date ~= "" and d.date:sub(1, 10) or d.file)
 end
 
--- from an older version: can't be played, or doesn't say what's in it
+-- from an older version: this one can't play it
 local function older(d)
-	return not d.playable or next(d.info) == nil
+	return not d.playable
 end
 
 local function size_text(n)
@@ -106,8 +130,10 @@ local function formspec()
 			fs[#fs + 1] = ("style[demo_%d;bgcolor=#B02020;textcolor=#FFFFFF]"):format(i)
 			label = label .. "  (older version)"
 		end
-		fs[#fs + 1] = ("button[1.1,%s;%s,0.8;demo_%d;%s]"):format(y, W - 4.4, i, E(label))
-		fs[#fs + 1] = ("label[%s,%s;%s]"):format(W - 3.15, y + 0.4, theme.dim(E(size_text(d.size))))
+		fs[#fs + 1] = ("button[1.1,%s;%s,0.8;demo_%d;%s]"):format(y, W - 4.6, i, E(label))
+		fs[#fs + 1] = ("label[%s,%s;%s]"):format(W - 3.35, y + 0.4, theme.dim(E(size_text(d.size))))
+		fs[#fs + 1] = ("button[%s,%s;0.8,0.8;del_%d;X]tooltip[del_%d;Delete it]"):format(
+			W - 1.9, y, i, i)
 		y = y + 0.95
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
@@ -115,7 +141,7 @@ local function formspec()
 		math.max(0, math.ceil((y - LIST_H) * 10)))
 	fs[#fs + 1] = ("scrollbar[%s,1.8;0.3,%s;vertical;list;0]"):format(W - 0.55, LIST_H)
 	fs[#fs + 1] = ("label[0.4,%s;%s]"):format(H - 1.25, theme.dim(E(
-		"Space pauses a demo, W and S speed it up and slow it down, Esc leaves it.")))
+		"Space pauses a demo, W and S speed it up and slow it down, Esc pauses it and leaves.")))
 	fs[#fs + 1] = ("button[%s,%s;3,0.8;back;Back]"):format(W / 2 - 1.5, H - 0.95)
 	local n = 0
 	for _, d in ipairs(list) do
@@ -129,24 +155,19 @@ local function formspec()
 end
 
 local function delete_formspec(d)
-	local why = d.playable and (", before demos kept who played them, how deep they got"
-		.. " and their level. It may still play.") or ", and this one can't play it."
-	local fs = theme.head(10, 4.6)
-		.. "label[0.4,0.6;" .. theme.title("Delete this demo?") .. "]"
-		.. ("textarea[0.4,1.1;9.2,2.1;;;%s]"):format(E(demos.title(d)
-			.. " was recorded with an older version of VoxHack" .. why))
-	if d.playable then
-		return fs .. "button[0.4,3.4;2.9,0.9;delete;Delete it]button[3.55,3.4;2.9,0.9;play;Play it]"
-			.. "button[6.7,3.4;2.9,0.9;keep;Keep it]"
-	end
-	return fs .. "button[0.4,3.4;4.4,0.9;delete;Delete it]button[5.2,3.4;4.4,0.9;keep;Keep it]"
+	local fs = theme.head(10, 4.6) .. "label[0.4,0.6;" .. theme.title("Delete this demo?") .. "]"
+	local text = older(d)
+		and demos.title(d) .. " was recorded with an older version of VoxHack, and this one can't play it."
+		or demos.title(d) .. " is deleted for good."
+	return fs .. ("textarea[0.4,1.1;9.2,2.1;;;%s]"):format(E(text))
+		.. "button[0.4,3.4;4.4,0.9;delete;Delete it]button[5.2,3.4;4.4,0.9;keep;Keep it]"
 end
 
 local function delete_old_formspec(n)
 	return theme.head(10, 4.6)
 		.. "label[0.4,0.6;" .. theme.title("Delete the older demos?") .. "]"
 		.. ("textarea[0.4,1.1;9.2,2.1;;;%s]"):format(E(("The %d demos in red, recorded with older"
-			.. " versions of VoxHack, are deleted."):format(n)))
+			.. " versions of VoxHack that this one can't play, are deleted."):format(n)))
 		.. "button[0.4,3.4;4.4,0.9;delete;Delete them]button[5.2,3.4;4.4,0.9;keep;Keep them]"
 end
 
@@ -175,6 +196,11 @@ local function play(player, d)
 	end)
 end
 
+local function ask_delete(player, d)
+	asked = d
+	core.show_formspec(player:get_player_name(), DELETE, delete_formspec(d))
+end
+
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname == FORM then
 		if fields.record then
@@ -184,15 +210,17 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			return true
 		end
 		for k in pairs(fields) do
-			local i = tonumber(k:match("^demo_(%d+)$"))
-			local d = i and list[i]
-			if d then
-				if not older(d) then
-					play(player, d)
+			local what, i = k:match("^(%a+)_(%d+)$")
+			local d = i and list[tonumber(i)]
+			if d and what == "demo" then
+				if older(d) then
+					ask_delete(player, d)
 				else
-					asked = d
-					core.show_formspec(player:get_player_name(), DELETE, delete_formspec(d))
+					play(player, d)
 				end
+				return true
+			elseif d and what == "del" then
+				ask_delete(player, d)
 				return true
 			end
 		end
@@ -207,15 +235,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		return true
 	elseif formname == DELETE then
-		local d = asked
+		if fields.delete and asked then
+			core.nhv_demo_delete(asked.file)
+		end
 		asked = nil
-		if fields.play and d and d.playable then
-			play(player, d)
-			return true
-		end
-		if fields.delete and d then
-			core.nhv_demo_delete(d.file)
-		end
 		demos.show(player)
 		return true
 	elseif formname == DELETE_OLD then

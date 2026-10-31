@@ -86,9 +86,10 @@ Demos
 Options > Record demos (or the checkbox on the title's Demos) records each
 game you play, from when it starts, to engine\demos. The title's Demos lists
 them, each with who played it, how deep they got and their level; click one
-to watch it. Or drop a demo onto "Play Demo.bat" in that folder (run on its
-own, it plays the newest). Space pauses, W and S speed it up and slow it
-down, Esc leaves. A demo plays only in the version that
+to watch it. A saved game continued later goes on in the same demo. Or drop
+a demo onto "Play Demo.bat" in that folder (run on its own, it plays the
+newest). Space pauses, W and S speed it up and slow it down, Esc pauses it
+and leaves. A demo plays only in the version that
 recorded it.
 
 Starting over

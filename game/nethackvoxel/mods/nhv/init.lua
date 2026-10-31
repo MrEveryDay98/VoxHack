@@ -213,10 +213,11 @@ core.register_on_joinplayer(function(player)
 	nhv.hud.fade(1, 0) -- (black until the opening, or the title, fades in)
 	-- the opening first, if there's one (intro_play.lua), then the title
 	-- screen: continue, new character, options, quit (back from a demo
-	-- played from the title's Demos - the engine says: straight to the title)
-	local from_demo = core.settings:get_bool("nhv_from_demo", false)
-	core.settings:remove("nhv_from_demo")
-	if nhv.intro_play.ready() and not from_demo then
+	-- played from the title's Demos, or from a game being recorded - the
+	-- engine says: straight to the title, demos.lua)
+	local to_title = core.settings:get_bool("nhv_to_title", false)
+	core.settings:remove("nhv_to_title")
+	if nhv.intro_play.ready() and not to_title then
 		player:hud_set_flags({wielditem = false, crosshair = false, nhv_camera_lock = true})
 		nhv.intro_play.start_game(player, nhv.title.enter)
 	else
