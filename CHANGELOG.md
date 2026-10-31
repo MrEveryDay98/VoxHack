@@ -2,6 +2,11 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.14.1 (alpha) - 2026-10-31
+
+- **Fixed: a boulder you pushed onto a rolling boulder trap could hit you as it rolled away.** A rolling boulder now only hits you in the square it's rolling through, coming towards you - not from the square beside its path, and never rolling away.
+- **Rolling boulders are on the map** while they roll, where you can see them: the corner map, the big map, and as icons where they are (Map icons > Where they are).
+
 ## v0.14.0 (alpha) - 2026-10-31
 
 - **Choose your voices.** Options > Voices: SAM, **Animalese** (every letter a little sound of its own, as in Animal Crossing - its letters are from animalese.js by Josh Simmons, CC BY 4.0), **Beeps and boops** (an 8-bit beep a character, each a few notes higher or lower than the speaker's own), or Off. Every speaker keeps their own pitch, pace and effects. Prologue and intro voices can be muted on their own.
