@@ -35,7 +35,7 @@ GAME_SKIP = ["*.bak", "*.before-*", "*.tmp", "__pycache__",
 	"voices"]  # (recordings made in the editor: not in public releases)
 # the prefabs and sizes made in the editor (the game reads them from mod_data)
 MOD_DATA = ["prefabs.dat", "scales.dat"]
-LAUNCHERS = ["Play VoxHack.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1"]
+LAUNCHERS = ["Play VoxHack.bat", "VoxHack Level Atlas.bat", "make_shortcut.ps1", "VoxHack.ico"]
 # (renamed: in a release it's for starting over, not just testing)
 RESET = ("Reset NetHack Save (testing).bat", "Reset NetHack Save.bat")
 

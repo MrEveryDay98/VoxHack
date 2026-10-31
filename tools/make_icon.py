@@ -1,7 +1,9 @@
 """VoxHack's icon, from the game's ICON.png (32x32, drawn by hand), for the
 engine: its window's icon (textures/base/pack/nhv_icon.png, 128x128) and
 the program's own (misc/voxhack-icon.ico: 16 to 256 pixels, built into
-luanti.exe - Explorer, the taskbar, the Play shortcut). Bigger sizes are its
+luanti.exe - Explorer, the taskbar); and the Play shortcut's
+(Launchers/VoxHack.ico, the same: Windows keeps a program's icon long after
+it's changed, a shortcut's own file it reads again). Bigger sizes are its
 pixels made bigger, sharp; the small ones averaged down.
 
 Usage: python -I tools/make_icon.py   (tools/deploy.sh runs it)
@@ -15,6 +17,7 @@ SRC = os.path.join(ROOT, "game", "nethackvoxel", "mods", "nhv_tiles", "textures"
 LUANTI = os.path.join(ROOT, "external", "luanti")
 WINDOW = os.path.join(LUANTI, "textures", "base", "pack", "nhv_icon.png")
 ICO = os.path.join(LUANTI, "misc", "voxhack-icon.ico")
+SHORTCUT_ICO = os.path.join(ROOT, "Launchers", "VoxHack.ico")
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
 
 
@@ -44,6 +47,7 @@ def main():
     # (each size of its own: Pillow's own resizing of the biggest would blur them)
     sized(im, 256).save(out, format="ICO", sizes=[(n, n) for n in ICO_SIZES],
                         append_images=[sized(im, n) for n in ICO_SIZES if n != 256])
+    write_if_changed(SHORTCUT_ICO, out.getvalue())
     if write_if_changed(ICO, out.getvalue()):
         # (the build doesn't see the icon change, only the script naming it)
         os.utime(os.path.join(LUANTI, "misc", "winresource.rc"))

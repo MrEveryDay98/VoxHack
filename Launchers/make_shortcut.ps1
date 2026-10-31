@@ -14,6 +14,10 @@ if (-not (Test-Path $exe)) {
 	Write-Host "Can't find the game (looked for engine\bin\luanti.exe)."
 	exit 1
 }
+# (VoxHack's icon, from its own file: Windows keeps a program's icon long
+# after it's changed - tools/make_icon.py)
+$icon = Join-Path $PSScriptRoot "VoxHack.ico"
+if (Test-Path $icon) { $icon = "$icon,0" } else { $icon = "$exe,0" }
 
 # player names: letters, digits, - and _ only
 $name = ($env:USERNAME -replace '[^A-Za-z0-9_-]', '_')
@@ -29,7 +33,7 @@ foreach ($dir in $places) {
 	$s.TargetPath = $exe
 	$s.Arguments = "--go --world worlds\nethack --name $name --password `"`""
 	$s.WorkingDirectory = $engine
-	$s.IconLocation = "$exe,0"
+	$s.IconLocation = $icon
 	$s.Description = "Play VoxHack"
 	$s.Save()
 	Write-Host "Made $lnk"
