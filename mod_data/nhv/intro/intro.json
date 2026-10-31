@@ -80,47 +80,8 @@
 	[
 		{
 			"blend" : true,
-			"delay" : 0,
+			"delay" : 3,
 			"fade_in" : "black",
-			"index" : -1,
-			"line" : "",
-			"mood" : "calm",
-			"pitch" : -0.13543754816055298,
-			"pos" : 
-			{
-				"x" : 194,
-				"y" : -5,
-				"z" : 75
-			},
-			"seconds" : 3,
-			"sync" : true,
-			"time" : 0.16666666666666666,
-			"transition" : "glide",
-			"voice" : "Narrator",
-			"yaw" : 0.4953245222568512
-		},
-		{
-			"blend" : true,
-			"delay" : 0,
-			"index" : 0,
-			"line" : "",
-			"mood" : "calm",
-			"pitch" : 0.17174039781093597,
-			"pos" : 
-			{
-				"x" : 155,
-				"y" : 4,
-				"z" : 155
-			},
-			"seconds" : 0,
-			"sync" : true,
-			"time" : 0.95833333333333337,
-			"transition" : "black",
-			"voice" : "Narrator",
-			"yaw" : 0.50492364168167114
-		},
-		{
-			"delay" : 0,
 			"index" : 1,
 			"line" : "Recently, you have begun to find yourself unfulfilled and distant in your daily occupation. Strange dreams of prospecting, stealing, crusading, and combat have haunted you in your sleep for many months, but you aren't sure of the reason. You wonder whether you have in fact been having those dreams all your life, and somehow managed to forget about them until now.",
 			"mood" : "calm",
@@ -133,6 +94,7 @@
 			},
 			"seconds" : 3,
 			"sync" : true,
+			"time" : 0.1875,
 			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 2.523047924041748
@@ -152,6 +114,7 @@
 			},
 			"seconds" : 3,
 			"sync" : true,
+			"time" : 0.33333333333333331,
 			"transition" : "glide",
 			"voice" : "Narrator",
 			"yaw" : 4.4336600303649902
@@ -170,6 +133,7 @@
 			},
 			"seconds" : 2,
 			"sync" : false,
+			"time" : 0.5,
 			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 5.0534262657165527
@@ -248,6 +212,7 @@
 			"yaw" : 1.5908676385879517
 		},
 		{
+			"blend" : true,
 			"delay" : 0,
 			"index" : 12,
 			"line" : "In the morning you awake, collect your belongings, and set off for the dungeon. After several days of uneventful travel, you see the ancient ruins that mark the entrance to the Mazes of Menace. It is late at night, so you make camp at the entrance and spend the night sleeping under the open skies. ",
@@ -261,6 +226,7 @@
 			},
 			"seconds" : 3,
 			"sync" : true,
+			"time" : 0.1875,
 			"transition" : "glide",
 			"voice" : "Narrator",
 			"yaw" : 0.91367995738983154
@@ -279,6 +245,7 @@
 			},
 			"seconds" : 3,
 			"sync" : true,
+			"time" : 0.18055555555555555,
 			"transition" : "black",
 			"voice" : "Narrator",
 			"yaw" : 1.9659391641616821
@@ -295,11 +262,11 @@
 			},
 			"pos" : 
 			{
-				"x" : 64,
-				"y" : -2,
-				"z" : 207
+				"x" : 66,
+				"y" : -3,
+				"z" : 218
 			},
-			"text" : "SOUVENIRS"
+			"text" : "WELCOME TO THE\nMAZES OF MENACE\n(and gift shop)"
 		},
 		{
 			"dir" : 
@@ -310,11 +277,11 @@
 			},
 			"pos" : 
 			{
-				"x" : 66,
-				"y" : -3,
-				"z" : 218
+				"x" : 64,
+				"y" : -2,
+				"z" : 207
 			},
-			"text" : "WELCOME TO THE\nMAZES OF MENACE\n(and gift shop)"
+			"text" : "SOUVENIRS"
 		}
 	],
 	"time" : 0.5,
@@ -4496,5 +4463,5 @@
 			"z" : 240
 		}
 	],
-	"version" : 1793393674
+	"version" : 1793410513
 }
