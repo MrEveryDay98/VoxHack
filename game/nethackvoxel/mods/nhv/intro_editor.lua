@@ -246,7 +246,8 @@ local function cam_form(pos, c)
 		"field[0.4,1.3;2,0.8;index;Number (order);", esc(c.index), "]",
 		"field[2.8,1.3;3.6,0.8;voice;Said by;", esc(c.voice or "Narrator"), "]",
 		"field[6.8,1.3;3.8,0.8;mood;Mood (angry, sad, afraid, calm, whisper);", esc(c.mood), "]",
-		"textarea[0.4,2.6;10.2,2.2;line;What's said here;", esc(c.line), "]",
+		"textarea[0.4,2.6;10.2,2.2;line;What's said here (Enter: a new page - 2 seconds to read, then the next);",
+		esc(c.line), "]",
 		"checkbox[0.4,5.4;sync;Go on to the next point in the time it takes to say;", c.sync ~= false and "true" or "false", "]",
 
 		"field[0.4,6.4;3,0.8;seconds;Otherwise: seconds;", esc(c.seconds or 3), "]",

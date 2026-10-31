@@ -100,19 +100,36 @@ local function wrap(text)
 	return table.concat(lines, "\n")
 end
 
--- how long a point's line takes to say (or to read, with no voice)
-local function line_seconds(p)
-	if not p.line or p.line == "" then
-		return 0
-	end
+-- how long a page of a point's line takes to say (or to read, with no voice)
+local function page_seconds(p, text)
 	-- (Options > Prologue and intro voices off: only shown)
 	local s = nhv.sound and nhv.sound.story_voices()
-		and nhv.sound.say_seconds(p.voice or "Narrator", p.line, p.mood ~= "" and p.mood or nil, true) or 0
+		and nhv.sound.say_seconds(p.voice or "Narrator", text, p.mood ~= "" and p.mood or nil, true) or 0
 	if s > 0 then
 		return s, true
 	end
 	-- (no voice: time to read it - or to type it, speech.lua)
-	return math.max(MIN_LINE_S, #p.line * READ_S, nhv.speech.typing_seconds(p.line) + 1), false
+	return math.max(MIN_LINE_S, #text * READ_S, nhv.speech.typing_seconds(text) + 1), false
+end
+
+-- A point's line in pages: each line of it (Enter, in the intro editor)
+-- said on its own, then PAGE_PAUSE_S to read it before the words are
+-- cleared for the next. Its whole time, and the pages: {text, secs,
+-- voiced, at (seconds from the line's start)}
+local PAGE_PAUSE_S = 2
+local function line_seconds(p)
+	local list, total = {}, 0
+	for text in ((p.line or "") .. "\n"):gmatch("(.-)\r?\n") do
+		if text:find("%S") then
+			if #list > 0 then
+				total = total + PAGE_PAUSE_S
+			end
+			local secs, voiced = page_seconds(p, text)
+			list[#list + 1] = {text = text, secs = secs, voiced = voiced, at = total}
+			total = total + secs
+		end
+	end
+	return total, list
 end
 
 -- The timeline: the camera's points (for the engine) and what happens when
@@ -155,10 +172,13 @@ local function timeline(points, at)
 			t = t + OPEN_S
 		end
 		last_out = nil
-		local secs, voiced = line_seconds(p)
-		if secs > 0 then
-			event({t = t, line = p, voiced = voiced})
-			event({t = t + secs + 0.3, line = false, of = p})
+		local secs, list = line_seconds(p)
+		for k, pg in ipairs(list) do
+			event({t = t + pg.at, line = p, page = pg})
+			-- (the last page cleared as it ends; the others as the next comes)
+			if k == #list then
+				event({t = t + pg.at + pg.secs + 0.3, line = false, of = pg})
+			end
 		end
 		local delay = tonumber(p.delay) or 0
 		local move = p.sync ~= false and secs > 0 and secs or (tonumber(p.seconds) or 3)
@@ -561,16 +581,17 @@ core.register_globalstep(function(dtime)
 			finish()
 		elseif ev.line ~= nil then
 			if ev.line then
-				run.saying = ev.line
+				local pg = ev.page
+				run.saying = pg
 				-- (typed a letter at a time in Animalese and beeps: below)
-				run.typer = nhv.speech.typer(wrap(ev.line.line), ev.line.line)
+				run.typer = nhv.speech.typer(wrap(pg.text), pg.text)
 				set_words("")
-				if ev.voiced and nhv.sound then
+				if pg.voiced and nhv.sound then
 					local p = ev.line
-					nhv.sound.say(p.voice or "Narrator", p.line, "opening", p.mood ~= "" and p.mood or nil, true)
+					nhv.sound.say(p.voice or "Narrator", pg.text, "opening", p.mood ~= "" and p.mood or nil, true)
 				end
 			elseif ev.of == run.saying then
-				-- (its own line's done - not the next one's, already up)
+				-- (its own page's done - not the next one's, already up)
 				run.saying, run.typer = nil, nil
 				set_words("")
 			end
