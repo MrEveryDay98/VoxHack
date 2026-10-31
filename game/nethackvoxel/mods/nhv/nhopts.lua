@@ -84,10 +84,6 @@ nhopts.OPTIONS = {
 	{key = "verbose", kind = "bool", label = "Verbose messages", opt = "verbose", default = false},
 	-- (VoxHack's own: not given to NetHack; signs.lua reads it)
 	{key = "shop_signs", kind = "bool", label = "Signs over shop doors", default = true, vox = true},
-	-- (sound.lua reads it: off, no line is spoken by SAM; set on the Options
-	-- screen's Game tab, graphics.lua - not here)
-	{key = "sam_voices", kind = "bool", label = "Spoken lines (SAM voices)", default = true, vox = true,
-		elsewhere = true},
 	-- (player.lua reads it: off, hallucinating doesn't wave the screen or
 	-- drift its colours; monsters still look wavy)
 	{key = "hallu_effects", kind = "bool", label = "Hallucination screen waves and colours",
@@ -269,9 +265,7 @@ function nhopts.formspec()
 	local body = {}
 	local yl, yr = 0, 0
 	for _, o in ipairs(nhopts.OPTIONS) do
-		if o.elsewhere then
-			-- (on the Game tab)
-		elseif o.new then
+		if o.new then
 			body[#body + 1] = field_for(o, 0.5, yl)
 			yl = yl + 0.9
 		else

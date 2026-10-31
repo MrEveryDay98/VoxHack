@@ -37,9 +37,9 @@ local DRAWN = {"Kept", "Removed (after a restart)"}
 -- this is too - or with engine/demos/Play Demo.bat)
 local DEMOS = {"Off", "On (next start)"}
 local RETRO = {"Off", "On"}
--- SAM's voice (sound.lua): off, no line is spoken - what's said is still
--- written; recorded voices still play (kept as NetHack options' sam_voices)
-local SAM = {"On", "Off (muted)"}
+-- the voice lines are spoken in (sound.voice_mode): SAM, Animalese, or
+-- none - what's said is still written; recorded voices still play
+local VOICES = {{"sam", "SAM"}, {"animalese", "Animalese"}, {"off", "Off (muted)"}}
 -- light per texture pixel (the VoxHack engine's nhv_texel_light): like a
 -- lightmap, light and shadow in steps of the textures' own pixels
 local TEXEL_LIGHT = {{"off", "Smooth"}, {"on", "Per texture pixel"}, {"dither", "Per texture pixel, dithered"}}
@@ -135,7 +135,7 @@ function graphics.formspec()
 	end
 	add(row(y, "Time", "time", table.concat(TIME, ","), nhv.clock.realtime() and 2 or 1))
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Sound") .. "]", 1.0)
-	add(row(y, "SAM voice", "sam", table.concat(SAM, ","), nhv.nhopts.get("sam_voices") and 1 or 2))
+	add(row(y, "Voices", "voices", names(VOICES), choice(VOICES, "nhv_voice", nhv.sound.voice_mode())))
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Graphics") .. "]", 1.0)
 	add(row(y, "Interface", "style", table.concat(STYLE, ","), theme.retro() and 1 or 2))
 	if retro then
@@ -345,12 +345,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		core.settings:set_bool("nhv_sprite_shadows", dr == 1)
 		changed = true
 	end
-	local sm = tonumber(fields.sam)
-	if sm and (sm == 1) ~= nhv.nhopts.get("sam_voices") then
-		nhv.nhopts.set("sam_voices", sm == 1)
-		if sm == 2 then
-			nhv.sound.hush_sam() -- (what SAM's saying now stops too)
-		end
+	local vc = VOICES[tonumber(fields.voices) or 0]
+	if vc and vc[1] ~= nhv.sound.voice_mode() then
+		core.settings:set("nhv_voice", vc[1])
+		nhv.sound.hush_sam() -- (what's being said now stops: the next line's in the new voice)
 		changed = true
 	end
 	local dm = tonumber(fields.demos)

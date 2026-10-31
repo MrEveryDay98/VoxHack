@@ -102,7 +102,7 @@ Licenses
 CREDITS.txt lists what the game is made of and under which licence. The
 licenses folder has the licence texts: NetHack (NetHack General Public
 License), Luanti (LGPL 2.1+), the GeneralUser GS SoundFont, TinySoundFont,
-and every bundled library (THIRD-PARTY.txt lists them).
+Animalese (animalese.js, MIT, and its letters, CC BY 4.0) and every bundled library (THIRD-PARTY.txt lists them).
 """
 
 
@@ -186,6 +186,8 @@ def stage(out):
 		shutil.copy2(sf, os.path.join(lic, "GeneralUser-GS-LICENSE.txt"))
 	shutil.copy2(os.path.join(LUANTI, "src", "client", "sound", "tinysoundfont", "LICENSE.txt"),
 			os.path.join(lic, "TinySoundFont-LICENSE.txt"))
+	shutil.copy2(os.path.join(GAME, "mods", "nhv_sounds", "animalese", "animalese-LICENSE.md"),
+			os.path.join(lic, "Animalese-LICENSE.txt"))
 	shutil.copy2(os.path.join(ROOT, "CREDITS.md"), os.path.join(out, "CREDITS.txt"))
 	libraries(engine, lic)
 

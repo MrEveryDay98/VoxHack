@@ -581,13 +581,25 @@ local function sam_for(id, who)
 	return sam_settings(ln.cast or e.speaker, who, ln)
 end
 
+-- Options > Voices (graphics.lua): the speakers SAM voices are spoken by
+-- SAM, or in Animalese (sam_voice.h: every letter a little sound of its
+-- own, the same speaker's pitch and pace), or not at all ("off")
+function sound.voice_mode()
+	local v = core.settings:get("nhv_voice")
+	if v == "sam" or v == "animalese" or v == "off" then
+		return v
+	end
+	-- (before there was a choice: NetHack options' Spoken lines)
+	return core.settings:get_bool("nhv_nh_sam_voices", true) and "sam" or "off"
+end
+
 -- the SAM settings for a speaker of the voice casting (ln: a line's own
 -- settings, if any), or nil if it isn't voiced live by SAM
 function sam_settings(speaker, who, ln)
 	ln = ln or {}
-	-- (Options > SAM voice off: SAM says nothing - the intro editor has no
+	-- (Options > Voices off: nothing's said - the intro editor has no
 	-- options of its own: it speaks)
-	if nhv.nhopts and not nhv.nhopts.get("sam_voices") then
+	if sound.voice_mode() == "off" then
 		return nil
 	end
 	local sc = sound.cast.speakers[speaker]
@@ -659,10 +671,11 @@ local function start_voice(key, name, params)
 		core.sound_stop(voices[key])
 	end
 	voices[key] = core.sound_play(name, params)
-	by_sam[key] = name:sub(1, 8) == "nhv_sam:" or nil
+	by_sam[key] = (name:find("^nhv_sam:") or name:find("^nhv_animalese:")) and true or nil
 end
 
--- everything SAM's saying cut off (SAM's voice turned off: graphics.lua)
+-- everything SAM (or Animalese) is saying cut off (Options > Voices
+-- changed: graphics.lua)
 function sound.hush_sam()
 	for key in pairs(by_sam) do
 		if voices[key] then
@@ -683,10 +696,21 @@ function sound.hush(key)
 end
 
 -- the sound name SAM reads a line from (sam_voice.h), nil if nothing to say
+-- - or Animalese (Options > Voices), as near as it can to SAM's pitch,
+-- pace and effects
 local function sam_name(st, text)
-	text = (st.text or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
+	local animalese = sound.voice_mode() == "animalese"
+	-- (Animalese spells what's written, not how SAM's told to say it)
+	text = ((animalese and text or st.text) or text):gsub("%s+", " "):gsub('^%s*"', ""):gsub('"%s*$', "")
 	if not text:find("%w") then
 		return nil
+	end
+	if animalese then
+		-- (SAM: a lower pitch number is a higher voice, 64 its own; a higher
+		-- speed number is slower, 72 its own)
+		local pitch = math.max(60, math.min(180, (64 / st.pitch) ^ 0.6 * 100))
+		local length = math.max(60, math.min(180, st.speed / 72 * 100))
+		return ("nhv_animalese:%d,%d,0,%s|%s"):format(pitch, length, st.effects, text)
 	end
 	return ("nhv_sam:%d,%d,%d,%d,%d,0,%d,%d,%s,%d,%d,%d,%d,%d,%d|%s"):format(st.speed, st.pitch, st.throat,
 		st.mouth, st.sing, st.smooth, st.tone, st.effects, st.hifi, st.bright, st.breath, st.movement,

@@ -32,6 +32,8 @@ licence. The licence texts are in the release's `licenses` folder
 | Sound effects `yh_*.ogg` | "You Hear A Clicking Sound - It Bites!" (YHACSIB), made by VoxHack's author | Project's own | OK |
 | Music (`nhv_music_*.ogg`), magic effect sounds (`nhv_sound_magiceffect`), footsteps (Freesound 268758) | Royalty-free / CC0 sources (per the author) | Free redistribution | OK |
 | NetHackWiki pages (the in-game viewer, F2) | Fetched live from nethackwiki.com and cached on the player's computer; not bundled | CC BY-SA 3.0 (credited on every page) | OK |
+| Animalese, the voice a player may choose over SAM: its letters (`mods/nhv_sounds/animalese/animalese.wav`, unchanged) | From animalese.js by Josh Simmons (github.com/Acedio/animalese.js) | CC BY 4.0 | OK: credited here; the licence ships next to it (`animalese-LICENSE.md`) and in `licenses` |
+| Animalese's way of speaking (the engine's `sound/sam_voice.cpp`), done again from animalese.js | animalese.js, Copyright © 2014 Josh Simmons | MIT | OK (the notice ships in `animalese-LICENSE.md`) |
 | SAM, the live voice (`external/luanti/lib/sam`, built into the engine) | SAM (Software Automatic Mouth, Don't Ask Software, 1982), C port by Sebastian Macke (github.com/s-macke/SAM) | No licence: reverse-engineered abandonware whose owner couldn't be reached | Included; the risk is accepted, as the port's author describes (lib/sam/VOXHACK.md) |
 
 ## Before a Steam release
