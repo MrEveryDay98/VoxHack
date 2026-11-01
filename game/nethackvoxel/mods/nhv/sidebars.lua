@@ -157,7 +157,7 @@ local ids = {}       -- element ids: bars, panel, boxes, slots
 local slot_ids = {}  -- equipment slot id -> {icon=}
 local shown = {}     -- equipment slot id -> texture shown
 local log_rows = {}  -- the log's lines: {id=, text=, color=}
-local inv_rows = {}  -- the inventory's lines: {icon=, text=, shown_icon=, shown_text=}
+local inv_rows = {}  -- the inventory's lines: {icon=, text=, shown_icon=, shown_text=, shown_color=}
 local inv_scroll = 0 -- (items scrolled past)
 local stats_shown = {} -- (the stats' lines shown: sidebars.set_stats)
 
@@ -212,6 +212,9 @@ function sidebars.rebuild(player)
 	if not g then
 		if core.nhv_console_margins then
 			core.nhv_console_margins(0, 0)
+		end
+		if core.nhv_view_sides then
+			core.nhv_view_sides(0)
 		end
 		return
 	end
@@ -305,10 +308,13 @@ function sidebars.rebuild(player)
 	sidebars.relayout(player)
 	sidebars.refresh(player, nh.snap and nh.snap.inventory)
 	sidebars.render_inventory(player)
-	-- (the chat console kept off the bars)
+	-- (the chat console kept off the bars; the hands drawn in from them)
 	if core.nhv_console_margins then
 		local m = math.floor(g.w * g.k + 0.5)
 		core.nhv_console_margins(m, m)
+	end
+	if core.nhv_view_sides then
+		core.nhv_view_sides(g.w / g.sw)
 	end
 end
 
@@ -370,23 +376,38 @@ function sidebars.set_stats(player, lines)
 end
 
 -- ---------------------------------------------------------------- inventory
--- what you carry, a line each (its picture, its letter and name), from
--- where it's scrolled to
+-- what you carry, a line each (its picture, its letter and name), as the
+-- full inventory has it (ui.lua): grouped by kind in NetHack's order, the
+-- kind's name over each group - from where it's scrolled to
+local KIND = 0xFFD080 -- (a kind's name, as the full inventory's)
 function sidebars.render_inventory(player)
 	player = player or nhv.player.get()
 	local g = player and #inv_rows > 0 and sidebars.geometry(player)
 	if not g then
 		return
 	end
-	local inv = (nh.snap and nh.snap.inventory) or {}
+	local inv = {}
+	local last
+	for _, o in ipairs(nhv.ui.sort_by_kind((nh.snap and nh.snap.inventory) or {})) do
+		if o.oclass ~= last then
+			last = o.oclass
+			inv[#inv + 1] = {kind = nhv.ui.CLASS_NAMES[o.oclass] or "Other"}
+		end
+		inv[#inv + 1] = o
+	end
 	inv_scroll = math.max(0, math.min(inv_scroll, #inv - #inv_rows))
 	local most = math.max(6, g.box_chars - 3)
 	for r, row in ipairs(inv_rows) do
 		local o = inv[inv_scroll + r]
-		local icon = o and nhv_tiles.texture(o.tile) or "blank.png"
-		local text = o and (o.invlet .. " - " .. o.name) or ""
+		local icon = o and o.tile and nhv_tiles.texture(o.tile) or "blank.png"
+		local text = o and (o.kind or (o.invlet .. " - " .. o.name)) or ""
 		if #text > most then
 			text = text:sub(1, most - 2) .. ".."
+		end
+		local color = o and o.kind and KIND or 0xFFFFFF
+		if row.shown_color ~= color then
+			row.shown_color = color
+			player:hud_change(row.text, "number", color)
 		end
 		if row.shown_icon ~= icon then
 			row.shown_icon = icon
@@ -543,6 +564,9 @@ core.register_on_leaveplayer(function()
 	log = {}
 	if core.nhv_console_margins then
 		core.nhv_console_margins(0, 0)
+	end
+	if core.nhv_view_sides then
+		core.nhv_view_sides(0)
 	end
 end)
 
