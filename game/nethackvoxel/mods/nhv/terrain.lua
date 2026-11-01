@@ -92,8 +92,10 @@ floor_node("air_floor", "Air", tile_tex(1322))
 -- see-through solids
 reg("tree", {description = "Tree", drawtype = "allfaces", tiles = {nhv_tiles.texture(1290)},
 	use_texture_alpha = "clip", sunlight_propagates = true})
-reg("bars", {description = "Iron bars", drawtype = "allfaces", tiles = {nhv_tiles.texture(1289)},
-	use_texture_alpha = "clip", sunlight_propagates = true})
+-- iron bars: a voxel object (props.lua), solid, joining up with the bars
+-- beside it - turned along them, crossed where they meet both ways
+nhv.props.register("nhv:bars", nhv_tiles.texture(1289), "Iron bars",
+	{walkable = true, _nhv_connect = true, on_blast = function() end})
 
 -- liquids: not walkable, you sink into them; NetHack decides what happens
 local function liquid_node(name, desc, tex, light)

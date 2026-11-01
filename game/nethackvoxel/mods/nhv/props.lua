@@ -8,6 +8,12 @@
 -- The node itself is invisible; an entity draws the sprite. Entities are
 -- added when a prop is placed, when the map around it loads, and when the
 -- game builds a square (terrain calls props.refresh for what it wrote).
+--
+-- One that connects (_nhv_connect: iron bars) turns to run along the same
+-- blocks beside it, east-west or north-south - both where they meet it
+-- both ways (a corner, a T, a cross): two sprites, crossed - so a run of
+-- them is one fence, with no gaps at its turns; alone, the way it was
+-- placed.
 
 local props = {objs = {}}
 nhv.props = props
@@ -32,11 +38,43 @@ core.register_entity("nhv:prop", {
 
 function props.remove(pos)
 	local k = key(pos)
-	local obj = props.objs[k]
-	if obj and obj:get_pos() then
-		obj:remove()
+	for _, kk in ipairs({k, k .. "|2"}) do
+		local obj = props.objs[kk]
+		if obj and obj:get_pos() then
+			obj:remove()
+		end
+		props.objs[kk] = nil
 	end
-	props.objs[k] = nil
+end
+
+-- (a connecting prop: the sprites it's drawn as, by the same blocks beside
+-- it - yaw 0 runs east-west, a quarter turn north-south)
+local function connected_yaws(pos, node)
+	local function same(dx, dz)
+		return core.get_node(vector.offset(pos, dx, 0, dz)).name == node.name
+	end
+	local ew, ns = same(1, 0) or same(-1, 0), same(0, 1) or same(0, -1)
+	if ew and ns then
+		return {0, math.pi / 2}
+	elseif ew then
+		return {0}
+	elseif ns then
+		return {math.pi / 2}
+	end
+	return {yaw_of(node.param2)}
+end
+
+local function sprite(k, pos, name, yaw)
+	local obj = props.objs[k]
+	if not (obj and obj:get_pos()) then
+		obj = core.add_entity(pos, "nhv:prop")
+		props.objs[k] = obj
+	end
+	if obj then
+		obj:set_properties({wield_item = name})
+		obj:set_pos(pos)
+		obj:set_yaw(yaw)
+	end
 end
 
 -- A floating particle (a block of the block editor's "particle" shape:
@@ -108,15 +146,31 @@ function props.show(pos)
 		show_floater(pos, def._nhv_particle, k)
 		return
 	end
-	local obj = props.objs[k]
-	if not (obj and obj:get_pos()) then
-		obj = core.add_entity(pos, "nhv:prop")
-		props.objs[k] = obj
+	if def._nhv_connect then
+		local yaws = connected_yaws(pos, node)
+		sprite(k, pos, node.name, yaws[1])
+		if yaws[2] then
+			sprite(k .. "|2", pos, node.name, yaws[2])
+		else
+			local second = props.objs[k .. "|2"]
+			if second and second:get_pos() then
+				second:remove()
+			end
+			props.objs[k .. "|2"] = nil
+		end
+		return
 	end
-	if obj then
-		obj:set_properties({wield_item = node.name})
-		obj:set_pos(pos)
-		obj:set_yaw(yaw_of(node.param2))
+	sprite(k, pos, node.name, yaw_of(node.param2))
+end
+
+-- (a connecting prop placed or taken away: those beside it turn again)
+local function show_beside(pos)
+	for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+		local p = vector.offset(pos, d[1], 0, d[2])
+		local def = core.registered_nodes[core.get_node(p).name]
+		if def and def._nhv_connect then
+			props.show(p)
+		end
 	end
 end
 
@@ -134,6 +188,13 @@ function props.refresh(minp, maxp)
 	end
 	for _, pos in ipairs(core.find_nodes_in_area(minp, maxp, "group:nhv_prop")) do
 		props.show(pos)
+	end
+	-- (connecting ones just outside, beside what was written: turned again)
+	local lo, hi = vector.offset(minp, -1, 0, -1), vector.offset(maxp, 1, 0, 1)
+	for _, pos in ipairs(core.find_nodes_in_area(lo, hi, "group:nhv_connect")) do
+		if pos.x < minp.x or pos.x > maxp.x or pos.z < minp.z or pos.z > maxp.z then
+			props.show(pos)
+		end
 	end
 end
 
@@ -163,10 +224,21 @@ function props.register(node, tex, desc, extra)
 		is_ground_content = false, drop = "",
 		groups = groups,
 		on_place = core.rotate_node,
-		on_construct = function(pos) core.after(0, props.show, pos) end,
-		after_destruct = function(pos) props.remove(pos) end,
+		on_construct = function(pos)
+			core.after(0, function()
+				props.show(pos)
+				show_beside(pos)
+			end)
+		end,
+		after_destruct = function(pos)
+			props.remove(pos)
+			core.after(0, show_beside, pos)
+		end,
 		on_rotate = function(pos) core.after(0, props.show, pos) end,
 	}
+	if extra and extra._nhv_connect then
+		groups.nhv_connect = 1
+	end
 	for k, v in pairs(extra or {}) do
 		if k == "groups" then
 			for g, n in pairs(v) do
