@@ -133,9 +133,14 @@ local function config(s)
 	local r, g, b = rgb(h.color or "#000000")
 	local dw = type(s.dawn) == "table" and s.dawn.on and s.dawn or nil
 	local gr, gg, gb = rgb(dw and dw.clouds or "#FFFFFF")
+	-- (a vortex: twisted round the point overhead, turning - its twist in
+	-- turns, its spin in degrees a second: the engine's in radians)
+	local vx = type(s.vortex) == "table" and s.vortex.on and s.vortex or nil
 	parts[3] = pairs_list({{"hr", r}, {"hg", g}, {"hb", b}, {"fade", num(h.fade, 0)},
 		{"px", num(s.pixels, 0)}, {"dn", s.daynight and 1 or 0}, {"bright", num(s.cloud_brightness, 1)},
-		{"gr", gr}, {"gg", gg}, {"gb", gb}, {"ga", dw and num(dw.strength, 0.6) or 0}})
+		{"gr", gr}, {"gg", gg}, {"gb", gb}, {"ga", dw and num(dw.strength, 0.6) or 0},
+		{"vt", vx and num(vx.twist, 1.5) * 2 * math.pi or 0}, {"vs", vx and math.rad(num(vx.spin, 6)) or 0},
+		{"vr", vx and num(vx.size, 0.6) or 1}})
 	return table.concat(parts, ";")
 end
 

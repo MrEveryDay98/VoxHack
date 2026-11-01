@@ -18,6 +18,7 @@ const Sky = (() => {
     horizon: { color: "#000000", fade: 0.6 }, pixels: 64, fog_color: "#000000",
     daynight: false, sun: true, moon: true, stars: true, stars_always: false, cloud_brightness: 1,
     lightning: { on: false, rate: 4, sound: true },
+    vortex: { on: false, twist: 1.5, spin: 6, size: 0.6 },
   };
   const LAYER_NAMES = ["Back layer", "Front layer"];
 
@@ -71,6 +72,13 @@ uniform vec4 l0; uniform vec4 l1; uniform vec4 tint0; uniform vec4 tint1;
 uniform vec4 gen0; uniform vec4 gen1; uniform vec4 shade0; uniform vec4 shade1;
 uniform vec4 hz; uniform vec4 misc; uniform vec3 bg; uniform vec3 bgTop; uniform vec4 glow;
 uniform vec2 res; uniform float yaw; uniform float pitch; uniform float stars;
+uniform vec4 vortex; // twist (radians, in the middle), turned by now, size - as the game's
+vec2 swirl(vec2 p) {
+  if (vortex.x == 0.0 && vortex.y == 0.0) return p;
+  float k = exp(-length(p) / max(vortex.z, 0.01));
+  float a = vortex.y + vortex.x * k;
+  return vec2(cos(a) * p.x - sin(a) * p.y, sin(a) * p.x + cos(a) * p.y);
+}
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p) {
   vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
@@ -113,7 +121,7 @@ void main() {
   }
   if (d.y < -0.02) { gl_FragColor = vec4(mix(bg, vec3(0.06), 0.85), 1.0); return; } // (the ground)
   if (d.y <= 0.0) { gl_FragColor = vec4(sky, 1.0); return; }
-  vec2 p = d.xz / d.y * 0.25;
+  vec2 p = swirl(d.xz / d.y * 0.25);
   vec4 back = layer(t0, p, l0, tint0, gen0, shade0);
   vec4 front = layer(t1, p, l1, tint1, gen1, shade1);
   float a = back.a + front.a * (1.0 - back.a);
@@ -238,6 +246,9 @@ void main() {
     gl.uniform4f(u("glow"), glow[0], glow[1], glow[2], glow[3]);
     gl.uniform1f(u("stars"), stars);
     gl.uniform4f(u("misc"), s.pixels || 0, light, 0, 0);
+    const vx = s.vortex && s.vortex.on ? s.vortex : null;
+    gl.uniform4f(u("vortex"), vx ? vx.twist * 2 * Math.PI : 0,
+      vx ? (t * vx.spin * Math.PI / 180) % (2 * Math.PI) : 0, vx ? vx.size : 1, 0);
     gl.uniform2f(u("res"), view.canvas.width, view.canvas.height);
     if (!view.drag) view.yaw += 0.0015; // (turns slowly by itself)
     gl.uniform1f(u("yaw"), view.yaw);
@@ -420,6 +431,21 @@ void main() {
       field("Opacity", slider(l, "opacity", 0, 1, 0.01, pct)));
   }
 
+  // A vortex: the clouds twisted round the point overhead, turning
+  function vortexEditor(s) {
+    s.vortex = Object.assign({ on: false, twist: 1.5, spin: 6, size: 0.6 }, s.vortex || {});
+    const v = s.vortex;
+    return el("div", {},
+      el("h4", {}, "Vortex"),
+      check(v, "on", "The clouds swirl round the middle of the sky", render),
+      v.on ? field("Twist", slider(v, "twist", -5, 5, 0.1, (x) => (+x).toFixed(1) + " turns"),
+        "How far the clouds wind round in the middle (the other way below 0).") : null,
+      v.on ? field("Spin", slider(v, "spin", -90, 90, 1, (x) => (+x) + "° a second"),
+        "How fast the whole sky turns round it (below 0: the other way).") : null,
+      v.on ? field("Size", slider(v, "size", 0.05, 3, 0.05, (x) => (+x).toFixed(2)),
+        "How far out the twist reaches.") : null);
+  }
+
   // Lightning shooting across the sky now and then
   function lightningEditor(s) {
     s.lightning = Object.assign({ on: false, rate: 4, sound: true }, s.lightning || {});
@@ -455,6 +481,7 @@ void main() {
             "100% is as the clouds are drawn; more makes them glow brighter."),
           s.daynight ? null : field("Sky colour", color(s, "fog_color"),
             "Behind the clouds; distant walls also fade into it on levels open to the sky all over."),
+          vortexEditor(s),
           lightningEditor(s)),
         el("div", { class: "blk-preview" }, preview(s), el("small", { class: "muted" }, "Drag to look around."))),
       el("div", { class: "sky-layers" }, ...s.layers.map(layerEditor)));

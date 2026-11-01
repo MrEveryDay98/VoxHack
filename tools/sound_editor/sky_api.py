@@ -200,6 +200,7 @@ def clean_sky(s):
     h = s.get("horizon") if isinstance(s.get("horizon"), dict) else {}
     lt = s.get("lightning") if isinstance(s.get("lightning"), dict) else {}
     dw = s.get("dawn") if isinstance(s.get("dawn"), dict) else {}
+    vx = s.get("vortex") if isinstance(s.get("vortex"), dict) else {}
     return {
         "id": sid,
         "name": str(s.get("name") or sid)[:60],
@@ -224,6 +225,11 @@ def clean_sky(s):
                  "horizon": _color(dw.get("horizon"), "#FFB070"), "sun": _color(dw.get("sun"), "#FF6A2A"),
                  "clouds": _color(dw.get("clouds"), "#FF9A60"),
                  "strength": round(_num(dw.get("strength"), 0, 1, 0.6), 2)},
+        # a vortex: the clouds twisted round the point overhead (turns in the
+        # middle), turning (degrees a second, either way), out to its size
+        "vortex": {"on": bool(vx.get("on", False)), "twist": round(_num(vx.get("twist"), -5, 5, 1.5), 2),
+                   "spin": round(_num(vx.get("spin"), -90, 90, 6), 1),
+                   "size": round(_num(vx.get("size"), 0.05, 3, 0.6), 2)},
     }
 
 
