@@ -132,11 +132,16 @@ local SEVERITY = {
 local HUNGER_SEVERITY = {[2] = 1, [3] = 3, [4] = 4, [5] = 4, [6] = 4}
 local ENCUMBRANCE_SEVERITY = {1, 2, 3, 3, 3}
 
--- the stats, in the side bars' lines (sidebars.lua)
-local function stat_lines(h)
+-- the stats, in the side bars' lines (sidebars.lua), each spread evenly
+-- across the bar
+local function stat_lines(h, g)
 	local str = h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str)
-	return ("St:%s Dx:%d Co:%d\nIn:%d Wi:%d Ch:%d\n%s  T:%d"):format(str, h.dex, h.con,
-		h.int, h.wis, h.cha, h.align, h.moves)
+	local n, spread = nhv.sidebars.stat_chars(g), nhv.sidebars.spread
+	return table.concat({
+		spread({"St:" .. str, "Dx:" .. h.dex, "Co:" .. h.con}, n),
+		spread({"In:" .. h.int, "Wi:" .. h.wis, "Ch:" .. h.cha}, n),
+		spread({h.align or "", "T:" .. h.moves}, n),
+	}, "\n")
 end
 
 -- the status line: its numbers, and its conditions ({text=, severity=},
@@ -204,7 +209,7 @@ local function show_status(player, h)
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	if g then
 		-- the side bars: the stats under the bars, the ailments in their box
-		player:hud_change(hud.ids.status, "text", stat_lines(h))
+		player:hud_change(hud.ids.status, "text", stat_lines(h, g))
 		for i = 1, math.max(#conds, #cond_ids) do
 			local cd = i <= nhv.sidebars.AILMENT_LINES and conds[i] or nil
 			if cd and not cond_ids[i] then
@@ -296,6 +301,12 @@ end
 function hud.info_text(h)
 	local before = ""
 	local gold = ("$:%d"):format(h.gold or 0)
+	-- (the side bars: spread evenly across the bar, as the stats under it)
+	local g = nhv.sidebars and nhv.sidebars.geometry(nhv.player.get())
+	if g then
+		return nhv.sidebars.spread({gold, ("AC:%d"):format(h.ac or 0),
+			("XL:%d/%d"):format(h.xlvl or 0, h.xp or 0)}, nhv.sidebars.stat_chars(g)), before, gold
+	end
 	return before .. gold .. ("   AC:%d   XL:%d/%d"):format(h.ac or 0, h.xlvl or 0, h.xp or 0),
 		before, gold
 end
@@ -361,10 +372,6 @@ local function update_here(player, snap)
 		invoke_shown = inv
 		player:hud_change(hud.ids.invoke_key, "text", inv)
 		player:hud_change(hud.ids.invoke_key_shadow, "text", inv)
-	end
-	-- (the side bars: the ground's box as tall as that)
-	if g then
-		nhv.sidebars.set_here(player, #lines, text ~= "", inv ~= "")
 	end
 end
 
@@ -1091,18 +1098,18 @@ function hud.place_here(player)
 		player:hud_change(id, "offset", off)
 	end
 	if g then
-		-- (the list, then the keys' lines under it, in the box)
-		local holds = nhv.sidebars.here_holds()
+		-- (the list at the top of its box, "F  Pick up" at the bottom; "Q
+		-- ..." with the keys' hints under the box, the second line)
 		local R, x = {x = 1, y = 0}, g.here.x + 6
 		local down = {x = 1, y = 1}
-		local ky = g.here.y + 6 + math.min(holds.list, g.here_max) * g.line_h
-		local qy = ky + (holds.f and g.line_h or 0)
+		local ky = g.here.y + g.here.h - 6 - g.line_h
+		local qy = g.hints_y + g.line_h
 		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + 8})
 		put(hud.ids.here, R, down, {x = x, y = g.here.y + 6})
 		put(hud.ids.here_key_shadow, R, down, {x = x + 2, y = ky + 2})
 		put(hud.ids.here_key, R, down, {x = x, y = ky})
-		put(hud.ids.invoke_key_shadow, R, down, {x = x + 2, y = qy + 2})
-		put(hud.ids.invoke_key, R, down, {x = x, y = qy})
+		put(hud.ids.invoke_key_shadow, R, down, {x = g.here.x + 2, y = qy + 2})
+		put(hud.ids.invoke_key, R, down, {x = g.here.x, y = qy})
 	else
 		local L, up = {x = 0, y = HERE_Y}, {x = 1, y = -1}
 		put(hud.ids.here_shadow, L, up, {x = 22, y = -28})

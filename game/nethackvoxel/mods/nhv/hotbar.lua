@@ -144,9 +144,10 @@ local function build(player)
 	-- (see update_enhance)
 	hud.enhance = add(player, {type = "text", offset = {x = slot_x(g and 3 or 1) - SLOT / 2 - 14, y = Y},
 		alignment = {x = -1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
-	-- (the side bars: these hints at the bottom of the right one, a line each)
+	-- (the side bars: these hints at the bottom of the right one, a line
+	-- each - the second is Q's, hud.lua)
 	if g then
-		for i, key in ipairs({"search", "pay", "enhance"}) do
+		for i, key in pairs({[1] = "search", [3] = "pay", [4] = "enhance"}) do
 			player:hud_change(hud[key], "position", {x = 1, y = 0})
 			player:hud_change(hud[key], "alignment", {x = 1, y = 1})
 			player:hud_change(hud[key], "offset", {x = -(g.w - g.pad), y = g.hints_y + (i - 1) * g.line_h})

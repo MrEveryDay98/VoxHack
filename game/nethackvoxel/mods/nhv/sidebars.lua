@@ -9,10 +9,10 @@
 --          status line's conditions, each in its colour)
 --   right: the map and the level; the log - NetHack's messages and what's
 --          said (speech.lua), speakers' names in yellow, the newest at the
---          bottom; what's on the ground where you stand (hud.lua), with
---          the keys for it in its box - only as tall as that, gone when
---          there's nothing; and the keys' hints (X Search, P Pay, G Enhance:
---          hotbar.lua) at the bottom
+--          bottom; what's on the ground where you stand (hud.lua), "F  Pick
+--          up" at the bottom of its box - always there; and the keys' hints
+--          (X Search, Q Invoke, P Pay, G Enhance: hotbar.lua, hud.lua) at
+--          the bottom
 -- The chat console (T, the command line) opens over the view only.
 -- The action keys stay along the bottom of the view, the compass along its
 -- top. Each bar is as wide as the
@@ -34,12 +34,8 @@ local SLOT_INNER = "#141418"
 local PAD = 8
 sidebars.STAT_LINES = 3    -- the stats' lines (hud.lua's show_status)
 sidebars.AILMENT_LINES = 4 -- ailments the box shows
-sidebars.HINT_LINES = 3    -- the keys' hints at the bottom right
-local LOG_MIN = 4          -- lines the log keeps however much is on the ground
-
--- what's on the ground's box holds now: its list's lines, and the keys
--- (F, Q) under it - hud.lua tells (sidebars.set_here)
-local here = {list = 0, f = false, q = false}
+sidebars.HINT_LINES = 4    -- the keys' hints at the bottom right
+local HERE_SHARE = 0.42    -- of the room under the map: the ground's box
 
 function sidebars.on()
 	return core.settings:get("nhv_hud_layout") == "sidebars"
@@ -107,18 +103,18 @@ function sidebars.geometry(player)
 	local S2 = math.floor(math.min(S * 1.4, (inner - 8) / 2))
 	g.weapons = {size = S2, {x = PAD + 2, y = y}, {x = w - PAD - 2 - S2, y = y}}
 	g.quiver = {x = math.floor((w - S2) / 2), y = y + S2 + 8, size = S2}
-	-- right: the map, the level under it; the hints at the bottom, the
-	-- ground's box over them (as tall as what's in it), the log the rest
+	-- right: the map, the level under it; the hints at the bottom; the log
+	-- and the ground's box between, the log the bigger
 	g.map = {x = -(PAD + math.floor((inner - U.COLNO * s) / 2)), y = PAD}
 	g.level_y = PAD + U.ROWNO * s + 4
 	local top = g.level_y + line_h + 6
 	g.hints_y = sh - PAD - sidebars.HINT_LINES * line_h
-	g.here_max = math.max(1, math.floor((g.hints_y - 16 - top - LOG_MIN * line_h - 24) / line_h))
-	local n = math.min(here.list, g.here_max) + (here.f and 1 or 0) + (here.q and 1 or 0)
-	local hh = n > 0 and n * line_h + 12 or 0
-	g.here = {x = -(w - PAD), y = g.hints_y - 8 - hh, w = inner, h = hh}
-	local bottom = (hh > 0 and g.here.y or g.hints_y) - 8
-	g.log = {x = -(w - PAD), y = top, w = inner, h = bottom - top}
+	local room = g.hints_y - 8 - top - 8
+	local hh = math.floor(room * HERE_SHARE)
+	g.log = {x = -(w - PAD), y = top, w = inner, h = room - hh}
+	g.here = {x = -(w - PAD), y = top + room - hh + 8, w = inner, h = hh}
+	-- (lines of the list the ground's box has room for, over "F  Pick up")
+	g.here_max = math.max(1, math.floor((hh - 12) / line_h) - 1)
 	g.log_rows = math.max(1, math.floor((g.log.h - 12) / line_h))
 	-- (characters a line in a box)
 	g.box_chars = math.max(8, math.floor((inner - 12) / char_w))
@@ -250,8 +246,7 @@ function sidebars.relayout(player)
 	player:hud_change(ids.log, "offset", {x = g.log.x, y = g.log.y})
 	player:hud_change(ids.log, "text", ("[fill:%dx%d:#000000"):format(g.log.w, math.max(1, g.log.h)))
 	player:hud_change(ids.here, "offset", {x = g.here.x, y = g.here.y})
-	player:hud_change(ids.here, "text", g.here.h > 0
-		and ("[fill:%dx%d:#000000"):format(g.here.w, g.here.h) or "blank.png")
+	player:hud_change(ids.here, "text", ("[fill:%dx%d:#000000"):format(g.here.w, math.max(1, g.here.h)))
 	if #log_rows ~= g.log_rows then
 		for _, row in ipairs(log_rows) do
 			player:hud_remove(row.id)
@@ -273,17 +268,32 @@ function sidebars.relayout(player)
 	end
 end
 
--- what's on the ground's box holds (hud.lua): list lines, and the F and Q
--- keys' lines under them
-function sidebars.set_here(player, list, f, q)
-	if here.list == list and here.f == f and here.q == q then
-		return
+-- (a line of fields spread evenly across n characters: the stats)
+function sidebars.spread(fields, n)
+	local total = 0
+	for _, f in ipairs(fields) do
+		total = total + #f
 	end
-	here.list, here.f, here.q = list, f, q
-	sidebars.relayout(player)
+	local gaps = #fields - 1
+	if gaps < 1 then
+		return fields[1] or ""
+	end
+	local space = math.max(gaps, n - total)
+	local out = {}
+	for i, f in ipairs(fields) do
+		out[#out + 1] = f
+		if i <= gaps then
+			-- (the leftover spaces to the first gaps)
+			local k = math.floor(space / gaps) + ((i <= space % gaps) and 1 or 0)
+			out[#out + 1] = (" "):rep(k)
+		end
+	end
+	return table.concat(out)
 end
-function sidebars.here_holds()
-	return here
+
+-- (characters across the left bar, for the stats)
+function sidebars.stat_chars(g)
+	return math.max(10, math.floor((g.w - 2 * g.pad - 4) / g.char_w))
 end
 
 -- ---------------------------------------------------------------- the log
@@ -405,7 +415,6 @@ end)
 core.register_on_leaveplayer(function()
 	ids, slot_ids, shown, size_seen, log_rows = {}, {}, {}, nil, {}
 	log = {}
-	here = {list = 0, f = false, q = false}
 	if core.nhv_console_margins then
 		core.nhv_console_margins(0, 0)
 	end
