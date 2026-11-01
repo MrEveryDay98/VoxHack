@@ -1396,6 +1396,17 @@ nhv_explode_event(int x, int y, int expltype)
     nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
+/* "shield <x> <y>": the shield sparkle - something resisting magic
+   (shieldeff; sent as a combat event) */
+void
+nhv_shield_event(int x, int y)
+{
+    char buf[64];
+
+    Sprintf(buf, "shield %d %d", x, y);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 /* "beam <otyp> <x0> <y0> <x1> <y1>" (sent as a combat event) */
 void
 nhv_beam_event(int otyp, int x0, int y0, int x1, int y1)

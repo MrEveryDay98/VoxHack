@@ -393,6 +393,105 @@ function msgfx.message(text)
 	end
 end
 
+-- ---------------------------------------------------------------- NetHack's effect tiles
+-- NetHack's own pictures of its effects (nhv_tiles.png - sheet positions):
+-- an explosion's 3x3, the shield sparkle's four frames - drawn as a sprite
+-- facing you, glowing, where it happens: growing in, fading out, or
+-- stepping through its frames.
+local SHEET_SHIELD = 1029    -- shield1..4
+local SHEET_EXPLOSION = 1043 -- 7 kinds of 9: dark, noxious, muddy, wet, magical, fiery, frosty
+
+local function sheet(s)
+	return nhv_tiles.sheet_texture(s)
+end
+local function escape(t)
+	return (t:gsub("%^", "\\^"):gsub(":", "\\:"))
+end
+
+core.register_entity("nhv:fx_tile", {
+	initial_properties = {
+		visual = "sprite", textures = {"blank.png"}, use_texture_alpha = true, glow = 14,
+		physical = false, pointable = false, static_save = false, collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+	on_step = function(self, dtime)
+		local fx = self.fx
+		if not fx then
+			self.object:remove()
+			return
+		end
+		fx.t = fx.t + dtime
+		if fx.t >= fx.secs then
+			self.object:remove()
+			return
+		end
+		local props = {}
+		if fx.frames then
+			local f = math.floor(fx.t / fx.frame_s) % #fx.frames + 1
+			if f ~= fx.shown then
+				fx.shown = f
+				props.textures = {fx.frames[f]}
+			end
+		else
+			-- (in quickly, a little bigger as it goes, then fading: in steps)
+			local k = fx.t / fx.secs
+			local s = fx.size * (0.75 + 0.35 * math.min(1, fx.t / 0.12) + 0.1 * k)
+			props.visual_size = {x = s, y = s}
+			local a = k < 0.45 and 255 or math.floor((1 - (k - 0.45) / 0.55) * 8 + 0.5) * 32
+			if a ~= fx.alpha then
+				fx.alpha = a
+				props.textures = {fx.tex .. (a < 255 and ("^[opacity:%d"):format(math.max(a, 1)) or "")}
+			end
+		end
+		if next(props) then
+			self.object:set_properties(props)
+		end
+	end,
+})
+
+local function fx_sprite(pos, fx)
+	local obj = core.add_entity(pos, "nhv:fx_tile")
+	if not obj then
+		return
+	end
+	fx.t = 0
+	obj:get_luaentity().fx = fx
+	obj:set_properties({visual_size = {x = fx.size, y = fx.size},
+		textures = {fx.frames and fx.frames[1] or fx.tex}})
+end
+
+-- an explosion's picture: its 3x3 tiles as one
+local function explosion_texture(kind)
+	local parts = {}
+	for i = 0, 8 do
+		parts[#parts + 1] = ("%d,%d=%s"):format(i % 3 * 16, math.floor(i / 3) * 16,
+			escape(sheet(SHEET_EXPLOSION + kind * 9 + i)))
+	end
+	return "[combine:48x48:" .. table.concat(parts, ":")
+end
+
+-- the shield sparkle - something resisting magic (NetHack's "shield x y"):
+-- over that square; yours, all round your view
+function msgfx.shield(tx, ty)
+	local frames = {}
+	for i = 0, 3 do
+		frames[#frames + 1] = sheet(SHEET_SHIELD + i)
+	end
+	local h = nh.snap and nh.snap.hero
+	if h and h.x == tx and h.y == ty then
+		local p = hero()
+		if p then
+			local look = p:get_look_dir()
+			local eye = vector.add(p:get_pos(), vector.new(0, 1.5, 0))
+			fx_sprite(vector.add(eye, vector.multiply(look, 1.2)), {frames = frames, frame_s = 0.07,
+				secs = 0.56, size = 1.6})
+		end
+		return
+	end
+	local e = nhv.mobs and nhv.mobs.monster_at(tx, ty)
+	local pos = e and e.obj and e.obj:get_pos() or U.tile_center(tx, ty, U.STAND_Y + 1.2)
+	fx_sprite(pos, {frames = frames, frame_s = 0.07, secs = 0.56, size = U.TILE * 0.8})
+end
+
 -- ---------------------------------------------------------------- explosions
 -- EXPL_DARK, NOXIOUS, MUDDY, WET, MAGICAL, FIERY, FROSTY
 local EXPL_COLORS = {[0] = "#402060", "#70c040", "#806040", "#4080ff", "#c060ff", "#ff7020", "#a0e8ff"}
@@ -400,6 +499,17 @@ local EXPL_COLORS = {[0] = "#402060", "#70c040", "#806040", "#4080ff", "#c060ff"
 function msgfx.explode(tx, ty, kind)
 	local c = EXPL_COLORS[kind] or "#ff7020"
 	local pos = U.tile_center(tx, ty)
+	-- NetHack's own picture of it, over the 3x3 squares it covers
+	-- (on your own square: in front of your eyes, filling the view)
+	local h, p = nh.snap and nh.snap.hero, hero()
+	if EXPL_COLORS[kind] and h and h.x == tx and h.y == ty and p then
+		local eye = vector.add(p:get_pos(), vector.new(0, 1.5, 0))
+		fx_sprite(vector.add(eye, vector.multiply(p:get_look_dir(), 1.5)),
+			{tex = explosion_texture(kind), secs = 0.7, size = 4})
+	elseif EXPL_COLORS[kind] then
+		fx_sprite(U.tile_center(tx, ty, U.STAND_Y + 1.5),
+			{tex = explosion_texture(kind), secs = 0.7, size = U.TILE * 3})
+	end
 	-- (the blast covers the 3x3 squares around it)
 	burst(pos, 1.2, c, U.TILE * 1.5, 120)
 	burst(pos, 1.2, "#ffffff", U.TILE * 0.6, 30)
@@ -418,6 +528,10 @@ nh.on_event(function(evs)
 			local x, y, k = ev.text:match("^explode (%d+) (%d+) (%d+)")
 			if x then
 				msgfx.explode(tonumber(x), tonumber(y), tonumber(k))
+			end
+			local sx, sy = ev.text:match("^shield (%d+) (%d+)")
+			if sx then
+				msgfx.shield(tonumber(sx), tonumber(sy))
 			end
 		end
 	end
