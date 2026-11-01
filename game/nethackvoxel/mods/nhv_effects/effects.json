@@ -452,6 +452,45 @@
     }
    ],
    "triggers": []
+  },
+  {
+   "id": "pet_heart",
+   "name": "Pet heart",
+   "layers": [
+    {
+     "shape": "rise",
+     "texture": {
+      "file": "nhvfx_heart.png"
+     },
+     "color": "#FFFFFF",
+     "amount": 1,
+     "duration": 0.05,
+     "spread": 0.05,
+     "height": 0.0,
+     "speed": [
+      1.4,
+      1.8
+     ],
+     "life": [
+      1.0,
+      1.2
+     ],
+     "size": [
+      1.1,
+      1.4
+     ],
+     "gravity": 1.7,
+     "glow": 10,
+     "additive": false,
+     "fade": true,
+     "fade_in": false,
+     "opacity": 100,
+     "collide": false
+    }
+   ],
+   "triggers": [
+    "pet_heart"
+   ]
   }
  ]
 }

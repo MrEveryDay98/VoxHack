@@ -1747,6 +1747,11 @@
    "desc": "The Amulet is offered on your own god's high altar: the choir as the ascension cutscene starts"
   },
   {
+   "id": "pet_heart",
+   "group": "game",
+   "desc": "A pet you can see gives off a heart (now and then, a few seconds apart; where its head is)"
+  },
+  {
    "id": "music_opening",
    "group": "music",
    "desc": "The opening, before the title (the title's music if none)"

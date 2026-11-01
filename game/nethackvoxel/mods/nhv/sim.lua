@@ -258,11 +258,18 @@ local function move_toward(e, map, target, dist, stop, hp)
 	local step = math.min(dist, d - (stop or 0))
 	local ux, uz = (target.x - e.pos.x) / d, (target.z - e.pos.z) / d
 	if not try_move(e, map, ux * step, uz * step, hp) then
+		-- (sliding: along either axis there's still some way to go on - even
+		-- a little, as a wide body has to go across a corridor, half a block,
+		-- to line up with an open door's gap three blocks ahead)
+		local dx, dz = target.x - e.pos.x, target.z - e.pos.z
 		if math.abs(ux) > 0.2 and try_move(e, map, U.sign(ux) * step, 0, hp) then
 			return
 		end
-		if math.abs(uz) > 0.2 then
-			try_move(e, map, 0, U.sign(uz) * step, hp)
+		if math.abs(dz) > 0.02 and try_move(e, map, 0, U.sign(dz) * math.min(step, math.abs(dz)), hp) then
+			return
+		end
+		if math.abs(ux) <= 0.2 and math.abs(dx) > 0.02 then
+			try_move(e, map, U.sign(dx) * math.min(step, math.abs(dx)), 0, hp)
 		end
 	end
 end

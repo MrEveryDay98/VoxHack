@@ -1440,8 +1440,10 @@ local function sleep_zs()
 end
 core.register_globalstep(sleep_zs)
 
--- A pet you can see gives off a heart now and then (nhv_heart.png:
--- tools/make_heart.py): it pops up out of its head, slows and fades
+-- A pet you can see gives off a heart now and then: the pet_heart hook,
+-- where its head is - what it looks like is the "Pet heart" effect
+-- (nhv_effects/effects.json, the VoxHack Editor's Effects tab), and a sound
+-- can be put on it too
 local HEART_EVERY = 6 -- seconds between hearts (per pet, give or take)
 local heart_next = {} -- monster id -> time of its next heart
 local function pet_hearts()
@@ -1460,17 +1462,7 @@ local function pet_hearts()
 			elseif now >= heart_next[id] then
 				heart_next[id] = now + HEART_EVERY * (0.6 + math.random() * 0.8)
 				local h = e.h or 1.5
-				local side = (math.random() - 0.5) * 0.5
-				core.add_particle({
-					pos = vector.offset(pos, side * 0.4, h * 0.45 + 0.1, side * 0.4),
-					velocity = vector.new(side * 0.5, 1.6, (math.random() - 0.5) * 0.3),
-					acceleration = vector.new(0, -1.7, 0),
-					expirationtime = 1.1,
-					size = 1.3,
-					texture = {name = "nhv_heart.png", alpha_tween = {1, 0, start = 0.55},
-						scale_tween = {0.5, 1.15}},
-					glow = 10,
-				})
+				nhv.sound.hook("pet_heart", {pos = vector.offset(pos, 0, h * 0.45 + 0.1, 0)})
 			end
 		else
 			heart_next[id] = nil

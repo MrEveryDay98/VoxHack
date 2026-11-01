@@ -1,13 +1,14 @@
-"""The heart pets give off (mobs.lua's pet_hearts): nhv_heart.png, a 9x8
-pixel heart - red, a dark red edge at its bottom, a light spot top left.
+"""The heart pets give off (mobs.lua's pet_hearts - the "Pet heart" effect,
+editable in the VoxHack Editor's Effects tab): nhvfx_heart.png, a 9x8 pixel
+heart - red, a dark red edge at its bottom, a light spot top left.
 
     py -3 tools/make_heart.py
 """
 import os
 from PIL import Image
 
-OUT = os.path.join(os.path.dirname(__file__), '..', 'game', 'nethackvoxel', 'mods', 'nhv',
-                   'textures', 'nhv_heart.png')
+OUT = os.path.join(os.path.dirname(__file__), '..', 'game', 'nethackvoxel', 'mods', 'nhv_effects',
+                   'textures', 'nhvfx_heart.png')
 SHAPE = [
     '.RR...RR.',
     'RWRR.RRRR',
