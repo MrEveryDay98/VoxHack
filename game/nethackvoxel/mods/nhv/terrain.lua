@@ -822,7 +822,7 @@ local function write_squares(sqs)
 	vm:set_data(data.ids)
 	vm:set_param2_data(data.p2)
 	vm:write_to_map(true)
-	if terrain.raytrace then
+	if nhv.raytrace and nhv.raytrace.wanted() then
 		nhv.raytrace.dirty()
 	end
 	-- (the light you carry was in what got rebuilt: it's put back at once,
@@ -1469,6 +1469,10 @@ function terrain.update_lights()
 		if n == "air" or (n ~= name and n:sub(1, 13) == "nhv:ls_light_") then
 			core.set_node(w.pos, {name = name})
 			ls_placed[k] = w.pos
+			-- (square light: the blocks' light changed - raytrace.lua)
+			if nhv.raytrace and nhv.raytrace.wanted() then
+				nhv.raytrace.dirty()
+			end
 		elseif n == name then
 			ls_placed[k] = w.pos
 		end

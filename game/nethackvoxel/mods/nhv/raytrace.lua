@@ -17,6 +17,13 @@ function raytrace.on()
 	return core.nhv_rt_scan ~= nil and core.settings:get_bool("nhv_raytrace", false)
 end
 
+-- the engine wants the level's blocks: raytraced, or square light (the
+-- blocks' own light, block by block)
+function raytrace.wanted()
+	return nhv.terrain.raytrace or (core.nhv_rt_scan ~= nil
+		and (core.settings:get("nhv_square_light") or "off") ~= "off")
+end
+
 -- (the engine's box of blocks: x 0..255, z 0..63)
 local GX, GZ = 256, 64
 
@@ -55,7 +62,7 @@ core.register_globalstep(function()
 		return
 	end
 	due = nil
-	if nhv.terrain.raytrace then
+	if raytrace.wanted() then
 		scan()
 	end
 end)

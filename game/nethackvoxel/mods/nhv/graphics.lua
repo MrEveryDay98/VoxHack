@@ -485,6 +485,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			or (core.settings:get_bool("nhv_square_corners", false) and "filled" or "on")
 		if want ~= now then
 			core.settings:set("nhv_square_light", want) -- (the engine, at once)
+			-- (the level's blocks, and their light, for it)
+			if nhv.raytrace then
+				nhv.raytrace.dirty()
+			end
 			changed = true
 		end
 	end
