@@ -1649,9 +1649,18 @@ local function update_meters(player, h)
 		player:hud_change(meter_ids.portrait, "text", tex)
 	end
 	local name = ((h.name or "") .. (h.rank and h.rank ~= "" and (" the " .. h.rank) or ""))
+	-- (the side bars: under your portrait, cut to the bar's width)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	local most = g and math.floor((g.w - 2 * g.pad) / g.char_w)
+	if most and #name > most then
+		name = name:sub(1, most - 2) .. ".."
+	end
 	if meter_ids.name and name ~= name_shown then
 		name_shown = name
 		player:hud_change(meter_ids.name, "text", name)
+		if meter_ids.name_shadow then
+			player:hud_change(meter_ids.name_shadow, "text", name)
+		end
 	end
 	local w, ht = meter_size()
 	for _, m in ipairs(METERS) do
@@ -1706,6 +1715,18 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 			offset = {x = g.bars.x + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
 		})
 	end
+	-- your name under the portrait, in gold (a black shadow: it's on the
+	-- bricks)
+	meter_ids.name_shadow = player:hud_add({
+		type = "text", position = base.position, alignment = {x = 0, y = 0},
+		offset = {x = g.name.x + 2, y = g.name.y + 2}, number = 0x000000, z_index = 41, text = "",
+		style = nhv.sidebars.text_style(),
+	})
+	meter_ids.name = player:hud_add({
+		type = "text", position = base.position, alignment = {x = 0, y = 0},
+		offset = {x = g.name.x, y = g.name.y}, number = GOLD_FLASH, z_index = 42, text = "",
+		style = nhv.sidebars.text_style(),
+	})
 	for _, key in ipairs({"info", "info_flash"}) do
 		meter_ids[key] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 1, y = 0},

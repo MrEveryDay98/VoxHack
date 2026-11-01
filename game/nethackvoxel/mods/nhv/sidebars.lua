@@ -2,7 +2,8 @@
 -- nhv_hud_layout = sidebars): the HUD round the view instead of over it,
 -- an old dungeon crawler's screen - the view in the middle, a bar each side
 -- (the world under them hidden):
---   left:  your portrait, HP and Pw, your numbers (gold, AC, experience,
+--   left:  your portrait, your name under it (gold, centred), HP and Pw
+--          close together, your numbers (gold, AC, experience,
 --          the stats, alignment and turns), what you wear (the inventory's
 --          equipment slots), your two weapons side by side (the hotbar's,
 --          hotbar.lua) and your quiver under them, each with its name
@@ -104,10 +105,13 @@ function sidebars.geometry(player)
 	local y = PAD
 	local ph = math.floor(math.min(inner, sh * 0.16))
 	g.portrait = {x = PAD, y = y, w = inner, h = ph}
-	y = y + ph + 6
+	y = y + ph + 4
+	-- (your name, then the bars, a little apart)
+	g.name = {x = PAD + inner / 2, y = y + line_h / 2}
+	y = y + line_h + 4
 	local bh = math.floor(14 * nhv.theme.box_scale() + 6)
-	g.bars = {x = PAD, y = {y, y + bh + 4}, w = inner, h = bh}
-	y = y + 2 * bh + 4 + 6
+	g.bars = {x = PAD, y = {y, y + bh + 2}, w = inner, h = bh}
+	y = y + 2 * bh + 2 + 6
 	-- (the gold/AC/experience line, then the stats in STAT_LINES lines,
 	-- in their box)
 	g.stats = {x = PAD, y = y, w = inner, h = (1 + sidebars.STAT_LINES) * line_h + 2 + 2 * IN}
