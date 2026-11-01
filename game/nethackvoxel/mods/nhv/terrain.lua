@@ -405,6 +405,7 @@ end
 local function open_typ(typ)
 	return typ >= T.POOL and typ ~= T.IRONBARS and typ ~= T.LAVAWALL
 end
+terrain.open_typ = open_typ
 
 -- ---------------------------------------------------------------- writing
 -- prefabs are built with the main walls; other levels swap in their own
@@ -660,6 +661,10 @@ end
 -- dithered, in steps of light)
 local LIT_LAYERS = {U.FLOOR_Y + 1, U.CEIL_Y - 1}
 function terrain.light_square(data, area, tx, ty)
+	-- (raytraced, the engine lights it instead: raytrace.lua)
+	if terrain.raytrace then
+		return
+	end
 	local air, light = cid("air"), cid("nhv:room_light")
 	local ox, oz = U.tile_origin(tx, ty)
 	for _, y in ipairs(LIT_LAYERS) do
@@ -792,6 +797,9 @@ local function write_squares(sqs)
 	vm:set_data(data.ids)
 	vm:set_param2_data(data.p2)
 	vm:write_to_map(true)
+	if terrain.raytrace then
+		nhv.raytrace.dirty()
+	end
 	-- (the light you carry was in what got rebuilt: it's put back at once,
 	-- instead of only when you next move)
 	local hl = terrain.hero_light_pos
@@ -1181,6 +1189,13 @@ function terrain.update(map, force)
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
 	local open, sky_floor, no_roof, open_edge = level_open_sky()
+	-- (raytraced light turned on or off: everything built again, with the
+	-- rooms' light blocks or without them - raytrace.lua)
+	local rt = nhv.raytrace and nhv.raytrace.on() or false
+	if rt ~= terrain.raytrace then
+		terrain.raytrace = rt
+		force = true
+	end
 	-- (a hand-built area open to the sky opens the level round it too -
 	-- its rim, its rock - unless the level is made up round it: the
 	-- Oracle's rooms and tunnels keep their ceilings)
@@ -1403,6 +1418,16 @@ function terrain.update_lights()
 	local level = carried > 0 and math.max(9, light_level(carried)) or 9
 	terrain.hero_light_node = level > 9 and ("nhv:hero_light_" .. level) or "nhv:hero_light"
 	terrain.hero_light_level = level
+	-- (raytraced: the lamps told to the engine, not light blocks -
+	-- raytrace.lua)
+	if terrain.raytrace then
+		local list = {}
+		for _, w in pairs(want) do
+			list[#list + 1] = {x = w.pos.x, y = w.pos.y, z = w.pos.z, level = w.level}
+		end
+		core.nhv_rt_lights(list)
+		want = {}
+	end
 	for k, p in pairs(ls_placed) do
 		local w = want[k]
 		local n = core.get_node(p).name

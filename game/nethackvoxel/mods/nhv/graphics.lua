@@ -53,6 +53,8 @@ local STORY_VOICES = {"On", "Off (muted)"}
 local TEXEL_LIGHT = {{"off", "Smooth"}, {"on", "Per texture pixel"}, {"dither", "Per texture pixel, dithered"}}
 local TEXEL_SIZE = {"Texture pixels", "Half (8x8 a block)"}
 local TEXEL_STEPS = {{2, "2"}, {3, "3"}, {4, "4"}, {6, "6"}, {8, "8"}, {12, "12"}, {16, "16"}, {32, "32"}}
+-- raytraced light (raytrace.lua)
+local RAYTRACE = {"Off", "On"}
 local TEXEL_PATTERN = {{"bayer2", "Ordered 2x2"}, {"bayer4", "Ordered 4x4"}, {"bayer8", "Ordered 8x8"},
 	{"lines", "Lines"}, {"noise", "Noise"}}
 local RETRO_RES = {"640x480", "800x600", "1024x768"}
@@ -181,6 +183,8 @@ function graphics.formspec()
 		core.settings:get_bool("nhv_texel_half", false) and 2 or 1))
 	add(row(y, "Light dithering", "texel_pattern", names(TEXEL_PATTERN),
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
+	add(row(y, "Raytraced light", "raytrace", table.concat(RAYTRACE, ","),
+		core.settings:get_bool("nhv_raytrace", false) and 2 or 1))
 	add(row(y, "Distant textures", "distant", table.concat(DISTANT, ","),
 		core.settings:get_bool("mip_map", false) and 2 or 1))
 	add(row(y, "Shadows", "shadows", table.concat(SHADOWS, ","), core.settings:get_bool("nhv_shadows", false) and 1 or 2))
@@ -437,6 +441,14 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	local tp = tonumber(fields.texel_pattern)
 	if tp and TEXEL_PATTERN[tp] and TEXEL_PATTERN[tp][1] ~= core.settings:get("nhv_texel_pattern") then
 		core.settings:set("nhv_texel_pattern", TEXEL_PATTERN[tp][1]) -- (the engine, at once)
+		changed = true
+	end
+	local rt = tonumber(fields.raytrace)
+	if rt and (rt == 2) ~= core.settings:get_bool("nhv_raytrace", false) then
+		core.settings:set_bool("nhv_raytrace", rt == 2) -- (the engine, at once)
+		if nhv.raytrace then
+			nhv.raytrace.changed()
+		end
 		changed = true
 	end
 	local rs = tonumber(fields.retro_scale)
