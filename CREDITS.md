@@ -83,6 +83,9 @@ with the wording they asked for where they gave one.
 
 The source is published with each release (this repository, with its
 `external/nethack` and `external/luanti` submodules), as NetHack's licence
-requires.
+requires. A paid release (Steam) must also come with the complete source
+itself (the licence's paragraph 3a: pointing to it is only allowed for
+non-commercial releases): the Steam build has it in `source/`
+(`tools/make_source_archive.py`).
 
 This is a practical inventory, not legal advice.

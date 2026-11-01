@@ -99,6 +99,11 @@ itch builds have no DLL and do neither), and it makes:
   .csv) with its two 256x256 icons, to set up in Steamworks (section 2b);
 - `dist/steam/rich_presence.vdf` - the rich presence strings (2b).
 
+The build also holds the game's complete source, `source/VoxHack-source.zip`
+(this repository and its NetHack and Luanti submodules, as committed): sold,
+NetHack's licence requires the source to come with the game, not just a
+link to it. Commit everything before building, or the zip won't match.
+
 Upload: run `dist\steam\upload.bat`.
 
 Then in Steamworks > SteamPipe > Builds, set the new build live on the

@@ -9,6 +9,9 @@ The content is the release (make_release.py) laid out for Steam:
                                 "Verify integrity" would put a shipped one back)
     Launchers/                  Reset NetHack Save, Level Atlas
     licenses/, CREDITS.txt, README.txt
+    source/                     the complete source (make_source_archive.py):
+                                a paid release must come with it - NetHack's
+                                licence, paragraph 3a
 
 Steam starts engine\\bin\\luanti.exe itself (steam/README.md: the launch
 option), so there's no shortcut maker and no Play launcher. The Steamworks
@@ -35,6 +38,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_release as rel  # noqa: E402
 import make_steam_achievements  # noqa: E402
+import make_source_archive  # noqa: E402
 
 ROOT = rel.ROOT
 OUT = os.path.join(ROOT, "dist", "steam")
@@ -157,6 +161,9 @@ def main():
 	if not os.path.isfile(dll):
 		sys.exit("no steam_api64.dll at %s: set steam/steam.json's sdk to the Steamworks SDK's sdk folder" % dll)
 	shutil.copy2(dll, os.path.join(CONTENT, "engine", "bin", "steam_api64.dll"))
+	# (the complete source with it: sold, NetHack's licence wants it there,
+	# not only a link to it)
+	make_source_archive.main(os.path.join(CONTENT, "source", "VoxHack-source.zip"))
 
 	os.makedirs(SCRIPTS)
 	rel.write(os.path.join(SCRIPTS, "app_build.vdf"), APP_BUILD.format(
