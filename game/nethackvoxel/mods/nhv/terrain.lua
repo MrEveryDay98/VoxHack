@@ -259,6 +259,47 @@ local function bars_rot(map, tx, ty)
 	return (walkable(map, tx, ty - 1) or walkable(map, tx, ty + 1)) and 0 or 1
 end
 
+-- Iron bars are a line through the middle of their square (as built, turned
+-- along the bars or the wall they meet: bars_rot); where they meet more on
+-- another side too - turning a corner, a T - that side's half of the line
+-- is added, so they join up with no gap to slip through: the sides they
+-- join, as "dx,dy" pairs ("" none more)
+local function bar_arms(map, tx, ty)
+	local function solid(x, y)
+		return walllike(map, x, y) or (U.in_map(x, y) and map.typ[U.idx(x, y)] == T.IRONBARS)
+	end
+	local out = {}
+	for _, d in ipairs({{0, -1}, {1, 0}, {0, 1}, {-1, 0}}) do
+		if solid(tx + d[1], ty + d[2]) then
+			out[#out + 1] = d[1] .. "," .. d[2]
+		end
+	end
+	return table.concat(out, ";")
+end
+
+-- the bars' middle column copied into each side they join (where that's
+-- empty): a side's middle cell, from the floor up to the ceiling
+local function write_bar_arms(data, area, sq)
+	local air = cid("air")
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	local mid = math.floor(U.TILE / 2)
+	for pair in sq.bar_arms:gmatch("[^;]+") do
+		local dx, dy = pair:match("^(%-?%d+),(%-?%d+)$")
+		dx, dy = tonumber(dx), tonumber(dy)
+		-- (map y south, the world's z north)
+		for step = 1, mid do
+			local lx, lz = mid + dx * step, mid - dy * step
+			for ly = prefabs.FLOOR + 1, prefabs.CEIL - 1 do
+				local from = area:index(ox + mid, prefabs.Y0 + ly, oz + mid)
+				local to = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+				if data.ids[to] == air and data.ids[from] ~= air then
+					data.ids[to], data.p2[to] = data.ids[from], data.p2[from]
+				end
+			end
+		end
+	end
+end
+
 -- Stairs and ladders face their way in: a prefab's front (the red block in
 -- the prefab editor, north at rotation 0; each quarter turn moves it on
 -- clockwise: east, south, west) goes to the side you can walk up to, so a
@@ -694,6 +735,9 @@ local function write_square(data, area, sq)
 		end
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
+		if sq.bar_arms and sq.bar_arms ~= "" then
+			write_bar_arms(data, area, sq)
+		end
 		carve_corners(data, area, sq)
 		if (terrain.open_area and sq.slot == "stone") or sq.roofless then
 			-- (open to the sky: rock you didn't build in the area stops at
@@ -948,6 +992,9 @@ local function describe(map, tx, ty)
 	local sq = {tx = tx, ty = ty, typ = map.typ[i], seen = seen, lit = lit, memcmap = memcmap,
 		cansee = has_bit(map.flags[i], U.LOC_CANSEE)}
 	sq.slot, sq.rot = base_slot(map, i, tx, ty, memcmap)
+	if sq.slot == "iron_bars" then
+		sq.bar_arms = bar_arms(map, tx, ty)
+	end
 	-- (a way up on a level open to the sky, or in a hand-built area open to
 	-- it: its own cell, once built)
 	local in_open_area = nhv.areas.in_open_area(tx, ty, map)
@@ -1010,7 +1057,7 @@ local function describe(map, tx, ty)
 	-- (seeing a square for the first time doesn't change what's built)
 	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or ""}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or "", sq.bar_arms or ""}, ":")
 	-- (ASCII mode: its character instead - ascii.lua; seeing it, or what's
 	-- remembered there changing, does change what's built then)
 	if sq.outer then
