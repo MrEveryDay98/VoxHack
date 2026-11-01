@@ -148,6 +148,10 @@ local function fill(col, light)
 			-- edge, too: the sea written over once more, its light as it was)
 			second = true
 			strip(1)
+			-- (and the rooms' light cast out again: lightcast.lua)
+			if nhv.lightcast then
+				nhv.lightcast.redo()
+			end
 			return
 		elseif not s then
 			return

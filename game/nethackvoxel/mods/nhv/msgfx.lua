@@ -584,6 +584,9 @@ local function altar_glow(color)
 			core.after(3, function()
 				if core.get_node(p).name == "nhv:ls_light_12" then
 					core.set_node(p, {name = "air"})
+					if nhv.lightcast then
+						nhv.lightcast.redo()
+					end
 				end
 			end)
 		end
