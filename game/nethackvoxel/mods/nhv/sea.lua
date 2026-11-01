@@ -140,7 +140,11 @@ local function fill(col, light)
 			local vm = core.get_voxel_manip()
 			local emin, emax = vm:read_from_map(p0, p1)
 			local area = VoxelArea(emin, emax)
-			local ids, p2 = vm:get_data(), vm:get_param2_data()
+			local ids, p2, lt = vm:get_data(), vm:get_param2_data(), vm:get_light_data()
+			-- (its light, day and night alike - set block by block: a
+			-- VoxelManip that isn't mapgen's can't set_lighting, the sea kept
+			-- whatever light was there before - fully lit, by an earlier sea)
+			local lit = light + light * 16
 			local air, bounds = terrain.cid("air"), terrain.cid("nhv:bounds")
 			for ly = 0, y1 - y0 do
 				local id = col and col[ly] and terrain.cid(col[ly]) or air
@@ -158,6 +162,10 @@ local function fill(col, light)
 							local ring = x >= -1 and x <= X1 and z >= -1 and z <= Z1
 								and (zedge or x == -1 or x == X1)
 							ids[vi], p2[vi] = ring and edge or id, 0
+							-- (column 0 is the level's: its light comes from the level)
+							if not inz or x < 0 or x >= X1 then
+								lt[vi] = lit
+							end
 						end
 						vi = vi + 1
 					end
@@ -165,9 +173,7 @@ local function fill(col, light)
 			end
 			vm:set_data(ids)
 			vm:set_param2_data(p2)
-			-- (column 0 is the level's: its light comes from the level)
-			local lx1 = k == 3 and -1 or x1
-			vm:set_lighting({day = light, night = light}, p0, vector.new(lx1, y1, z1))
+			vm:set_light_data(lt)
 			vm:write_to_map(false)
 			strip(k + 1)
 		end)
