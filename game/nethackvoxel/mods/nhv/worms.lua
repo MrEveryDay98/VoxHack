@@ -11,7 +11,11 @@
 --    bodies only follow them, along the way they came, and are only for
 --    looking at (hitting one hits the worm).
 -- The body comes out from behind the head as you see it (the head's
--- picture always faces you). Not while you're hallucinating (what a worm
+-- picture always faces you).
+-- Swallowed by one, you're inside its body: NetHack has it on your square
+-- (not drawn, mobs.lua); here its head is out ahead of you, the way it
+-- last went, you where its body is about your size, and the segments
+-- round you your size. Not while you're hallucinating (what a worm
 -- looks like then is NetHack's to say), nor in ASCII mode.
 local U = nhv.util
 
@@ -22,7 +26,7 @@ local BODIES = dofile(core.get_modpath("nhv_tiles") .. "/worm_bodies.lua")
 local WIDTH = 0.9      -- a segment's picture next to the head, for the head's height
 local TIP = 0.13       -- at the very end of the tail, for that
 local BEHIND = 0.18    -- where it comes out: behind the head's middle, for its height
-local LENGTH = 1.5     -- a body with no tail: how long, for the head's height
+local LENGTH = 4       -- a body with no tail: how long, for the head's height
 local SPACING = 0.45   -- from one segment to the next, for their size
 local WAVE = 0.15      -- how far it snakes from side to side (nodes)
 local WAVE_LEN = 7     -- (nodes from one bend to the next the same way)
@@ -30,6 +34,8 @@ local EASE = 6         -- how quickly segments follow where they're going
 local SAMPLES = 8      -- (points along the curve from one square to the next)
 local TRAIL_STEP = 0.4 -- (a body with no tail: a point of the way it came every so far)
 local TRAIL_KEEP = 20  -- (seconds it keeps its shape out of sight)
+local HERO_W = 2.2     -- swallowed: the segments round you (nodes)
+local BULGE = 1.5      -- (and how far along it they swell to that)
 
 -- a segment: its picture, facing you
 core.register_entity("nhv:wormseg", {
@@ -45,6 +51,16 @@ core.register_entity("nhv:wormseg", {
 		end
 		return true
 	end,
+})
+
+-- the head of the worm you're inside (mobs.lua doesn't draw it: it's on
+-- your square)
+core.register_entity("nhv:wormhead", {
+	initial_properties = {
+		visual = "wielditem", wield_item = nhv_tiles.item(0), visual_size = {x = 0.5, y = 0.5, z = 0.5},
+		physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0}, shaded = true,
+	},
 })
 
 -- drawn as bodies now (else as NetHack's pictures, square by square)
@@ -66,15 +82,19 @@ local function flat(p)
 	return vector.new(p.x, 0, p.z)
 end
 
--- where a head's body comes out: behind its middle, as you see it
-local function anchor(head, eye)
-	local hp = flat(head.obj:get_pos())
+-- where a head's body comes out: behind its middle (hp, a head h tall),
+-- as you see it
+local function anchor_at(hp, h, eye)
 	local away = vector.subtract(hp, flat(eye))
 	local l = vector.length(away)
 	if l < 1e-3 then
 		return hp
 	end
-	return vector.add(hp, vector.multiply(away, (head.h or 2) * BEHIND / l))
+	return vector.add(hp, vector.multiply(away, h * BEHIND / l))
+end
+
+local function anchor(head, eye)
+	return anchor_at(flat(head.obj:get_pos()), head.h or 2, eye)
 end
 
 -- (is there a wall at (x, z), a block above the floor?)
@@ -93,9 +113,7 @@ end
 -- straight back from it, away from you and off to one side if there's
 -- room, else the way with most room.
 local trails = {} -- worm id -> {pts, len}
-local function trail_of(id, head, eye)
-	local hp = flat(head.obj:get_pos())
-	local len = (head.h or 2) * LENGTH
+local function trail_of(id, hp, len, eye)
 	local t = trails[id]
 	if t and vector.distance(t.pts[1], hp) > 3 * U.TILE then
 		t = nil
@@ -151,7 +169,7 @@ end
 -- that's seen. A point: {p = where (x, z), k = how far along (0: the
 -- head; for a tail, its place in it), key = the mobs.mons key it hits}.
 -- Each worm: {pieces, last (k at its end), look (worm_bodies.lua), h}.
-local function bodies(mons, eye)
+local function bodies(mons, eye, inside, hero_pos)
 	local out = {}
 	for key, e in pairs(mons) do
 		if e.tail_of and e.mon and e.obj:get_pos() then
@@ -193,7 +211,7 @@ local function bodies(mons, eye)
 		-- (not one only sensed, unseen, nor a black shape in the dark)
 		if look and e.obj:get_pos() and not (e.silhouette or e.fuzz or U.has(e.mon.flags or 0, U.MON_UNSEEN)) then
 			seen[e.id] = true
-			local t = trail_of(e.id, e, eye)
+			local t = trail_of(e.id, flat(e.obj:get_pos()), (e.h or 2) * LENGTH, eye)
 			local piece = {{p = anchor(e, eye), k = 0, key = key}}
 			local d, from = 0, nil
 			for _, p in ipairs(t.pts) do
@@ -206,6 +224,45 @@ local function bodies(mons, eye)
 			end
 			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, head = flat(e.obj:get_pos())}
 		end
+	end
+	-- the one you're inside
+	local m = inside
+	if m then
+		seen[m.id] = true
+		local h = nhv.scale.height(m.size, m.mndx)
+		local len = h * LENGTH
+		-- (you: where it's about your size - that far back from its head)
+		local f = math.max(0.15, math.min(0.85, (WIDTH - HERO_W / h) / (WIDTH - TIP)))
+		local hp = flat(hero_pos)
+		local t = trail_of(m.id, hp, len * (1 - f), eye)
+		-- its head ahead of you, the way it last went (not into a wall)
+		local dir = t.pts[2] and vector.subtract(t.pts[1], t.pts[2])
+		if not dir or vector.length(dir) < 1e-3 then
+			dir = vector.subtract(hp, flat(eye))
+			if vector.length(dir) < 1e-3 then
+				dir = vector.new(0, 0, 1)
+			end
+		end
+		dir = vector.normalize(dir)
+		local ahead = 0
+		while ahead < len * f and not wall_at(vector.add(hp, vector.multiply(dir, ahead + 0.5))) do
+			ahead = ahead + 0.25
+		end
+		local head = vector.add(hp, vector.multiply(dir, ahead))
+		local a = anchor_at(head, h, eye)
+		local key = "id" .. m.id
+		local piece = {{p = a, k = 0, key = key}}
+		local d0 = vector.distance(a, hp)
+		piece[2] = {p = hp, k = 4 * f, key = key}
+		local d, from = d0, hp
+		for i = 2, #t.pts do
+			d = d + vector.distance(from, t.pts[i])
+			from = t.pts[i]
+			piece[#piece + 1] = {p = t.pts[i], k = 4 * math.min(1, f + (1 - f) * (d - d0) / math.max(0.1, len * (1 - f))),
+				key = key}
+		end
+		out[m.id] = {pieces = {piece}, last = 4, look = BODIES.bodies[m.tile], h = h, head = hp,
+			bulge = d0, inside_head = {pos = head, tile = m.tile, mndx = m.mndx, h = h}}
 	end
 	-- (one out of sight a while keeps its body's shape: back in sight
 	-- where it was, it isn't laid out afresh)
@@ -283,6 +340,11 @@ local function targets(w, phase)
 			-- (the head's size next to it, thinner all the way to the tip)
 			local f = math.max(0, math.min(1, s.k / math.max(1, w.last)))
 			local wd = h * (WIDTH + (TIP - WIDTH) * f)
+			-- (swallowed: your size round you)
+			if w.bulge and from_head then
+				local b = math.max(0, 1 - math.abs(d - w.bulge) / BULGE)
+				wd = wd + (HERO_W - wd) * b
+			end
 			-- (snaking from side to side - not where it leaves the head)
 			local l = vector.length(dir)
 			if l > 1e-4 then
@@ -332,6 +394,56 @@ local function remove(list, from)
 	end
 end
 
+-- what has swallowed you, if it's a worm with a body
+local function swallower(snap)
+	if not U.has(snap.hero.flags or 0, U.HERO.SWALLOWED) then
+		return nil
+	end
+	for _, m in ipairs(snap.monsters or {}) do
+		if U.has(m.flags or 0, U.MON_ENGULFING) and (m.id or 0) > 0 and BODIES.bodies[m.tile] then
+			return m
+		end
+	end
+end
+
+-- Are you inside a worm's body now (swallowed by one that has one, drawn)?
+-- Then you aren't drawn (avatar.lua), nor the engulf frame (holds.lua).
+function worms.inside(snap)
+	return snap and snap.hero and worms.on(snap) and swallower(snap) ~= nil or false
+end
+
+-- its head, out ahead of you: {obj, tile, h}
+local inside_head = nil
+local function set_inside_head(want)
+	if inside_head and not (want and inside_head.obj:get_pos()) then
+		if inside_head.obj:get_pos() then
+			inside_head.obj:remove()
+		end
+		inside_head = nil
+	end
+	if not want then
+		return
+	end
+	local tx, ty = U.pos_to_tile(want.pos)
+	local floor = U.in_map(tx, ty) and nhv.terrain.stand_y(tx, ty) or U.STAND_Y
+	local pos = vector.new(want.pos.x, nhv.scale.mon_center_y(want.mndx, want.h, floor, U.CEIL_Y - 0.5),
+		want.pos.z)
+	if not inside_head then
+		local obj = core.add_entity(pos, "nhv:wormhead")
+		if not obj then
+			return
+		end
+		inside_head = {obj = obj}
+	end
+	if inside_head.tile ~= want.tile or inside_head.h ~= want.h then
+		inside_head.tile, inside_head.h = want.tile, want.h
+		local props = nhv_tiles.look(want.tile, want.h)
+		props.infotext = "nhv:billboard" -- (facing you: the engine turns it)
+		inside_head.obj:set_properties(props)
+	end
+	inside_head.obj:move_to(pos, true)
+end
+
 function worms.clear()
 	for id, list in pairs(drawn) do
 		remove(list, 1)
@@ -339,6 +451,7 @@ function worms.clear()
 	end
 	trails = {}
 	travelled = {}
+	set_inside_head(nil)
 end
 
 core.register_globalstep(function(dtime)
@@ -349,7 +462,14 @@ core.register_globalstep(function(dtime)
 		worms.clear()
 		return
 	end
-	local all = bodies(mobs.mons, U.camera_pos(player))
+	local inside = swallower(snap)
+	-- (you: your body - flying free of the hero in wizard mode, the hero's square)
+	local hero_pos = player:get_pos()
+	if nhv.wizard and nhv.wizard.detached() and snap.hero.x then
+		hero_pos = U.tile_center(snap.hero.x, snap.hero.y)
+	end
+	local all = bodies(mobs.mons, U.camera_pos(player), inside, hero_pos)
+	set_inside_head(inside and all[inside.id] and all[inside.id].inside_head)
 	for id, list in pairs(drawn) do
 		if not all[id] then
 			remove(list, 1)

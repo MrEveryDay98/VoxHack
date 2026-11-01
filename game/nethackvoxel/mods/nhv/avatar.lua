@@ -132,9 +132,11 @@ function avatar.update(snap)
 	end
 	-- (invisible, and you can't see invisible: you can't see yourself;
 	-- dead, your corpse lies there instead - death.lua; ascended, you're
-	-- gone into the light - cutscene.lua)
+	-- gone into the light - cutscene.lua; swallowed by a worm, you're
+	-- inside its body - worms.lua)
 	if me and not U.has(me.flags, U.MON_HIDDEN) and not (nhv.death and nhv.death.active)
-			and not (nhv.cutscene and nhv.cutscene.hide_self) then
+			and not (nhv.cutscene and nhv.cutscene.hide_self)
+			and not (nhv.worms and nhv.worms.inside(snap)) then
 		show(player, "self", me, seat)
 	else
 		drop("self")

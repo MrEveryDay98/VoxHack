@@ -179,6 +179,10 @@ local function update(player)
 	local from = holder_pos()
 	local h = nh.snap and nh.snap.hero
 	local swallowed = h and U.has(h.flags, U.HERO.SWALLOWED)
+	-- (inside a worm, its body's round you - worms.lua: no frame, no dark)
+	if swallowed and nhv.worms and nhv.worms.inside(nh.snap) then
+		swallowed = false
+	end
 	set_vignette(player, from ~= nil or swallowed, swallowed)
 	set_frame(player, swallowed)
 	-- (where you're pinned, not your body's position this step: that
