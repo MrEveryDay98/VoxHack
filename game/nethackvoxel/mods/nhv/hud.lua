@@ -416,8 +416,6 @@ local function update_messages(player)
 	-- chat console shows the whole log meanwhile)
 	local covered = nhv.ui.chat_open or (nhv.guide and nhv.guide.open)
 		or (nhv.title and nhv.title.open) or (nhv.ui.menu_open and not nhv.ui.open)
-		-- (the side bars: in their log instead - sidebars.lua)
-		or (nhv.sidebars and nhv.sidebars.on())
 	if not covered then
 		for _, m in ipairs(hud.messages) do
 			lines[#lines + 1] = m.text
@@ -494,10 +492,6 @@ function hud.message(text)
 		return
 	end
 	table.insert(hud.messages, {text = text, t = core.get_us_time() / 1e6})
-	-- (and the side bars' log: kept whichever HUD is showing)
-	if nhv.sidebars then
-		nhv.sidebars.log_add({text = text})
-	end
 	while #hud.messages > MSG_LINES do
 		table.remove(hud.messages, 1)
 	end

@@ -988,6 +988,10 @@ function ui.show_item_menu(invlet)
 	end
 	ui.ctx_obj = o
 	local acts = nhv.actions.item_actions(o)
+	-- (and putting it in a quick slot: Shift + 1-5 - quick.lua)
+	acts = table.copy(acts)
+	acts[#acts + 1] = {label = "Quick slot (Shift + 1-5)...",
+		func = function(player, it) nhv.quick.show_chooser(player, it) end}
 	local h = 2.4 + #acts * 0.85
 	local fs = {head(9, h),
 		("item_image[0.4,0.3;1,1;%s]"):format(nhv_tiles.item(o.tile)),

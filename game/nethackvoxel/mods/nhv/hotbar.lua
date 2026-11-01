@@ -4,7 +4,11 @@
 -- it can be selected):
 --   [primary weapon] [alternate weapon]   [1] [2] [3] [4] [5]
 -- The weapon you're wielding has a green frame. Keys 1-5 do the actions in
--- ACTIONS (the VoxHack build of Luanti sends them as "/nhvkey <n>").
+-- ACTIONS (the VoxHack build of Luanti sends them as "/nhvkey <n>"); with
+-- Shift held they use your quick items, with Ctrl they cast your quick
+-- spells ("/nhvkey s<n>", "c<n>": quick.lua) - the slots show those while
+-- it's held, and a line over the hotbar says what the keys and the mouse
+-- do.
 -- Your hand always holds the wielded weapon.
 --
 -- Chat (T) is a NetHack command line: type a command and press Enter. The
@@ -100,12 +104,13 @@ end
 local wep_size -- (the weapons' slots' size, in the side bars; nil: the hotbar's)
 
 local SEARCH_DIM = 0x90C8C8C8 -- (see-through grey: the alpha byte is first)
+local layer, layer_sig = "actions", nil -- (what the action slots show: refresh_layer)
 local HINT_LIT = 0xFFFFD080
 
 local function build(player)
 	measure(player)
 	if nhv.hud.place_status then
-		nhv.hud.place_status(player, SLOT + 28) -- (the status line sits just above)
+		nhv.hud.place_status(player, SLOT + 50) -- (the status line sits above, over the hints)
 	end
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	wep_size = g and g.weapons.size or nil
@@ -153,12 +158,99 @@ local function build(player)
 			player:hud_change(hud[key], "offset", {x = -(g.w - g.pad), y = g.hints_y + (i - 1) * g.line_h})
 		end
 	end
+	-- the line saying what the keys and the mouse do (refresh_layer)
+	hud.hint = add(player, {type = "text", offset = {x = 0, y = Y - SLOT / 2 - 26},
+		number = SEARCH_DIM, text = "", z_index = 52})
+	layer_sig = nil
 	-- the cooldown bar: just above the hotbar while an action plays out
 	-- (until it's gone you can't act again); see update_cooldown
 	hud.cooldown = add(player, {type = "image", offset = {x = 0, y = Y - SLOT / 2 - 10},
 		scale = {x = 0, y = 4}, text = "[fill:1x1:#FFFFFF", z_index = 52})
 	cooldown_w = nil
 end
+
+-- ---------------------------------------------------------------- layers
+-- Holding Shift the action slots show your quick items, holding Ctrl your
+-- quick spells (quick.lua): the picture, and what it does or the spell's
+-- name; the line over the hotbar says what the keys and the mouse do with
+-- that held
+local HINTS = {
+	actions = "Shift: quick items    Ctrl: quick spells    Shift+LMB: fire",
+	items = "Shift+1-5: quick items    Shift+LMB: fire    Shift+RMB (hold): yourself",
+	spells = "Ctrl+1-5: cast where you aim    Ctrl+RMB (hold): magic",
+}
+
+local function layer_slots(which)
+	local out = {}
+	local most = math.max(4, math.floor(SLOT / 8.5))
+	for n = 1, 5 do
+		if which == "items" then
+			local o, s = nhv.quick.find(n)
+			out[n] = {icon = o and nhv_tiles.texture(o.tile) or "blank.png",
+				label = s and s.action:sub(1, most) or ""}
+		elseif which == "spells" then
+			local sp = nhv.quick.spells()[n]
+			out[n] = {icon = sp and nhv_tiles.texture(sp.tile) or "blank.png",
+				label = sp and sp.name:sub(1, most) or ""}
+		else
+			local a = hotbar.ACTIONS[n]
+			out[n] = {icon = "blank.png", label = a and a[1] or ""}
+		end
+	end
+	return out
+end
+
+function hotbar.refresh_layer(player, force)
+	if not hud.label3 then
+		return
+	end
+	local slots = layer_slots(layer)
+	local parts = {layer}
+	for n, s in ipairs(slots) do
+		parts[#parts + 1] = n .. s.icon .. "|" .. s.label
+	end
+	local sig = table.concat(parts, ";")
+	if sig == layer_sig and not force then
+		return
+	end
+	layer_sig = sig
+	-- (a picture: it in the slot's top, its words under it)
+	local pictured = layer ~= "actions"
+	for n, s in ipairs(slots) do
+		local k = n + 2
+		player:hud_change(hud["icon" .. k], "text", s.icon)
+		player:hud_change(hud["icon" .. k], "offset", {x = slot_x(k), y = pictured and Y - SLOT * 0.1 or Y - 4})
+		player:hud_change(hud["icon" .. k], "scale", pictured and {x = 1.8 * SLOT / 64, y = 1.8 * SLOT / 64}
+			or {x = 2.5 * SLOT / 64, y = 2.5 * SLOT / 64})
+		player:hud_change(hud["label" .. k], "text", s.label)
+		player:hud_change(hud["label" .. k], "offset", {x = slot_x(k), y = pictured and Y + SLOT * 0.33 or Y + 2})
+	end
+	if hud.hint then
+		player:hud_change(hud.hint, "text", HINTS[layer])
+	end
+end
+
+-- (Shift or Ctrl held, or let go: the slots change)
+local layer_t = 0
+core.register_globalstep(function(dtime)
+	layer_t = layer_t + dtime
+	if layer_t < 0.05 then
+		return
+	end
+	layer_t = 0
+	local player = nhv.player.get()
+	if not (player and hud.label3) then
+		return
+	end
+	local ctl = player:get_player_control()
+	local want = ctl.sneak and "items" or (ctl.nhv_ctrl and "spells") or "actions"
+	if want ~= layer then
+		layer = want
+		hotbar.refresh_layer(player, true)
+	elseif layer_sig == nil then
+		hotbar.refresh_layer(player, true)
+	end
+end)
 
 -- the hint lights up for a moment when X is pressed
 function hotbar.flash_search()
@@ -373,6 +465,7 @@ nh.on_snapshot(function(snap)
 		refresh(player, snap.inventory)
 		update_pay(player, snap.hero)
 		update_enhance(player, snap.hero)
+		hotbar.refresh_layer(player) -- (what's in the quick slots)
 	end
 end)
 
@@ -482,7 +575,26 @@ core.register_chatcommand("nhvkey", {
 		end
 		local notches = param:match("^wheel (%-?%d+)$")
 		if notches then
-			nhv.hud.scroll_map(tonumber(notches)) -- (the big map, when it's wider than the screen)
+			-- (the big map, when it's open and wider than the screen; else the
+			-- side bars' inventory)
+			if not nhv.hud.scroll_map(tonumber(notches)) and nhv.sidebars then
+				nhv.sidebars.scroll_inventory(tonumber(notches))
+			end
+			return true
+		end
+		-- Shift + 1-5: a quick item; Ctrl + 1-5: a quick spell (quick.lua)
+		local mod, qn = param:match("^([sc])(%d)$")
+		if mod then
+			local player = core.get_player_by_name(pname)
+			qn = tonumber(qn)
+			if player and qn >= 1 and qn <= nhv.quick.SLOTS then
+				flash_slot(qn + 2)
+				if mod == "s" then
+					nhv.quick.use(player, qn)
+				else
+					nhv.quick.cast(player, qn)
+				end
+			end
 			return true
 		end
 		if param == "look" then

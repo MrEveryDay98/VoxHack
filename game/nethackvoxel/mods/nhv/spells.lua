@@ -276,13 +276,27 @@ function spells.release(player)
 		nhv.clock.act({{key = "z"}, {key = r.wand}}, {kind = "zap"})
 		return true
 	end
-	-- (looking down means down for dig, but yourself for anything else)
-	local dir = look_dir(nhv.actions.pointed_dir_key(player, r.name == "dig" and "dig" or r.name, true))
-	table.insert(nhv.ui.auto_answers, {pattern = spells.PROMPT, menu = r.sel, t = now})
-	table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
+	spells.cast_at_aim(player, r.sel, r.name, true)
+	return true
+end
+
+-- Cast the spell at sel (its letter in NetHack's spell menu) where you aim
+-- - NetHack's direction the nearest of its 8 to where you look; looking
+-- down means down for dig, yourself for anything else. One that needs no
+-- direction is just cast. (A readied spell released; Ctrl + 1-5: quick.lua)
+function spells.cast_at_aim(player, sel, name, directional)
+	local now = core.get_us_time()
+	table.insert(nhv.ui.auto_answers, {pattern = spells.PROMPT, menu = sel, t = now})
+	if directional then
+		local dir = nhv.actions.pointed_dir_key(player, name == "dig" and "dig" or name, true)
+		if dir ~= "<" and dir ~= ">" and dir ~= "." then
+			local dx, dy = U.vec_to_dir(player:get_look_dir())
+			dir = (dx ~= 0 or dy ~= 0) and U.dir_key(dx, dy) or dir
+		end
+		table.insert(nhv.ui.auto_answers, {pattern = "direction", key = dir, t = now})
+	end
 	nhv.actions.swing()
 	nhv.clock.act({{key = "Z"}}, {kind = "spell"})
-	return true
 end
 
 core.register_globalstep(function()

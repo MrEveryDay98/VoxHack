@@ -7,15 +7,17 @@
 --          equipment slots), your two weapons side by side (the hotbar's,
 --          hotbar.lua) and your quiver under them, and your ailments (the
 --          status line's conditions, each in its colour)
---   right: the map and the level; the log - NetHack's messages and what's
---          said (speech.lua), speakers' names in yellow, the newest at the
---          bottom; what's on the ground where you stand (hud.lua), "F  Pick
---          up" at the bottom of its box - always there; and the keys' hints
---          (X Search, Q Invoke, P Pay, G Enhance: hotbar.lua, hud.lua) at
---          the bottom
+--   right: the map and the level; a small box of what's said (speech.lua),
+--          speakers' names in yellow, the newest at the bottom (the
+--          speech bubbles over heads stay); your inventory, scrolled with
+--          the mouse wheel (the big map's scroll comes first, when it's
+--          open and wider than the screen); what's on the ground where you
+--          stand (hud.lua), "F  Pick up" at the bottom of its box; and the
+--          keys' hints (X Search, Q Invoke, P Pay, G Enhance: hotbar.lua,
+--          hud.lua) at the bottom
 -- The chat console (T, the command line) opens over the view only.
--- The action keys stay along the bottom of the view, the compass along its
--- top. Each bar is as wide as the
+-- The action keys stay along the bottom of the view, the messages and the
+-- compass along its top. Each bar is as wide as the
 -- corner map needs (Map size), at most a quarter of the screen (the map
 -- made smaller to fit); everything in them sized to the screen's height.
 
@@ -35,7 +37,8 @@ local PAD = 8
 sidebars.STAT_LINES = 3    -- the stats' lines (hud.lua's show_status)
 sidebars.AILMENT_LINES = 4 -- ailments the box shows
 sidebars.HINT_LINES = 4    -- the keys' hints at the bottom right
-local HERE_SHARE = 0.42    -- of the room under the map: the ground's box
+local DIALOG_LINES = 4     -- what's said: its box's lines
+local HERE_LINES = 6       -- what's on the ground: its box's lines (with F)
 
 function sidebars.on()
 	return core.settings:get("nhv_hud_layout") == "sidebars"
@@ -103,18 +106,22 @@ function sidebars.geometry(player)
 	local S2 = math.floor(math.min(S * 1.4, (inner - 8) / 2))
 	g.weapons = {size = S2, {x = PAD + 2, y = y}, {x = w - PAD - 2 - S2, y = y}}
 	g.quiver = {x = math.floor((w - S2) / 2), y = y + S2 + 8, size = S2}
-	-- right: the map, the level under it; the hints at the bottom; the log
-	-- and the ground's box between, the log the bigger
+	-- right: the map, the level under it; what's said under that; the hints
+	-- at the bottom, the ground's box over them; the inventory between
 	g.map = {x = -(PAD + math.floor((inner - U.COLNO * s) / 2)), y = PAD}
 	g.level_y = PAD + U.ROWNO * s + 4
 	local top = g.level_y + line_h + 6
 	g.hints_y = sh - PAD - sidebars.HINT_LINES * line_h
-	local room = g.hints_y - 8 - top - 8
-	local hh = math.floor(room * HERE_SHARE)
-	g.log = {x = -(w - PAD), y = top, w = inner, h = room - hh}
-	g.here = {x = -(w - PAD), y = top + room - hh + 8, w = inner, h = hh}
+	local dh = DIALOG_LINES * line_h + 12
+	g.log = {x = -(w - PAD), y = top, w = inner, h = dh}
+	local hh = HERE_LINES * line_h + 12
+	g.here = {x = -(w - PAD), y = g.hints_y - 8 - hh, w = inner, h = hh}
 	-- (lines of the list the ground's box has room for, over "F  Pick up")
-	g.here_max = math.max(1, math.floor((hh - 12) / line_h) - 1)
+	g.here_max = HERE_LINES - 1
+	local iy = top + dh + 8
+	g.inv = {x = -(w - PAD), y = iy, w = inner, h = math.max(line_h + 12, g.here.y - 8 - iy)}
+	g.inv_row = line_h + 4
+	g.inv_rows = math.max(1, math.floor((g.inv.h - 12) / g.inv_row))
 	g.log_rows = math.max(1, math.floor((g.log.h - 12) / line_h))
 	-- (characters a line in a box)
 	g.box_chars = math.max(8, math.floor((inner - 12) / char_w))
@@ -127,6 +134,8 @@ local ids = {}       -- element ids: bars, panel, boxes, slots
 local slot_ids = {}  -- equipment slot id -> {icon=}
 local shown = {}     -- equipment slot id -> texture shown
 local log_rows = {}  -- the log's lines: {id=, text=, color=}
+local inv_rows = {}  -- the inventory's lines: {icon=, text=, shown_icon=, shown_text=}
+local inv_scroll = 0 -- (items scrolled past)
 
 local function remove(player)
 	for _, id in pairs(ids) do
@@ -140,7 +149,11 @@ local function remove(player)
 	for _, row in ipairs(log_rows) do
 		player:hud_remove(row.id)
 	end
-	ids, slot_ids, shown, log_rows = {}, {}, {}, {}
+	for _, row in ipairs(inv_rows) do
+		player:hud_remove(row.icon)
+		player:hud_remove(row.text)
+	end
+	ids, slot_ids, shown, log_rows, inv_rows = {}, {}, {}, {}, {}
 end
 
 local function add(player, def)
@@ -222,13 +235,31 @@ function sidebars.rebuild(player)
 	local a = g.ailments
 	ids.ailments = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},
 		offset = {x = a.x, y = a.y}, z_index = -90, text = ("[fill:%dx%d:#000000"):format(a.w, a.h)})
-	-- the log's box and the ground's (sidebars.relayout)
+	-- the boxes: what's said, the inventory (its rows, and a mark of how
+	-- far down it's scrolled), what's on the ground (sidebars.relayout)
 	ids.log = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
 		offset = {x = 0, y = 0}, z_index = -90, text = "blank.png"})
+	ids.inv = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
+		offset = {x = g.inv.x, y = g.inv.y}, z_index = -90,
+		text = ("[fill:%dx%d:#000000"):format(g.inv.w, g.inv.h)})
+	ids.inv_mark = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
+		offset = {x = g.inv.x + g.inv.w - 4, y = g.inv.y}, z_index = -89, text = "blank.png"})
+	local icon = g.inv_row - 4
+	for r = 1, g.inv_rows do
+		local y = g.inv.y + 6 + (r - 1) * g.inv_row
+		inv_rows[r] = {
+			icon = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
+				offset = {x = g.inv.x + 6, y = y}, z_index = -88, text = "blank.png",
+				scale = {x = icon / 16, y = icon / 16}}),
+			text = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
+				offset = {x = g.inv.x + 10 + icon, y = y + 2}, z_index = -88, number = 0xFFFFFF, text = ""}),
+		}
+	end
 	ids.here = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
 		offset = {x = 0, y = 0}, z_index = -90, text = "blank.png"})
 	sidebars.relayout(player)
 	sidebars.refresh(player, nh.snap and nh.snap.inventory)
+	sidebars.render_inventory(player)
 	-- (the chat console kept off the bars)
 	if core.nhv_console_margins then
 		local m = math.floor(g.w * g.k + 0.5)
@@ -236,8 +267,8 @@ function sidebars.rebuild(player)
 	end
 end
 
--- the right bar's boxes placed again: the ground's as tall as what's on it
--- (none when nothing is), the log the rest - its lines made for its height
+-- the right bar's boxes placed again: what's said, what's on the ground
+-- - the log's lines made for its height
 function sidebars.relayout(player)
 	local g = sidebars.geometry(player)
 	if not (g and ids.log) then
@@ -294,6 +325,57 @@ end
 -- (characters across the left bar, for the stats)
 function sidebars.stat_chars(g)
 	return math.max(10, math.floor((g.w - 2 * g.pad - 4) / g.char_w))
+end
+
+-- ---------------------------------------------------------------- inventory
+-- what you carry, a line each (its picture, its letter and name), from
+-- where it's scrolled to
+function sidebars.render_inventory(player)
+	player = player or nhv.player.get()
+	local g = player and #inv_rows > 0 and sidebars.geometry(player)
+	if not g then
+		return
+	end
+	local inv = (nh.snap and nh.snap.inventory) or {}
+	inv_scroll = math.max(0, math.min(inv_scroll, #inv - #inv_rows))
+	local most = math.max(6, g.box_chars - 3)
+	for r, row in ipairs(inv_rows) do
+		local o = inv[inv_scroll + r]
+		local icon = o and nhv_tiles.texture(o.tile) or "blank.png"
+		local text = o and (o.invlet .. " - " .. o.name) or ""
+		if #text > most then
+			text = text:sub(1, most - 2) .. ".."
+		end
+		if row.shown_icon ~= icon then
+			row.shown_icon = icon
+			player:hud_change(row.icon, "text", icon)
+		end
+		if row.shown_text ~= text then
+			row.shown_text = text
+			player:hud_change(row.text, "text", text)
+		end
+	end
+	-- (the mark: as tall as the part shown, where it is; none when all is)
+	if ids.inv_mark then
+		local tex = "blank.png"
+		local off = {x = g.inv.x + g.inv.w - 4, y = g.inv.y}
+		if #inv > #inv_rows then
+			local h = math.max(6, math.floor(g.inv.h * #inv_rows / #inv))
+			off.y = g.inv.y + math.floor((g.inv.h - h) * inv_scroll / (#inv - #inv_rows))
+			tex = ("[fill:3x%d:#808080"):format(h)
+		end
+		player:hud_change(ids.inv_mark, "text", tex)
+		player:hud_change(ids.inv_mark, "offset", off)
+	end
+end
+
+-- the mouse wheel (notches: up positive): the inventory up or down
+function sidebars.scroll_inventory(notches)
+	if not (sidebars.on() and #inv_rows > 0) then
+		return
+	end
+	inv_scroll = inv_scroll - notches * 3
+	sidebars.render_inventory()
 end
 
 -- ---------------------------------------------------------------- the log
@@ -386,6 +468,7 @@ nh.on_snapshot(function(snap)
 	local player = nhv.player.get()
 	if snap and player then
 		sidebars.refresh(player, snap.inventory)
+		sidebars.render_inventory(player)
 	end
 end)
 
@@ -413,7 +496,7 @@ core.register_globalstep(function(dtime)
 end)
 
 core.register_on_leaveplayer(function()
-	ids, slot_ids, shown, size_seen, log_rows = {}, {}, {}, nil, {}
+	ids, slot_ids, shown, size_seen, log_rows, inv_rows, inv_scroll = {}, {}, {}, nil, {}, {}, 0
 	log = {}
 	if core.nhv_console_margins then
 		core.nhv_console_margins(0, 0)
