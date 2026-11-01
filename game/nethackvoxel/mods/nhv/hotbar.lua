@@ -104,6 +104,12 @@ end
 local wep_size -- (the weapons' slots' size, in the side bars; nil: the hotbar's)
 
 local SEARCH_DIM = 0x90C8C8C8 -- (see-through grey: the alpha byte is first)
+-- (the keys' hints: X, P, G - see-through over the view; in the side bars'
+-- box solid, and always there, darker while the key would do nothing)
+local hint_shown = {} -- (their text and colour now: pay_text=, pay_color=...)
+local function idle()
+	return nhv.sidebars and nhv.sidebars.on() and 0xFFC8C8C8 or SEARCH_DIM
+end
 local layer, layer_sig = "actions", nil -- (what the action slots show: refresh_layer)
 local HINT_LIT = 0xFFFFD080
 
@@ -142,13 +148,14 @@ local function build(player)
 	-- in a shop "P  Pay Shop" goes under it (see update_pay)
 	local hx = slot_x(7) + SLOT / 2 + 14
 	hud.search = add(player, {type = "text", offset = {x = hx, y = Y - SLOT * 0.2},
-		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "X  Search", z_index = 52})
+		alignment = {x = 1, y = 0}, number = idle(), text = "X  Search", z_index = 52})
 	hud.pay = add(player, {type = "text", offset = {x = hx, y = Y + SLOT * 0.2},
-		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
+		alignment = {x = 1, y = 0}, number = idle(), text = "", z_index = 52})
+	hint_shown = {}
 	-- on the other side, "G  Enhance Skills" while a skill can be advanced
 	-- (see update_enhance)
 	hud.enhance = add(player, {type = "text", offset = {x = slot_x(g and 3 or 1) - SLOT / 2 - 14, y = Y},
-		alignment = {x = -1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
+		alignment = {x = -1, y = 0}, number = idle(), text = "", z_index = 52})
 	-- (the side bars: these hints at the bottom of the right one, a line
 	-- each - the second is Q's, hud.lua)
 	if g then
@@ -156,6 +163,7 @@ local function build(player)
 			player:hud_change(hud[key], "position", {x = 1, y = 0})
 			player:hud_change(hud[key], "alignment", {x = 1, y = 1})
 			player:hud_change(hud[key], "offset", {x = g.hints_x, y = g.hints_y + (i - 1) * g.line_h})
+			player:hud_change(hud[key], "style", nhv.sidebars.text_style())
 		end
 	end
 	-- the line saying what the keys and the mouse do (refresh_layer)
@@ -259,7 +267,7 @@ function hotbar.flash_search()
 		player:hud_change(hud.search, "number", HINT_LIT)
 		core.after(0.2, function()
 			if player:is_player() and hud.search then
-				player:hud_change(hud.search, "number", SEARCH_DIM)
+				player:hud_change(hud.search, "number", idle())
 			end
 		end)
 	end
@@ -267,11 +275,12 @@ end
 
 -- "P  Pay Shop": shown while you're in a shop; grey, pulsing yellow while
 -- you owe it something (picked up something for sale, used something up)
-local pay = {shown = false, owes = false, color = nil}
+-- (in the side bars it's always there, darker out of a shop)
+local pay = {owes = false}
 
 local function set_pay_color(player, c)
-	if pay.color ~= c then
-		pay.color = c
+	if hint_shown.pay_color ~= c then
+		hint_shown.pay_color = c
 		player:hud_change(hud.pay, "number", c)
 	end
 end
@@ -282,12 +291,13 @@ local function update_pay(player, hero)
 	end
 	local shown = hero and U.has(hero.flags, U.HERO.INSHOP) or false
 	pay.owes = shown and U.has(hero.flags, U.HERO.OWES)
-	if shown ~= pay.shown then
-		pay.shown = shown
-		player:hud_change(hud.pay, "text", shown and "P  Pay Shop" or "")
+	local text = (shown or (nhv.sidebars and nhv.sidebars.on())) and "P  Pay Shop" or ""
+	if text ~= hint_shown.pay_text then
+		hint_shown.pay_text = text
+		player:hud_change(hud.pay, "text", text)
 	end
 	if not pay.owes then
-		set_pay_color(player, SEARCH_DIM)
+		set_pay_color(player, shown and idle() or nhv.hud.KEY_OFF)
 	end
 end
 
@@ -302,24 +312,31 @@ local function pulse_color(t)
 	local k = math.floor((0.5 - 0.5 * math.cos(t * 2 * math.pi)) * 8 + 0.5) / 8
 	local c = 0
 	for _, shift in ipairs({24, 16, 8, 0}) do
-		local a, b = channel(SEARCH_DIM, shift), channel(0xFFFFD040, shift)
+		local a, b = channel(idle(), shift), channel(0xFFFFD040, shift)
 		c = c + math.floor(a + (b - a) * k + 0.5) * 2 ^ shift
 	end
 	return c
 end
 
 -- "G  Enhance Skills": left of the hotbar while NetHack would let you
--- advance a skill; pulsing
-local enhance = {shown = false, color = nil}
+-- advance a skill; pulsing (in the side bars always there, darker while
+-- there's none)
+local enhance = {shown = false}
 
 local function update_enhance(player, hero)
 	if not hud.enhance then
 		return
 	end
 	local shown = hero and U.has(hero.flags, U.HERO.ENHANCE) or false
-	if shown ~= enhance.shown then
-		enhance.shown = shown
-		player:hud_change(hud.enhance, "text", shown and "G  Enhance Skills" or "")
+	enhance.shown = shown
+	local text = (shown or (nhv.sidebars and nhv.sidebars.on())) and "G  Enhance Skills" or ""
+	if text ~= hint_shown.enhance_text then
+		hint_shown.enhance_text = text
+		player:hud_change(hud.enhance, "text", text)
+	end
+	if not shown and hint_shown.enhance_color ~= nhv.hud.KEY_OFF then
+		hint_shown.enhance_color = nhv.hud.KEY_OFF
+		player:hud_change(hud.enhance, "number", nhv.hud.KEY_OFF)
 	end
 end
 
@@ -358,8 +375,8 @@ core.register_globalstep(function(dtime)
 	if owes then
 		set_pay_color(player, c)
 	end
-	if can and enhance.color ~= c then
-		enhance.color = c
+	if can and hint_shown.enhance_color ~= c then
+		hint_shown.enhance_color = c
 		player:hud_change(hud.enhance, "number", c)
 	end
 end)

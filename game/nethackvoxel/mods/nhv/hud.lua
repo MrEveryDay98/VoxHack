@@ -132,16 +132,16 @@ local SEVERITY = {
 local HUNGER_SEVERITY = {[2] = 1, [3] = 3, [4] = 4, [5] = 4, [6] = 4}
 local ENCUMBRANCE_SEVERITY = {1, 2, 3, 3, 3}
 
--- the stats, in the side bars' lines (sidebars.lua), each spread evenly
--- across the bar
+-- the stats, in the side bars' lines (sidebars.lua), in columns across
+-- the bar: a list of the lines
 local function stat_lines(h, g)
 	local str = h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str)
-	local n, spread = nhv.sidebars.stat_chars(g), nhv.sidebars.spread
-	return table.concat({
-		spread({"St:" .. str, "Dx:" .. h.dex, "Co:" .. h.con}, n),
-		spread({"In:" .. h.int, "Wi:" .. h.wis, "Ch:" .. h.cha}, n),
-		spread({h.align or "", "T:" .. h.moves}, n),
-	}, "\n")
+	local n, columns = nhv.sidebars.stat_chars(g), nhv.sidebars.columns
+	return {
+		columns({"St:" .. str, "Dx:" .. h.dex, "Co:" .. h.con}, n),
+		columns({"In:" .. h.int, "Wi:" .. h.wis, "Ch:" .. h.cha}, n),
+		columns({h.align or "", "", "T:" .. h.moves}, n),
+	}
 end
 
 -- the status line: its numbers, and its conditions ({text=, severity=},
@@ -199,7 +199,7 @@ local status_above = 90
 -- of its own in the ailments' box)
 local function cond_base(g, i)
 	if g then
-		return {x = g.ailments.x + 6, y = g.ailments.y + 6 + (i - 1) * g.line_h}
+		return {x = g.ailments.x + g.inset, y = g.ailments.y + g.inset + (i - 1) * g.line_h}
 	end
 	return {x = 0, y = -status_above}
 end
@@ -209,7 +209,10 @@ local function show_status(player, h)
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	if g then
 		-- the side bars: the stats under the bars, the ailments in their box
-		player:hud_change(hud.ids.status, "text", stat_lines(h, g))
+		-- (a text of its own each, a line apart: one text's lines in the
+		-- small font are closer than the bars' lines)
+		player:hud_change(hud.ids.status, "text", "")
+		nhv.sidebars.set_stats(player, stat_lines(h, g))
 		for i = 1, math.max(#conds, #cond_ids) do
 			local cd = i <= nhv.sidebars.AILMENT_LINES and conds[i] or nil
 			if cd and not cond_ids[i] then
@@ -301,10 +304,10 @@ end
 function hud.info_text(h)
 	local before = ""
 	local gold = ("$:%d"):format(h.gold or 0)
-	-- (the side bars: spread evenly across the bar, as the stats under it)
+	-- (the side bars: in the stats' columns under it)
 	local g = nhv.sidebars and nhv.sidebars.geometry(nhv.player.get())
 	if g then
-		return nhv.sidebars.spread({gold, ("AC:%d"):format(h.ac or 0),
+		return nhv.sidebars.columns({gold, ("AC:%d"):format(h.ac or 0),
 			("XL:%d/%d"):format(h.xlvl or 0, h.xp or 0)}, nhv.sidebars.stat_chars(g)), before, gold
 	end
 	return before .. gold .. ("   AC:%d   XL:%d/%d"):format(h.ac or 0, h.xlvl or 0, h.xp or 0),
@@ -317,6 +320,8 @@ local msg_shown
 -- there (instead of NetHack's "Things that are here:" window, which ui.lua
 -- leaves out). Hidden under the inventory and other menus.
 local HERE_MAX = 12
+local KEY_LIT = 0xFFD040 -- (a key's hint: F, Q)
+hud.KEY_OFF = 0xFF505058 -- (a key's hint while it would do nothing: the side bars)
 local here_shown
 local invoke_shown
 local fade_shown = nil -- (the fade layer's texture now)
@@ -354,24 +359,28 @@ local function update_here(player, snap)
 		end
 	end
 	local text = table.concat(lines, "\n")
+	-- (the side bars show the keys always - grey while they'd do nothing)
+	local always = g ~= nil
 	if text ~= here_shown then
 		here_shown = text
 		player:hud_change(hud.ids.here, "text", text)
 		player:hud_change(hud.ids.here_shadow, "text", text)
 		-- (and the key to pick it up, under the list)
-		local key = text ~= "" and "F  Pick up" or ""
+		local key = (text ~= "" or always) and "F  Pick up" or ""
 		player:hud_change(hud.ids.here_key, "text", key)
 		player:hud_change(hud.ids.here_key_shadow, "text", key)
+		player:hud_change(hud.ids.here_key, "number", text ~= "" and KEY_LIT or hud.KEY_OFF)
 	end
 	-- (and what Q does under it: your form's special ability, or invoking
 	-- what you wield, while there is one)
 	local q = h and not covered and (nhv.actions.monster_ability()
 		or (nhv.actions.invokable() and "Invoke"))
-	local inv = q and "Q  " .. q or ""
-	if inv ~= invoke_shown then
-		invoke_shown = inv
+	local inv = q and "Q  " .. q or (always and "Q  Invoke") or ""
+	if inv .. tostring(q) ~= invoke_shown then
+		invoke_shown = inv .. tostring(q)
 		player:hud_change(hud.ids.invoke_key, "text", inv)
 		player:hud_change(hud.ids.invoke_key_shadow, "text", inv)
+		player:hud_change(hud.ids.invoke_key, "number", q and KEY_LIT or hud.KEY_OFF)
 	end
 end
 
@@ -381,6 +390,9 @@ end
 -- monospace as it.
 local MONO = 4 -- (HUD text style: Luanti's mono font)
 function hud.status_style()
+	if nhv.sidebars and nhv.sidebars.on() then
+		return nhv.sidebars.text_style() -- (the side bars' words)
+	end
 	return nhv.theme.small_messages() and 0 or MONO
 end
 function hud.message_style()
@@ -940,10 +952,12 @@ local function place_level(player)
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	if g then
 		player:hud_change(hud.ids.level, "offset", {x = g.level_x, y = g.level_y})
+		player:hud_change(hud.ids.level, "style", nhv.sidebars.text_style())
 		return
 	end
 	local off = corner_offset(player)
 	player:hud_change(hud.ids.level, "offset", {x = -off, y = off + U.ROWNO * corner_scale(player) + 6})
+	player:hud_change(hud.ids.level, "style", 0)
 end
 
 local function place_map(player)
@@ -1099,20 +1113,22 @@ function hud.place_here(player)
 		return
 	end
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	local style = g and nhv.sidebars.text_style() or 0 -- (the side bars' words)
 	local function put(id, pos, align, off)
 		player:hud_change(id, "position", pos)
 		player:hud_change(id, "alignment", align)
 		player:hud_change(id, "offset", off)
+		player:hud_change(id, "style", style)
 	end
 	if g then
 		-- (the list at the top of its box, "F  Pick up" at the bottom; "Q
 		-- ..." with the keys' hints under the box, the second line)
-		local R, x = {x = 1, y = 0}, g.here.x + 6
+		local R, x = {x = 1, y = 0}, g.here.x + g.inset
 		local down = {x = 1, y = 1}
-		local ky = g.here.y + g.here.h - 6 - g.line_h
+		local ky = g.here.y + g.here.h - g.inset - g.line_h
 		local qy = g.hints_y + g.line_h
-		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + 8})
-		put(hud.ids.here, R, down, {x = x, y = g.here.y + 6})
+		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + g.inset + 2})
+		put(hud.ids.here, R, down, {x = x, y = g.here.y + g.inset})
 		put(hud.ids.here_key_shadow, R, down, {x = x + 2, y = ky + 2})
 		put(hud.ids.here_key, R, down, {x = x, y = ky})
 		put(hud.ids.invoke_key_shadow, R, down, {x = g.hints_x + 2, y = qy + 2})
@@ -1524,7 +1540,7 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 		meter_ids[key] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 1, y = 0},
 			offset = {x = g.stats_x, y = g.info_y}, number = key == "info" and 0xFFFFFF or GOLD_FLASH,
-			z_index = key == "info" and 42 or 43, text = "",
+			z_index = key == "info" and 42 or 43, text = "", style = nhv.sidebars.text_style(),
 		})
 	end
 	info_shown = nil

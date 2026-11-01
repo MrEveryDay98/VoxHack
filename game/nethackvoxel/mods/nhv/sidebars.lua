@@ -34,7 +34,9 @@ local BRICK = 64           -- (its size on the HUD: twice its own, sharp)
 local EDGE = "#000000"    -- their edge on the view's side
 local EDGE_W = 3
 local PAD = 8
-local IN = nhv.skin.INSET -- (a box's border: what's in it starts this far in)
+-- (what's in a box starts this far in: past its frame's border, and a
+-- little clear of it)
+local IN = nhv.skin.INSET + 4
 sidebars.STAT_LINES = 3    -- the stats' lines (hud.lua's show_status)
 sidebars.AILMENT_LINES = 4 -- ailments the box shows
 sidebars.HINT_LINES = 4    -- the keys' hints at the bottom right
@@ -45,10 +47,20 @@ function sidebars.on()
 	return core.settings:get("nhv_hud_layout") == "sidebars"
 end
 
+-- The bars' words are in the small pixel font in retro mode (the messages'
+-- one: Luanti's "mono" then, theme.lua) - the HUD text style for them
+function sidebars.text_style()
+	return nhv.theme.small_messages() and 4 or 0
+end
+
 -- a line of HUD text: its height, and a character's width (the pixel
--- font's letters are all one width; the other's about the same)
+-- fonts' letters are all one width, 8 - the small one's too; the other's
+-- about the same)
 local function text_metrics()
 	local k = nhv.theme.box_scale()
+	if nhv.theme.small_messages() then
+		return math.ceil(11 * k), 8 * k
+	end
 	return math.ceil((nhv.theme.retro() and 15 or 18) * k), (nhv.theme.retro() and 8 or 8.6) * k
 end
 sidebars.text_metrics = text_metrics
@@ -74,7 +86,7 @@ function sidebars.geometry(player)
 		s = hud.hud_px(player, math.max(1 / k, most))
 	end
 	local w = math.floor(math.max(U.COLNO * s + 2 * PAD + 2 * IN, 3 * 40 + 2 * PAD + 20, sw * 0.12))
-	local g = {w = w, sw = sw, sh = sh, pad = PAD, map_s = s, line_h = line_h, char_w = char_w}
+	local g = {w = w, sw = sw, sh = sh, pad = PAD, inset = IN, map_s = s, line_h = line_h, char_w = char_w}
 	-- left: portrait, bars, your numbers, the equipment, the weapons and
 	-- the quiver, the ailments
 	local inner = w - 2 * PAD
@@ -93,19 +105,20 @@ function sidebars.geometry(player)
 	g.stats_y = y + IN + line_h + 2
 	y = y + g.stats.h + 6
 	-- (the ailments' box at the bottom: AILMENT_LINES of them)
-	local ah = sidebars.AILMENT_LINES * line_h + 12
+	local ah = sidebars.AILMENT_LINES * line_h + 2 * IN
 	g.ailments = {x = PAD, y = sh - PAD - ah, w = inner, h = ah}
-	-- (the wear slots and their captions, 4 rows; then the two weapons,
-	-- bigger, side by side, and the quiver under them in the middle)
+	-- (the wear slots and their captions, 4 rows of 3 - each slot in the
+	-- middle of its third, its caption centred under it; then the two
+	-- weapons, bigger, side by side, and the quiver under them in the
+	-- middle)
 	local gap = 4
 	local room = g.ailments.y - 8 - y
-	local by_h = math.floor((room - 12 - 4 * (line_h + gap) - 16) / (4 + 2 * 1.4))
-	local by_w = math.floor((inner - 12 - 2 * gap) / 3)
-	local S = math.max(16, math.min(by_h, by_w))
+	local cell = math.floor((inner - 2 * IN) / 3)
+	local by_h = math.floor((room - 2 * IN - 4 * (line_h + gap) - 16) / (4 + 2 * 1.4))
+	local S = math.max(16, math.min(by_h, cell - 2 * gap))
 	local step = S + line_h + gap
-	local ph_eq = math.floor(6 + 3 * step + S + line_h + 6)
-	g.equip = {x = PAD, y = y, w = inner, h = ph_eq, slot = S, step = step,
-		col_gap = math.floor((inner - 12 - 3 * S) / 2)}
+	local ph_eq = math.floor(IN + 3 * step + S + line_h + IN)
+	g.equip = {x = PAD, y = y, w = inner, h = ph_eq, slot = S, step = step, cell = cell}
 	y = y + ph_eq + 8
 	local S2 = math.floor(math.min(S * 1.4, (inner - 8) / 2))
 	g.weapons = {size = S2, {x = PAD + 2, y = y}, {x = w - PAD - 2 - S2, y = y}}
@@ -122,19 +135,19 @@ function sidebars.geometry(player)
 	g.hints_box = {x = -(w - PAD), y = sh - PAD - hb, w = inner, h = hb}
 	g.hints_y = g.hints_box.y + IN
 	g.hints_x = -(w - PAD - IN)
-	local dh = DIALOG_LINES * line_h + 12
+	local dh = DIALOG_LINES * line_h + 2 * IN
 	g.log = {x = -(w - PAD), y = top, w = inner, h = dh}
-	local hh = HERE_LINES * line_h + 12
+	local hh = HERE_LINES * line_h + 2 * IN
 	g.here = {x = -(w - PAD), y = g.hints_box.y - 8 - hh, w = inner, h = hh}
 	-- (lines of the list the ground's box has room for, over "F  Pick up")
 	g.here_max = HERE_LINES - 1
 	local iy = top + dh + 8
-	g.inv = {x = -(w - PAD), y = iy, w = inner, h = math.max(line_h + 12, g.here.y - 8 - iy)}
+	g.inv = {x = -(w - PAD), y = iy, w = inner, h = math.max(line_h + 2 * IN, g.here.y - 8 - iy)}
 	g.inv_row = line_h + 4
-	g.inv_rows = math.max(1, math.floor((g.inv.h - 12) / g.inv_row))
-	g.log_rows = math.max(1, math.floor((g.log.h - 12) / line_h))
+	g.inv_rows = math.max(1, math.floor((g.inv.h - 2 * IN) / g.inv_row))
+	g.log_rows = math.max(1, math.floor((g.log.h - 2 * IN) / line_h))
 	-- (characters a line in a box)
-	g.box_chars = math.max(8, math.floor((inner - 12) / char_w))
+	g.box_chars = math.max(8, math.floor((inner - 2 * IN) / char_w))
 	g.k = k
 	return g
 end
@@ -146,6 +159,7 @@ local shown = {}     -- equipment slot id -> texture shown
 local log_rows = {}  -- the log's lines: {id=, text=, color=}
 local inv_rows = {}  -- the inventory's lines: {icon=, text=, shown_icon=, shown_text=}
 local inv_scroll = 0 -- (items scrolled past)
+local stats_shown = {} -- (the stats' lines shown: sidebars.set_stats)
 
 local function remove(player)
 	for _, id in pairs(ids) do
@@ -227,6 +241,12 @@ function sidebars.rebuild(player)
 			offset = {x = b.x, y = b.y}, z_index = -90, text = nhv.skin.box(b.w, b.h)})
 	end
 	ids.stats = box(g.stats, LEFT)
+	for i = 1, sidebars.STAT_LINES do
+		ids["stat" .. i] = add(player, {type = "text", position = LEFT, alignment = {x = 1, y = 1},
+			offset = {x = g.stats_x, y = g.stats_y + (i - 1) * g.line_h}, z_index = 42,
+			number = 0xFFFFFF, text = "", style = sidebars.text_style()})
+	end
+	stats_shown = {}
 	ids.map_box = box(g.map_box, RIGHT)
 	ids.hints_box = box(g.hints_box, RIGHT)
 	-- the equipment panel and its slots
@@ -234,8 +254,9 @@ function sidebars.rebuild(player)
 	ids.panel = box(e, LEFT)
 	local S = e.slot
 	for _, slot in ipairs(nhv.ui.EQUIP or {}) do
-		local x = e.x + 6 + slot.col * (S + e.col_gap)
-		local y = math.floor(e.y + 6 + slot.row * e.step)
+		local mid = e.x + IN + slot.col * e.cell + e.cell / 2
+		local x = math.floor(mid - S / 2)
+		local y = math.floor(e.y + IN + slot.row * e.step)
 		-- (the weapons are the hotbar's, side by side under the panel; the
 		-- quiver's box under them, bigger, no caption)
 		local size, caption = S, slot.short
@@ -243,6 +264,7 @@ function sidebars.rebuild(player)
 			goto next_slot
 		elseif slot.quiver then
 			x, y, size, caption = g.quiver.x, g.quiver.y, g.quiver.size, ""
+			mid = x + size / 2
 		end
 		slot_ids[slot.id] = {
 			bg = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},
@@ -250,9 +272,9 @@ function sidebars.rebuild(player)
 			icon = add(player, {type = "image", position = LEFT, alignment = {x = 0, y = 0},
 				offset = {x = x + size / 2, y = y + size / 2}, z_index = -79, text = "blank.png",
 				scale = {x = (size - 10) / 16, y = (size - 10) / 16}}),
-			label = add(player, {type = "text", position = LEFT, alignment = {x = 1, y = 1},
-				offset = {x = x, y = y + size + 1}, z_index = -79, number = 0xFFFFFF,
-				text = caption}),
+			label = add(player, {type = "text", position = LEFT, alignment = {x = 0, y = 1},
+				offset = {x = mid, y = y + size + 1}, z_index = -79, number = 0xFFFFFF,
+				text = caption, style = sidebars.text_style()}),
 		}
 		::next_slot::
 	end
@@ -265,16 +287,17 @@ function sidebars.rebuild(player)
 		offset = {x = 0, y = 0}, z_index = -90, text = "blank.png"})
 	ids.inv = box(g.inv, RIGHT)
 	ids.inv_mark = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
-		offset = {x = g.inv.x + g.inv.w - IN - 4, y = g.inv.y + IN}, z_index = -89, text = "blank.png"})
+		offset = {x = g.inv.x + g.inv.w - IN, y = g.inv.y + IN}, z_index = -89, text = "blank.png"})
 	local icon = g.inv_row - 4
 	for r = 1, g.inv_rows do
-		local y = g.inv.y + 6 + (r - 1) * g.inv_row
+		local y = g.inv.y + IN + (r - 1) * g.inv_row
 		inv_rows[r] = {
 			icon = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
-				offset = {x = g.inv.x + 6, y = y}, z_index = -88, text = "blank.png",
+				offset = {x = g.inv.x + IN, y = y}, z_index = -88, text = "blank.png",
 				scale = {x = icon / 16, y = icon / 16}}),
 			text = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
-				offset = {x = g.inv.x + 10 + icon, y = y + 2}, z_index = -88, number = 0xFFFFFF, text = ""}),
+				offset = {x = g.inv.x + IN + 4 + icon, y = y + 2}, z_index = -88, number = 0xFFFFFF, text = "",
+				style = sidebars.text_style()}),
 		}
 	end
 	ids.here = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
@@ -307,12 +330,12 @@ function sidebars.relayout(player)
 		log_rows = {}
 		for r = 1, g.log_rows do
 			log_rows[r] = {id = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
-				offset = {x = g.log.x + 6, y = g.log.y + 6 + (r - 1) * g.line_h}, z_index = 31,
-				number = 0xFFFFFF, text = "", style = nhv.hud.message_style()})}
+				offset = {x = g.log.x + IN, y = g.log.y + IN + (r - 1) * g.line_h}, z_index = 31,
+				number = 0xFFFFFF, text = "", style = sidebars.text_style()})}
 		end
 	else
 		for r, row in ipairs(log_rows) do
-			player:hud_change(row.id, "offset", {x = g.log.x + 6, y = g.log.y + 6 + (r - 1) * g.line_h})
+			player:hud_change(row.id, "offset", {x = g.log.x + IN, y = g.log.y + IN + (r - 1) * g.line_h})
 		end
 	end
 	sidebars.render_log(player)
@@ -321,32 +344,29 @@ function sidebars.relayout(player)
 	end
 end
 
--- (a line of fields spread evenly across n characters: the stats)
-function sidebars.spread(fields, n)
-	local total = 0
-	for _, f in ipairs(fields) do
-		total = total + #f
-	end
-	local gaps = #fields - 1
-	if gaps < 1 then
-		return fields[1] or ""
-	end
-	local space = math.max(gaps, n - total)
-	local out = {}
-	for i, f in ipairs(fields) do
-		out[#out + 1] = f
-		if i <= gaps then
-			-- (the leftover spaces to the first gaps)
-			local k = math.floor(space / gaps) + ((i <= space % gaps) and 1 or 0)
-			out[#out + 1] = (" "):rep(k)
-		end
-	end
-	return table.concat(out)
+-- (a line of three fields across n characters, in columns: the first at
+-- the left, the second where every line's second starts - AC over Dx over
+-- Wi - the third ending at the right)
+function sidebars.columns(fields, n)
+	local a, b, c = fields[1] or "", fields[2] or "", fields[3] or ""
+	local left = a .. (" "):rep(math.max(1, math.floor((n - 5) / 2) - #a)) .. b
+	return left .. (" "):rep(math.max(1, n - #left - #c)) .. c
 end
 
 -- (characters across the left bar, for the stats)
 function sidebars.stat_chars(g)
-	return math.max(10, math.floor((g.w - 2 * g.pad - 2 * IN - 2) / g.char_w))
+	return math.max(10, math.floor((g.w - 2 * g.pad - 2 * IN) / g.char_w))
+end
+
+-- the stats' lines (hud.lua's show_status)
+function sidebars.set_stats(player, lines)
+	for i = 1, sidebars.STAT_LINES do
+		local id, text = ids["stat" .. i], lines[i] or ""
+		if id and stats_shown[i] ~= text then
+			stats_shown[i] = text
+			player:hud_change(id, "text", text)
+		end
+	end
 end
 
 -- ---------------------------------------------------------------- inventory
@@ -380,7 +400,7 @@ function sidebars.render_inventory(player)
 	-- (the mark: as tall as the part shown, where it is; none when all is)
 	if ids.inv_mark then
 		local tex = "blank.png"
-		local off = {x = g.inv.x + g.inv.w - IN - 4, y = g.inv.y + IN}
+		local off = {x = g.inv.x + g.inv.w - IN, y = g.inv.y + IN}
 		if #inv > #inv_rows then
 			local room = g.inv.h - 2 * IN
 			local h = math.max(6, math.floor(room * #inv_rows / #inv))
