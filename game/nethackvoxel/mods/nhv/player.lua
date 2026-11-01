@@ -150,6 +150,11 @@ local CRAWL_S = 0.6 -- (out of water or lava onto the bank: a slow clamber)
 -- them after it: player_mod.travel)
 local function moved_by_nethack(player, h, steps)
 	local last = steps and steps[#steps]
+	-- (the way's last square told, or the one before it: on to yours)
+	if last and math.max(math.abs(last.x - h.x), math.abs(last.y - h.y)) == 1 then
+		steps[#steps + 1] = {x = h.x, y = h.y}
+		last = steps[#steps]
+	end
 	if last and last.x == h.x and last.y == h.y and nhv.terrain.sky_floor ~= "water" then
 		player_mod.travel(player, steps)
 		return
