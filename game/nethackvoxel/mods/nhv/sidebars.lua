@@ -7,10 +7,15 @@
 --          equipment slots), your two weapons side by side (the hotbar's,
 --          hotbar.lua) and your quiver under them, and your ailments (the
 --          status line's conditions, each in its colour)
---   right: the map and the level, the dialogue box (speech.lua) and what's
---          on the ground where you stand (hud.lua), "F  Pick up" under it
--- The action keys stay along the bottom of the view, the messages and the
--- compass along its top. Each bar is as wide as the
+--   right: the map and the level; the log - NetHack's messages and what's
+--          said (speech.lua), speakers' names in yellow, the newest at the
+--          bottom; what's on the ground where you stand (hud.lua), with
+--          the keys for it in its box - only as tall as that, gone when
+--          there's nothing; and the keys' hints (X Search, P Pay, G Enhance:
+--          hotbar.lua) at the bottom
+-- The chat console (T, the command line) opens over the view only.
+-- The action keys stay along the bottom of the view, the compass along its
+-- top. Each bar is as wide as the
 -- corner map needs (Map size), at most a quarter of the screen (the map
 -- made smaller to fit); everything in them sized to the screen's height.
 
@@ -29,6 +34,12 @@ local SLOT_INNER = "#141418"
 local PAD = 8
 sidebars.STAT_LINES = 3    -- the stats' lines (hud.lua's show_status)
 sidebars.AILMENT_LINES = 4 -- ailments the box shows
+sidebars.HINT_LINES = 3    -- the keys' hints at the bottom right
+local LOG_MIN = 4          -- lines the log keeps however much is on the ground
+
+-- what's on the ground's box holds now: its list's lines, and the keys
+-- (F, Q) under it - hud.lua tells (sidebars.set_here)
+local here = {list = 0, f = false, q = false}
 
 function sidebars.on()
 	return core.settings:get("nhv_hud_layout") == "sidebars"
@@ -96,17 +107,22 @@ function sidebars.geometry(player)
 	local S2 = math.floor(math.min(S * 1.4, (inner - 8) / 2))
 	g.weapons = {size = S2, {x = PAD + 2, y = y}, {x = w - PAD - 2 - S2, y = y}}
 	g.quiver = {x = math.floor((w - S2) / 2), y = y + S2 + 8, size = S2}
-	-- right: the map, the level under it, the dialogue box, the ground's box
+	-- right: the map, the level under it; the hints at the bottom, the
+	-- ground's box over them (as tall as what's in it), the log the rest
 	g.map = {x = -(PAD + math.floor((inner - U.COLNO * s) / 2)), y = PAD}
 	g.level_y = PAD + U.ROWNO * s + 4
 	local top = g.level_y + line_h + 6
-	local rest = sh - top - PAD - 2 * line_h - 10
-	local dh = math.floor(rest * 0.5)
-	g.dialog = {x = -(w - PAD), y = top, w = inner, h = dh}
-	g.items = {x = -(w - PAD), y = top + dh + 8, w = inner, h = rest - dh - 8}
-	g.pickup_y = g.items.y + g.items.h + 6
+	g.hints_y = sh - PAD - sidebars.HINT_LINES * line_h
+	g.here_max = math.max(1, math.floor((g.hints_y - 16 - top - LOG_MIN * line_h - 24) / line_h))
+	local n = math.min(here.list, g.here_max) + (here.f and 1 or 0) + (here.q and 1 or 0)
+	local hh = n > 0 and n * line_h + 12 or 0
+	g.here = {x = -(w - PAD), y = g.hints_y - 8 - hh, w = inner, h = hh}
+	local bottom = (hh > 0 and g.here.y or g.hints_y) - 8
+	g.log = {x = -(w - PAD), y = top, w = inner, h = bottom - top}
+	g.log_rows = math.max(1, math.floor((g.log.h - 12) / line_h))
 	-- (characters a line in a box)
 	g.box_chars = math.max(8, math.floor((inner - 12) / char_w))
+	g.k = k
 	return g
 end
 
@@ -114,6 +130,7 @@ end
 local ids = {}       -- element ids: bars, panel, boxes, slots
 local slot_ids = {}  -- equipment slot id -> {icon=}
 local shown = {}     -- equipment slot id -> texture shown
+local log_rows = {}  -- the log's lines: {id=, text=, color=}
 
 local function remove(player)
 	for _, id in pairs(ids) do
@@ -124,7 +141,10 @@ local function remove(player)
 		player:hud_remove(s.icon)
 		player:hud_remove(s.label)
 	end
-	ids, slot_ids, shown = {}, {}, {}
+	for _, row in ipairs(log_rows) do
+		player:hud_remove(row.id)
+	end
+	ids, slot_ids, shown, log_rows = {}, {}, {}, {}
 end
 
 local function add(player, def)
@@ -157,6 +177,9 @@ function sidebars.rebuild(player)
 	remove(player)
 	local g = sidebars.geometry(player)
 	if not g then
+		if core.nhv_console_margins then
+			core.nhv_console_margins(0, 0)
+		end
 		return
 	end
 	local W, H = g.w, math.ceil(g.sh)
@@ -203,14 +226,150 @@ function sidebars.rebuild(player)
 	local a = g.ailments
 	ids.ailments = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},
 		offset = {x = a.x, y = a.y}, z_index = -90, text = ("[fill:%dx%d:#000000"):format(a.w, a.h)})
-	-- the dialogue box and the ground's box: black, always there
-	for _, key in ipairs({"dialog", "items"}) do
-		local b = g[key]
-		ids[key] = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
-			offset = {x = b.x, y = b.y}, z_index = -90,
-			text = ("[fill:%dx%d:#000000"):format(b.w, math.max(1, b.h))})
-	end
+	-- the log's box and the ground's (sidebars.relayout)
+	ids.log = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
+		offset = {x = 0, y = 0}, z_index = -90, text = "blank.png"})
+	ids.here = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
+		offset = {x = 0, y = 0}, z_index = -90, text = "blank.png"})
+	sidebars.relayout(player)
 	sidebars.refresh(player, nh.snap and nh.snap.inventory)
+	-- (the chat console kept off the bars)
+	if core.nhv_console_margins then
+		local m = math.floor(g.w * g.k + 0.5)
+		core.nhv_console_margins(m, m)
+	end
+end
+
+-- the right bar's boxes placed again: the ground's as tall as what's on it
+-- (none when nothing is), the log the rest - its lines made for its height
+function sidebars.relayout(player)
+	local g = sidebars.geometry(player)
+	if not (g and ids.log) then
+		return
+	end
+	player:hud_change(ids.log, "offset", {x = g.log.x, y = g.log.y})
+	player:hud_change(ids.log, "text", ("[fill:%dx%d:#000000"):format(g.log.w, math.max(1, g.log.h)))
+	player:hud_change(ids.here, "offset", {x = g.here.x, y = g.here.y})
+	player:hud_change(ids.here, "text", g.here.h > 0
+		and ("[fill:%dx%d:#000000"):format(g.here.w, g.here.h) or "blank.png")
+	if #log_rows ~= g.log_rows then
+		for _, row in ipairs(log_rows) do
+			player:hud_remove(row.id)
+		end
+		log_rows = {}
+		for r = 1, g.log_rows do
+			log_rows[r] = {id = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
+				offset = {x = g.log.x + 6, y = g.log.y + 6 + (r - 1) * g.line_h}, z_index = 31,
+				number = 0xFFFFFF, text = "", style = nhv.hud.message_style()})}
+		end
+	else
+		for r, row in ipairs(log_rows) do
+			player:hud_change(row.id, "offset", {x = g.log.x + 6, y = g.log.y + 6 + (r - 1) * g.line_h})
+		end
+	end
+	sidebars.render_log(player)
+	if nhv.hud.place_here then
+		nhv.hud.place_here(player)
+	end
+end
+
+-- what's on the ground's box holds (hud.lua): list lines, and the F and Q
+-- keys' lines under them
+function sidebars.set_here(player, list, f, q)
+	if here.list == list and here.f == f and here.q == q then
+		return
+	end
+	here.list, here.f, here.q = list, f, q
+	sidebars.relayout(player)
+end
+function sidebars.here_holds()
+	return here
+end
+
+-- ---------------------------------------------------------------- the log
+-- NetHack's messages and what's said, in order: {label=, text=, color=}
+-- (a spoken line's text grows as it's said: speech.lua changes it and
+-- draws the log again)
+local log = {}
+local LOG_MAX = 200
+local MSG_COLOR, LABEL_COLOR = 0xFFFFE0, 0xFFD040
+
+function sidebars.log_add(entry)
+	log[#log + 1] = entry
+	if #log > LOG_MAX then
+		table.remove(log, 1)
+	end
+	sidebars.render_log()
+	return entry
+end
+
+-- (words wrapped to n characters a line)
+local function wrap(text, n)
+	local out = {}
+	for para in (text .. "\n"):gmatch("(.-)\n") do
+		local line = ""
+		for word in para:gmatch("%S+") do
+			while #word > n do
+				if line ~= "" then
+					out[#out + 1] = line
+					line = ""
+				end
+				out[#out + 1] = word:sub(1, n)
+				word = word:sub(n + 1)
+			end
+			if line == "" then
+				line = word
+			elseif #line + 1 + #word <= n then
+				line = line .. " " .. word
+			else
+				out[#out + 1] = line
+				line = word
+			end
+		end
+		if line ~= "" then
+			out[#out + 1] = line
+		end
+	end
+	return out
+end
+
+-- the log's last lines, the newest at the bottom
+function sidebars.render_log(player)
+	player = player or nhv.player.get()
+	local g = player and #log_rows > 0 and sidebars.geometry(player)
+	if not g then
+		return
+	end
+	local lines = {}
+	for k = #log, 1, -1 do
+		local e = log[k]
+		local block = {}
+		if e.label then
+			block[#block + 1] = {e.label .. ":", LABEL_COLOR}
+		end
+		for _, l in ipairs(wrap(e.text or "", g.box_chars)) do
+			block[#block + 1] = {l, e.color or MSG_COLOR}
+		end
+		for j = #block, 1, -1 do
+			table.insert(lines, 1, block[j])
+		end
+		if #lines >= #log_rows then
+			break
+		end
+	end
+	local start = #lines - #log_rows
+	for r, row in ipairs(log_rows) do
+		local ln = lines[start + r]
+		local text, color = ln and ln[1] or "", ln and ln[2] or MSG_COLOR
+		if row.text ~= text then
+			row.text = text
+			player:hud_change(row.id, "text", text)
+		end
+		if row.color ~= color then
+			row.color = color
+			player:hud_change(row.id, "number", color)
+		end
+	end
 end
 
 nh.on_snapshot(function(snap)
@@ -244,7 +403,12 @@ core.register_globalstep(function(dtime)
 end)
 
 core.register_on_leaveplayer(function()
-	ids, slot_ids, shown, size_seen = {}, {}, {}, nil
+	ids, slot_ids, shown, size_seen, log_rows = {}, {}, {}, nil, {}
+	log = {}
+	here = {list = 0, f = false, q = false}
+	if core.nhv_console_margins then
+		core.nhv_console_margins(0, 0)
+	end
 end)
 
 return sidebars

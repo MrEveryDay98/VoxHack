@@ -144,6 +144,14 @@ local function build(player)
 	-- (see update_enhance)
 	hud.enhance = add(player, {type = "text", offset = {x = slot_x(g and 3 or 1) - SLOT / 2 - 14, y = Y},
 		alignment = {x = -1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
+	-- (the side bars: these hints at the bottom of the right one, a line each)
+	if g then
+		for i, key in ipairs({"search", "pay", "enhance"}) do
+			player:hud_change(hud[key], "position", {x = 1, y = 0})
+			player:hud_change(hud[key], "alignment", {x = 1, y = 1})
+			player:hud_change(hud[key], "offset", {x = -(g.w - g.pad), y = g.hints_y + (i - 1) * g.line_h})
+		end
+	end
 	-- the cooldown bar: just above the hotbar while an action plays out
 	-- (until it's gone you can't act again); see update_cooldown
 	hud.cooldown = add(player, {type = "image", offset = {x = 0, y = Y - SLOT / 2 - 10},

@@ -319,7 +319,7 @@ local function update_here(player, snap)
 	local lines = {}
 	-- (in the side bars: in their box, as many as fit, cut to its width)
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
-	local most = g and math.max(1, math.floor((g.items.h - 12) / g.line_h) - 2) or HERE_MAX
+	local most = g and math.max(1, g.here_max - 2) or HERE_MAX
 	if h and h.x and not covered and not U.has(h.flags, U.HERO.SWALLOWED) then
 		local items = nhv.mobs.floor_items(h.x, h.y)
 		if #items > 0 then
@@ -361,6 +361,10 @@ local function update_here(player, snap)
 		invoke_shown = inv
 		player:hud_change(hud.ids.invoke_key, "text", inv)
 		player:hud_change(hud.ids.invoke_key_shadow, "text", inv)
+	end
+	-- (the side bars: the ground's box as tall as that)
+	if g then
+		nhv.sidebars.set_here(player, #lines, text ~= "", inv ~= "")
 	end
 end
 
@@ -405,6 +409,8 @@ local function update_messages(player)
 	-- chat console shows the whole log meanwhile)
 	local covered = nhv.ui.chat_open or (nhv.guide and nhv.guide.open)
 		or (nhv.title and nhv.title.open) or (nhv.ui.menu_open and not nhv.ui.open)
+		-- (the side bars: in their log instead - sidebars.lua)
+		or (nhv.sidebars and nhv.sidebars.on())
 	if not covered then
 		for _, m in ipairs(hud.messages) do
 			lines[#lines + 1] = m.text
@@ -481,6 +487,10 @@ function hud.message(text)
 		return
 	end
 	table.insert(hud.messages, {text = text, t = core.get_us_time() / 1e6})
+	-- (and the side bars' log: kept whichever HUD is showing)
+	if nhv.sidebars then
+		nhv.sidebars.log_add({text = text})
+	end
 	while #hud.messages > MSG_LINES do
 		table.remove(hud.messages, 1)
 	end
@@ -1081,14 +1091,18 @@ function hud.place_here(player)
 		player:hud_change(id, "offset", off)
 	end
 	if g then
-		local R, x = {x = 1, y = 0}, g.items.x + 6
+		-- (the list, then the keys' lines under it, in the box)
+		local holds = nhv.sidebars.here_holds()
+		local R, x = {x = 1, y = 0}, g.here.x + 6
 		local down = {x = 1, y = 1}
-		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.items.y + 8})
-		put(hud.ids.here, R, down, {x = x, y = g.items.y + 6})
-		put(hud.ids.here_key_shadow, R, down, {x = g.items.x + 2, y = g.pickup_y + 2})
-		put(hud.ids.here_key, R, down, {x = g.items.x, y = g.pickup_y})
-		put(hud.ids.invoke_key_shadow, R, down, {x = g.items.x + 2, y = g.pickup_y + g.line_h + 4})
-		put(hud.ids.invoke_key, R, down, {x = g.items.x, y = g.pickup_y + g.line_h + 2})
+		local ky = g.here.y + 6 + math.min(holds.list, g.here_max) * g.line_h
+		local qy = ky + (holds.f and g.line_h or 0)
+		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + 8})
+		put(hud.ids.here, R, down, {x = x, y = g.here.y + 6})
+		put(hud.ids.here_key_shadow, R, down, {x = x + 2, y = ky + 2})
+		put(hud.ids.here_key, R, down, {x = x, y = ky})
+		put(hud.ids.invoke_key_shadow, R, down, {x = x + 2, y = qy + 2})
+		put(hud.ids.invoke_key, R, down, {x = x, y = qy})
 	else
 		local L, up = {x = 0, y = HERE_Y}, {x = 1, y = -1}
 		put(hud.ids.here_shadow, L, up, {x = 22, y = -28})

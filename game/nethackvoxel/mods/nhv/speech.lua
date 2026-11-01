@@ -308,18 +308,6 @@ local function draw_box(player, list)
 		y = y + line_h * (breaks + 1)
 	end
 	local h = y + pad
-	-- (the side bars: in their dialogue box - black already, from its top)
-	local g = nhv.sidebars and nhv.sidebars.geometry(player)
-	if g then
-		for n, t in ipairs(texts) do
-			ids["t" .. n] = player:hud_add({
-				type = "text", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
-				offset = {x = g.dialog.x + 6, y = g.dialog.y + t.y - pad + 6}, number = t.color,
-				text = t.text, z_index = 31,
-			})
-		end
-		return
-	end
 	local POS, X = {x = 1, y = 0.36}, -16
 	ids.bg = player:hud_add({
 		type = "image", position = POS, alignment = {x = -1, y = 1}, offset = {x = X, y = 0},
@@ -363,12 +351,19 @@ function speech.refresh()
 			end
 		end
 	end
-	-- (the box's width: its own, or the side bars' box)
-	local g = nhv.sidebars and nhv.sidebars.geometry(player)
-	local box_wrap = g and g.box_chars or BOX_WRAP
+	-- (the side bars: every line said goes into their log, as it's said -
+	-- sidebars.lua - and there's no box of its own)
+	local in_log = nhv.sidebars and nhv.sidebars.on()
+	local log_changed = false
 	for _, ln in ipairs(lines) do
-		if not ln.wrapped or ln.wrapped.bw ~= box_wrap then
-			ln.wrapped = {head = wrap(ln.text, HEAD_WRAP), box = wrap(ln.text, box_wrap), bw = box_wrap}
+		ln.wrapped = ln.wrapped or {head = wrap(ln.text, HEAD_WRAP), box = wrap(ln.text, BOX_WRAP)}
+		if in_log then
+			ln.log = ln.log or nhv.sidebars.log_add({label = ln.label, text = ""})
+			local said = speech.typed_text(ln.tp, now)
+			if ln.log.text ~= said then
+				ln.log.text = said
+				log_changed = true
+			end
 		end
 		local n = #speech.typed_text(ln.tp, now)
 		local _, more = ln.wrapped.head:sub(n + 1):gsub("\n", "")
@@ -381,9 +376,12 @@ function speech.refresh()
 					set_head(ln.obj, text)
 				end
 			end
-		else
+		elseif not in_log then
 			box[#box + 1] = {label = ln.label, shown = ln.wrapped.box:sub(1, n), full = ln.wrapped.box}
 		end
+	end
+	if log_changed then
+		nhv.sidebars.render_log(player)
 	end
 	while #box > BOX_LINES do
 		table.remove(box, 1)
@@ -411,6 +409,10 @@ end)
 function speech.clear()
 	for _, ln in ipairs(lines) do
 		drop(ln)
+		-- (said in full in the side bars' log)
+		if ln.log then
+			ln.log.text = ln.text
+		end
 	end
 	lines = {}
 	local player = nhv.player.get()
