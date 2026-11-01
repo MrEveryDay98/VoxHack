@@ -1,0 +1,9 @@
+"lang"
+{
+	"Language"	"english"
+	"Tokens"
+	{
+		"#Playing"	"%status%"
+		"#Title"	"At the title screen"
+	}
+}

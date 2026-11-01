@@ -5,7 +5,8 @@
 -- debug or explore mode) and each achievement says which events unlock it.
 -- Unlocking one shows a note at the lower right (and plays the hook
 -- "achievement_unlocked"); the Achievements screen (the title screen's
--- button, or the pause menu's) lists them all.
+-- button, or the pause menu's) lists them all. In the Steam build each is
+-- unlocked on Steam too (steam.lua).
 
 local U = nhv.util
 local nh = nhv.nh
@@ -458,6 +459,7 @@ function ach.unlock(id)
 	end
 	data.unlocked[id] = os.time()
 	save()
+	nhv.steam.achieve(id) -- (the Steam build: on Steam too)
 	queue[#queue + 1] = a
 	core.log("action", "[nhv] achievement unlocked: " .. id)
 end

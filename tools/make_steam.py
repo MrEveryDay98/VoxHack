@@ -11,10 +11,17 @@ The content is the release (make_release.py) laid out for Steam:
     licenses/, CREDITS.txt, README.txt
 
 Steam starts engine\\bin\\luanti.exe itself (steam/README.md: the launch
-option), so there's no shortcut maker and no Play launcher.
+option), so there's no shortcut maker and no Play launcher. The Steamworks
+API's steam_api64.dll goes next to it (from the SDK: steam/steam.json's
+"sdk"), so the game unlocks Steam achievements and shows rich presence
+(nhv_steam: the zip and itch builds have no DLL and do neither).
+
+Also made: dist/steam/achievements (make_steam_achievements.py: the list
+and icons to set up in Steamworks) and dist/steam/upload.bat.
 
 The app and depot ids are in steam/steam.json (from the Steamworks partner
-site). Uploading needs your Steam partner login, so you run it yourself:
+site). Uploading needs your Steam partner login, so you run it yourself -
+upload.bat asks for it, then runs the SDK's steamcmd:
 
     steamcmd +login <your Steam login> +run_app_build "<...>\\dist\\steam\\scripts\\app_build.vdf" +quit
 
@@ -27,11 +34,22 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_release as rel  # noqa: E402
+import make_steam_achievements  # noqa: E402
 
 ROOT = rel.ROOT
 OUT = os.path.join(ROOT, "dist", "steam")
 CONTENT = os.path.join(OUT, "content")
 SCRIPTS = os.path.join(OUT, "scripts")
+
+# (upload.bat: your Steam login asked, the SDK's steamcmd run)
+UPLOAD = """@echo off
+rem Upload dist\\steam to Steam (SteamPipe): made by tools/make_steam.py
+set /p LOGIN=Your Steam partner login:
+"{steamcmd}" +login %LOGIN% +run_app_build "{vdf}" +quit
+echo.
+echo Then in Steamworks: SteamPipe ^> Builds, set the new build live.
+pause
+"""
 
 # (in a Steam install: Steam starts the game, and keeps shortcuts itself)
 NOT_ON_STEAM = ["Create Play Shortcut.bat", os.path.join("Launchers", "Play VoxHack.bat"),
@@ -133,19 +151,29 @@ def main():
 			os.remove(p)
 	rel.write(os.path.join(CONTENT, "engine", "nhv_defaults.conf"), rel.CONF, crlf=False)
 	rel.write(os.path.join(CONTENT, "README.txt"), README)
+	# (Steamworks: the API next to the program - achievements, rich presence)
+	sdk = ids.get("sdk", "")
+	dll = os.path.join(sdk, "redistributable_bin", "win64", "steam_api64.dll")
+	if not os.path.isfile(dll):
+		sys.exit("no steam_api64.dll at %s: set steam/steam.json's sdk to the Steamworks SDK's sdk folder" % dll)
+	shutil.copy2(dll, os.path.join(CONTENT, "engine", "bin", "steam_api64.dll"))
 
 	os.makedirs(SCRIPTS)
 	rel.write(os.path.join(SCRIPTS, "app_build.vdf"), APP_BUILD.format(
 		app=ids["app_id"], depot=ids["depot_id"], desc=desc.replace('"', "'"),
 		content=vdf_path(CONTENT), output=vdf_path(os.path.join(OUT, "output"))))
 	rel.write(os.path.join(SCRIPTS, "depot_build.vdf"), DEPOT_BUILD.format(depot=ids["depot_id"]))
+	steamcmd = os.path.join(sdk, "tools", "ContentBuilder", "builder", "steamcmd.exe")
+	rel.write(os.path.join(OUT, "upload.bat"), UPLOAD.format(
+		steamcmd=steamcmd, vdf=os.path.join(SCRIPTS, "app_build.vdf")))
+	shutil.copy2(os.path.join(ROOT, "steam", "rich_presence.vdf"), os.path.join(OUT, "rich_presence.vdf"))
+	make_steam_achievements.main()
 
 	size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(CONTENT) for f in fs)
 	print("%s (%.1f MB)" % (CONTENT, size / 1e6))
 	if str(ids["app_id"]).startswith("0"):
 		print("note: steam/steam.json still has placeholder ids - put your app and depot ids in it")
-	print('upload: steamcmd +login <your Steam login> +run_app_build "%s" +quit'
-		% os.path.join(SCRIPTS, "app_build.vdf"))
+	print("upload: run %s" % os.path.join(OUT, "upload.bat"))
 
 
 if __name__ == "__main__":

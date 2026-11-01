@@ -1,5 +1,7 @@
 {
 	"_comment": "VoxHack's Steam ids, from the Steamworks partner site (App Admin > SteamPipe > Depots). Placeholders until the app exists.",
 	"app_id": "0000000",
-	"depot_id": "0000001"
+	"depot_id": "0000001",
+	"_sdk": "The Steamworks SDK's sdk folder: its steam_api64.dll is shipped with the game, its steamcmd uploads",
+	"sdk": "C:\\Users\\mreve\\Games\\steamworks_sdk_165\\sdk"
 }
