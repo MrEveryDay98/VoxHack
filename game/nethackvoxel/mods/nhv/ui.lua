@@ -798,6 +798,9 @@ function ui.item_row(fs, o, x, y, field, w, text)
 end
 ui.CLASS_NAMES = CLASS_NAMES
 ui.head = head
+-- (the equipment slots, and what's in one: the side bars too, sidebars.lua)
+ui.EQUIP = EQUIP
+ui.equipped = equipped
 
 -- NetHack's usual inventory order: $ " ) [ % ? + ! = / ( * ` 0 _
 local INV_ORDER = {}

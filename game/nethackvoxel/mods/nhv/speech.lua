@@ -308,6 +308,18 @@ local function draw_box(player, list)
 		y = y + line_h * (breaks + 1)
 	end
 	local h = y + pad
+	-- (the side bars: in their dialogue box - black already, from its top)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	if g then
+		for n, t in ipairs(texts) do
+			ids["t" .. n] = player:hud_add({
+				type = "text", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
+				offset = {x = g.dialog.x + 6, y = g.dialog.y + t.y - pad + 6}, number = t.color,
+				text = t.text, z_index = 31,
+			})
+		end
+		return
+	end
 	local POS, X = {x = 1, y = 0.36}, -16
 	ids.bg = player:hud_add({
 		type = "image", position = POS, alignment = {x = -1, y = 1}, offset = {x = X, y = 0},
@@ -351,8 +363,13 @@ function speech.refresh()
 			end
 		end
 	end
+	-- (the box's width: its own, or the side bars' box)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	local box_wrap = g and g.box_chars or BOX_WRAP
 	for _, ln in ipairs(lines) do
-		ln.wrapped = ln.wrapped or {head = wrap(ln.text, HEAD_WRAP), box = wrap(ln.text, BOX_WRAP)}
+		if not ln.wrapped or ln.wrapped.bw ~= box_wrap then
+			ln.wrapped = {head = wrap(ln.text, HEAD_WRAP), box = wrap(ln.text, box_wrap), bw = box_wrap}
+		end
 		local n = #speech.typed_text(ln.tp, now)
 		local _, more = ln.wrapped.head:sub(n + 1):gsub("\n", "")
 		if ln.head then

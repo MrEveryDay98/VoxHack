@@ -71,7 +71,13 @@ end
 
 -- ---------------------------------------------------------------- drawing
 -- x offset (from the screen centre) of slot k: 1-2 weapons, 3-7 actions
+-- (with the side bars, the weapons are in the left one: the actions alone,
+-- in the middle)
 local function slot_x(k)
+	if nhv.sidebars and nhv.sidebars.on() then
+		local total = 5 * (SLOT + GAP) - GAP
+		return (k - 3) * (SLOT + GAP) - total / 2 + SLOT / 2
+	end
 	local x = (k - 1) * (SLOT + GAP)
 	if k >= 3 then
 		x = x + SLOT / 2 -- a gap between the weapons and the actions
@@ -87,9 +93,11 @@ local function add(player, def)
 	return player:hud_add(def)
 end
 
-local function frame(color)
-	return ("[fill:%dx%d:%s^[fill:%dx%d:3,3:#141418E0"):format(SLOT, SLOT, color, SLOT - 6, SLOT - 6)
+local function frame(color, size)
+	size = size or SLOT
+	return ("[fill:%dx%d:%s^[fill:%dx%d:3,3:#141418E0"):format(size, size, color, size - 6, size - 6)
 end
+local wep_size -- (the weapons' slots' size, in the side bars; nil: the hotbar's)
 
 local SEARCH_DIM = 0x90C8C8C8 -- (see-through grey: the alpha byte is first)
 local HINT_LIT = 0xFFFFD080
@@ -99,11 +107,24 @@ local function build(player)
 	if nhv.hud.place_status then
 		nhv.hud.place_status(player, SLOT + 28) -- (the status line sits just above)
 	end
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	wep_size = g and g.weapons.size or nil
 	for k = 1, 7 do
-		hud["bg" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y},
-			scale = {x = 1, y = 1}, text = frame("#50505A"), z_index = 50})
-		hud["icon" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y - 4},
-			scale = {x = 2.5 * SLOT / 64, y = 2.5 * SLOT / 64}, text = "blank.png", z_index = 51})
+		if g and k <= 2 then
+			-- (in the left bar: the wielded one, and the other down and right)
+			local at, S = g.weapons[k], g.weapons.size
+			hud["bg" .. k] = player:hud_add({type = "image", position = {x = 0, y = 0},
+				alignment = {x = 1, y = 1}, offset = {x = at.x, y = at.y},
+				scale = {x = 1, y = 1}, text = frame("#50505A", S), z_index = 50})
+			hud["icon" .. k] = player:hud_add({type = "image", position = {x = 0, y = 0},
+				alignment = {x = 0, y = 0}, offset = {x = at.x + S / 2, y = at.y + S / 2},
+				scale = {x = (S - 12) / 16, y = (S - 12) / 16}, text = "blank.png", z_index = 51})
+		else
+			hud["bg" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y},
+				scale = {x = 1, y = 1}, text = frame("#50505A"), z_index = 50})
+			hud["icon" .. k] = add(player, {type = "image", offset = {x = slot_x(k), y = Y - 4},
+				scale = {x = 2.5 * SLOT / 64, y = 2.5 * SLOT / 64}, text = "blank.png", z_index = 51})
+		end
 	end
 	for k = 3, 7 do
 		local a = hotbar.ACTIONS[k - 2]
@@ -121,7 +142,7 @@ local function build(player)
 		alignment = {x = 1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
 	-- on the other side, "G  Enhance Skills" while a skill can be advanced
 	-- (see update_enhance)
-	hud.enhance = add(player, {type = "text", offset = {x = slot_x(1) - SLOT / 2 - 14, y = Y},
+	hud.enhance = add(player, {type = "text", offset = {x = slot_x(g and 3 or 1) - SLOT / 2 - 14, y = Y},
 		alignment = {x = -1, y = 0}, number = SEARCH_DIM, text = "", z_index = 52})
 	-- the cooldown bar: just above the hotbar while an action plays out
 	-- (until it's gone you can't act again); see update_cooldown
@@ -252,7 +273,7 @@ local function refresh(player, inv)
 	for k, o in ipairs({wep or false, alt or false}) do
 		player:hud_change(hud["icon" .. k], "text", o and nhv_tiles.texture(o.tile) or "blank.png")
 		-- the weapons in your hands are framed green (both, dual wielding)
-		player:hud_change(hud["bg" .. k], "text", frame(o and (k == 1 or two) and "#30C040" or "#50505A"))
+		player:hud_change(hud["bg" .. k], "text", frame(o and (k == 1 or two) and "#30C040" or "#50505A", wep_size))
 	end
 	-- your hand shows the wielded weapon
 	local pinv = player:get_inventory()

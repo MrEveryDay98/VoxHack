@@ -132,6 +132,13 @@ local SEVERITY = {
 local HUNGER_SEVERITY = {[2] = 1, [3] = 3, [4] = 4, [5] = 4, [6] = 4}
 local ENCUMBRANCE_SEVERITY = {1, 2, 3, 3, 3}
 
+-- the stats, in the side bars' lines (sidebars.lua)
+local function stat_lines(h)
+	local str = h.str > 18 and (h.str <= 118 and ("18/" .. (h.str - 18)) or tostring(h.str - 100)) or tostring(h.str)
+	return ("St:%s Dx:%d Co:%d\nIn:%d Wi:%d Ch:%d\n%s  T:%d"):format(str, h.dex, h.con,
+		h.int, h.wis, h.cha, h.align, h.moves)
+end
+
 -- the status line: its numbers, and its conditions ({text=, severity=},
 -- worst first)
 local function status_text(h)
@@ -183,8 +190,44 @@ local cond_ids = {}  -- HUD ids, made as they're needed
 local cond_shown = {} -- {text=, severity=} drawn by each
 local status_above = 90
 
+-- (a condition's place: over the status line, or - the side bars - a line
+-- of its own in the ailments' box)
+local function cond_base(g, i)
+	if g then
+		return {x = g.ailments.x + 6, y = g.ailments.y + 6 + (i - 1) * g.line_h}
+	end
+	return {x = 0, y = -status_above}
+end
+
 local function show_status(player, h)
 	local stats, conds = status_text(h)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	if g then
+		-- the side bars: the stats under the bars, the ailments in their box
+		player:hud_change(hud.ids.status, "text", stat_lines(h))
+		for i = 1, math.max(#conds, #cond_ids) do
+			local cd = i <= nhv.sidebars.AILMENT_LINES and conds[i] or nil
+			if cd and not cond_ids[i] then
+				local base = cond_base(g, i)
+				cond_ids[i] = player:hud_add({
+					type = "text", position = {x = 0, y = 0}, alignment = {x = 1, y = 1},
+					offset = base, number = 0xFFFFFF, text = "", style = hud.status_style(),
+				})
+			end
+			if cond_ids[i] then
+				local text = cd and cd.text or ""
+				local was = cond_shown[i]
+				if not was or was.text ~= text or was.severity ~= (cd and cd.severity) then
+					player:hud_change(cond_ids[i], "text", text)
+					if cd then
+						player:hud_change(cond_ids[i], "number", SEVERITY[cd.severity].color)
+					end
+					cond_shown[i] = {text = text, severity = cd and cd.severity, base = cond_base(g, i)}
+				end
+			end
+		end
+		return
+	end
 	local words = {stats}
 	for _, cd in ipairs(conds) do
 		words[#words + 1] = cd.text
@@ -213,7 +256,7 @@ local function show_status(player, h)
 				if cd then
 					player:hud_change(cond_ids[i], "number", SEVERITY[cd.severity].color)
 				end
-				cond_shown[i] = {text = text, severity = cd and cd.severity}
+				cond_shown[i] = {text = text, severity = cd and cd.severity, base = cond_base(nil, i)}
 			end
 		end
 		if cd then
@@ -241,7 +284,8 @@ local function shake_conditions(player, dtime)
 		end
 		if cd and (amp > 0 or cd.still ~= true) then
 			cd.still = amp == 0
-			player:hud_change(id, "offset", {x = x, y = y - status_above})
+			local base = cd.base or {x = 0, y = -status_above}
+			player:hud_change(id, "offset", {x = base.x + x, y = base.y + y})
 		end
 	end
 end
@@ -273,17 +317,28 @@ local function update_here(player, snap)
 	local covered = nhv.ui.menu_open or nhv.ui.chat_open or (nhv.title and nhv.title.open)
 		or hud.big_map
 	local lines = {}
+	-- (in the side bars: in their box, as many as fit, cut to its width)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	local most = g and math.max(1, math.floor((g.items.h - 12) / g.line_h) - 2) or HERE_MAX
 	if h and h.x and not covered and not U.has(h.flags, U.HERO.SWALLOWED) then
 		local items = nhv.mobs.floor_items(h.x, h.y)
 		if #items > 0 then
 			lines[1] = U.has(h.flags, U.HERO.BLIND) and "Things that you feel here:"
 				or "Things that are here:"
 			for k, o in ipairs(items) do
-				if k > HERE_MAX then
-					lines[#lines + 1] = ("  ...and %d more"):format(#items - HERE_MAX)
+				if k > most then
+					lines[#lines + 1] = ("  ...and %d more"):format(#items - most)
 					break
 				end
 				lines[#lines + 1] = "  " .. o.name
+			end
+			if g then
+				lines[1] = U.has(h.flags, U.HERO.BLIND) and "You feel here:" or "Here:"
+				for k, line in ipairs(lines) do
+					if #line > g.box_chars then
+						lines[k] = line:sub(1, g.box_chars - 2) .. ".."
+					end
+				end
 			end
 		end
 	end
@@ -840,6 +895,7 @@ end
 local function corner_offset(player)
 	return hud_px(player, 10)
 end
+hud.hud_px, hud.corner_scale = hud_px, corner_scale
 
 -- under the corner map: the dungeon level ("Dlvl:3"), and the branch when
 -- it isn't the main dungeon
@@ -863,6 +919,11 @@ local function place_level(player)
 		level_shown = text
 		player:hud_change(hud.ids.level, "text", text)
 	end
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	if g then
+		player:hud_change(hud.ids.level, "offset", {x = -g.pad, y = g.level_y})
+		return
+	end
 	local off = corner_offset(player)
 	player:hud_change(hud.ids.level, "offset", {x = -off, y = off + U.ROWNO * corner_scale(player) + 6})
 end
@@ -885,11 +946,17 @@ local function place_map(player)
 		player:hud_set_flags({nhv_big_map = true})
 	else
 		local s, off = corner_scale(player), corner_offset(player)
+		local ox, oy = -off, off
+		-- (the side bars: at the top of the right one, as big as fits)
+		local g = nhv.sidebars and nhv.sidebars.geometry(player)
+		if g then
+			s, ox, oy = g.map_s, g.map.x, g.map.y
+		end
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
 		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
 		-- (a hidden map is scaled to nothing)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
-		player:hud_change(hud.ids.map, "offset", {x = -off, y = off})
+		player:hud_change(hud.ids.map, "offset", {x = ox, y = oy})
 		player:hud_change(hud.ids.map, "style", 0)
 		player:hud_set_flags({nhv_big_map = false}) -- (its squares hidden, kept)
 		if nh.snap and nh.snap.map then
@@ -964,17 +1031,29 @@ function hud.follow_map(player, instant)
 	end
 end
 
--- the status line's distance from the bottom of the screen (above the hotbar)
+-- the status line's distance from the bottom of the screen (above the
+-- hotbar) - or, with the side bars, the stats under the HP and Pw bars and
+-- the conditions in the ailments' box (made again where they go now)
 function hud.place_status(player, above)
 	status_above = above
-	for i, id in ipairs(cond_ids) do
-		if cond_shown[i] then
-			cond_shown[i].still = nil -- (shake_conditions moves it)
-		end
-		player:hud_change(id, "offset", {x = 0, y = -above})
+	for _, id in ipairs(cond_ids) do
+		player:hud_remove(id)
 	end
+	cond_ids, cond_shown = {}, {}
 	if hud.ids.status then
-		player:hud_change(hud.ids.status, "offset", {x = 0, y = -above})
+		local g = nhv.sidebars and nhv.sidebars.geometry(player)
+		if g then
+			player:hud_change(hud.ids.status, "position", {x = 0, y = 0})
+			player:hud_change(hud.ids.status, "alignment", {x = 1, y = 1})
+			player:hud_change(hud.ids.status, "offset", {x = g.pad + 2, y = g.stats_y})
+		else
+			player:hud_change(hud.ids.status, "position", {x = 0.5, y = 1})
+			player:hud_change(hud.ids.status, "alignment", {x = 0, y = -1})
+			player:hud_change(hud.ids.status, "offset", {x = 0, y = -above})
+		end
+	end
+	if nh.snap and nh.snap.hero and hud.ids.status then
+		show_status(player, nh.snap.hero)
 	end
 end
 
@@ -986,6 +1065,40 @@ function hud.toggle_map()
 		hud.follow_map(player, true)
 		place_map(player)
 	end
+end
+
+-- what lies on your square, and the keys under it: down the left (low), or
+-- in the side bars' box for it, the keys under the box
+local HERE_Y = 0.72
+function hud.place_here(player)
+	if not hud.ids.here then
+		return
+	end
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	local function put(id, pos, align, off)
+		player:hud_change(id, "position", pos)
+		player:hud_change(id, "alignment", align)
+		player:hud_change(id, "offset", off)
+	end
+	if g then
+		local R, x = {x = 1, y = 0}, g.items.x + 6
+		local down = {x = 1, y = 1}
+		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.items.y + 8})
+		put(hud.ids.here, R, down, {x = x, y = g.items.y + 6})
+		put(hud.ids.here_key_shadow, R, down, {x = g.items.x + 2, y = g.pickup_y + 2})
+		put(hud.ids.here_key, R, down, {x = g.items.x, y = g.pickup_y})
+		put(hud.ids.invoke_key_shadow, R, down, {x = g.items.x + 2, y = g.pickup_y + g.line_h + 4})
+		put(hud.ids.invoke_key, R, down, {x = g.items.x, y = g.pickup_y + g.line_h + 2})
+	else
+		local L, up = {x = 0, y = HERE_Y}, {x = 1, y = -1}
+		put(hud.ids.here_shadow, L, up, {x = 22, y = -28})
+		put(hud.ids.here, L, up, {x = 20, y = -30})
+		put(hud.ids.here_key_shadow, L, up, {x = 22, y = 2})
+		put(hud.ids.here_key, L, up, {x = 20, y = 0})
+		put(hud.ids.invoke_key_shadow, L, up, {x = 22, y = 28})
+		put(hud.ids.invoke_key, L, up, {x = 20, y = 26})
+	end
+	here_shown, invoke_shown = nil, nil
 end
 
 -- Picking a place on the map (ui.lua's place picker): the big map itself is
@@ -1069,7 +1182,6 @@ core.register_on_joinplayer(function(player)
 	-- (the same text again, a little down and right, behind it). "F  Pick up"
 	-- sits at a fixed place low on the left, the list above it, growing up
 	-- (clear of the messages coming down from the top)
-	local HERE_Y = 0.72
 	hud.ids.here_shadow = player:hud_add({
 		type = "text", position = {x = 0, y = HERE_Y}, alignment = {x = 1, y = -1},
 		offset = {x = 22, y = -28}, number = 0x000000, text = "", z_index = 10,
@@ -1095,6 +1207,7 @@ core.register_on_joinplayer(function(player)
 		offset = {x = 20, y = 26}, number = 0xFFD040, text = "", z_index = 11,
 	})
 	here_shown, invoke_shown = nil, nil
+	hud.place_here(player)
 	-- the big map's facing arrow (over its squares and icons; update_map_arrow)
 	hud.ids.map_arrow = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
@@ -1177,6 +1290,11 @@ local meter_ids = {}
 local meter_last = {} -- key -> "cur/max" shown
 
 local function meter_size()
+	-- (the side bars: as wide as the left one has room for)
+	local g = nhv.sidebars and nhv.sidebars.geometry(nhv.player.get())
+	if g then
+		return g.bars.w, g.bars.h
+	end
 	local k = nhv.theme and nhv.theme.box_scale() or 1
 	return math.floor(200 * k), 14 * k + 6 -- width, height (HUD pixels)
 end
@@ -1231,6 +1349,11 @@ function hud.build_meters(player)
 	local w, h = meter_size()
 	local frame = nhv.theme and nhv.theme.retro() and "#AAAAAA" or "#000000"
 	local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	if g then
+		hud.build_side_meters(player, g, w, h, frame, base)
+		return
+	end
 	local mx = meters_x()
 	-- your portrait in a framed box, as tall as the name and both bars
 	local ps = portrait_size()
@@ -1307,7 +1430,7 @@ local function update_meters(player, h)
 		player:hud_change(meter_ids.portrait, "text", tex)
 	end
 	local name = ((h.name or "") .. (h.rank and h.rank ~= "" and (" the " .. h.rank) or ""))
-	if name ~= name_shown then
+	if meter_ids.name and name ~= name_shown then
 		name_shown = name
 		player:hud_change(meter_ids.name, "text", name)
 	end
@@ -1326,6 +1449,53 @@ local function update_meters(player, h)
 			player:hud_change(meter_ids[m.key .. "_text"], "text",
 				("%s %d/%d"):format(m.label, cur, max))
 		end
+	end
+end
+
+-- In the side bars: your portrait at the top of the left one, as wide as it
+-- (your sprite in the middle), the bars under it, the level/gold/AC line
+-- under them; no name (the bar has no room for a long one). The messages
+-- along the top of the view.
+function hud.build_side_meters(player, g, w, h, frame, base)
+	local p = g.portrait
+	meter_ids.portrait_bg = player:hud_add({
+		type = "image", position = base.position, alignment = base.alignment,
+		offset = {x = p.x, y = p.y}, scale = {x = 1, y = 1}, z_index = 40,
+		text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(p.w, p.h, frame, p.w - 4, p.h - 4),
+	})
+	local inner = math.min(p.w, p.h) - 8
+	meter_ids.portrait = player:hud_add({
+		type = "image", position = base.position, alignment = {x = 0, y = 0},
+		offset = {x = p.x + p.w / 2, y = p.y + p.h / 2}, scale = {x = inner / TILE_PX, y = inner / TILE_PX},
+		z_index = 41, text = "blank.png",
+	})
+	for row, m in ipairs(METERS) do
+		local y = g.bars.y[row]
+		meter_ids[m.key .. "_bg"] = player:hud_add({
+			type = "image", position = base.position, alignment = base.alignment,
+			offset = {x = g.bars.x, y = y}, scale = {x = 1, y = 1}, z_index = 40,
+			text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(w, h, frame, w - 4, h - 4),
+		})
+		meter_ids[m.key .. "_fill"] = player:hud_add({
+			type = "image", position = base.position, alignment = base.alignment,
+			offset = {x = g.bars.x + 2, y = y + 2}, scale = {x = 0, y = 0}, z_index = 41,
+			text = "[fill:1x1:" .. m.color,
+		})
+		meter_ids[m.key .. "_text"] = player:hud_add({
+			type = "text", position = base.position, alignment = {x = 0, y = 0},
+			offset = {x = g.bars.x + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+		})
+	end
+	for _, key in ipairs({"info", "info_flash"}) do
+		meter_ids[key] = player:hud_add({
+			type = "text", position = base.position, alignment = {x = 1, y = 0},
+			offset = {x = g.pad + 2, y = g.info_y}, number = key == "info" and 0xFFFFFF or GOLD_FLASH,
+			z_index = key == "info" and 42 or 43, text = "",
+		})
+	end
+	info_shown = nil
+	if hud.ids.msg then
+		player:hud_change(hud.ids.msg, "offset", {x = 0, y = 60})
 	end
 end
 

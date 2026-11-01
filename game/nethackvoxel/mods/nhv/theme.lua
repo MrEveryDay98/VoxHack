@@ -131,6 +131,10 @@ end
 function theme.apply(player)
 	theme.apply_font()
 	player:set_formspec_prepend(theme.styles())
+	-- (the side bars first: the rest is placed in them - sidebars.lua)
+	if nhv.sidebars then
+		nhv.sidebars.rebuild(player)
+	end
 	if nhv.hotbar and nhv.hotbar.rebuild then
 		nhv.hotbar.rebuild(player) -- (slots sized for the text)
 	end
@@ -139,6 +143,13 @@ function theme.apply(player)
 	end
 	if nhv.hud and nhv.hud.text_styles then
 		nhv.hud.text_styles(player) -- (the messages' font)
+	end
+	if nhv.hud and nhv.hud.place_map then
+		nhv.hud.place_map(player) -- (the map: a corner, or the right bar)
+		nhv.hud.place_here(player)
+	end
+	if nhv.speech then
+		nhv.speech.clear() -- (the dialogue box drawn again where it is now)
 	end
 end
 

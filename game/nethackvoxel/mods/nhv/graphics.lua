@@ -55,6 +55,8 @@ local TEXEL_SIZE = {"Texture pixels", "Half (8x8 a block)"}
 local TEXEL_STEPS = {{2, "2"}, {3, "3"}, {4, "4"}, {6, "6"}, {8, "8"}, {12, "12"}, {16, "16"}, {32, "32"}}
 -- raytraced light (raytrace.lua)
 local RAYTRACE = {"Off", "On"}
+-- the HUD over the view, or round it in side bars (sidebars.lua)
+local HUD_LAYOUT = {{"overlay", "Over the view"}, {"sidebars", "Side bars"}}
 -- square light: block by block, its edges in steps (the VoxHack engine's
 -- nhv_square_light: off, on)
 local SQUARE = {"Off", "On"}
@@ -189,6 +191,7 @@ function graphics.formspec()
 		core.settings:get_bool("nhv_texel_half", false) and 2 or 1))
 	add(row(y, "Light dithering", "texel_pattern", names(TEXEL_PATTERN),
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
+	add(row(y, "HUD layout", "hud_layout", names(HUD_LAYOUT), choice(HUD_LAYOUT, "nhv_hud_layout", "overlay")))
 	add(row(y, "Raytraced light", "raytrace", table.concat(RAYTRACE, ","),
 		core.settings:get_bool("nhv_raytrace", false) and 2 or 1))
 	local square = core.settings:get("nhv_square_light") or "off"
@@ -459,6 +462,12 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	local tp = tonumber(fields.texel_pattern)
 	if tp and TEXEL_PATTERN[tp] and TEXEL_PATTERN[tp][1] ~= core.settings:get("nhv_texel_pattern") then
 		core.settings:set("nhv_texel_pattern", TEXEL_PATTERN[tp][1]) -- (the engine, at once)
+		changed = true
+	end
+	local hl = tonumber(fields.hud_layout)
+	if hl and HUD_LAYOUT[hl] and HUD_LAYOUT[hl][1] ~= (core.settings:get("nhv_hud_layout") or "overlay") then
+		core.settings:set("nhv_hud_layout", HUD_LAYOUT[hl][1])
+		theme.apply(player) -- (everything placed again)
 		changed = true
 	end
 	local rt = tonumber(fields.raytrace)
