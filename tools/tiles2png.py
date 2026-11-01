@@ -1,11 +1,11 @@
 """Convert NetHack's vanilla tileset (win/share/*.txt) to the game's sprite
 sheet (nhv_tiles.png, SHEET_COLS tiles per row) plus tilenames.lua.
 
-The sheet holds each distinct sprite once:
-  * monsters whose male and female tiles are identical get one sprite;
-    pairs that really differ keep both;
-  * statues are not stored at all - the game draws a monster's sprite
-    with a stone colour filter instead.
+The sheet holds every NetHack tile in its own cell, in NetHack's order
+(cell n is tile n) - a male and a female each their own, even where
+NetHack draws them the same, so either can be redrawn - but for statues,
+which are not stored at all: the game draws a monster's sprite with a
+stone colour filter instead.
 Pixels are copied as-is (NetHack's drop shadows included); the sheet is
 meant to be edited by hand afterwards, so deploy.sh only runs this when
 the sheet doesn't exist yet.
@@ -91,27 +91,13 @@ def main():
         palette, tiles = parse_tile_file(os.path.join(share, fname))
         if fname == "monsters.txt":
             nmon = len(tiles)
-            i = 0
-            while i < len(tiles):
-                name, rows = tiles[i]
-                base = name.rsplit(",", 1)[0] if name.endswith((",male", ",female")) else name
-                nxt = tiles[i + 1] if i + 1 < len(tiles) else None
-                if name.endswith(",male") and nxt and nxt[0] == base + ",female":
-                    # a male/female pair: one sprite if they look the same
-                    if rows == nxt[1]:
-                        idx = add_sprite(tile_image(palette, rows), base)
-                        names += [name, nxt[0]]
-                        tile_sheet += [idx, idx]
-                    else:
-                        a = add_sprite(tile_image(palette, rows), base + " (male)")
-                        b = add_sprite(tile_image(palette, nxt[1]), base + " (female)")
-                        names += [name, nxt[0]]
-                        tile_sheet += [a, b]
-                    i += 2
-                    continue
+            for name, rows in tiles:
                 names.append(name)
-                tile_sheet.append(add_sprite(tile_image(palette, rows), base))
-                i += 1
+                cell = name
+                for sex in ("male", "female"):
+                    if name.endswith("," + sex):
+                        cell = name[:-len(sex) - 1] + " (" + sex + ")"
+                tile_sheet.append(add_sprite(tile_image(palette, rows), cell))
         else:
             for name, rows in tiles:
                 names.append(name)

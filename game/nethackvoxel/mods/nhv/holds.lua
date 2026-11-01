@@ -138,11 +138,11 @@ local function set_overlay(player, tex)
 end
 
 -- Swallowed: NetHack's engulf frame (its eight swallow tiles, nhv_tiles.png
--- sheet 1035 on: top left, top, top right, left, right, bottom left,
+-- sheet 1392 on: top left, top, top right, left, right, bottom left,
 -- bottom, bottom right) round the screen's edges - the corners in the
 -- corners, the sides stretched along them - over any insides overlay;
 -- the middle open. (Made big first, a pixel to many: stretched, still sharp.)
-local SWALLOW_SHEET = 1035
+local SWALLOW_SHEET = 1392
 local CORNER_W, CORNER_H = 16, 24 -- (percent of the screen)
 local FRAME = {
 	{pos = {0, 0}, align = {1, 1}, w = CORNER_W, h = CORNER_H},

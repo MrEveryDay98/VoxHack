@@ -138,7 +138,7 @@
    "name": "ironBarsVoxel",
    "shape": "object",
    "texture": {
-    "sheet": 932
+    "sheet": 1289
    },
    "scale": 1.0,
    "solid": true,
