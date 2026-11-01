@@ -383,12 +383,32 @@ function player_mod.travel(player, steps)
 		local c = map and nhv.sim.walk_center(map, s.x, s.y) or U.tile_center(s.x, s.y)
 		pts[#pts + 1] = vector.new(c.x, terrain.stand_y(s.x, s.y), c.z)
 	end
+	-- (block by block, round its corners - path.body_route; else straight
+	-- from square to square)
+	local from = player:get_pos()
+	local squares, heights = {}, {}
+	local fx, fy = U.pos_to_tile(from)
+	local all = {{x = fx, y = fy}}
+	for _, s in ipairs(steps) do
+		all[#all + 1] = s
+	end
+	for _, s in ipairs(all) do
+		if U.in_map(s.x, s.y) then
+			squares[#squares + 1] = s
+			heights[U.idx(s.x, s.y)] = terrain.stand_y(s.x, s.y)
+		end
+	end
+	pts = nhv.path.body_route(squares, from, pts[#pts], heights) or pts
 	local last = steps[#steps]
 	player_mod.trap_done = last.x .. "," .. last.y
 	-- (your walking speed - before it's stopped for the walk)
 	local walk = (tonumber(core.settings:get("movement_speed_walk")) or 4)
 		* (player:get_physics_override().speed_walk or 1)
 	player_mod.traveling = {pts = pts, i = 1, v = math.max(2, walk) * TRAVEL_SPEED}
+	-- (the camera eases round to face the way you go, unless you turn it)
+	if core.nhv_drift_facing then
+		core.nhv_drift_facing(true)
+	end
 	set_speed(player)
 	player:add_velocity(vector.multiply(player:get_velocity(), -1))
 end
@@ -399,6 +419,9 @@ function player_mod.end_travel(player, cut)
 	player_mod.traveling = nil
 	if core.nhv_player_drift then
 		core.nhv_player_drift(vector.zero())
+	end
+	if core.nhv_drift_facing then
+		core.nhv_drift_facing(false)
 	end
 	if player and t then
 		set_speed(player)
@@ -420,7 +443,7 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	local p = player:get_pos()
-	-- (at this square's spot - or about to pass it: on to the next)
+	-- (at this point of the way - or about to pass it: on to the next)
 	local d = vector.subtract(t.pts[t.i], p)
 	while vector.length(d) <= math.max(t.v * dtime, 0.08) do
 		t.i = t.i + 1
@@ -429,12 +452,6 @@ core.register_globalstep(function(dtime)
 			return
 		end
 		d = vector.subtract(t.pts[t.i], p)
-		-- (facing the way it goes: the camera behind follows)
-		player:set_look_horizontal(math.atan2(-d.x, d.z))
-	end
-	if t.i == 1 and not t.facing then
-		t.facing = true
-		player:set_look_horizontal(math.atan2(-d.x, d.z))
 	end
 	core.nhv_player_drift(vector.multiply(vector.normalize(d), t.v))
 end)
