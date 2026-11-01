@@ -65,12 +65,6 @@ with the wording they asked for where they gave one.
 | `nhv_music_tocatafuga.ogg` | [Toccata and Fugue in D Minor](https://opengameart.org/content/toccata-and-fugue-in-d-minor) | J. S. Bach, performed by Mario4536 (submitted by bart) | CC BY 3.0 | **Attribution required**: "Toccata and Fugue in D Minor by Johann Sebastian Bach, performed by Mario4536". Converted to Ogg |
 | `nhv_music_diesirae.ogg` | Verdi, Requiem: II. Dies Irae - a recording saved from YouTube (via yt-to-mp3.net) | Verdi (composition); performers unknown | **Unknown** | **Needs checking**: the composition is public domain, but a recording usually isn't. Find a recording with a free licence (e.g. Musopen, public-domain recordings) or replace |
 
-Downloaded but not in the game: "Lament for a Warrior's Soul" (RandomMind),
-"Inside the Overlord's Domain" (KarateStudios), "Determined Pursuit"
-(Emma_MA), the rest of JRPG Music Pack #3 (all CC0), and Freesound 123435
-"02362 fanfare announce a" by Robinhood76 - **CC BY-NC 4.0, non-commercial
-only**: don't use it in a paid release.
-
 ## Before a Steam release
 
 1. **SAM.** Its code has no licence; it's included knowingly (see the
