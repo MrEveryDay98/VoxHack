@@ -419,6 +419,40 @@ local function think(e, map, dturns, hp, hero)
 	wander(e, map, dist, hp)
 end
 
+-- Bodies in each other - one glided in through anything (NetHack moved
+-- it), one appeared beside another, one grew - are eased apart: each back
+-- toward the middle of its own square (NetHack's squares are never shared,
+-- and two bodies in the middles of theirs never touch). A body refuses
+-- every step that brings it closer to another, so two in each other, both
+-- pressing on toward you, would otherwise stay stuck in each other.
+local function separate(dturns)
+	local list = {}
+	for _, e in pairs(sim.mons) do
+		if not e.glide then
+			list[#list + 1] = e
+		end
+	end
+	local most = 1.5 * dturns * TILE -- (a square and a half a turn, at most)
+	for i = 1, #list do
+		local a = list[i]
+		for j = i + 1, #list do
+			local b = list[j]
+			local over = a.r + b.r - flat_dist(a.pos, b.pos)
+			if over > 0.01 then
+				for _, e in ipairs({a, b}) do
+					local c = center_of(e.x, e.y)
+					local d = flat_dist(e.pos, c)
+					if d > 0.001 then
+						local step = math.min(d, over / 2 + 0.05, most)
+						e.pos = vector.add(e.pos, vector.multiply(vector.direction(e.pos, c), step))
+						e.pos.y = 0
+					end
+				end
+			end
+		end
+	end
+end
+
 -- Move everything by dturns of game time.
 function sim.update(dturns)
 	local snap = nh.snap
@@ -430,6 +464,7 @@ function sim.update(dturns)
 	for _, e in pairs(sim.mons) do
 		think(e, snap.map, dturns, hp, hero)
 	end
+	separate(dturns)
 end
 
 -- is the way from a to b clear of walls (no reaching round a corner)?
