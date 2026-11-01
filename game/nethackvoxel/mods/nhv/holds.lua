@@ -70,11 +70,23 @@ local function holder_pos()
 	end
 end
 
--- the screen's edges: a soft white glow while you're held, slowly
--- pulsing; dark while you're swallowed (over any insides overlay)
-local vignette = nil -- {player=, id=, shown=}
+-- (the game's view: the screen between the side bars, if they're on - how
+-- much of the screen's width each bar takes)
+local function side_frac(player)
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	return g and g.w / g.sw or 0
+end
+
+-- the view's edges: a soft white glow while you're held, slowly pulsing;
+-- dark while you're swallowed
+local vignette = nil -- {player=, id=, shown=, side=}
 local function set_vignette(player, on, dark)
 	if vignette and vignette.player ~= player then
+		vignette = nil
+	end
+	local side = on and side_frac(player)
+	if vignette and vignette.side ~= side then
+		player:hud_remove(vignette.id)
 		vignette = nil
 	end
 	if not on then
@@ -85,9 +97,9 @@ local function set_vignette(player, on, dark)
 		return
 	end
 	if not vignette then
-		vignette = {player = player, id = player:hud_add({
+		vignette = {player = player, side = side, id = player:hud_add({
 			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
-			scale = {x = -100, y = -100}, text = "blank.png", z_index = -10,
+			scale = {x = -100 * (1 - 2 * side), y = -100}, text = "blank.png", z_index = -10,
 		})}
 	end
 	-- (steps of 16: few different textures)
@@ -103,47 +115,14 @@ local function set_vignette(player, on, dark)
 	end
 end
 
--- Swallowed: inside some engulfers the whole view is their insides
--- (overlay_<name>.png in nhv_tiles, drawn as it is, covering the screen;
--- the HUD stays on top)
-local ENGULF_OVERLAYS = {["purple worm"] = "overlay_purpleworm.png"}
-local overlay = nil -- {player=, id=, tex=}
-
-local function engulfer_name()
-	local snap = nh.snap
-	if not snap or not snap.hero or not U.has(snap.hero.flags, U.HERO.SWALLOWED) then
-		return
-	end
-	for _, m in ipairs(snap.monsters or {}) do
-		if U.has(m.flags, U.MON_ENGULFING) and m.mndx and m.mndx >= 0 then
-			return core.nh_mon_name(m.mndx)
-		end
-	end
-end
-
-local function set_overlay(player, tex)
-	if overlay and overlay.player ~= player then
-		overlay = nil
-	end
-	if overlay and overlay.tex ~= tex then
-		player:hud_remove(overlay.id)
-		overlay = nil
-	end
-	if tex and not overlay then
-		overlay = {player = player, tex = tex, id = player:hud_add({
-			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
-			scale = {x = -100, y = -100}, text = tex, z_index = -20,
-		})}
-	end
-end
-
 -- Swallowed: NetHack's engulf frame (its eight swallow tiles, nhv_tiles.png
 -- sheet 1392 on: top left, top, top right, left, right, bottom left,
--- bottom, bottom right) round the screen's edges - the corners in the
--- corners, the sides stretched along them - over any insides overlay;
--- the middle open. (Made big first, a pixel to many: stretched, still sharp.)
+-- bottom, bottom right) round the view's edges - the corners in the
+-- corners, the sides stretched along them; the middle open. Only over the
+-- view: between the side bars, not over them. (Made big first, a pixel to
+-- many: stretched, still sharp.)
 local SWALLOW_SHEET = 1392
-local CORNER_W, CORNER_H = 16, 24 -- (percent of the screen)
+local CORNER_W, CORNER_H = 16, 24 -- (percent of the view)
 local FRAME = {
 	{pos = {0, 0}, align = {1, 1}, w = CORNER_W, h = CORNER_H},
 	{pos = {0.5, 0}, align = {0, 1}, w = 100 - 2 * CORNER_W, h = CORNER_H},
@@ -154,10 +133,14 @@ local FRAME = {
 	{pos = {0.5, 1}, align = {0, -1}, w = 100 - 2 * CORNER_W, h = CORNER_H},
 	{pos = {1, 1}, align = {-1, -1}, w = CORNER_W, h = CORNER_H},
 }
-local frame = nil -- {player=, ids}
+local frame = nil -- {player=, ids, side=}
 local function set_frame(player, on)
 	if frame and frame.player ~= player then
 		frame = nil
+	end
+	local side = on and side_frac(player)
+	if frame and frame.side ~= side then
+		set_frame(player, false) -- (the bars came or went, or the window changed)
 	end
 	if not on then
 		if frame then
@@ -171,11 +154,12 @@ local function set_frame(player, on)
 	if frame then
 		return
 	end
-	frame = {player = player, ids = {}}
+	frame = {player = player, ids = {}, side = side}
+	local view = 1 - 2 * side
 	for i, f in ipairs(FRAME) do
 		frame.ids[i] = player:hud_add({
-			type = "image", position = {x = f.pos[1], y = f.pos[2]},
-			alignment = {x = f.align[1], y = f.align[2]}, scale = {x = -f.w, y = -f.h},
+			type = "image", position = {x = side + f.pos[1] * view, y = f.pos[2]},
+			alignment = {x = f.align[1], y = f.align[2]}, scale = {x = -f.w * view, y = -f.h},
 			text = nhv_tiles.sheet_texture(SWALLOW_SHEET + i - 1) .. "^[resize:256x256", z_index = -5,
 		})
 	end
@@ -186,11 +170,9 @@ local ALWAYS = core.settings:get_bool("nhv_test_tendril", false) -- (for tests)
 
 local function update(player)
 	local from = holder_pos()
-	local inside = engulfer_name()
 	local h = nh.snap and nh.snap.hero
 	local swallowed = h and U.has(h.flags, U.HERO.SWALLOWED)
 	set_vignette(player, from ~= nil or swallowed, swallowed)
-	set_overlay(player, inside and ENGULF_OVERLAYS[inside:lower()])
 	set_frame(player, swallowed)
 	-- (where you're pinned, not your body's position this step: that
 	-- wobbles a little and the tendril would jitter with it)
