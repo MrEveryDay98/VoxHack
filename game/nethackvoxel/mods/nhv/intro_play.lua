@@ -38,6 +38,7 @@
 
 local intro_play = {active = false}
 nhv.intro_play = intro_play
+local run
 
 local DATA_DIR = core.get_mod_data_path() .. DIR_DELIM .. "intro"
 local SCHEMATIC = DATA_DIR .. DIR_DELIM .. "forest.mts"
@@ -227,7 +228,13 @@ local function timeline(points, at)
 	return cam, events
 end
 
-local run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
+run = nil -- {player=, t0=, events=, next_ev=, ids={}, huds={}, signs={}, done=}
+
+-- (while it plays: where the HUD it hides is noted - HUD made meanwhile
+-- too, off the screen to begin with: showroom.lua)
+function intro_play.huds_store()
+	return run and run.huds
+end
 
 -- the time of day now (sky.time: held there - sky.lua)
 local function set_time(t)
@@ -421,7 +428,7 @@ local function finish()
 		for id, pos in pairs(run.huds) do
 			local def = player:hud_get(id)
 			if def and def.position and def.position.x == 9 then
-				player:hud_change(id, "position", pos)
+				nhv.showroom.put_back(player, id, pos)
 			end
 		end
 	end
@@ -436,10 +443,14 @@ local function finish()
 	if nhv.INTRO_EDITOR and nhv.sound then
 		nhv.sound.stop_music()
 	end
-	player:hud_set_flags({wielditem = run.flags.wielditem, crosshair = run.flags.crosshair,
+	-- (the title next: the hand and crosshair left off, the view still held
+	-- - turned on for a moment and off again, they'd flash)
+	local title_next = done ~= nil
+	player:hud_set_flags({wielditem = not title_next and run.flags.wielditem,
+		crosshair = not title_next and run.flags.crosshair,
 		hotbar = run.flags.hotbar, healthbar = run.flags.healthbar, breathbar = run.flags.breathbar,
 		chat = run.flags.chat, nhv_no_selection = run.flags.nhv_no_selection,
-		nhv_camera_lock = false})
+		nhv_camera_lock = title_next})
 	player:set_properties({is_visible = run.visible})
 	if core.nhv_hero_light then
 		-- (the game's own, as it goes on - none before a game: the title's)
@@ -486,7 +497,7 @@ local function play(player, data, at, done)
 		run.ids[#run.ids + 1] = player:hud_add({
 			type = "text", position = {x = 0.5, y = 0.9}, alignment = {x = 0, y = -1},
 			offset = {x = l[2], y = l[2]}, size = {x = 1, y = 0}, number = l[1], text = "",
-			z_index = 60,
+			z_index = 60, nhv_show = true,
 		})
 	end
 	hide_huds(player)
@@ -538,7 +549,7 @@ local function play(player, data, at, done)
 		-- (the editor's own fade: over the whole screen, black to start)
 		run.fade_id = player:hud_add({
 			type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
-			scale = {x = -100, y = -100}, text = "", z_index = 50,
+			scale = {x = -100, y = -100}, text = "", z_index = 50, nhv_show = true,
 		})
 		run.fade = {from = 1, to = 1, t0 = core.get_us_time(), dur = 1, color = "#000000"}
 	end

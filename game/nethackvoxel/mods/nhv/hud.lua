@@ -1305,6 +1305,7 @@ core.register_on_joinplayer(function(player)
 	hud.ids.fade = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "blank.png", z_index = 1000,
+		nhv_show = true, -- (over the title and the opening too: showroom.lua)
 	})
 	fade_shown = nil
 	-- the compass at the top middle (Skyrim style): a strip of directions

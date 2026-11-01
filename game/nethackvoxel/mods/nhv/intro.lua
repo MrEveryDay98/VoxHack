@@ -99,7 +99,7 @@ function intro.start(player)
 		local id = player:hud_add({
 			type = "text", position = {x = 0.5, y = 0.05}, alignment = {x = 0, y = 1},
 			offset = {x = l[2], y = l[2]}, size = {x = 1, y = 0}, number = l[1], text = "",
-			z_index = 60,
+			z_index = 60, nhv_show = true,
 		})
 		run.ids[#run.ids + 1] = id
 		nhv.showroom.keep[id] = true

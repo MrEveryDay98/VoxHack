@@ -238,6 +238,7 @@ function showroom.backdrop(player)
 		return
 	end
 	showroom.bd = true
+	showroom.held = true
 	-- (out in the empty space where you wait before a game: init.lua's
 	-- spot - after a game too, away from the level you were on; kept
 	-- there, below)
@@ -275,6 +276,99 @@ function showroom.hide_huds(player)
 		end
 	end
 end
+
+-- ---------------------------------------------------------------- made hidden
+-- Hiding HUD by moving it off the screen in the same server step it's made
+-- (or put somewhere) isn't enough: the client can take the two in two
+-- frames, and draw it once in between - a flash. So while the title or the
+-- opening holds the screen, and from joining until a game has started,
+-- HUD is made off the screen to begin with, and moving it is only noted
+-- (where it goes when it's shown); it all comes out when the game starts
+-- (showroom.hide). What's meant to show meanwhile - the black fade, the
+-- opening's and the intro's words - says so: nhv_show = true in its
+-- definition.
+showroom.held = not (nhv.EDITOR or nhv.INTRO_EDITOR or nhv.ATLAS) -- (no game yet)
+local BIG_MAP_ONLY = 512 -- (the big map's squares: hidden by a HUD flag of their own)
+
+-- (where an element hidden now is noted: the opening's, the backdrop's, or
+-- before either)
+local function store_now()
+	local s = nhv.intro_play and nhv.intro_play.huds_store and nhv.intro_play.huds_store()
+	if s then
+		return s
+	end
+	if showroom.bd then
+		showroom.huds = showroom.huds or {}
+		return showroom.huds
+	end
+	if showroom.held then
+		showroom.adopted = showroom.adopted or {}
+		return showroom.adopted
+	end
+end
+
+local function store_of(id)
+	local ip = nhv.intro_play and nhv.intro_play.huds_store and nhv.intro_play.huds_store()
+	for _, s in ipairs({ip or {}, showroom.huds or {}, showroom.adopted or {}}) do
+		if s[id] then
+			return s
+		end
+	end
+end
+
+-- (the engine's own hud_change: putting HUD back goes round the noting)
+local raw_change = nil
+function showroom.put_back(player, id, pos)
+	return (raw_change or player.hud_change)(player, id, "position", pos)
+end
+
+-- (first of everything done when you join: before the HUD's made)
+table.insert(core.registered_on_joinplayers, 1, function(player)
+	local meta = getmetatable(player)
+	local methods = meta and (type(meta.__index) == "table" and meta.__index or meta)
+	if not methods or methods._nhv_held then
+		return
+	end
+	methods._nhv_held = true
+	local add, change, remove = methods.hud_add, methods.hud_change, methods.hud_remove
+	raw_change = change
+	methods.hud_add = function(self, def)
+		local store = self:is_player() and store_now()
+		if store and type(def) == "table" and not def.nhv_show and def.position and def.position.x ~= 9
+				and math.floor((def.style or 0) / BIG_MAP_ONLY) % 2 == 0 then
+			local pos = def.position
+			def = table.copy(def)
+			def.position = {x = 9, y = 9}
+			local id = add(self, def)
+			if id then
+				store[id] = pos
+			end
+			return id
+		end
+		return add(self, def)
+	end
+	methods.hud_change = function(self, id, stat, value)
+		if stat == "position" and type(value) == "table" and value.x ~= 9 and self:is_player() then
+			local s = store_of(id)
+			local def = s and self:hud_get(id)
+			if def and def.position and def.position.x == 9 then
+				s[id] = value -- (noted: where it goes when it's shown)
+				return
+			end
+		end
+		return change(self, id, stat, value)
+	end
+	methods.hud_remove = function(self, id)
+		for _, s in ipairs({showroom.huds or {}, showroom.adopted or {}}) do
+			s[id] = nil -- (its number may be given to the next one made)
+		end
+		local ip = nhv.intro_play and nhv.intro_play.huds_store and nhv.intro_play.huds_store()
+		if ip then
+			ip[id] = nil
+		end
+		return remove(self, id)
+	end
+end)
 
 -- HUD the opening hid, given over to the title's backdrop (intro_play.lua):
 -- kept hidden, and put back with the rest when the backdrop goes
@@ -344,11 +438,22 @@ function showroom.hide(player)
 		for id, pos in pairs(showroom.huds or {}) do
 			local def = player:hud_get(id)
 			if def and def.position and def.position.x == 9 then
-				player:hud_change(id, "position", pos)
+				showroom.put_back(player, id, pos)
 			end
 		end
 	end
 	showroom.huds = nil
+	-- (and what was made before the backdrop, still waiting: out too)
+	showroom.held = false
+	if player and player:is_player() then
+		for id, pos in pairs(showroom.adopted or {}) do
+			local def = player:hud_get(id)
+			if def and def.position and def.position.x == 9 then
+				showroom.put_back(player, id, pos)
+			end
+		end
+	end
+	showroom.adopted = nil
 	if player and player:is_player() then
 		nhv.player.set_speed(player) -- (walking, and gravity, again)
 	end
