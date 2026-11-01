@@ -157,10 +157,17 @@ local function set_frame(player, on)
 	frame = {player = player, ids = {}, side = side}
 	local view = 1 - 2 * side
 	for i, f in ipairs(FRAME) do
+		-- (each piece's size rounded to whole pixels on its own: the sides
+		-- go on a little under the corners, drawn over them, so no gap -
+		-- a seam - shows between them)
+		local w = f.w == CORNER_W and f.w or f.w + 1
+		local h = f.h == CORNER_H and f.h or f.h + 1
+		local corner = f.w == CORNER_W and f.h == CORNER_H
 		frame.ids[i] = player:hud_add({
 			type = "image", position = {x = side + f.pos[1] * view, y = f.pos[2]},
-			alignment = {x = f.align[1], y = f.align[2]}, scale = {x = -f.w * view, y = -f.h},
-			text = nhv_tiles.sheet_texture(SWALLOW_SHEET + i - 1) .. "^[resize:256x256", z_index = -5,
+			alignment = {x = f.align[1], y = f.align[2]}, scale = {x = -w * view, y = -h},
+			text = nhv_tiles.sheet_texture(SWALLOW_SHEET + i - 1) .. "^[resize:256x256",
+			z_index = corner and -4 or -5,
 		})
 	end
 end
