@@ -251,7 +251,8 @@ function showroom.backdrop(player)
 	player:set_look_horizontal(0)
 	player:set_look_vertical(LOOK_DOWN)
 	nhv.player.set_speed(player) -- (still, no gravity: player.lua)
-	showroom.huds = {}
+	showroom.huds = showroom.adopted or {}
+	showroom.adopted = nil
 	showroom.hide_huds(player)
 	if nhv.sky then
 		nhv.sky.scene = "astral"
@@ -272,6 +273,15 @@ function showroom.hide_huds(player)
 			showroom.huds[id] = def.position
 			player:hud_change(id, "position", {x = 9, y = 9})
 		end
+	end
+end
+
+-- HUD the opening hid, given over to the title's backdrop (intro_play.lua):
+-- kept hidden, and put back with the rest when the backdrop goes
+function showroom.adopt_huds(huds)
+	showroom.adopted = showroom.adopted or {}
+	for id, pos in pairs(huds) do
+		showroom.adopted[id] = pos
 	end
 end
 

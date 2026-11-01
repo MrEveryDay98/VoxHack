@@ -412,10 +412,17 @@ local function finish()
 	if run.fade_id then
 		player:hud_remove(run.fade_id)
 	end
-	for id, pos in pairs(run.huds) do
-		local def = player:hud_get(id)
-		if def and def.position and def.position.x == 9 then
-			player:hud_change(id, "position", pos)
+	-- (the HUD back as it was - or, the title screen coming next, still
+	-- hidden, handed to it: put back when the title's done, not shown for
+	-- a frame in between)
+	if done and nhv.showroom then
+		nhv.showroom.adopt_huds(run.huds)
+	else
+		for id, pos in pairs(run.huds) do
+			local def = player:hud_get(id)
+			if def and def.position and def.position.x == 9 then
+				player:hud_change(id, "position", pos)
+			end
 		end
 	end
 	for _, obj in ipairs(run.signs) do

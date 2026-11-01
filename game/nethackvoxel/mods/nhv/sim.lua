@@ -113,7 +113,10 @@ local function hits_terrain(e, map, p, r)
 			end
 		end
 	end
-	-- (the door's blocks: points across the body, at most a block apart)
+	-- (the door's blocks: points across the body, at most a block apart -
+	-- a body wider than the doorway's gap, a mumak's, only its middle: it
+	-- brushes past them, as such a body does past walls, not stuck there)
+	r = math.min(r, 0.9)
 	local n = math.max(1, math.ceil(2 * r))
 	for a = 0, n do
 		for b = 0, n do
