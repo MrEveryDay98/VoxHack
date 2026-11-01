@@ -64,7 +64,42 @@ local function is_door(map, tx, ty)
 	return U.in_map(tx, ty) and map.typ[U.idx(tx, ty)] == U.TYP.DOOR
 end
 
--- does a body of radius r at p overlap a square it can't stand in?
+-- An open door's own blocks - 3 of its square's 9, along the side it
+-- swung to (where its prefab puts them) - are solid to bodies too: is the
+-- block at x, z one?
+local function door_block_at(map, x, z)
+	local tx, ty = U.pos_to_tile(vector.new(x, 0, z))
+	if not U.in_map(tx, ty) then
+		return false
+	end
+	local i = U.idx(tx, ty)
+	if map.typ[i] ~= U.TYP.DOOR or not U.has(map.door[i] or 0, U.D_ISOPEN) then
+		return false
+	end
+	local def = core.registered_nodes[core.get_node(vector.new(math.floor(x + 0.5), U.FLOOR_Y + 2,
+		math.floor(z + 0.5))).name]
+	return def and def.walkable or false
+end
+sim.door_block_at = door_block_at
+
+-- Where a body walks to on square x, y: its middle - on an open door's,
+-- half a block away from the door's side, in the middle of the room it
+-- leaves (so a body as wide as a block still gets by it)
+function sim.walk_center(map, x, y)
+	local c = U.tile_center(x, y)
+	local i = U.in_map(x, y) and U.idx(x, y)
+	if i and map.typ[i] == U.TYP.DOOR and U.has(map.door[i] or 0, U.D_ISOPEN) then
+		for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+			if door_block_at(map, c.x + d[1], c.z + d[2]) then
+				return vector.new(c.x - d[1] * 0.5, 0, c.z - d[2] * 0.5)
+			end
+		end
+	end
+	return vector.new(c.x, 0, c.z)
+end
+
+-- does a body of radius r at p overlap a square it can't stand in (or an
+-- open door's blocks)?
 local function hits_terrain(e, map, p, r)
 	for _, ox in ipairs({-r, r}) do
 		for _, oz in ipairs({-r, r}) do
@@ -74,6 +109,15 @@ local function hits_terrain(e, map, p, r)
 			end
 			local b = e.blocked[tx * 32 + ty]
 			if b and b > nhv.clock.game then
+				return true
+			end
+		end
+	end
+	-- (the door's blocks: points across the body, at most a block apart)
+	local n = math.max(1, math.ceil(2 * r))
+	for a = 0, n do
+		for b = 0, n do
+			if door_block_at(map, p.x - r + 2 * r * a / n, p.z - r + 2 * r * b / n) then
 				return true
 			end
 		end
@@ -232,13 +276,13 @@ local function follow_path(e, map, gx, gy, dist, hp)
 	if not e.path or #e.path == 0 then
 		return false
 	end
-	local wp = center_of(e.path[1].x, e.path[1].y)
+	local wp = sim.walk_center(map, e.path[1].x, e.path[1].y)
 	if e.x == e.path[1].x and e.y == e.path[1].y and flat_dist(e.pos, wp) < 0.9 then
 		table.remove(e.path, 1)
 		if #e.path == 0 then
 			return true
 		end
-		wp = center_of(e.path[1].x, e.path[1].y)
+		wp = sim.walk_center(map, e.path[1].x, e.path[1].y)
 	end
 	move_toward(e, map, wp, dist, 0, hp)
 	return true

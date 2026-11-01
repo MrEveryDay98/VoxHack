@@ -82,6 +82,9 @@ end
 local function teleport(player, pos)
 	-- (NetHack put you there - arriving, a teleport: any trap there has
 	-- gone off already; the body landing on its pad isn't stepping on it)
+	if player_mod.traveling then
+		player_mod.end_travel(player, true) -- (no walking the rest)
+	end
 	local tx, ty = U.pos_to_tile(pos)
 	player_mod.trap_done = tx .. "," .. ty
 	local at = player_mod.free_spot(pos)
@@ -143,7 +146,14 @@ end
 -- the hero: their drift carries the body, and it walks - bubbles.lua)
 local SLIDE_S = 0.4
 local CRAWL_S = 0.6 -- (out of water or lava onto the bank: a slow clamber)
-local function moved_by_nethack(player, h)
+-- (steps: the squares travel took you through, if it did - the body walks
+-- them after it: player_mod.travel)
+local function moved_by_nethack(player, h, steps)
+	local last = steps and steps[#steps]
+	if last and last.x == h.x and last.y == h.y and nhv.terrain.sky_floor ~= "water" then
+		player_mod.travel(player, steps)
+		return
+	end
 	-- (on the Plane of Water a square or two - pulled out of the water to
 	-- safety - the body glides there, not put there at once)
 	local to = U.tile_center(h.x, h.y)
@@ -255,7 +265,7 @@ local function set_speed(player)
 	-- while the game starts behind it: still, and nothing pulls you down;
 	-- its hold and gravity would fight, the view shaking)
 	local scene = nhv.showroom and nhv.showroom.bd
-	if player_mod.frozen or player_mod.crawling or nhv.clock.searching() or nhv.clock.occupied
+	if player_mod.frozen or player_mod.crawling or player_mod.traveling or nhv.clock.searching() or nhv.clock.occupied
 			or (nhv.cutscene and nhv.cutscene.active) or scene then
 		speed = 0 -- (a prompt is up; searching; occupied - clock.lua; a cutscene; the scene)
 	end
@@ -267,6 +277,7 @@ local function set_speed(player)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
 		new_move = true, gravity = ((h and not levitating(h) and not scene and not player_mod.crawling
+			and not player_mod.traveling
 			and not (nhv.cutscene and nhv.cutscene.no_gravity)) and 1 or 0) * (player_mod.hop_g or 1)})
 end
 player_mod.set_speed = set_speed
@@ -338,6 +349,89 @@ core.register_globalstep(function()
 	local bulge = c.top - (c.from.y + c.to.y) / 2
 	local vy = ((c.to.y - c.from.y) + bulge * 4 * (1 - 2 * u)) / c.secs
 	core.nhv_player_drift(vector.new((c.to.x - c.from.x) / c.secs, vy, (c.to.z - c.from.z) / c.secs))
+end)
+
+-- Travel (_): NetHack takes you the whole way at once, telling each
+-- square it went through ("travel x y": nhv_travel_event); the body then
+-- walks that way - square by square, twice your walking speed, carried by
+-- the VoxHack engine's drift (smooth, every frame), up and down the floor's
+-- steps - seen from behind you (helpless_view), and you can't walk
+-- meanwhile. Through an open door it keeps clear of the door's own blocks
+-- (sim.walk_center).
+local TRAVEL_SPEED = 2
+local travel_steps = {} -- (the squares told since the last snapshot)
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "combat" then
+			local x, y = ev.text:match("^travel (%d+) (%d+)$")
+			if x then
+				travel_steps[#travel_steps + 1] = {x = tonumber(x), y = tonumber(y)}
+			end
+		end
+	end
+end)
+
+function player_mod.travel(player, steps)
+	local map = nh.snap and nh.snap.map
+	local pts = {}
+	for _, s in ipairs(steps) do
+		local c = map and nhv.sim.walk_center(map, s.x, s.y) or U.tile_center(s.x, s.y)
+		pts[#pts + 1] = vector.new(c.x, terrain.stand_y(s.x, s.y), c.z)
+	end
+	local last = steps[#steps]
+	player_mod.trap_done = last.x .. "," .. last.y
+	-- (your walking speed - before it's stopped for the walk)
+	local walk = (tonumber(core.settings:get("movement_speed_walk")) or 4)
+		* (player:get_physics_override().speed_walk or 1)
+	player_mod.traveling = {pts = pts, i = 1, v = math.max(2, walk) * TRAVEL_SPEED}
+	set_speed(player)
+	player:add_velocity(vector.multiply(player:get_velocity(), -1))
+end
+
+-- (there, or cut short - a teleport: put down where NetHack has you)
+function player_mod.end_travel(player, cut)
+	local t = player_mod.traveling
+	player_mod.traveling = nil
+	if core.nhv_player_drift then
+		core.nhv_player_drift(vector.zero())
+	end
+	if player and t then
+		set_speed(player)
+		if not cut then
+			player:set_pos(player_mod.free_spot(t.pts[#t.pts]))
+		end
+		player_mod.grace_until = core.get_us_time() + GRACE_US
+	end
+end
+
+core.register_globalstep(function(dtime)
+	local t = player_mod.traveling
+	if not t then
+		return
+	end
+	local player = player_mod.get()
+	if not player or not core.nhv_player_drift then
+		player_mod.end_travel(player)
+		return
+	end
+	local p = player:get_pos()
+	-- (at this square's spot - or about to pass it: on to the next)
+	local d = vector.subtract(t.pts[t.i], p)
+	while vector.length(d) <= math.max(t.v * dtime, 0.08) do
+		t.i = t.i + 1
+		if t.i > #t.pts then
+			player_mod.end_travel(player)
+			return
+		end
+		d = vector.subtract(t.pts[t.i], p)
+		-- (facing the way it goes: the camera behind follows)
+		player:set_look_horizontal(math.atan2(-d.x, d.z))
+	end
+	if t.i == 1 and not t.facing then
+		t.facing = true
+		player:set_look_horizontal(math.atan2(-d.x, d.z))
+	end
+	core.nhv_player_drift(vector.multiply(vector.normalize(d), t.v))
 end)
 
 -- (walking speed worked out again: a cutscene started or ended)
@@ -506,8 +600,8 @@ end
 local function step(player)
 	local h = player_mod.hero
 	footsteps(player)
-	if not h or not nh.ready() then
-		return
+	if not h or not nh.ready() or player_mod.traveling then
+		return -- (travelling: the body walks after the hero - travel above)
 	end
 	if core.get_us_time() < player_mod.grace_until then
 		return
@@ -660,6 +754,9 @@ nh.on_snapshot(function(snap, action)
 	local h = snap.hero
 	local prev = player_mod.hero
 	player_mod.hero = h
+	-- (the squares travel took you through to get here, if it did)
+	local steps = #travel_steps > 0 and travel_steps or nil
+	travel_steps = {}
 	if not player then
 		return
 	end
@@ -762,13 +859,13 @@ nh.on_snapshot(function(snap, action)
 		else
 			player_mod.refusals = 0
 			if h.x ~= action.tx or h.y ~= action.ty then
-				moved_by_nethack(player, h) -- moved elsewhere
+				moved_by_nethack(player, h, steps) -- moved elsewhere
 			end
 		end
 	elseif prev.x ~= h.x or prev.y ~= h.y then
 		local tx, ty = U.pos_to_tile(player:get_pos())
 		if tx ~= h.x or ty ~= h.y then
-			moved_by_nethack(player, h)
+			moved_by_nethack(player, h, steps)
 		end
 	end
 end)
@@ -908,8 +1005,8 @@ local function hold_still(player)
 	return true
 end
 
--- Helpless (asleep, frozen, fainted...), or searching for a number of
--- turns (Ctrl+X): the camera goes behind you, so you see what's happening
+-- Helpless (asleep, frozen, fainted...), searching for a number of turns
+-- (Ctrl+X) or travelling (_): the camera goes behind you, so you see what's happening
 -- to you, and straight back to first person when you can act again (then
 -- it's yours to change again). Asleep, you breathe out Z's, as sleeping
 -- monsters do (mobs.lua).
@@ -917,7 +1014,8 @@ local camera_out = false
 local z_next = 0
 local function helpless_view(player)
 	local h = player_mod.hero
-	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or nh.repeating or false
+	local helpless = h and U.has(h.flags, U.HERO.HELPLESS) or nh.repeating
+		or player_mod.traveling ~= nil or false
 	-- (dying, or a cutscene: their camera, not this - no back to first
 	-- person over your death because you'd stopped being helpless)
 	local scene = (nhv.death and nhv.death.active) or (nhv.cutscene and nhv.cutscene.active)

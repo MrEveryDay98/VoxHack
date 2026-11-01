@@ -1434,6 +1434,17 @@ nhv_shield_event(int x, int y)
     nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
+/* "travel <x> <y>": travel (_) moved the hero into that square - one
+   event a square, in order (sent as a combat event) */
+void
+nhv_travel_event(int x, int y)
+{
+    char buf[64];
+
+    Sprintf(buf, "travel %d %d", x, y);
+    nhv_push_event(NHV_EV_COMBAT, 0, buf);
+}
+
 /* "beam <otyp> <x0> <y0> <x1> <y1>" (sent as a combat event) */
 void
 nhv_beam_event(int otyp, int x0, int y0, int x1, int y1)
