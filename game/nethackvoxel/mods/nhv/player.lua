@@ -429,6 +429,20 @@ local function footsteps(player)
 	end
 end
 
+-- Water and lava (a pool, a moat, lava, a wall of water): you're in them -
+-- NetHack has you fall in - only once your whole body's over them; at the
+-- edge, a foot over it, you're still on the ground beside it. (Not on the
+-- Plane of Water, all water: its air bubbles say where you are - bubbles.lua.)
+local LIQUID = {[U.TYP.POOL] = true, [U.TYP.MOAT] = true, [U.TYP.LAVAPOOL] = true, [U.TYP.WATER] = true}
+local function body_inside(pos, tx, ty)
+	local c, m = U.tile_center(tx, ty), U.TILE / 2 - nhv.sim.HERO_R
+	return math.abs(pos.x - c.x) <= m and math.abs(pos.z - c.z) <= m
+end
+local function at_liquid_edge(pos, tx, ty)
+	local map = nh.snap and nh.snap.map
+	return map and not terrain.sky_floor and LIQUID[map.typ[U.idx(tx, ty)]] and not body_inside(pos, tx, ty)
+end
+
 local function step(player)
 	local h = player_mod.hero
 	footsteps(player)
@@ -456,6 +470,9 @@ local function step(player)
 	end
 	player_mod.ahead = nil
 	if not U.in_map(tx, ty) then
+		return
+	end
+	if at_liquid_edge(pos, tx, ty) then
 		return
 	end
 	-- NetHack refused that square a moment ago (someone is standing in
@@ -757,7 +774,8 @@ end)
 -- you've been off it again. So cutting the corner of a trap's square,
 -- stepping diagonally past it, doesn't. An open pit or hole - its floor
 -- gone across the whole square, seen or a Sokoban one - is the whole
--- square: being over it at all is falling in, not just its middle.
+-- square, less your body's width at its edges: your whole body over it is
+-- falling in; on its rim, a foot over the drop, you're still standing.
 local TRAP_PAD = 1.0
 local OPEN_HOLE_NAMES = {S_hole = true, S_pit = true, S_spiked_pit = true}
 local on_trap = nil -- "x,y" of the trap pad the body is on
@@ -779,7 +797,8 @@ local function check_traps(player)
 		on_trap = player_mod.trap_done == here and here or on_trap
 		player_mod.trap_done = nil
 	end
-	local pad = (known and known ~= 255 and OPEN_HOLE_NAMES[nhv.cmap_name(known % 128)]) and U.TILE or TRAP_PAD
+	local pad = (known and known ~= 255 and OPEN_HOLE_NAMES[nhv.cmap_name(known % 128)])
+		and U.TILE - 2 * nhv.sim.HERO_R or TRAP_PAD
 	if math.abs(pos.x - c.x) > pad / 2 or math.abs(pos.z - c.z) > pad / 2 then
 		if on_trap == here then
 			on_trap = nil -- (off it again: it can go off again)
