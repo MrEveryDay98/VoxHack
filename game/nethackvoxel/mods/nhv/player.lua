@@ -815,6 +815,12 @@ nh.on_snapshot(function(snap, action)
 		player_mod.confused, player_mod.stunned, player_mod.hallu = conf, stun, hallu
 		player:hud_set_flags({nhv_confused = conf, nhv_stunned = stun, nhv_hallu = hallu})
 	end
+	-- blind: what's in your hands isn't lit (the VoxHack engine)
+	local blind = U.has(h.flags, U.HERO.BLIND)
+	if blind ~= player_mod.blind and core.nhv_hero_blind then
+		player_mod.blind = blind
+		core.nhv_hero_blind(blind)
+	end
 	local level_changed = player_mod.ledger ~= h.ledger
 	player_mod.ledger = h.ledger
 
