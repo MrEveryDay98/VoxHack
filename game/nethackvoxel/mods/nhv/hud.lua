@@ -29,17 +29,24 @@ local COL = {
 	boulder = {200, 200, 200, 255},
 	hole = {120, 0, 120, 255},
 	monster = {255, 40, 40, 255},
-	pet = {255, 150, 150, 255},
-	peaceful = {255, 150, 0, 255},
+	pet = {255, 110, 210, 255},      -- (pink, as the hearts they give off)
+	peaceful = {255, 175, 0, 255},  -- (amber: not out to get you)
 	hero = {255, 255, 255, 255},
 }
 
 local sleep_shown = nil -- (the helpless overlay shown: "asleep", "frozen")
 
+-- (the squares of the peaceful monsters and pets you see: map_png)
+local peaceful_at, pet_at = {}, {}
+
 local function color_for(map, i)
 	local gi = nhv.glyph_info(map.glyph[i])
 	local k = gi.kind
-	if k == "mon" or k == "detected" or k == "ridden" or k == "invis" or k == "warning" then
+	if pet_at[i] then
+		return COL.pet
+	elseif peaceful_at[i] and (k == "mon" or k == "detected" or k == "ridden") then
+		return COL.peaceful
+	elseif k == "mon" or k == "detected" or k == "ridden" or k == "invis" or k == "warning" then
 		return COL.monster
 	elseif k == "pet" then
 		return COL.pet
@@ -96,6 +103,18 @@ local function map_png(snap)
 	local map, h = snap.map, snap.hero
 	local data = {}
 	local rolling = rolling_seen(map)
+	-- (monsters shown by their side: pets pink, the peaceful amber, the
+	-- rest red - NetHack's monster list says which)
+	peaceful_at, pet_at = {}, {}
+	for _, m in ipairs(snap.monsters or {}) do
+		if m.x and m.y and U.in_map(m.x, m.y) then
+			if U.has(m.flags or 0, U.MON_PET) then
+				pet_at[U.idx(m.x, m.y)] = true
+			elseif U.has(m.flags or 0, U.MON_PEACEFUL) then
+				peaceful_at[U.idx(m.x, m.y)] = true
+			end
+		end
+	end
 	for y = 0, U.ROWNO - 1 do
 		for x = 0, U.COLNO - 1 do
 			local c

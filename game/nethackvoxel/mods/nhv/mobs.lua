@@ -1440,6 +1440,50 @@ local function sleep_zs()
 end
 core.register_globalstep(sleep_zs)
 
+-- A pet you can see gives off a heart now and then (nhv_heart.png:
+-- tools/make_heart.py): it pops up out of its head, slows and fades
+local HEART_EVERY = 6 -- seconds between hearts (per pet, give or take)
+local heart_next = {} -- monster id -> time of its next heart
+local function pet_hearts()
+	local now = core.get_us_time() / 1e6
+	local MF = nhv.sim and nhv.sim.MF
+	if not MF then
+		return
+	end
+	for id, b in pairs(nhv.sim.mons) do
+		local e = mobs.mons["id" .. id]
+		local pos = e and not e.silhouette and e.obj:get_pos()
+		if pos and U.has(b.flags or 0, MF.TAME) and U.has(b.flags or 0, MF.VISIBLE)
+				and not U.has(b.flags or 0, MF.ASLEEP) then
+			if not heart_next[id] then
+				heart_next[id] = now + math.random() * HEART_EVERY -- (not all at once)
+			elseif now >= heart_next[id] then
+				heart_next[id] = now + HEART_EVERY * (0.6 + math.random() * 0.8)
+				local h = e.h or 1.5
+				local side = (math.random() - 0.5) * 0.5
+				core.add_particle({
+					pos = vector.offset(pos, side * 0.4, h * 0.45 + 0.1, side * 0.4),
+					velocity = vector.new(side * 0.5, 1.6, (math.random() - 0.5) * 0.3),
+					acceleration = vector.new(0, -1.7, 0),
+					expirationtime = 1.1,
+					size = 1.3,
+					texture = {name = "nhv_heart.png", alpha_tween = {1, 0, start = 0.55},
+						scale_tween = {0.5, 1.15}},
+					glow = 10,
+				})
+			end
+		else
+			heart_next[id] = nil
+		end
+	end
+	for id in pairs(heart_next) do
+		if not nhv.sim.mons[id] then
+			heart_next[id] = nil -- (gone: died, left the level)
+		end
+	end
+end
+core.register_globalstep(pet_hearts)
+
 -- ---------------------------------------------------------------- per step
 -- objects that moved a square (a pushed boulder) slide there, slowing at
 -- the end
