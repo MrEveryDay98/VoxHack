@@ -201,6 +201,9 @@ NHV_API void nhv_get_map(nhv_loc *buf);
                                    invisible: not drawn at all */
 #define NHV_MON_TAIL     0x8000 /* a long worm's tail segment: its id is the
                                    worm's, its square isn't the worm's own */
+#define NHV_MON_SEG_SHIFT 16    /* (TAIL) its place in the tail, in the flags
+                                   from this bit up: 1 next to the head,
+                                   counting on to the tail's end */
 
 typedef struct nhv_mon {
     unsigned id;    /* m_id, stable across turns; 0 for markers */

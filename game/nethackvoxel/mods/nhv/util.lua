@@ -58,6 +58,7 @@ U.MON_UNSEEN = 0x1000 -- (with SENSED: NetHack says you don't see it)
 U.MON_SEEINVIS = 0x2000 -- (invisible, seen anyway - See_invisible: see-through fuzz; you too)
 U.MON_HIDDEN = 0x4000 -- (SELF: you're invisible and can't see invisible: not drawn)
 U.MON_TAIL = 0x8000 -- (a long worm's tail segment: id is the worm's)
+U.MON_SEG_SHIFT = 16 -- (TAIL: its place in the tail, flags from this bit up - 1 next to the head)
 
 -- nhv_hero.flags
 U.HERO = {

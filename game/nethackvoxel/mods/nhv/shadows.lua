@@ -101,7 +101,7 @@ core.register_globalstep(function()
 	end
 	if on and alpha > 0 and mobs then
 		for _, e in pairs(mobs.mons) do
-			if e.h and e.tile and not e.ghost and not e.fuzz and e.obj:get_pos() then
+			if e.h and e.tile and not e.ghost and not e.fuzz and not e.tail_hidden and e.obj:get_pos() then
 				keep[e] = true
 				place(e, e.ground_y or U.STAND_Y, alpha, e.turned_by == "nhv:billboard" and "billboard")
 			end

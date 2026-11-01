@@ -481,7 +481,9 @@ nhv_get_monsters(nhv_mon *buf, int max)
                     m.id = mtmp->m_id;
                     /* (a long worm is at every square of its tail too) */
                     if (mtmp->mx != x || mtmp->my != y)
-                        m.flags |= NHV_MON_TAIL;
+                        m.flags |= NHV_MON_TAIL
+                                   | ((wseg_at(mtmp, x, y) - 1)
+                                      << NHV_MON_SEG_SHIFT);
                     if (mtmp->minvis && canseemon(mtmp))
                         m.flags |= NHV_MON_SEEINVIS;
                     if (sensemon(mtmp))

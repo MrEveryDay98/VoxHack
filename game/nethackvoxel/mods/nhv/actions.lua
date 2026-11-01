@@ -629,7 +629,7 @@ function actions.pointed(player)
 		end
 		if pt.type == "object" and pt.ref ~= player then
 			local ent = pt.ref:get_luaentity()
-			if ent and ent.name == "nhv:mon" and ent.nh_key then
+			if ent and (ent.name == "nhv:mon" or ent.name == "nhv:wormseg") and ent.nh_key then
 				local e = nhv.mobs.mons[ent.nh_key]
 				if e then
 					return {kind = "mon", tx = e.x, ty = e.y, mon = e}

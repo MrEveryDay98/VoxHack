@@ -90,6 +90,7 @@ dofile(path .. "doors.lua")
 dofile(path .. "path.lua")
 dofile(path .. "sim.lua")
 dofile(path .. "mobs.lua")
+dofile(path .. "worms.lua")
 
 local U = nhv.util
 local nh = nhv.nh

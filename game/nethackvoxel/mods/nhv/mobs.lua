@@ -217,12 +217,15 @@ function mobs.clear()
 	end
 	mobs.piles = {}
 	remove_all(mobs.feats)
+	if nhv.worms then
+		nhv.worms.clear()
+	end
 	-- stray entities from an earlier session
 	for _, obj in ipairs(core.get_objects_in_area(vector.new(-10, -10, -10),
 			vector.new(U.COLNO * U.TILE + 10, U.CEIL_Y + 10, U.ROWNO * U.TILE + 10))) do
 		local ent = obj:get_luaentity()
 		if ent and (ent.name == "nhv:mon" or ent.name == "nhv:obj" or ent.name == "nhv:feat"
-				or ent.name == "nhv:chainlink" or ent.name == "nhv:ball") then
+				or ent.name == "nhv:chainlink" or ent.name == "nhv:ball" or ent.name == "nhv:wormseg") then
 			obj:remove()
 		end
 	end
@@ -426,6 +429,12 @@ local function update_monsters(snap)
 			end
 			e.wavy = hallu or U.has(m.flags, U.MON_INVIS) or U.has(m.flags, U.MON_DETECTED)
 			apply_sprite(e, m)
+			-- (a long worm's tail: one body, worms.lua - not square by square)
+			local hide = tail and nhv.worms and nhv.worms.on(snap) or false
+			if e.tail_hidden ~= hide then
+				e.tail_hidden = hide
+				e.obj:set_properties({is_visible = not hide})
+			end
 			e.obj:set_pos(mon_draw_pos(e))
 			if fresh then
 				fade_in(e)
