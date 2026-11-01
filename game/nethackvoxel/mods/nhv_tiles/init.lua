@@ -226,9 +226,35 @@ nhv_tiles.FLASH = {
 	w = "^[colorize:#ffffff:70",
 	r = "^[colorize:#ff2020:150",
 	-- (not a flash: a monster in plain view that NetHack says you can't
-	-- see - in the dark - drawn all black, mobs.lua)
+	-- see - in the dark - drawn all black, mobs.lua; turning black and
+	-- back in steps: k1, k2, k3 a quarter, half, three quarters of the way)
 	k = "^[multiply:#000000",
+	k1 = "^[multiply:#c0c0c0",
+	k2 = "^[multiply:#808080",
+	k3 = "^[multiply:#404040",
 }
+
+-- In retro mode the steps to black dither instead, a sprite's own pixels
+-- going black in an ordered pattern (textures/nhv_dither_<n>.png: a 4x4
+-- Bayer matrix's first quarter, half, three quarters - white where black
+-- goes, made by tools; a flat sprite's only: an extruded one's picture is
+-- fixed when the game starts)
+local DITHER = {k1 = 1, k2 = 2, k3 = 3}
+local function darkened(tex, kind)
+	local n = DITHER[kind]
+	if n and core.settings:get_bool("nhv_retro", false) then
+		return tex .. "^((" .. tex .. "^[multiply:#000000)^[mask:nhv_dither_" .. n .. ".png)"
+	end
+	return tex .. (kind and nhv_tiles.FLASH[kind] or "")
+end
+
+-- the tiles besides monsters that turn black like them (boulders: mobs.lua)
+local DARKENS = {}
+for i, name in pairs(meta.names) do
+	if name == "boulder" then
+		DARKENS[i] = true
+	end
+end
 
 -- Something invisible that you see anyway (See_invisible): Doom's
 -- spectre fuzz - the monster faint and see-through, with fine specks of it
@@ -282,7 +308,7 @@ end
 
 function nhv_tiles.look(tile, height, kind)
 	if nhv_tiles.flat() then
-		local tex = nhv_tiles.texture(tile) .. (kind and nhv_tiles.FLASH[kind] or "")
+		local tex = darkened(nhv_tiles.texture(tile), kind)
 		-- (a character is narrower than it's tall, as on a text screen)
 		local w = nhv_tiles.ascii and height * nhv_tiles.ASCII_ASPECT or height
 		return {
@@ -308,7 +334,7 @@ function nhv_tiles.size(height, w)
 end
 
 function nhv_tiles.flash_item(tile, kind)
-	if not tile or tile < 0 or tile >= meta.monsters or not nhv_tiles.FLASH[kind] then
+	if not tile or tile < 0 or not (tile < meta.monsters or DARKENS[tile]) or not nhv_tiles.FLASH[kind] then
 		return nhv_tiles.item(tile)
 	end
 	return string.format("nhv_tiles:t%04d_%s", tile, kind)
@@ -349,7 +375,7 @@ for i = 0, meta.count - 1 do
 		stack_max = 65535,
 		groups = {not_in_creative_inventory = 1},
 	})
-	if i < meta.monsters then
+	if i < meta.monsters or DARKENS[i] then
 		for kind, mod in pairs(nhv_tiles.FLASH) do
 			core.register_craftitem(nhv_tiles.flash_item(i, kind), {
 				description = meta.names[i] or ("tile " .. i),

@@ -37,6 +37,19 @@ local function turned_here(e)
 	return e.ghost or e.wavy
 end
 
+-- Turning black (a monster or boulder in plain view, in the dark: drawn
+-- all black) and back: not at once, in DARK_STEPS steps DARK_STEP_S apart
+-- - darker and darker, or in retro mode dithering to black (nhv_tiles'
+-- k1..k3, k). e.dark: the step it's at (0: as it is); e.silhouette: black
+-- or not, where it's going (the globalstep below takes it there)
+local DARK_STEPS, DARK_STEP_S = 4, 0.08
+local function dark_kind(step)
+	if not step or step <= 0 then
+		return nil
+	end
+	return step >= DARK_STEPS and "k" or ("k" .. step)
+end
+
 local function look_for(e, kind)
 	if e.ghost then
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(GHOST_ALPHA)
@@ -52,7 +65,7 @@ local function look_for(e, kind)
 		e.fuzz_frame = nhv_tiles.fuzz_frame()
 		return props
 	end
-	local props = nhv_tiles.look(e.tile, e.h, kind or (e.silhouette and "k" or nil))
+	local props = nhv_tiles.look(e.tile, e.h, kind or dark_kind(e.dark))
 	props.use_texture_alpha, props.infotext, props.glow = false, infotext, 0
 	return props
 end
@@ -296,6 +309,10 @@ local function apply_sprite(e, m)
 			or e.fuzz ~= fuzz or e.silhouette ~= silhouette or e.turned_by ~= (e.wavy and "" or "nhv:billboard")
 			and not ghost then
 		e.tile, e.h, e.ghost, e.fuzz, e.silhouette = m.tile, h, ghost, fuzz, silhouette
+		-- (new: black or not from the start; then turning, step by step)
+		if e.dark == nil then
+			e.dark = silhouette and DARK_STEPS or 0
+		end
 		local props = monster_props(e)
 		local w = shk and U.TILE * 0.48 or scale.radius(m.size, m.mndx)
 		props.physical = solid
@@ -697,11 +714,18 @@ local function update_objects(snap)
 					boulder = real_boulder(tx, ty)
 				end
 				local bw = boulder and boulder_w(map, tx, ty, BOULDER_H, snap.hero) or nil
+				-- (black or not: from the start if new, else turning step by
+				-- step - the globalstep below)
 				local silhouette = dark[i] and dark[i].silhouette or false
-				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground
-						or e.silhouette ~= silhouette) then
-					local props = sprite_props(tile, h, silhouette and "k" or nil)
-					e.bw, e.silhouette = bw, silhouette
+				if e then
+					e.silhouette = silhouette
+					if e.dark == nil then
+						e.dark = silhouette and DARK_STEPS or 0
+					end
+				end
+				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
+					local props = sprite_props(tile, h, dark_kind(e.dark))
+					e.bw = bw
 					if boulder then
 						-- boulders are solid; pushing into one tries to roll it
 						-- (its box a boulder's size from the floor up, even
@@ -1537,10 +1561,34 @@ local function update_noclip(dtime)
 	end
 end
 
+-- (turning black, or back, a step at a time: e.dark toward e.silhouette)
+local dark_t = 0
+local function update_dark(dtime)
+	dark_t = dark_t + dtime
+	if dark_t < DARK_STEP_S then
+		return
+	end
+	dark_t = 0
+	for _, list in ipairs({mobs.mons, mobs.objs}) do
+		for _, e in pairs(list) do
+			local want = e.silhouette and DARK_STEPS or 0
+			if e.dark and e.dark ~= want and e.tile and e.obj:get_pos() then
+				e.dark = e.dark + (want > e.dark and 1 or -1)
+				if list == mobs.mons then
+					e.obj:set_properties(look_for(e))
+				else
+					e.obj:set_properties(sprite_props(e.tile, e.h, dark_kind(e.dark)))
+				end
+			end
+		end
+	end
+end
+
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	update_fades()
 	update_noclip(dtime)
+	update_dark(dtime)
 	do
 		local pl = core.get_connected_players()[1]
 		if pl then
