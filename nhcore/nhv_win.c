@@ -495,6 +495,19 @@ nhv_repeat_turn(void)
     return !(in.type == NHV_Q_KEY && in.key == '\033');
 }
 
+/* travel (_): each step after the first waits until the host has walked
+   the hero's body to the square it's on and a turn's time has passed (a
+   NHV_REQ_TURN with the prompt "travel"), so the turns pass, and the
+   monsters move, as you go - not all at once; FALSE: stopped (Esc) */
+boolean
+nhv_travel_turn(void)
+{
+    nhv_qitem in;
+
+    wait_for(NHV_REQ_TURN, "travel", "", 0, &in);
+    return !(in.type == NHV_Q_KEY && in.key == '\033');
+}
+
 static int
 nhv_nhgetch(void)
 {

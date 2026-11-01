@@ -41,6 +41,7 @@ clock.RATE = 4 / 3          -- turns per second at full rate
 clock.WALK = 4.0            -- nodes per second the hero walks at speed 12
 clock.WHEEL_SLOW = 0.25     -- with the action wheel open, time runs this x the minimum
 clock.FAST = 6              -- searching, helpless or occupied: time runs this x the full rate
+clock.TRAVEL = 2            -- travelling (_): you walk this x your speed, and time runs so too
 clock.OCCUPIED_TURNS = 3    -- an action owing more than this: you're occupied until it's paid
 clock.occupied = false
 
@@ -141,7 +142,8 @@ end
 function clock.update(dtime, player)
 	-- prompts, menus and the command line: paused
 	local helpless = nh.helpless_wait()
-	if not (nh.ready() or helpless) or nhv.ui.open or nhv.ui.chat_open or nhv.ui.menu_open then
+	local travel = nh.travel_wait() or (nhv.player and nhv.player.traveling ~= nil)
+	if not (nh.ready() or helpless or nh.travel_wait()) or nhv.ui.open or nhv.ui.chat_open or nhv.ui.menu_open then
 		return 0
 	end
 	if nhv.cutscene and nhv.cutscene.active then
@@ -164,7 +166,11 @@ function clock.update(dtime, player)
 	-- (searching, or helpless - asleep, frozen... - or occupied: fast
 	-- forward, the world keeping up, until it ends)
 	local fast = clock.searching() or helpless or clock.occupied
-	if fast then
+	if travel and not fast then
+		-- (travelling: as fast as you walk there, each step its turn)
+		target = clock.TRAVEL * math.max(0.1, clock.walk_speed() / 12)
+		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
+	elseif fast then
 		target = clock.FAST
 		clock.scale = clock.scale + (target - clock.scale) * math.min(1, dtime * 10)
 	elseif clock.scale > 1 then
@@ -187,6 +193,13 @@ function clock.update(dtime, player)
 		end
 	else
 		clock.acc = clock.acc + dtg
+	end
+	-- (travelling: time that built up while the body caught up - a corner,
+	-- a diagonal - isn't kept for afterwards: at most the next step's; once
+	-- NetHack's done, the last square's walk takes no turn of its own)
+	if travel then
+		local step = clock.action_turns()
+		clock.acc = math.min(clock.acc, nh.travel_wait() and step or step * 0.99)
 	end
 	clock.game = clock.game + dtg
 	return dtg

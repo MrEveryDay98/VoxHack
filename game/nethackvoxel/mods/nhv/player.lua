@@ -356,14 +356,17 @@ core.register_globalstep(function()
 	core.nhv_player_drift(vector.new((c.to.x - c.from.x) / c.secs, vy, (c.to.z - c.from.z) / c.secs))
 end)
 
--- Travel (_): NetHack takes you the whole way at once, telling each
--- square it went through ("travel x y": nhv_travel_event); the body then
--- walks that way - square by square, twice your walking speed, carried by
--- the VoxHack engine's drift (smooth, every frame), up and down the floor's
--- steps - seen from behind you (helpless_view), and you can't walk
--- meanwhile. Through an open door it keeps clear of the door's own blocks
--- (sim.walk_center).
-local TRAVEL_SPEED = 2
+-- Travel (_): NetHack takes you a step at a time, telling each square it
+-- went to ("travel x y": nhv_travel_event), and waits before the next
+-- (nhv_travel_turn) until the body has walked nearly there and the step's
+-- turn has come (loop.lua) - so the turns pass, and the monsters move, as
+-- you go. The body walks the way square by square, twice your walking
+-- speed (time running so too: clock.TRAVEL), carried by the VoxHack
+-- engine's drift (smooth, every frame), up and down the floor's steps -
+-- seen from behind you (helpless_view); you can't walk meanwhile, and a
+-- step of your own stops it. Through an open door it keeps clear of the
+-- door's own blocks (sim.walk_center).
+local TRAVEL_SPEED = nhv.clock.TRAVEL
 local travel_steps = {} -- (the squares told since the last snapshot)
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
@@ -384,11 +387,17 @@ function player_mod.travel(player, steps)
 		pts[#pts + 1] = vector.new(c.x, terrain.stand_y(s.x, s.y), c.z)
 	end
 	-- (block by block, round its corners - path.body_route; else straight
-	-- from square to square)
+	-- from square to square - from where the body is now, through the
+	-- square it was going to, if it's on its way: a corner between the
+	-- steps rounded too)
 	local from = player:get_pos()
 	local squares, heights = {}, {}
 	local fx, fy = U.pos_to_tile(from)
 	local all = {{x = fx, y = fy}}
+	local t0 = player_mod.traveling
+	if t0 and t0.last then
+		all[#all + 1] = t0.last
+	end
 	for _, s in ipairs(steps) do
 		all[#all + 1] = s
 	end
@@ -402,9 +411,14 @@ function player_mod.travel(player, steps)
 	local last = steps[#steps]
 	player_mod.trap_done = last.x .. "," .. last.y
 	-- (your walking speed - before it's stopped for the walk)
+	if t0 then
+		-- (on its way: the way on from here, at the same pace)
+		t0.pts, t0.i, t0.last = pts, 1, last
+		return
+	end
 	local walk = (tonumber(core.settings:get("movement_speed_walk")) or 4)
 		* (player:get_physics_override().speed_walk or 1)
-	player_mod.traveling = {pts = pts, i = 1, v = math.max(2, walk) * TRAVEL_SPEED}
+	player_mod.traveling = {pts = pts, i = 1, v = math.max(2, walk) * TRAVEL_SPEED, last = last}
 	-- (the camera eases round to face the way you go, unless you turn it)
 	if core.nhv_drift_facing then
 		core.nhv_drift_facing(true)
@@ -448,6 +462,12 @@ core.register_globalstep(function(dtime)
 	while vector.length(d) <= math.max(t.v * dtime, 0.08) do
 		t.i = t.i + 1
 		if t.i > #t.pts then
+			if nh.travel_wait() then
+				-- (there, and NetHack's next step not come yet: wait for it)
+				t.i = #t.pts
+				core.nhv_player_drift(vector.zero())
+				return
+			end
 			player_mod.end_travel(player)
 			return
 		end
@@ -455,6 +475,31 @@ core.register_globalstep(function(dtime)
 	end
 	core.nhv_player_drift(vector.multiply(vector.normalize(d), t.v))
 end)
+
+-- (NetHack may take the next step: the body is at most a block from the
+-- end of the way it was given - or isn't walking one)
+function player_mod.travel_ready()
+	local t = player_mod.traveling
+	local player = player_mod.get()
+	if not (t and player) then
+		return true
+	end
+	local p = player:get_pos()
+	local left = vector.distance(vector.new(p.x, 0, p.z), vector.new(t.pts[t.i].x, 0, t.pts[t.i].z))
+	for k = t.i, #t.pts - 1 do
+		left = left + vector.distance(t.pts[k], t.pts[k + 1])
+		if left > 1 then
+			return false
+		end
+	end
+	return left <= 1
+end
+
+-- (a step of your own - a movement key - stops the travelling)
+function player_mod.travel_stopped(player)
+	local c = player:get_player_control()
+	return c.up or c.down or c.left or c.right or c.jump
+end
 
 -- (walking speed worked out again: a cutscene started or ended)
 function player_mod.refresh_speed()
@@ -922,6 +967,9 @@ nh.on_snapshot(function(snap, action)
 				moved_by_nethack(player, h, steps) -- moved elsewhere
 			end
 		end
+	elseif steps and player_mod.traveling and (prev.x ~= h.x or prev.y ~= h.y) then
+		-- (travelling on: the next step's square onto the way)
+		player_mod.travel(player, steps)
 	elseif prev.x ~= h.x or prev.y ~= h.y then
 		local tx, ty = U.pos_to_tile(player:get_pos())
 		if tx ~= h.x or ty ~= h.y then

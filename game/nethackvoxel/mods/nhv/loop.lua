@@ -24,7 +24,8 @@ local function watchdog()
 		return
 	end
 	-- (a helpless turn isn't a pause: the clock answers it)
-	local paused = not (nh.ready() or nh.helpless_wait()) or ui.open or ui.chat_open or ui.menu_open
+	local paused = not (nh.ready() or nh.helpless_wait() or nh.travel_wait()) or ui.open or ui.chat_open
+		or ui.menu_open
 	if not paused then
 		paused_since, logged = nil, false
 		return
@@ -60,7 +61,8 @@ core.register_globalstep(function(dtime)
 	watchdog()
 	local player = nhv.player.get()
 	local helpless = nh.helpless_wait()
-	if not player or not nh.snap or not (nh.ready() or helpless) or nhv.ui.open or nhv.ui.chat_open
+	local travel = nh.travel_wait()
+	if not player or not nh.snap or not (nh.ready() or helpless or travel) or nhv.ui.open or nhv.ui.chat_open
 			or nhv.ui.menu_open then
 		return
 	end
@@ -93,6 +95,14 @@ core.register_globalstep(function(dtime)
 	end
 	if helpless and nhv.clock.tick_due() then
 		nh.answer_key(32) -- (a helpless turn has passed)
+	elseif travel then
+		-- (travelling: the next step once the body's nearly where NetHack
+		-- has you and its turn has come; a step of your own stops it)
+		if nhv.player.travel_stopped(player) then
+			nh.answer_key(27)
+		elseif nhv.player.travel_ready() and nhv.clock.tick_due() then
+			nh.answer_key(32)
+		end
 	elseif nh.ready() and nhv.clock.tick_due() then
 		nh.act({{key = "#"}, {text = "nhvtick"}}, {kind = "tick"})
 	end

@@ -104,7 +104,13 @@ end
 -- or for a counted command's next repeat (nh.repeating): the clock answers
 -- it when a turn's time has passed (loop.lua)
 function nh.helpless_wait()
-	return nh.state == "waiting" and nh.req and nh.req.kind == "turn"
+	return nh.state == "waiting" and nh.req and nh.req.kind == "turn" and nh.req.prompt ~= "travel"
+end
+
+-- NetHack travelling (_), waiting to take its next step: the body walks to
+-- the square it's on first (player.lua), the clock running (loop.lua)
+function nh.travel_wait()
+	return nh.state == "waiting" and nh.req and nh.req.kind == "turn" and nh.req.prompt == "travel"
 end
 
 function nh.ready()
