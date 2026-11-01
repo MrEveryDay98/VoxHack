@@ -1797,6 +1797,12 @@ function hud.fade(to, seconds, color, from_color)
 	local c1 = rgb(color or "#000000")
 	fade = {from = hud.fade_level(), to = to, t0 = core.get_us_time(), dur = seconds or 0,
 		c0 = from_color and rgb(from_color) or c1, c1 = c1}
+	-- (at once: drawn now, not at the next step - nothing under it shows a
+	-- frame first)
+	local player = nhv.player.get()
+	if (seconds or 0) <= 0 and player then
+		hud.update_fade(player)
+	end
 end
 local function fade_color()
 	-- (in 16 steps: few different textures)
@@ -1806,6 +1812,19 @@ local function fade_color()
 		c[i] = math.floor(fade.c0[i] + (fade.c1[i] - fade.c0[i]) * t + 0.5)
 	end
 	return ("#%02X%02X%02X"):format(c[1], c[2], c[3])
+end
+
+-- the fade's layer as it is now
+function hud.update_fade(player)
+	if hud.ids.fade then
+		-- (steps of 8 keep the number of different textures small)
+		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
+		local tex = nhv.theme.veil(player, fade_color(), a)
+		if tex ~= fade_shown then
+			fade_shown = tex
+			player:hud_change(hud.ids.fade, "text", tex)
+		end
+	end
 end
 
 -- a flash of colour over the screen (full: all of it, else at its edges);
@@ -1853,15 +1872,7 @@ core.register_globalstep(function(dtime)
 	shake_conditions(player, dtime)
 	update_map_arrow(player)
 	update_map_icons(player)
-	if hud.ids.fade then
-		-- (steps of 8 keep the number of different textures small)
-		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
-		local tex = nhv.theme.veil(player, fade_color(), a)
-		if tex ~= fade_shown then
-			fade_shown = tex
-			player:hud_change(hud.ids.fade, "text", tex)
-		end
-	end
+	hud.update_fade(player)
 	if flash then
 		local t = (core.get_us_time() - flash.t0) / 1e6 / (flash.seconds or FLASH_S)
 		local tex = "blank.png"

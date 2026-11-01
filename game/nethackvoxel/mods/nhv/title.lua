@@ -82,6 +82,9 @@ local function start(player, name, intro)
 	if intro then
 		nhv.intro.start(player) -- (its own screen: "Press Enter to skip")
 	else
+		-- (black at once - the HUD comes back under it; the level fades
+		-- in when it's built: player.lua)
+		nhv.hud.fade(1, 0)
 		nhv.showroom.hide(player)
 	end
 	title.open, title.from_title = false, false

@@ -190,6 +190,9 @@ function theme.apply(player)
 	if nhv.speech then
 		nhv.speech.clear() -- (the dialogue box drawn again where it is now)
 	end
+	if nhv.showroom then
+		nhv.showroom.hide_new(player) -- (not a frame of it over the title)
+	end
 end
 
 core.register_on_joinplayer(function(player)

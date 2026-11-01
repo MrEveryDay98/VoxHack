@@ -275,6 +275,19 @@ function showroom.hide_huds(player)
 	end
 end
 
+-- HUD just made (the hotbar, the side bars - a moment after you join, or
+-- built again at the window's size) hidden at once while the title or the
+-- opening holds the screen: not a frame of it shown first, as it would be
+-- left to the next step
+function showroom.hide_new(player)
+	if showroom.bd then
+		showroom.hide_huds(player)
+	end
+	if nhv.intro_play and nhv.intro_play.hide_new then
+		nhv.intro_play.hide_new(player)
+	end
+end
+
 -- the figures away (the backdrop stays)
 local function clear_figures()
 	for _, obj in pairs(showroom.objs or {}) do

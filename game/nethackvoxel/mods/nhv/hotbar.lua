@@ -450,6 +450,7 @@ function hotbar.rebuild(player)
 	if nh.snap then
 		refresh(player, nh.snap.inventory)
 	end
+	nhv.showroom.hide_new(player)
 	pay.shown, pay.color = false, nil
 	update_pay(player, nh.snap and nh.snap.hero)
 	enhance.shown, enhance.color = false, nil
@@ -467,6 +468,7 @@ core.register_on_joinplayer(function(player)
 			if nh.snap then
 				refresh(player, nh.snap.inventory)
 			end
+			nhv.showroom.hide_new(player) -- (not a frame of it over the title)
 		end
 	end)
 	-- (the window's size is only known a little after joining: fit to it then)

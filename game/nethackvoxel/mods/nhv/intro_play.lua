@@ -382,6 +382,13 @@ local function hide_huds(player)
 	end
 end
 
+-- (HUD just made, hidden at once: showroom.hide_new)
+function intro_play.hide_new(player)
+	if run and run.player == player then
+		hide_huds(player)
+	end
+end
+
 local function set_words(text)
 	if text == run.words then
 		return
