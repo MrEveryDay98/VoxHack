@@ -19,8 +19,8 @@ local worms = {}
 nhv.worms = worms
 
 local BODIES = dofile(core.get_modpath("nhv_tiles") .. "/worm_bodies.lua")
-local WIDTH = 0.26     -- a segment's picture next to the head, for the head's height
-local TIP = 0.5        -- at the very end, for that
+local WIDTH = 0.9      -- a segment's picture next to the head, for the head's height
+local TIP = 0.13       -- at the very end of the tail, for that
 local BEHIND = 0.18    -- where it comes out: behind the head's middle, for its height
 local LENGTH = 1.5     -- a body with no tail: how long, for the head's height
 local SPACING = 0.45   -- from one segment to the next, for their size
@@ -272,7 +272,7 @@ end
 -- where each segment of a worm goes now: {pos, w, key}
 local function targets(w, phase)
 	local out = {}
-	local w0 = (w.h or 2) * WIDTH
+	local h = w.h or 2
 	for _, piece in ipairs(w.pieces) do
 		local c = curve(piece)
 		local len = c[#c].d
@@ -280,9 +280,9 @@ local function targets(w, phase)
 		local d = 0
 		repeat
 			local p, dir, s = along(c, d)
-			-- (thinner over the last two squares' worth, to a point)
-			local f = math.max(0, math.min(1, (s.k - (w.last - 2)) / 2))
-			local wd = w0 * (1 + (TIP - 1) * f)
+			-- (the head's size next to it, thinner all the way to the tip)
+			local f = math.max(0, math.min(1, s.k / math.max(1, w.last)))
+			local wd = h * (WIDTH + (TIP - WIDTH) * f)
 			-- (snaking from side to side - not where it leaves the head)
 			local l = vector.length(dir)
 			if l > 1e-4 then
@@ -350,7 +350,6 @@ core.register_globalstep(function(dtime)
 		return
 	end
 	local all = bodies(mobs.mons, U.camera_pos(player))
-	local ease = math.min(1, dtime * EASE)
 	for id, list in pairs(drawn) do
 		if not all[id] then
 			remove(list, 1)
@@ -376,6 +375,9 @@ core.register_globalstep(function(dtime)
 				s = {obj = obj, pos = t.pos}
 				list[i] = s
 			end
+			-- (easing to where it goes - the ones by the head at once: lagging,
+			-- they'd come out in front of it as you go round it)
+			local ease = math.min(1, dtime * EASE * (1 + 8 / i))
 			s.pos = vector.add(s.pos, vector.multiply(vector.subtract(t.pos, s.pos), ease))
 			local wd = math.floor(t.w * 50 + 0.5) / 50
 			if s.w ~= wd then
