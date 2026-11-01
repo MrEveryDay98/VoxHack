@@ -56,6 +56,23 @@ Byte quota: 200 MB, number of files: 2000.
 
 **Depot: no redistributables needed** (every DLL ships with the game).
 
+## 2b. Achievements and rich presence (you; once, then when they change)
+
+- **Stats & Achievements > Achievements:** add each one in
+  `dist/steam/achievements/ACHIEVEMENTS.md`. The **API name must be exactly
+  its id** (the game unlocks it by that name); the icons are `<id>.jpg` and
+  `<id>_locked.jpg` beside it. "Hidden" marks a suggestion only. Publish.
+  Achievements players already had in the itch build are sent to Steam the
+  first time the Steam build starts.
+- **Stats & Achievements > Rich Presence:** upload
+  `dist/steam/rich_presence.vdf` (English). Friends then see "Alex the
+  Aspirant, Dlvl 4 (Gnomish Mines)", or "At the title screen".
+- Testing before the app exists: put a `steam_appid.txt` containing `480`
+  (Valve's test app, Spacewar) in `dist/steam/content/engine` and start
+  `engine\bin\luanti.exe` from there with Steam running. You show as
+  playing Spacewar meanwhile; its achievements aren't ours, so unlocking
+  only says "no achievement" in debug.txt - that's the check it works.
+
 ## 3. The build (me, then you upload)
 
 ```bash
@@ -71,12 +88,18 @@ It differs from the zip release:
   put a shipped one back on every "Verify integrity of game files". (This
   needs the engine built after 2026-10-21; the script checks.)
 
-Upload it with SteamCMD (https://developer.valvesoftware.com/wiki/SteamCMD;
-it asks for your Steam Guard code the first time):
+It also ships the Steamworks API (`steam_api64.dll`, from the SDK - its
+place is `sdk` in [steam.json](steam.json)): in the Steam build the game
+unlocks **Steam achievements** and shows **rich presence** (the zip and
+itch builds have no DLL and do neither), and it makes:
 
-```bash
-steamcmd +login YOUR_STEAM_LOGIN +run_app_build "C:\Users\mreve\Documents\NetHackVoxel\dist\steam\scripts\app_build.vdf" +quit
-```
+- `dist/steam/upload.bat` - asks for your Steam login and uploads with the
+  SDK's own steamcmd (it asks for your Steam Guard code the first time);
+- `dist/steam/achievements/` - every achievement (ACHIEVEMENTS.md, also as a
+  .csv) with its two 256x256 icons, to set up in Steamworks (section 2b);
+- `dist/steam/rich_presence.vdf` - the rich presence strings (2b).
+
+Upload: run `dist\steam\upload.bat`.
 
 Then in Steamworks > SteamPipe > Builds, set the new build live on the
 `default` branch (or a `beta` branch first, to try it through Steam).
@@ -108,7 +131,7 @@ Then in Steamworks > SteamPipe > Builds, set the new build live on the
 ## 5. Each update after that
 
 1. `python -I tools/make_steam.py --desc "vX.Y.Z"`
-2. the steamcmd line above;
+2. `dist\steam\upload.bat`;
 3. set the build live in Steamworks;
 4. post the CHANGELOG section as a Steam news/update post (the itch devlog
    text works too).
