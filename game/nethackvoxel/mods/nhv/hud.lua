@@ -1856,7 +1856,7 @@ core.register_globalstep(function(dtime)
 	if hud.ids.fade then
 		-- (steps of 8 keep the number of different textures small)
 		local a = math.floor(hud.fade_level() * 255 / 8 + 0.5) * 8
-		local tex = a <= 0 and "blank.png" or ("[fill:16x16:%s^[opacity:%d"):format(fade_color(), math.min(255, a))
+		local tex = nhv.theme.veil(player, fade_color(), a)
 		if tex ~= fade_shown then
 			fade_shown = tex
 			player:hud_change(hud.ids.fade, "text", tex)
@@ -1870,7 +1870,7 @@ core.register_globalstep(function(dtime)
 			local k = flash.seconds and (1 - t) ^ 1.5 * 255 or (1 - t) * 230
 			local a = math.min(255, math.floor(k * flash.strength / 16 + (flash.seconds and 0.999 or 0)) * 16)
 			if flash.full then
-				tex = ("[fill:16x16:%s^[opacity:%d"):format(flash.color, a)
+				tex = nhv.theme.veil(player, flash.color, a)
 			else
 				tex = ("nhv_vignette.png^[multiply:%s^[opacity:%d"):format(flash.color, a)
 			end

@@ -346,7 +346,7 @@ local function draw_fade()
 	end
 	local k = math.min(1, (core.get_us_time() - f.t0) / math.max(1, f.dur))
 	local a = math.floor((f.from + (f.to - f.from) * k) * 255 + 0.5)
-	local text = a > 0 and ("[fill:16x16:%s^[opacity:%d"):format(f.color, a) or ""
+	local text = a > 0 and nhv.theme.veil(run.player, f.color, a) or ""
 	if text ~= run.fade_text then
 		run.fade_text = text
 		run.player:hud_change(run.fade_id, "text", text)

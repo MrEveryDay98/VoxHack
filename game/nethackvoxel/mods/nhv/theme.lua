@@ -21,6 +21,45 @@ function theme.retro()
 	return core.settings:get("nhv_interface") ~= "modern"
 end
 
+-- A veil of colour over the whole screen (a HUD image scaled -100), a
+-- (0-255) of the way to solid: see-through - or in retro mode dithered,
+-- that many of every 16 pixels covered in an ordered 4x4 pattern
+-- (nhv_dither_screen_<n>.png: tools/make_dither_screen.py), each of the
+-- pattern's pixels one of the HUD's. (Fades to black and white: hud.lua,
+-- cutscene.lua, intro_play.lua.)
+local DITHER_TILE = 128
+local veil_tiles = {} -- "WxH:n" -> the pattern across the screen
+function theme.veil(player, color, a)
+	a = math.max(0, math.min(255, math.floor(a)))
+	if a <= 0 then
+		return "blank.png"
+	end
+	if not core.settings:get_bool("nhv_retro", false) then
+		return ("[fill:16x16:%s^[opacity:%d"):format(color, a)
+	end
+	local n = math.floor(a / 255 * 16 + 0.5)
+	if n <= 0 then
+		return "blank.png"
+	elseif n >= 16 then
+		return "[fill:16x16:" .. color
+	end
+	local info = player and core.get_player_window_information(player:get_player_name())
+	local k = info and info.real_hud_scaling or 1
+	local w = info and info.size and math.ceil(info.size.x / k) or 1024
+	local h = info and info.size and math.ceil(info.size.y / k) or 768
+	local key = w .. "x" .. h .. ":" .. n
+	if not veil_tiles[key] then
+		local t = {("[combine:%dx%d"):format(w, h)}
+		for y = 0, h - 1, DITHER_TILE do
+			for x = 0, w - 1, DITHER_TILE do
+				t[#t + 1] = (":%d,%d=nhv_dither_screen_%d.png"):format(x, y, n)
+			end
+		end
+		veil_tiles[key] = table.concat(t)
+	end
+	return veil_tiles[key] .. "^[multiply:" .. color
+end
+
 local RETRO = table.concat({
 	"bgcolor[#000000A0;true]",
 	"background9[0,0;0,0;nhv_ui_panel.png;true;4]",

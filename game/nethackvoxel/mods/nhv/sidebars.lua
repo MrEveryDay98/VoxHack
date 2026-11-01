@@ -173,7 +173,11 @@ function sidebars.geometry(player)
 	g.here_max = HERE_LINES - 1
 	local iy = top + dh + 8
 	g.inv = {x = -(w - PAD), y = iy, w = inner, h = math.max(line_h + 2 * IN, g.here.y - 8 - iy)}
-	g.inv_row = line_h + 4
+	-- (the inventory's pictures their own 16 pixels - or a whole number of
+	-- times that, as big as a line of text rounds to: sharp)
+	local px = math.max(1, math.floor(line_h * k / 16 + 0.5))
+	g.inv_icon = 16 * px / k
+	g.inv_row = math.max(line_h + 4, math.ceil(g.inv_icon) + 2)
 	g.inv_rows = math.max(1, math.floor((g.inv.h - 2 * IN) / g.inv_row))
 	g.log_rows = math.max(1, math.floor((g.log.h - 2 * IN - g.title) / line_h))
 	-- (characters a line in a box)
@@ -367,7 +371,7 @@ function sidebars.rebuild(player)
 	ids.inv = box(g.inv, RIGHT)
 	ids.inv_mark = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
 		offset = {x = g.inv.x + g.inv.w - IN, y = g.inv.y + IN}, z_index = -89, text = "blank.png"})
-	local icon = g.inv_row - 4
+	local icon = g.inv_icon
 	for r = 1, g.inv_rows do
 		local y = g.inv.y + IN + (r - 1) * g.inv_row
 		inv_rows[r] = {
@@ -375,7 +379,8 @@ function sidebars.rebuild(player)
 				offset = {x = g.inv.x + IN, y = y}, z_index = -88, text = "blank.png",
 				scale = {x = icon / 16, y = icon / 16}}),
 			text = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
-				offset = {x = g.inv.x + IN + 4 + icon, y = y + 2}, z_index = -88, number = 0xFFFFFF, text = "",
+				offset = {x = g.inv.x + IN + 4 + icon, y = y + math.floor((g.inv_row - g.line_h) / 2)},
+				z_index = -88, number = 0xFFFFFF, text = "",
 				style = sidebars.text_style()}),
 		}
 	end

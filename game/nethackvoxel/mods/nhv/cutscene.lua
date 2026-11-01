@@ -483,7 +483,7 @@ local function flash_opacity(player, a)
 	a = math.max(0, math.min(255, math.floor(a)))
 	if asc.white_a ~= a then
 		asc.white_a = a
-		player:hud_change(asc.white, "text", "[fill:1x1:#FFFFFF^[opacity:" .. a)
+		player:hud_change(asc.white, "text", nhv.theme.veil(player, "#FFFFFF", a))
 	end
 end
 
