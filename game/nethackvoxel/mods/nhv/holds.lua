@@ -137,6 +137,50 @@ local function set_overlay(player, tex)
 	end
 end
 
+-- Swallowed: NetHack's engulf frame (its eight swallow tiles, nhv_tiles.png
+-- sheet 1035 on: top left, top, top right, left, right, bottom left,
+-- bottom, bottom right) round the screen's edges - the corners in the
+-- corners, the sides stretched along them - over any insides overlay;
+-- the middle open. (Made big first, a pixel to many: stretched, still sharp.)
+local SWALLOW_SHEET = 1035
+local CORNER_W, CORNER_H = 16, 24 -- (percent of the screen)
+local FRAME = {
+	{pos = {0, 0}, align = {1, 1}, w = CORNER_W, h = CORNER_H},
+	{pos = {0.5, 0}, align = {0, 1}, w = 100 - 2 * CORNER_W, h = CORNER_H},
+	{pos = {1, 0}, align = {-1, 1}, w = CORNER_W, h = CORNER_H},
+	{pos = {0, 0.5}, align = {1, 0}, w = CORNER_W, h = 100 - 2 * CORNER_H},
+	{pos = {1, 0.5}, align = {-1, 0}, w = CORNER_W, h = 100 - 2 * CORNER_H},
+	{pos = {0, 1}, align = {1, -1}, w = CORNER_W, h = CORNER_H},
+	{pos = {0.5, 1}, align = {0, -1}, w = 100 - 2 * CORNER_W, h = CORNER_H},
+	{pos = {1, 1}, align = {-1, -1}, w = CORNER_W, h = CORNER_H},
+}
+local frame = nil -- {player=, ids}
+local function set_frame(player, on)
+	if frame and frame.player ~= player then
+		frame = nil
+	end
+	if not on then
+		if frame then
+			for _, id in ipairs(frame.ids) do
+				player:hud_remove(id)
+			end
+			frame = nil
+		end
+		return
+	end
+	if frame then
+		return
+	end
+	frame = {player = player, ids = {}}
+	for i, f in ipairs(FRAME) do
+		frame.ids[i] = player:hud_add({
+			type = "image", position = {x = f.pos[1], y = f.pos[2]},
+			alignment = {x = f.align[1], y = f.align[2]}, scale = {x = -f.w, y = -f.h},
+			text = nhv_tiles.sheet_texture(SWALLOW_SHEET + i - 1) .. "^[resize:256x256", z_index = -5,
+		})
+	end
+end
+
 local test_until = 0 -- (/nhvtendril: one from in front of you, to look at)
 local ALWAYS = core.settings:get_bool("nhv_test_tendril", false) -- (for tests)
 
@@ -147,6 +191,7 @@ local function update(player)
 	local swallowed = h and U.has(h.flags, U.HERO.SWALLOWED)
 	set_vignette(player, from ~= nil or swallowed, swallowed)
 	set_overlay(player, inside and ENGULF_OVERLAYS[inside:lower()])
+	set_frame(player, swallowed)
 	-- (where you're pinned, not your body's position this step: that
 	-- wobbles a little and the tendril would jitter with it)
 	local ppos = nhv.player.held_at or player:get_pos()
