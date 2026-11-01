@@ -109,7 +109,7 @@
    "name": "Star",
    "shape": "particle",
    "texture": {
-    "file": "nhvfx_spark.png"
+    "file": "nhvfx_dot.png"
    },
    "scale": 1.5,
    "solid": false,

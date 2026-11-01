@@ -132,6 +132,26 @@
     "height": 1,
     "spin": 90.0
    }
+  },
+  {
+   "id": "block5",
+   "name": "ironBarsVoxel",
+   "shape": "object",
+   "texture": {
+    "sheet": 932
+   },
+   "scale": 1.0,
+   "solid": true,
+   "climbable": false,
+   "stretch": false,
+   "turns": "",
+   "light": 0,
+   "damage": "",
+   "repeat": 0.0,
+   "cause": "",
+   "spikes": false,
+   "backfaces": {},
+   "hidden": {}
   }
  ]
 }
