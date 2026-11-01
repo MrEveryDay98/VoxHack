@@ -396,6 +396,8 @@ local function swing_angle(look, body, pos)
 	return angle_between(look, vector.subtract(body.pos, pos))
 end
 
+local aimed_segment -- (below: a worm's body you aim at)
+
 -- the perceived monster your swing would hit: within reach of your body
 -- (the same reach monsters have on you: sim.in_reach) and closest to the
 -- crosshair
@@ -508,6 +510,14 @@ function actions.attack(player, prefer_id, target)
 		nhv.clock.act("Fl", {kind = "attack"})
 		return
 	end
+	-- (a worm's body where you aim - further off than a click itself
+	-- reaches, or the button held: worms.lua)
+	if target == nil and prefer_id == nil then
+		local seg = aimed_segment(player)
+		if seg then
+			return actions.attack_worm(player, seg, nhv.mobs.mons[seg.nh_key])
+		end
+	end
 	local t = target or attack_target(player, prefer_id)
 	local far = not t and pole_target(player, prefer_id)
 	if t then
@@ -580,6 +590,25 @@ function actions.attack_entity(player, ent)
 	actions.attack(player, e and (e.id or e.tail_of))
 end
 
+-- the segment of a worm's body you aim at, if that's what you aim at (not
+-- a wall or another monster in front of it)
+aimed_segment = function(player)
+	local eye = vector.add(player:get_pos(), vector.new(0, player:get_properties().eye_height or 1.5, 0))
+	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 8))
+	for pt in core.raycast(eye, to, true, false) do
+		if pt.type == "node" then
+			return nil
+		elseif pt.type == "object" and pt.ref ~= player then
+			local ent = pt.ref:get_luaentity()
+			if ent and ent.name == "nhv:wormseg" and ent.nh_key then
+				return ent
+			elseif ent and ent.name == "nhv:mon" then
+				return nil
+			end
+		end
+	end
+end
+
 -- A worm's body you aim at (worms.lua): what's nearest the segment you aim
 -- at of what you can hit of that worm - a square of its tail next to you,
 -- or the worm itself in your reach (a purple worm's body is only to look
@@ -606,7 +635,7 @@ function actions.attack_worm(player, ent, e)
 			end
 		end
 	end
-	actions.attack(player, id, best)
+	actions.attack(player, id or false, best)
 end
 
 function actions.fire(player)

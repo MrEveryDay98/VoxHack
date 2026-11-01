@@ -204,7 +204,7 @@ local function bodies(mons, eye, inside, hero_pos)
 		if head and head.obj:get_pos() and w.segs[1] and adjacent(head, w.segs[1]) then
 			cur = {{p = anchor(head, eye), k = 0, key = "id" .. id}}
 			w.pieces[1] = cur
-			w.h, w.head = head.h or w.h, flat(head.obj:get_pos())
+			w.h, w.head, w.head_e = head.h or w.h, flat(head.obj:get_pos()), head
 		end
 		for k = 1, w.last do
 			local s = w.segs[k]
@@ -238,7 +238,7 @@ local function bodies(mons, eye, inside, hero_pos)
 				end
 			end
 			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, head = flat(e.obj:get_pos()),
-				only_looks = true, side = side_of(e.mon.flags), x = e.x, y = e.y}
+				only_looks = true, side = side_of(e.mon.flags), x = e.x, y = e.y, head_e = e}
 		end
 	end
 	-- the one you're inside
@@ -381,10 +381,27 @@ end
 -- ---------------------------------------------------------------- drawing
 local drawn = {} -- worm id -> list of {obj, pos, w, tex, key, sent}
 
--- The bodies NetHack knows nothing of (worms with no tail): the squares
--- they cover, for the map (hud.lua) - square index -> {tex, side} (not the
+-- For the maps (hud.lua): every segment drawn, where it is, its size and
+-- picture - {key, pos, w, tex} - and the heads they're behind, to draw
+-- over them - {key (its mobs.mons key), pos, tile}; the squares a worm
+-- covers (NetHack's pictures not drawn there: the segments and head are)
+-- - square index -> true; and
+-- the squares of the bodies NetHack knows nothing of (worms with no tail),
+-- for the small map's colours - square index -> {tex, side} (not the
 -- worm's own square).
+worms.segments = {}
+worms.heads = {}
+worms.covered = {}
 worms.squares = {}
+
+-- Hurt (or attacking), a worm's sprite flashes (mobs.flash): its whole
+-- body with it. worm id -> {kind (nhv_tiles.FLASH), until}
+local flashing = {}
+function worms.flash(id, kind, secs)
+	if id and nhv_tiles.FLASH[kind] then
+		flashing[id] = {kind = kind, ["until"] = core.get_us_time() + (secs or 0.15) * 1e6}
+	end
+end
 
 -- The bends: they move down the body only as the worm goes - each stays
 -- where it is on the floor while the body slides through it, as a snake's
@@ -458,9 +475,9 @@ local function set_inside_head(want)
 		end
 		inside_head = {obj = obj}
 	end
-	if inside_head.tile ~= want.tile or inside_head.h ~= want.h then
-		inside_head.tile, inside_head.h = want.tile, want.h
-		local props = nhv_tiles.look(want.tile, want.h)
+	if inside_head.tile ~= want.tile or inside_head.h ~= want.h or inside_head.kind ~= want.kind then
+		inside_head.tile, inside_head.h, inside_head.kind = want.tile, want.h, want.kind
+		local props = nhv_tiles.look(want.tile, want.h, want.kind)
 		props.infotext = "nhv:billboard" -- (facing you: the engine turns it)
 		inside_head.obj:set_properties(props)
 	end
@@ -475,7 +492,7 @@ function worms.clear()
 	trails = {}
 	travelled = {}
 	set_inside_head(nil)
-	worms.squares = {}
+	worms.segments, worms.heads, worms.covered, worms.squares = {}, {}, {}, {}
 end
 
 core.register_globalstep(function(dtime)
@@ -493,7 +510,17 @@ core.register_globalstep(function(dtime)
 		hero_pos = U.tile_center(snap.hero.x, snap.hero.y)
 	end
 	local all = bodies(mobs.mons, U.camera_pos(player), inside, hero_pos)
-	set_inside_head(inside and all[inside.id] and all[inside.id].inside_head)
+	local now = core.get_us_time()
+	for id, f in pairs(flashing) do
+		if now >= f["until"] then
+			flashing[id] = nil
+		end
+	end
+	local ih = inside and all[inside.id] and all[inside.id].inside_head
+	if ih then
+		ih.kind = flashing[inside.id] and flashing[inside.id].kind
+	end
+	set_inside_head(ih)
 	for id, list in pairs(drawn) do
 		if not all[id] then
 			remove(list, 1)
@@ -501,15 +528,23 @@ core.register_globalstep(function(dtime)
 			travelled[id] = nil
 		end
 	end
-	local squares = {}
+	local segments, heads, covered, squares = {}, {}, {}, {}
 	for id, w in pairs(all) do
 		local want = targets(w, phase_of(id, w))
+		local tex = texture_of(w.look) .. (flashing[id] and nhv_tiles.FLASH[flashing[id].kind] or "")
+		for _, s in pairs(w.segs or {}) do
+			covered[U.idx(s.x, s.y)] = true
+		end
+		local he = w.head_e
+		if he and he.obj:get_pos() and he.x then
+			covered[U.idx(he.x, he.y)] = true
+			heads[#heads + 1] = {key = "id" .. id, pos = he.obj:get_pos(), tile = he.tile}
+		end
 		if w.only_looks then
-			local tex = texture_of(w.look)
 			for _, t in ipairs(want) do
 				local tx, ty = U.pos_to_tile(t.pos)
 				if U.in_map(tx, ty) and not (tx == w.x and ty == w.y) then
-					squares[U.idx(tx, ty)] = {tex = tex, side = w.side}
+					squares[U.idx(tx, ty)] = {tex = texture_of(w.look), side = w.side}
 				end
 			end
 		end
@@ -540,7 +575,6 @@ core.register_globalstep(function(dtime)
 				s.obj:set_properties({visual_size = {x = wd, y = wd},
 					selectionbox = {-h, -h, -h, h, h, h}})
 			end
-			local tex = texture_of(w.look)
 			if s.tex ~= tex then
 				s.tex = tex
 				s.obj:set_properties({textures = {tex}})
@@ -554,14 +588,15 @@ core.register_globalstep(function(dtime)
 			end
 		end
 		-- (sent only when it's moved: most of them keep moving)
-		for _, s in ipairs(list) do
+		for i, s in ipairs(list) do
+			segments[#segments + 1] = {key = "wseg" .. id .. "_" .. i, pos = s.pos, w = s.w, tex = s.tex}
 			if not s.sent or vector.distance(s.sent, s.pos) > 0.01 then
 				s.sent = s.pos
 				s.obj:move_to(s.pos, true)
 			end
 		end
 	end
-	worms.squares = squares
+	worms.segments, worms.heads, worms.covered, worms.squares = segments, heads, covered, squares
 end)
 
 return worms

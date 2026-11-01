@@ -666,7 +666,6 @@ end
 function hud.square_tex(map, h, x, y, bare, rolling)
 	local i = U.idx(x, y)
 	local top -- (you, a monster or a boulder rolling)
-	local body -- (or a worm's body NetHack doesn't know of: its picture)
 	if bare then -- luacheck: ignore 542
 		-- (nothing on top)
 	elseif x == h.x and y == h.y then
@@ -677,9 +676,11 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 		local c = color_for(map, i)
 		if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
 			top = map.tile[i]
-		elseif nhv.worms and nhv.worms.squares[i] then
-			body = nhv.worms.squares[i].tex
 		end
+	end
+	-- (a worm's body: drawn where it really is, worms.lua - not on squares)
+	if top and nhv.worms and nhv.worms.covered[i] then
+		top = nil
 	end
 	-- ASCII mode: just the top character, as on NetHack's own screen
 	if nhv.ascii and nhv.ascii.on then
@@ -722,7 +723,7 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 	end
 	local known = mem >= 0 and mname ~= "S_stone" and mname ~= "S_unexplored"
 	if not known then
-		return top and nhv_tiles.texture(top) or body
+		return top and nhv_tiles.texture(top) or nil
 	end
 	local layers = {}
 	local typ = map.typ[i] or 0
@@ -749,9 +750,6 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 	local parts = {}
 	for _, t in ipairs(layers) do
 		parts[#parts + 1] = "(" .. nhv_tiles.texture(t) .. ")"
-	end
-	if body then
-		parts[#parts + 1] = "(" .. body .. ")"
 	end
 	if #parts == 1 then
 		return nhv_tiles.texture(layers[1])
@@ -839,7 +837,7 @@ end
 
 local function update_map_icons(player)
 	local h = nh.snap and nh.snap.hero
-	if not (hud.big_map and h and h.x and hud.exact_icons()) then
+	if not (hud.big_map and h and h.x) then
 		if next(icons) then
 			clear_icons(player)
 		end
@@ -847,22 +845,30 @@ local function update_map_icons(player)
 	end
 	local s = big_map_scale(player)
 	local want = {}
-	for key, e in pairs(nhv.mobs.mons) do
-		-- (not one only seen in the dark: NetHack says you don't see it)
-		local p = e.tile and not e.silhouette and e.obj and e.obj:get_pos()
-		if p then
-			want[key] = {tile = e.tile, p = p, z = 3}
+	if hud.exact_icons() then
+		for key, e in pairs(nhv.mobs.mons) do
+			-- (not one only seen in the dark: NetHack says you don't see
+			-- it; nor a worm's tail square: its segments are drawn)
+			local p = e.tile and not e.silhouette and not e.tail_hidden and e.obj and e.obj:get_pos()
+			if p then
+				want[key] = {tile = e.tile, p = p, z = 3}
+			end
+		end
+		for _, r in pairs(nh.snap.map and rolling_seen(nh.snap.map) or {}) do
+			want["roll" .. r.pid] = {tile = r.tile, p = r.pos, z = 3}
+		end
+		want.hero = {tile = h.tile, p = player:get_pos(), z = 4} -- (you on top)
+	end
+	-- (worms' bodies: every segment where it is, its size - on either map -
+	-- and their heads over them)
+	for _, seg in ipairs(nhv.worms and nhv.worms.segments or {}) do
+		if seg.tex then
+			want[seg.key] = {tex = seg.tex, p = seg.pos, z = 2, size = seg.w / U.TILE}
 		end
 	end
-	for _, r in pairs(nh.snap.map and rolling_seen(nh.snap.map) or {}) do
-		want["roll" .. r.pid] = {tile = r.tile, p = r.pos, z = 3}
+	for _, hd in ipairs(nhv.worms and nhv.worms.heads or {}) do
+		want[hd.key] = {tile = hd.tile, p = hd.pos, z = 3}
 	end
-	-- (worms' bodies NetHack doesn't know of: on the squares they cover)
-	for i, b in pairs(nhv.worms and nhv.worms.squares or {}) do
-		local x, y = math.floor((i - 1) / U.ROWNO), (i - 1) % U.ROWNO
-		want["worm" .. i] = {tex = b.tex, p = U.tile_center(x, y), z = 2}
-	end
-	want.hero = {tile = h.tile, p = player:get_pos(), z = 4} -- (you on top)
 	for key, w in pairs(want) do
 		local fx, fy = map_pos(w.p)
 		-- (the picture's own middle where they are, not its cell's: most
@@ -871,16 +877,17 @@ local function update_map_icons(player)
 		if w.tile then
 			cx, cy = nhv_tiles.picture_center(w.tile)
 		end
-		local x = (fx - U.COLNO / 2) * s - cx * s / TILE_PX
-		local y = (fy - U.ROWNO / 2) * s - cy * s / TILE_PX
+		local k = s * (w.size or 1) -- (its size on the map: a square's, or less)
+		local x = (fx - U.COLNO / 2) * s - cx * k / TILE_PX
+		local y = (fy - U.ROWNO / 2) * s - cy * k / TILE_PX
 		local tex = w.tex or map_texture(w.tile)
 		local ic = icons[key]
 		if not ic then
 			icons[key] = {id = player:hud_add({
 				type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
-				offset = {x = x, y = y}, scale = {x = s / TILE_PX, y = s / TILE_PX},
+				offset = {x = x, y = y}, scale = {x = k / TILE_PX, y = k / TILE_PX},
 				text = tex, z_index = BIG_Z + w.z, style = MAP_SCROLLS,
-			}), tex = tex, x = x, y = y, s = s}
+			}), tex = tex, x = x, y = y, s = k}
 		else
 			if tex ~= ic.tex then
 				ic.tex = tex
@@ -890,9 +897,9 @@ local function update_map_icons(player)
 				ic.x, ic.y = x, y
 				player:hud_change(ic.id, "offset", {x = x, y = y})
 			end
-			if s ~= ic.s then
-				ic.s = s
-				player:hud_change(ic.id, "scale", {x = s / TILE_PX, y = s / TILE_PX})
+			if k ~= ic.s then
+				ic.s = k
+				player:hud_change(ic.id, "scale", {x = k / TILE_PX, y = k / TILE_PX})
 			end
 		end
 	end

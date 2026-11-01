@@ -1055,6 +1055,10 @@ end
 -- ---------------------------------------------------------------- combat
 -- Flash a monster's sprite: "w" = faint white (attacking), "r" = red (hurt)
 function mobs.flash(id, kind, secs)
+	-- (a worm's body flashes with it: worms.lua)
+	if nhv.worms then
+		nhv.worms.flash(id, kind, secs)
+	end
 	local e = mobs.mons["id" .. id]
 	if not e or not e.tile or not e.obj:get_pos() then
 		return
