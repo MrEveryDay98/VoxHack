@@ -102,6 +102,14 @@ U.OCLASS = {
 	GEM = 13, ROCK = 14, BALL = 15, CHAIN = 16, VENOM = 17,
 }
 
+-- Is the view as if blind? Blind - or inside a worm's body (worms.lua),
+-- where there's nothing to see: the same black fog, unlit hands, no sky,
+-- but nothing said of it (not an ailment).
+function U.sees_blind(snap)
+	local h = snap and snap.hero
+	return h and (U.has(h.flags, U.HERO.BLIND) or nhv.worms and nhv.worms.inside(snap)) or false
+end
+
 function U.idx(x, y)
 	return x * U.ROWNO + y + 1
 end
@@ -117,6 +125,17 @@ function U.camera_pos(player)
 	end
 	player = player or core.get_connected_players()[1]
 	return player and player:get_pos()
+end
+
+-- Is the camera out of your head (third person, behind you or in front)?
+function U.third_person(player)
+	local c = core.nhv_camera and core.nhv_camera()
+	player = player or core.get_connected_players()[1]
+	if not (c and player) then
+		return false
+	end
+	local eye = vector.add(player:get_pos(), vector.new(0, player:get_properties().eye_height or 1.5, 0))
+	return vector.distance(c, eye) > 1
 end
 
 -- turn a sprite entity to face the camera (billboarding)

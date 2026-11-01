@@ -115,6 +115,8 @@ local function map_png(snap)
 			end
 		end
 	end
+	-- (worms' bodies NetHack doesn't know of - a purple worm's: worms.lua)
+	local bodies = nhv.worms and nhv.worms.squares or {}
 	for y = 0, U.ROWNO - 1 do
 		for x = 0, U.COLNO - 1 do
 			local c
@@ -122,6 +124,8 @@ local function map_png(snap)
 				c = COL.hero
 			elseif rolling[U.idx(x, y)] then
 				c = COL.boulder
+			elseif bodies[U.idx(x, y)] then
+				c = COL[bodies[U.idx(x, y)].side]
 			elseif x == 0 then
 				c = COL.unknown
 			else
@@ -662,6 +666,7 @@ end
 function hud.square_tex(map, h, x, y, bare, rolling)
 	local i = U.idx(x, y)
 	local top -- (you, a monster or a boulder rolling)
+	local body -- (or a worm's body NetHack doesn't know of: its picture)
 	if bare then -- luacheck: ignore 542
 		-- (nothing on top)
 	elseif x == h.x and y == h.y then
@@ -672,6 +677,8 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 		local c = color_for(map, i)
 		if (c == COL.monster or c == COL.pet) and (map.tile[i] or -1) >= 0 then
 			top = map.tile[i]
+		elseif nhv.worms and nhv.worms.squares[i] then
+			body = nhv.worms.squares[i].tex
 		end
 	end
 	-- ASCII mode: just the top character, as on NetHack's own screen
@@ -715,7 +722,7 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 	end
 	local known = mem >= 0 and mname ~= "S_stone" and mname ~= "S_unexplored"
 	if not known then
-		return top and nhv_tiles.texture(top) or nil
+		return top and nhv_tiles.texture(top) or body
 	end
 	local layers = {}
 	local typ = map.typ[i] or 0
@@ -742,6 +749,9 @@ function hud.square_tex(map, h, x, y, bare, rolling)
 	local parts = {}
 	for _, t in ipairs(layers) do
 		parts[#parts + 1] = "(" .. nhv_tiles.texture(t) .. ")"
+	end
+	if body then
+		parts[#parts + 1] = "(" .. body .. ")"
 	end
 	if #parts == 1 then
 		return nhv_tiles.texture(layers[1])
@@ -847,15 +857,23 @@ local function update_map_icons(player)
 	for _, r in pairs(nh.snap.map and rolling_seen(nh.snap.map) or {}) do
 		want["roll" .. r.pid] = {tile = r.tile, p = r.pos, z = 3}
 	end
+	-- (worms' bodies NetHack doesn't know of: on the squares they cover)
+	for i, b in pairs(nhv.worms and nhv.worms.squares or {}) do
+		local x, y = math.floor((i - 1) / U.ROWNO), (i - 1) % U.ROWNO
+		want["worm" .. i] = {tex = b.tex, p = U.tile_center(x, y), z = 2}
+	end
 	want.hero = {tile = h.tile, p = player:get_pos(), z = 4} -- (you on top)
 	for key, w in pairs(want) do
 		local fx, fy = map_pos(w.p)
 		-- (the picture's own middle where they are, not its cell's: most
 		-- stand at the bottom of theirs)
-		local cx, cy = nhv_tiles.picture_center(w.tile)
+		local cx, cy = 0, 0
+		if w.tile then
+			cx, cy = nhv_tiles.picture_center(w.tile)
+		end
 		local x = (fx - U.COLNO / 2) * s - cx * s / TILE_PX
 		local y = (fy - U.ROWNO / 2) * s - cy * s / TILE_PX
-		local tex = map_texture(w.tile)
+		local tex = w.tex or map_texture(w.tile)
 		local ic = icons[key]
 		if not ic then
 			icons[key] = {id = player:hud_add({
@@ -2090,8 +2108,9 @@ nh.on_snapshot(function(snap)
 		player:hud_change(hud.ids.sleep, "text", look == "asleep" and "[fill:16x16:#000010^[opacity:150"
 			or look == "frozen" and "[fill:16x16:#5070A0^[opacity:90" or "blank.png")
 	end
-	-- blindness: black fog that hides everything beyond arm's reach
-	local blind = U.has(h.flags, U.HERO.BLIND)
+	-- blindness (or inside a worm): black fog that hides everything beyond
+	-- arm's reach
+	local blind = U.sees_blind(nh.snap)
 	if blind ~= hud.blind then
 		hud.blind = blind
 		hud.apply_fog(player)

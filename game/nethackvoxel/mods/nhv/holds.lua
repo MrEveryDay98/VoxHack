@@ -179,8 +179,9 @@ local function update(player)
 	local from = holder_pos()
 	local h = nh.snap and nh.snap.hero
 	local swallowed = h and U.has(h.flags, U.HERO.SWALLOWED)
-	-- (inside a worm, its body's round you - worms.lua: no frame, no dark)
-	if swallowed and nhv.worms and nhv.worms.inside(nh.snap) then
+	-- (inside a worm, seen from outside you - third person: its body's
+	-- round you, worms.lua - no frame, no dark)
+	if swallowed and nhv.worms and nhv.worms.inside(nh.snap) and U.third_person(player) then
 		swallowed = false
 	end
 	set_vignette(player, from ~= nil or swallowed, swallowed)

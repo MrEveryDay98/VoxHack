@@ -492,7 +492,7 @@ function actions.drop_waiting()
 	waiting = nil
 end
 
-function actions.attack(player, prefer_id)
+function actions.attack(player, prefer_id, target)
 	if nhv.cutscene and nhv.cutscene.active then
 		return
 	end
@@ -508,7 +508,7 @@ function actions.attack(player, prefer_id)
 		nhv.clock.act("Fl", {kind = "attack"})
 		return
 	end
-	local t = attack_target(player, prefer_id)
+	local t = target or attack_target(player, prefer_id)
 	local far = not t and pole_target(player, prefer_id)
 	if t then
 		-- (the arm swings as NetHack reports each swing: above)
@@ -574,7 +574,39 @@ end
 
 function actions.attack_entity(player, ent)
 	local e = nhv.mobs.mons[ent.nh_key]
+	if ent.name == "nhv:wormseg" then
+		return actions.attack_worm(player, ent, e)
+	end
 	actions.attack(player, e and (e.id or e.tail_of))
+end
+
+-- A worm's body you aim at (worms.lua): what's nearest the segment you aim
+-- at of what you can hit of that worm - a square of its tail next to you,
+-- or the worm itself in your reach (a purple worm's body is only to look
+-- at: NetHack has it on its own square)
+function actions.attack_worm(player, ent, e)
+	local id = e and (e.id or e.tail_of)
+	local at = ent.object and ent.object:get_pos()
+	local h = hero()
+	local pos = player:get_pos()
+	local best, bd
+	if id and at and h and h.x then
+		for _, m in pairs(nhv.mobs.mons) do
+			local p, t
+			if m.tail_of == id and math.max(math.abs(m.x - h.x), math.abs(m.y - h.y)) == 1 then
+				p, t = U.tile_center(m.x, m.y), {id = id, tx = m.x, ty = m.y}
+			elseif m.id == id and nhv.sim.body(id) and nhv.sim.in_reach(id, pos) then
+				p, t = nhv.sim.body(id).pos, m
+			end
+			if p then
+				local d = vector.distance(vector.new(p.x, 0, p.z), vector.new(at.x, 0, at.z))
+				if not bd or d < bd then
+					best, bd = t, d
+				end
+			end
+		end
+	end
+	actions.attack(player, id, best)
 end
 
 function actions.fire(player)

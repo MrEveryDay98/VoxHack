@@ -239,7 +239,7 @@ end
 function sky.update()
 	local snap = nh and nh.snap
 	local hero = snap and snap.hero
-	local s = hero and not U.has(hero.flags, U.HERO.BLIND) and nhv.terrain.has_sky() and sky.for_level()
+	local s = hero and not U.sees_blind(snap) and nhv.terrain.has_sky() and sky.for_level()
 	if sky.scene then
 		s = by_id(sky.data.levels[sky.scene]) or (sky.scene == "opening" and by_id(sky.data.levels.default)) or s
 	end
@@ -307,7 +307,7 @@ core.register_globalstep(function(dtime)
 	end
 	local player = nhv.player.get()
 	local h = nh.snap and nh.snap.hero
-	if not player or (h and U.has(h.flags, U.HERO.BLIND)) then
+	if not player or (h and U.sees_blind(nh.snap)) then
 		return
 	end
 	if math.random() < dtime * (tonumber(l.rate) or 4) / 60 then

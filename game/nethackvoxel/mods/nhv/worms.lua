@@ -23,6 +23,15 @@ local worms = {}
 nhv.worms = worms
 
 local BODIES = dofile(core.get_modpath("nhv_tiles") .. "/worm_bodies.lua")
+-- (a tail square showing something else - the moment a worm's cut in two,
+-- its new head's picture: a tail's all the same)
+local TAIL_LOOK
+for tile, look in pairs(BODIES.tails) do
+	if not TAIL_LOOK or tile < TAIL_LOOK.tile then
+		TAIL_LOOK = {tile = tile, look = look}
+	end
+end
+TAIL_LOOK = TAIL_LOOK and TAIL_LOOK.look or {tile = 0}
 local WIDTH = 0.9      -- a segment's picture next to the head, for the head's height
 local TIP = 0.13       -- at the very end of the tail, for that
 local BEHIND = 0.18    -- where it comes out: behind the head's middle, for its height
@@ -74,6 +83,12 @@ local function texture_of(look)
 end
 
 -- ---------------------------------------------------------------- the bodies
+-- (which side it's on, for the map's colours: hud.lua)
+local function side_of(flags)
+	return U.has(flags or 0, U.MON_PET) and "pet" or U.has(flags or 0, U.MON_PEACEFUL) and "peaceful"
+		or "monster"
+end
+
 local function adjacent(a, b)
 	return math.max(math.abs(a.x - b.x), math.abs(a.y - b.y)) == 1
 end
@@ -179,7 +194,7 @@ local function bodies(mons, eye, inside, hero_pos)
 				out[e.tail_of] = w
 				w.segs[k] = {p = flat(U.tile_center(e.x, e.y)), k = k, key = key, x = e.x, y = e.y}
 				w.last = math.max(w.last, k)
-				w.look, w.h = BODIES.tails[e.tile] or {tile = e.tile}, e.h
+				w.look, w.h = BODIES.tails[e.tile] or w.look or TAIL_LOOK, e.h
 			end
 		end
 	end
@@ -222,7 +237,8 @@ local function bodies(mons, eye, inside, hero_pos)
 					piece[#piece + 1] = {p = p, k = 4 * d / t.len, key = key}
 				end
 			end
-			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, head = flat(e.obj:get_pos())}
+			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, head = flat(e.obj:get_pos()),
+				only_looks = true, side = side_of(e.mon.flags), x = e.x, y = e.y}
 		end
 	end
 	-- the one you're inside
@@ -262,7 +278,8 @@ local function bodies(mons, eye, inside, hero_pos)
 				key = key}
 		end
 		out[m.id] = {pieces = {piece}, last = 4, look = BODIES.bodies[m.tile], h = h, head = hp,
-			bulge = d0, inside_head = {pos = head, tile = m.tile, mndx = m.mndx, h = h}}
+			bulge = d0, inside_head = {pos = head, tile = m.tile, mndx = m.mndx, h = h},
+			only_looks = true, side = side_of(m.flags), x = m.x, y = m.y}
 	end
 	-- (one out of sight a while keeps its body's shape: back in sight
 	-- where it was, it isn't laid out afresh)
@@ -364,6 +381,11 @@ end
 -- ---------------------------------------------------------------- drawing
 local drawn = {} -- worm id -> list of {obj, pos, w, tex, key, sent}
 
+-- The bodies NetHack knows nothing of (worms with no tail): the squares
+-- they cover, for the map (hud.lua) - square index -> {tex, side} (not the
+-- worm's own square).
+worms.squares = {}
+
 -- The bends: they move down the body only as the worm goes - each stays
 -- where it is on the floor while the body slides through it, as a snake's
 -- do; a worm standing still lies still. (How far each has gone.)
@@ -407,7 +429,8 @@ local function swallower(snap)
 end
 
 -- Are you inside a worm's body now (swallowed by one that has one, drawn)?
--- Then you aren't drawn (avatar.lua), nor the engulf frame (holds.lua).
+-- Then you aren't drawn (avatar.lua), nor, seen from outside you, the
+-- engulf frame (holds.lua).
 function worms.inside(snap)
 	return snap and snap.hero and worms.on(snap) and swallower(snap) ~= nil or false
 end
@@ -452,6 +475,7 @@ function worms.clear()
 	trails = {}
 	travelled = {}
 	set_inside_head(nil)
+	worms.squares = {}
 end
 
 core.register_globalstep(function(dtime)
@@ -477,8 +501,18 @@ core.register_globalstep(function(dtime)
 			travelled[id] = nil
 		end
 	end
+	local squares = {}
 	for id, w in pairs(all) do
 		local want = targets(w, phase_of(id, w))
+		if w.only_looks then
+			local tex = texture_of(w.look)
+			for _, t in ipairs(want) do
+				local tx, ty = U.pos_to_tile(t.pos)
+				if U.in_map(tx, ty) and not (tx == w.x and ty == w.y) then
+					squares[U.idx(tx, ty)] = {tex = tex, side = w.side}
+				end
+			end
+		end
 		local list = drawn[id] or {}
 		drawn[id] = list
 		remove(list, #want + 1)
@@ -527,6 +561,7 @@ core.register_globalstep(function(dtime)
 			end
 		end
 	end
+	worms.squares = squares
 end)
 
 return worms
