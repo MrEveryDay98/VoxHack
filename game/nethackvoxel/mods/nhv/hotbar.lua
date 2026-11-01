@@ -97,9 +97,9 @@ local function add(player, def)
 	return player:hud_add(def)
 end
 
+-- a slot (skin.lua's), the grey of an unlit one or ringed in color
 local function frame(color, size)
-	size = size or SLOT
-	return ("[fill:%dx%d:%s^[fill:%dx%d:3,3:#141418E0"):format(size, size, color, size - 6, size - 6)
+	return nhv.skin.slot(size or SLOT, color ~= "#50505A" and color or nil)
 end
 local wep_size -- (the weapons' slots' size, in the side bars; nil: the hotbar's)
 
@@ -155,7 +155,7 @@ local function build(player)
 		for i, key in pairs({[1] = "search", [3] = "pay", [4] = "enhance"}) do
 			player:hud_change(hud[key], "position", {x = 1, y = 0})
 			player:hud_change(hud[key], "alignment", {x = 1, y = 1})
-			player:hud_change(hud[key], "offset", {x = -(g.w - g.pad), y = g.hints_y + (i - 1) * g.line_h})
+			player:hud_change(hud[key], "offset", {x = g.hints_x, y = g.hints_y + (i - 1) * g.line_h})
 		end
 	end
 	-- the line saying what the keys and the mouse do (refresh_layer)

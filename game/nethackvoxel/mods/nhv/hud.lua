@@ -939,7 +939,7 @@ local function place_level(player)
 	end
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	if g then
-		player:hud_change(hud.ids.level, "offset", {x = -g.pad, y = g.level_y})
+		player:hud_change(hud.ids.level, "offset", {x = g.level_x, y = g.level_y})
 		return
 	end
 	local off = corner_offset(player)
@@ -1069,7 +1069,7 @@ function hud.place_status(player, above)
 		if g then
 			player:hud_change(hud.ids.status, "position", {x = 0, y = 0})
 			player:hud_change(hud.ids.status, "alignment", {x = 1, y = 1})
-			player:hud_change(hud.ids.status, "offset", {x = g.pad + 2, y = g.stats_y})
+			player:hud_change(hud.ids.status, "offset", {x = g.stats_x, y = g.stats_y})
 		else
 			player:hud_change(hud.ids.status, "position", {x = 0.5, y = 1})
 			player:hud_change(hud.ids.status, "alignment", {x = 0, y = -1})
@@ -1115,8 +1115,8 @@ function hud.place_here(player)
 		put(hud.ids.here, R, down, {x = x, y = g.here.y + 6})
 		put(hud.ids.here_key_shadow, R, down, {x = x + 2, y = ky + 2})
 		put(hud.ids.here_key, R, down, {x = x, y = ky})
-		put(hud.ids.invoke_key_shadow, R, down, {x = g.here.x + 2, y = qy + 2})
-		put(hud.ids.invoke_key, R, down, {x = g.here.x, y = qy})
+		put(hud.ids.invoke_key_shadow, R, down, {x = g.hints_x + 2, y = qy + 2})
+		put(hud.ids.invoke_key, R, down, {x = g.hints_x, y = qy})
 	else
 		local L, up = {x = 0, y = HERE_Y}, {x = 1, y = -1}
 		put(hud.ids.here_shadow, L, up, {x = 22, y = -28})
@@ -1394,7 +1394,7 @@ function hud.build_meters(player)
 	meter_ids.portrait_bg = player:hud_add({
 		type = "image", position = base.position, alignment = base.alignment,
 		offset = {x = 12, y = 12}, scale = {x = 1, y = 1}, z_index = 40,
-		text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(ps, ps, frame, ps - 4, ps - 4),
+		text = nhv.skin.box(ps, ps),
 	})
 	local inner = ps - 8
 	meter_ids.portrait = player:hud_add({
@@ -1495,9 +1495,9 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 	meter_ids.portrait_bg = player:hud_add({
 		type = "image", position = base.position, alignment = base.alignment,
 		offset = {x = p.x, y = p.y}, scale = {x = 1, y = 1}, z_index = 40,
-		text = ("[fill:%dx%d:%s^[fill:%dx%d:2,2:#141418"):format(p.w, p.h, frame, p.w - 4, p.h - 4),
+		text = nhv.skin.box(p.w, p.h),
 	})
-	local inner = math.min(p.w, p.h) - 8
+	local inner = math.min(p.w, p.h) - 2 * nhv.skin.INSET - 4
 	meter_ids.portrait = player:hud_add({
 		type = "image", position = base.position, alignment = {x = 0, y = 0},
 		offset = {x = p.x + p.w / 2, y = p.y + p.h / 2}, scale = {x = inner / TILE_PX, y = inner / TILE_PX},
@@ -1523,7 +1523,7 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 	for _, key in ipairs({"info", "info_flash"}) do
 		meter_ids[key] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 1, y = 0},
-			offset = {x = g.pad + 2, y = g.info_y}, number = key == "info" and 0xFFFFFF or GOLD_FLASH,
+			offset = {x = g.stats_x, y = g.info_y}, number = key == "info" and 0xFFFFFF or GOLD_FLASH,
 			z_index = key == "info" and 42 or 43, text = "",
 		})
 	end
