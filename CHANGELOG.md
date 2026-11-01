@@ -2,6 +2,22 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.15.0 (alpha) - 2026-10-31
+
+- **Raytraced light** (Options > Graphics, off by default). A lit room's light goes out through its doorways in straight lines, fading with distance, with hard shadows from corners. Lamps and the light you carry cast shadows too.
+- **Square light** (Options > Graphics): light and shadow change block by block, in steps. Works with raytraced light, without it, and in retro mode.
+- **Widescreen retro mode** (Options > Graphics > Retro mode > Shape): the retro screen keeps its height and widens to your window's shape, so there are no black bars.
+- **Boulders in the dark** behave like monsters: one in plain view that you can't see (it's dark) is drawn black where it really is, and one you remember that has since moved disappears once you can see its spot.
+- Monsters and boulders now fade to black (or dither to black in retro mode) when they go into the dark, and fade back.
+- **NetHack's own effect pictures**: explosions show their 3x3 tiles over the blast, and something resisting magic shows the shield sparkle. Being swallowed puts NetHack's engulf frame round the edges of the screen.
+- Iron bars are drawn as bars that join up with the bars beside them, with no gaps you could walk through at their corners.
+- Ordinary Gehennom levels have no ceiling half the time. Under an open sky, walls of water or lava and iron bars keep a thin ceiling, and walls of water and lava pour downwards.
+- One swamp level now stands in an endless ocean instead of a walled box.
+- Black blocks under water instead of rock.
+- You fall into water, lava, holes and pits only once your whole body is over them, not when standing at the edge, and climbing out of water or lava carries you smoothly onto the bank.
+- The VoxHack Editor: skies can have a spinning vortex of clouds (Sky tab).
+- Fixed: monsters could get stuck inside each other; the sea round some levels, and the level's edge beside it, were lit when they should be dark.
+
 ## v0.14.3 (alpha) - 2026-10-31
 
 - **VoxHack has its own icon**, on its window, the taskbar, the program and the Play shortcut. If you made a shortcut with Create Play Shortcut.bat before, run it again to get the new icon.
