@@ -62,6 +62,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -125,6 +131,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -188,6 +200,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -251,6 +269,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -314,6 +338,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 2.0,
+    "spin": 0.0,
+    "size": 3
    }
   },
   {
@@ -377,6 +407,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -440,6 +476,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": false,
+    "twist": 1.5,
+    "spin": 6.0,
+    "size": 0.6
    }
   },
   {
@@ -503,6 +545,12 @@
     "sun": "#FF6A2A",
     "clouds": "#FF9A60",
     "strength": 0.6
+   },
+   "vortex": {
+    "on": true,
+    "twist": 1.0,
+    "spin": 27.0,
+    "size": 0.15
    }
   }
  ],
