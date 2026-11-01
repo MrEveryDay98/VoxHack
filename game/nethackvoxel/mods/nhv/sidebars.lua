@@ -28,7 +28,7 @@ local sidebars = {}
 nhv.sidebars = sidebars
 
 local BAR = "ui_bricksidebar.png" -- the bars: its bricks across them
-local BRICK = 32           -- (its size)
+local BRICK = 64           -- (its size on the HUD: twice its own, sharp)
 local EDGE = "#000000"    -- their edge on the view's side
 local EDGE_W = 3
 local PANEL = "#1A1A20"   -- the equipment panel
@@ -200,7 +200,7 @@ function sidebars.rebuild(player)
 		local t = {("[combine:%dx%d"):format(W, H)}
 		for y = 0, H - 1, BRICK do
 			for x = 0, W - 1, BRICK do
-				t[#t + 1] = (":%d,%d=%s"):format(from_right and W - BRICK - x or x, y, BAR)
+				t[#t + 1] = (":%d,%d=%s\\^[resize\\:%dx%d"):format(from_right and W - BRICK - x or x, y, BAR, BRICK, BRICK)
 			end
 		end
 		return table.concat(t)
