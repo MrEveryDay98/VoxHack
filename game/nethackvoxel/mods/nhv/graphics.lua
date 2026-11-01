@@ -58,6 +58,9 @@ local RAYTRACE = {"Off", "On"}
 local TEXEL_PATTERN = {{"bayer2", "Ordered 2x2"}, {"bayer4", "Ordered 4x4"}, {"bayer8", "Ordered 8x8"},
 	{"lines", "Lines"}, {"noise", "Noise"}}
 local RETRO_RES = {"640x480", "800x600", "1024x768"}
+-- its shape: 4:3, or widescreen - as tall, as wide as the window's shape
+-- makes it (the engine's nhv_retro_wide)
+local RETRO_SHAPE = {"4:3", "Widescreen"}
 local RETRO_PALETTE = {{"vga", "256 colours"}, {"ega", "16 colours"}, {"full", "Full colour"}}
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
 local RETRO_BANDS = {{0, "Smooth"}, {4, "4 steps"}, {6, "6 steps"}, {8, "8 steps"}, {12, "12 steps"}}
@@ -196,6 +199,8 @@ function graphics.formspec()
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Retro mode: a small old screen, scaled up") .. "]", 1.0)
 	add(row(y, "Retro mode", "retro", table.concat(RETRO, ","), retro and 2 or 1))
 	add(row(y, "Resolution", "retro_res", names(RETRO_RES), choice(RETRO_RES, "nhv_retro_res", "800x600")))
+	add(row(y, "Shape", "retro_wide", table.concat(RETRO_SHAPE, ","),
+		core.settings:get_bool("nhv_retro_wide", false) and 2 or 1))
 	add(row(y, "Colours", "retro_palette", names(RETRO_PALETTE), choice(RETRO_PALETTE, "nhv_retro_palette", "vga")))
 	add(row(y, "Dithering", "retro_dither", labels(RETRO_DITHER), pick(RETRO_DITHER, "nhv_retro_dither", 1)))
 	add(row(y, "Light", "retro_bands", labels(RETRO_BANDS), pick(RETRO_BANDS, "nhv_retro_bands", 6)))
@@ -411,6 +416,14 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 		core.settings:set("nhv_retro_res", RETRO_RES[rr])
 		if core.settings:get_bool("nhv_retro", false) then
 			retro_sizes(player) -- (the sizes made for that screen)
+		end
+		changed, reshow = true, true -- (redrawn for the new screen)
+	end
+	local rw = tonumber(fields.retro_wide)
+	if rw and (rw == 2) ~= core.settings:get_bool("nhv_retro_wide", false) then
+		core.settings:set_bool("nhv_retro_wide", rw == 2)
+		if core.settings:get_bool("nhv_retro", false) then
+			retro_sizes(player) -- (the map placed for the new screen)
 		end
 		changed, reshow = true, true -- (redrawn for the new screen)
 	end
