@@ -55,6 +55,10 @@ local TEXEL_SIZE = {"Texture pixels", "Half (8x8 a block)"}
 local TEXEL_STEPS = {{2, "2"}, {3, "3"}, {4, "4"}, {6, "6"}, {8, "8"}, {12, "12"}, {16, "16"}, {32, "32"}}
 -- raytraced light (raytrace.lua)
 local RAYTRACE = {"Off", "On"}
+-- square light: block by block, its edges in steps - their corners filled
+-- or not (the VoxHack engine's nhv_square_light: off, on, filled)
+local SQUARE = {"Off", "On"}
+local SQUARE_CORNERS = {"Stepped", "Filled"}
 local TEXEL_PATTERN = {{"bayer2", "Ordered 2x2"}, {"bayer4", "Ordered 4x4"}, {"bayer8", "Ordered 8x8"},
 	{"lines", "Lines"}, {"noise", "Noise"}}
 local RETRO_RES = {"640x480", "800x600", "1024x768"}
@@ -188,6 +192,10 @@ function graphics.formspec()
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
 	add(row(y, "Raytraced light", "raytrace", table.concat(RAYTRACE, ","),
 		core.settings:get_bool("nhv_raytrace", false) and 2 or 1))
+	local square = core.settings:get("nhv_square_light") or "off"
+	add(row(y, "Square light", "square", table.concat(SQUARE, ","), square == "off" and 1 or 2))
+	add(row(y, "Square light corners", "square_corners", table.concat(SQUARE_CORNERS, ","),
+		(square == "filled" or core.settings:get_bool("nhv_square_corners", false)) and 2 or 1))
 	add(row(y, "Distant textures", "distant", table.concat(DISTANT, ","),
 		core.settings:get_bool("mip_map", false) and 2 or 1))
 	add(row(y, "Shadows", "shadows", table.concat(SHADOWS, ","), core.settings:get_bool("nhv_shadows", false) and 1 or 2))
@@ -463,6 +471,22 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 			nhv.raytrace.changed()
 		end
 		changed = true
+	end
+	-- (square light and its corners: one setting - off, on, filled; the
+	-- corners' choice kept while it's off, in nhv_square_corners)
+	local sq, sc = tonumber(fields.square), tonumber(fields.square_corners)
+	if sq or sc then
+		local now = core.settings:get("nhv_square_light") or "off"
+		if sc then
+			core.settings:set_bool("nhv_square_corners", sc == 2)
+		end
+		local on = (sq and sq == 2) or (not sq and now ~= "off")
+		local want = not on and "off"
+			or (core.settings:get_bool("nhv_square_corners", false) and "filled" or "on")
+		if want ~= now then
+			core.settings:set("nhv_square_light", want) -- (the engine, at once)
+			changed = true
+		end
 	end
 	local rs = tonumber(fields.retro_scale)
 	if rs and (rs == 2) ~= core.settings:get_bool("nhv_retro_whole", false) then
