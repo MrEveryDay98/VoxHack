@@ -8,6 +8,8 @@
 --           hand (it glows) for READY_S seconds; move and aim freely, then
 --           left-click to release it where you aim. Readying costs nothing:
 --           NetHack only casts it when it's released.
+--   Quick   put it in a quick slot, Ctrl + 1-5 (quick.lua) - closing the
+--           menu, nothing cast
 -- Wands work the same way: NetHack's "What do you want to zap?" becomes a
 -- list of your wands, each with Self (zap it at yourself, now) and Target
 -- (ready it; left-click zaps it where you aim). A wand that needs no
@@ -71,10 +73,14 @@ function spells.dialog(req, head)
 		fs[#fs + 1] = ("label[1.2,%f;%s]"):format(y + 0.72, nhv.theme.dim(E(rest)))
 		local b = it.sel:byte()
 		if s and s.directional then
-			fs[#fs + 1] = ("button[8.4,%f;2.6,0.8;spself_%d;Self]"):format(y + 0.1, b)
-			fs[#fs + 1] = ("button[11.2,%f;2.8,0.8;spaim_%d;Target]"):format(y + 0.1, b)
+			fs[#fs + 1] = ("button[6.6,%f;2.2,0.8;spself_%d;Self]"):format(y + 0.1, b)
+			fs[#fs + 1] = ("button[9.0,%f;2.4,0.8;spaim_%d;Target]"):format(y + 0.1, b)
 		else
-			fs[#fs + 1] = ("button[11.2,%f;2.8,0.8;spcast_%d;Cast]"):format(y + 0.1, b)
+			fs[#fs + 1] = ("button[9.0,%f;2.4,0.8;spcast_%d;Cast]"):format(y + 0.1, b)
+		end
+		if s then
+			fs[#fs + 1] = ("button[11.6,%f;2.4,0.8;spquick_%d;Quick...]"):format(y + 0.1, b)
+			fs[#fs + 1] = ("tooltip[spquick_%d;%s]"):format(b, E("Put it in a quick slot (Ctrl + 1-5)"))
 		end
 	end
 	fs[#fs + 1] = "scroll_container_end[]"
@@ -182,6 +188,25 @@ function spells.fields(fields, req, answer_menu, queue)
 				answer_menu(sel)
 			elseif how == "cast" then
 				answer_menu(sel)
+			elseif how == "quick" then
+				local name = ""
+				for _, it in ipairs(req.items or {}) do
+					if it.sel == sel then
+						name = spells.row_name(it.text)
+					end
+				end
+				answer_menu("") -- (nothing is cast: no time passes)
+				local player = nhv.player.get()
+				-- (once the menu's closed)
+				core.after(0.1, function()
+					if player and player:is_player() then
+						for _, s in ipairs(core.nh_get_spells and core.nh_get_spells() or {}) do
+							if s.name:lower() == name:lower() then
+								nhv.quick.show_spell_chooser(player, s.name)
+							end
+						end
+					end
+				end)
 			elseif how == "aim" then
 				local name = ""
 				for _, it in ipairs(req.items or {}) do
@@ -282,13 +307,14 @@ end
 
 -- Cast the spell at sel (its letter in NetHack's spell menu) where you aim
 -- - NetHack's direction the nearest of its 8 to where you look; looking
--- down means down for dig, yourself for anything else. One that needs no
--- direction is just cast. (A readied spell released; Ctrl + 1-5: quick.lua)
-function spells.cast_at_aim(player, sel, name, directional)
+-- down means down for dig, yourself for anything else - or in direction
+-- dir ("." yourself) when given. One that needs no direction is just cast.
+-- (A readied spell released; Ctrl + 1-5: quick.lua)
+function spells.cast_at_aim(player, sel, name, directional, dir)
 	local now = core.get_us_time()
 	table.insert(nhv.ui.auto_answers, {pattern = spells.PROMPT, menu = sel, t = now})
 	if directional then
-		local dir = nhv.actions.pointed_dir_key(player, name == "dig" and "dig" or name, true)
+		dir = dir or nhv.actions.pointed_dir_key(player, name == "dig" and "dig" or name, true)
 		if dir ~= "<" and dir ~= ">" and dir ~= "." then
 			local dx, dy = U.vec_to_dir(player:get_look_dir())
 			dir = (dx ~= 0 or dy ~= 0) and U.dir_key(dx, dy) or dir

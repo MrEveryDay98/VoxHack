@@ -1,12 +1,14 @@
 -- Quick slots: Shift + 1-5 uses the item put in that slot, doing what was
--- picked for it (quaff, read, zap, throw, put on...); Ctrl + 1-5 casts one
--- of your spells - the first five you know, in NetHack's order - at what
--- you aim at (one that needs no aim is just cast). While Shift or Ctrl is
--- held the hotbar shows them (hotbar.lua).
+-- picked for it (quaff, read, zap, throw, put on...); Ctrl + 1-5 casts the
+-- spell put in that slot, at what you aim at or at yourself, as was picked
+-- for it (one that needs no aim is just cast). Until a spell has been put
+-- in any, Ctrl + n casts the spell NetHack lists n down. While Shift or
+-- Ctrl is held the hotbar shows them (hotbar.lua).
 --
--- An item's slot is set from its menu ("Quick slot": ui.lua), kept with
--- the game (mod storage, by the hero's name), and goes on to another of
--- the same kind (the same picture) when the one you had is used up.
+-- An item's slot is set from its menu ("Quick slot": ui.lua), and goes on
+-- to another of the same kind (the same picture) when the one you had is
+-- used up; a spell's from the spell menu ("Quick": spells.lua), by its
+-- name. Both are kept with the game (mod storage, by the hero's name).
 
 local nh = nhv.nh
 local E = core.formspec_escape
@@ -17,9 +19,9 @@ nhv.quick = quick
 quick.SLOTS = 5
 local store = core.get_mod_storage()
 
-local function key()
+local function key(what)
 	local h = nh.snap and nh.snap.hero
-	return "quick_items:" .. (h and h.name or "")
+	return (what or "quick_items") .. ":" .. (h and h.name or "")
 end
 
 -- the item slots: n -> {tile=, invlet=, name=, action=}
@@ -30,6 +32,16 @@ end
 
 local function save(t)
 	store:set_string(key(), core.serialize(t))
+end
+
+-- the spell slots: n -> {name=, self=} (self: cast at yourself)
+function quick.spell_slots()
+	local raw = store:get_string(key("quick_spells"))
+	return raw ~= "" and core.deserialize(raw) or {}
+end
+
+local function save_spells(t)
+	store:set_string(key("quick_spells"), core.serialize(t))
 end
 
 -- (an item's name without how many: "potions of healing", for messages)
@@ -99,18 +111,40 @@ function quick.spells()
 	return core.nh_get_spells and core.nh_get_spells() or {}
 end
 
--- Ctrl + n: the nth spell, at what you aim at
+-- the spell Ctrl + n casts now: the one put there - or, while none has
+-- been put in any, NetHack's nth - (the spell, its letter in NetHack's
+-- menu, at yourself?, the slot)
+function quick.spell(n)
+	local known = quick.spells()
+	local slots = quick.spell_slots()
+	local slot = slots[n]
+	if next(slots) and not slot then
+		return nil
+	end
+	if slot then
+		for i, sp in ipairs(known) do
+			if sp.name == slot.name then
+				return sp, string.char(96 + i), slot.self, slot
+			end
+		end
+		return nil, nil, nil, slot -- (put there, but forgotten)
+	end
+	local sp = known[n]
+	return sp, sp and string.char(96 + n), false, nil
+end
+
+-- Ctrl + n
 function quick.cast(player, n)
 	if nhv.ui.open or not nh.ready() or nhv.clock.busy() then
 		return
 	end
-	local sp = quick.spells()[n]
+	local sp, sel, self, slot = quick.spell(n)
 	if not sp then
-		nhv.hud.message(("You know no spell for Ctrl+%d."):format(n))
+		nhv.hud.message(slot and ("You don't know %s any more."):format(slot.name)
+			or ("You know no spell for Ctrl+%d."):format(n))
 		return
 	end
-	-- (its letter in NetHack's spell menu: a, b, c... in this order)
-	nhv.spells.cast_at_aim(player, string.char(96 + n), sp.name, sp.directional)
+	nhv.spells.cast_at_aim(player, sel, sp.name, sp.directional, self and sp.directional and "." or nil)
 end
 
 -- ---------------------------------------------------------------- choosing
@@ -148,6 +182,90 @@ function quick.show_chooser(player, o)
 	fs[#fs + 1] = ("button[0.5,%f;8,0.75;clear;Take it out of its slot]"):format(3.2 + quick.SLOTS * 0.85)
 	core.show_formspec(player:get_player_name(), "nhv:quick", table.concat(fs))
 end
+
+-- A spell's "Quick" (the spell menu: spells.lua): which of the five, and
+-- whether at what you aim at or at yourself
+local chosen_spell = nil -- {name=, directional=}
+
+function quick.show_spell_chooser(player, name)
+	local sp
+	for _, s in ipairs(quick.spells()) do
+		if s.name == name then
+			sp = s
+		end
+	end
+	if not sp then
+		return
+	end
+	chosen_spell = {name = sp.name, directional = sp.directional}
+	local slots = quick.spell_slots()
+	local fs = {nhv.ui.head(9, 4.9 + quick.SLOTS * 0.85)}
+	if sp.tile and sp.tile >= 0 then
+		fs[#fs + 1] = ("item_image[0.4,0.3;1,1;%s]"):format(nhv_tiles.item(sp.tile))
+	end
+	fs[#fs + 1] = ("label[1.6,0.8;%s]"):format(E(sp.name))
+	if sp.directional then
+		fs[#fs + 1] = "label[0.5,1.8;Cast it:]"
+		fs[#fs + 1] = "dropdown[3,1.45;5.5,0.75;target;At what you aim at,At yourself;1;true]"
+	else
+		fs[#fs + 1] = ("label[0.5,1.8;%s]"):format(E("(It needs no aim: it's just cast.)"))
+	end
+	fs[#fs + 1] = "label[0.5,2.7;Put it in (Ctrl + the key):]"
+	for n = 1, quick.SLOTS do
+		local s = slots[n]
+		local now = s and (s.name .. (s.self and " (at yourself)" or "")) or "(empty)"
+		fs[#fs + 1] = ("button[0.5,%f;8,0.75;slot_%d;%s]"):format(3.0 + (n - 1) * 0.85, n,
+			E(("Ctrl+%d   %s"):format(n, now)))
+	end
+	fs[#fs + 1] = ("button[0.5,%f;8,0.75;clear;Take it out of its slot]"):format(3.2 + quick.SLOTS * 0.85)
+	core.show_formspec(player:get_player_name(), "nhv:quick_spell", table.concat(fs))
+end
+
+core.register_on_player_receive_fields(function(player, formname, fields)
+	if formname ~= "nhv:quick_spell" then
+		return
+	end
+	local c = chosen_spell
+	if not c then
+		return true
+	end
+	local self = c.directional and tonumber(fields.target) == 2 or false
+	for n = 1, quick.SLOTS do
+		if fields["slot_" .. n] then
+			local t = quick.spell_slots()
+			-- (a spell is in one slot at a time)
+			for k = 1, quick.SLOTS do
+				if t[k] and t[k].name == c.name then
+					t[k] = nil
+				end
+			end
+			t[n] = {name = c.name, self = self}
+			save_spells(t)
+			core.close_formspec(player:get_player_name(), "nhv:quick_spell")
+			nhv.hud.message(("Ctrl+%d: %s%s."):format(n, c.name, self and ", at yourself" or ""))
+			chosen_spell = nil
+			if nhv.hotbar.refresh_layer then
+				nhv.hotbar.refresh_layer(player)
+			end
+			return true
+		end
+	end
+	if fields.clear then
+		local t = quick.spell_slots()
+		for n = 1, quick.SLOTS do
+			if t[n] and t[n].name == c.name then
+				t[n] = nil
+			end
+		end
+		save_spells(t)
+		core.close_formspec(player:get_player_name(), "nhv:quick_spell")
+		chosen_spell = nil
+		if nhv.hotbar.refresh_layer then
+			nhv.hotbar.refresh_layer(player)
+		end
+	end
+	return true
+end)
 
 core.register_on_player_receive_fields(function(player, formname, fields)
 	if formname ~= "nhv:quick" then

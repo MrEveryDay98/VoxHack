@@ -197,9 +197,10 @@ local function layer_slots(which)
 			out[n] = {icon = o and nhv_tiles.texture(o.tile) or "blank.png",
 				label = s and s.action:sub(1, most) or ""}
 		elseif which == "spells" then
-			local sp = nhv.quick.spells()[n]
+			-- ("@" before it: cast at yourself - NetHack's you)
+			local sp, _, self = nhv.quick.spell(n)
 			out[n] = {icon = sp and nhv_tiles.texture(sp.tile) or "blank.png",
-				label = sp and sp.name:sub(1, most) or ""}
+				label = sp and ((self and sp.directional and "@" or "") .. sp.name):sub(1, most) or ""}
 		else
 			local a = hotbar.ACTIONS[n]
 			out[n] = {icon = "blank.png", label = a and a[1] or ""}
