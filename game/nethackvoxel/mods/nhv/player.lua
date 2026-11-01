@@ -113,10 +113,36 @@ local function teleport(player, pos)
 end
 player_mod.teleport = teleport
 
+-- Water and lava (a pool, a moat, lava, a wall of water): you're in them -
+-- NetHack has you fall in - once no part of your body is over dry ground
+-- (each corner of it over the liquid: just as the body itself drops in);
+-- at the edge, a foot over it, you're still on the ground beside it. (Not
+-- on the Plane of Water, all water: its air bubbles say where you are -
+-- bubbles.lua.)
+local LIQUID = {[U.TYP.POOL] = true, [U.TYP.MOAT] = true, [U.TYP.LAVAPOOL] = true, [U.TYP.WATER] = true}
+local function liquid_at(map, x, z)
+	local tx, ty = U.pos_to_tile(vector.new(x, 0, z))
+	return LIQUID[map.typ[U.idx(tx, ty)]] or false
+end
+local function in_liquid(pos)
+	local map = nh.snap and nh.snap.map
+	if not map or terrain.sky_floor then
+		return false
+	end
+	local r = nhv.sim.HERO_R
+	return liquid_at(map, pos.x - r, pos.z - r) and liquid_at(map, pos.x + r, pos.z - r)
+		and liquid_at(map, pos.x - r, pos.z + r) and liquid_at(map, pos.x + r, pos.z + r)
+end
+local function at_liquid_edge(pos, tx, ty)
+	local map = nh.snap and nh.snap.map
+	return map and not terrain.sky_floor and LIQUID[map.typ[U.idx(tx, ty)]] and not in_liquid(pos)
+end
+
 -- NetHack moved the hero from square (fx, fy) to h without your walking
 -- there: the body is put there (the Plane of Water's bubbles don't carry
 -- the hero: their drift carries the body, and it walks - bubbles.lua)
 local SLIDE_S = 0.4
+local CRAWL_S = 0.6 -- (out of water or lava onto the bank: a slow clamber)
 local function moved_by_nethack(player, h)
 	-- (on the Plane of Water a square or two - pulled out of the water to
 	-- safety - the body glides there, not put there at once)
@@ -126,6 +152,12 @@ local function moved_by_nethack(player, h)
 	if nhv.terrain.sky_floor == "water" and nhv.bubbles and vector.length(d) <= U.TILE * 2.5 then
 		nhv.bubbles.slide(vector.divide(d, SLIDE_S), SLIDE_S)
 		player_mod.grace_until = core.get_us_time() + (SLIDE_S + 0.1) * 1e6
+		return
+	end
+	-- (in water or lava, crawled out onto the bank a square or two away:
+	-- the body climbs out there, not put there at once)
+	if in_liquid(pos) and vector.length(d) <= U.TILE * 2.5 and core.nhv_player_drift then
+		player_mod.crawl(player, U.tile_center(h.x, h.y, terrain.stand_y(h.x, h.y)), CRAWL_S)
 		return
 	end
 	teleport(player, to)
@@ -223,7 +255,7 @@ local function set_speed(player)
 	-- while the game starts behind it: still, and nothing pulls you down;
 	-- its hold and gravity would fight, the view shaking)
 	local scene = nhv.showroom and nhv.showroom.bd
-	if player_mod.frozen or nhv.clock.searching() or nhv.clock.occupied
+	if player_mod.frozen or player_mod.crawling or nhv.clock.searching() or nhv.clock.occupied
 			or (nhv.cutscene and nhv.cutscene.active) or scene then
 		speed = 0 -- (a prompt is up; searching; occupied - clock.lua; a cutscene; the scene)
 	end
@@ -234,7 +266,7 @@ local function set_speed(player)
 	-- stop you walking off ledges into pits)
 	player:set_physics_override({speed = 1, speed_walk = speed, speed_fast = speed,
 		speed_crouch = speed, jump = 0, sneak = false, sneak_glitch = false,
-		new_move = true, gravity = ((h and not levitating(h) and not scene
+		new_move = true, gravity = ((h and not levitating(h) and not scene and not player_mod.crawling
 			and not (nhv.cutscene and nhv.cutscene.no_gravity)) and 1 or 0) * (player_mod.hop_g or 1)})
 end
 player_mod.set_speed = set_speed
@@ -243,18 +275,20 @@ player_mod.set_speed = set_speed
 -- you - fast, a short arc (gravity turned up for it, so it's quick and
 -- still clears the floor), then set down exactly on the square
 local HOP_S, HOP_G = 0.42, 3
-function player_mod.hop(player, to)
+-- (secs: how long it takes - HOP_S for a jump)
+function player_mod.hop(player, to, secs)
+	secs = secs or HOP_S
 	local tx, ty = U.pos_to_tile(to)
 	player_mod.trap_done = tx .. "," .. ty -- (NetHack set off any trap there)
 	local from = player:get_pos()
 	local g = (tonumber(core.settings:get("movement_gravity")) or 9.81) * HOP_G
-	local v = vector.new((to.x - from.x) / HOP_S, g * HOP_S / 2 + (to.y - from.y) / HOP_S,
-		(to.z - from.z) / HOP_S)
+	local v = vector.new((to.x - from.x) / secs, g * secs / 2 + (to.y - from.y) / secs,
+		(to.z - from.z) / secs)
 	player_mod.hop_g = HOP_G
 	set_speed(player)
 	player:add_velocity(vector.subtract(v, player:get_velocity()))
-	player_mod.grace_until = core.get_us_time() + (HOP_S + 0.3) * 1e6
-	core.after(HOP_S + 0.1, function()
+	player_mod.grace_until = core.get_us_time() + (secs + 0.3) * 1e6
+	core.after(secs + 0.1, function()
 		player_mod.hop_g = nil
 		if player:is_player() then
 			set_speed(player)
@@ -265,6 +299,46 @@ function player_mod.hop(player, to)
 		end
 	end)
 end
+
+-- Out of the water onto the bank (NetHack: you crawl out): the body's
+-- carried there in a low arc - up out of it, over the edge, down onto the
+-- bank - by the VoxHack engine's drift (smooth, every frame; through the
+-- bank's edge), set each step along the arc; nothing pulls it down, nor
+-- does it walk, meanwhile. Then set down exactly on the square.
+local CRAWL_UP = 1.2 -- (nodes over the higher end, at its highest)
+function player_mod.crawl(player, to, secs)
+	local from = player:get_pos()
+	local tx, ty = U.pos_to_tile(to)
+	player_mod.trap_done = tx .. "," .. ty
+	local t0 = core.get_us_time()
+	player_mod.crawling = {from = from, to = to, t0 = t0, secs = secs,
+		top = math.max(from.y, to.y) + CRAWL_UP}
+	player_mod.grace_until = t0 + (secs + 0.3) * 1e6
+	set_speed(player)
+	player:add_velocity(vector.multiply(player:get_velocity(), -1))
+end
+
+core.register_globalstep(function()
+	local c = player_mod.crawling
+	local player = c and player_mod.get()
+	if not c then
+		return
+	end
+	local u = (core.get_us_time() - c.t0) / 1e6 / c.secs
+	if not player or u >= 1 then
+		player_mod.crawling = nil
+		core.nhv_player_drift(vector.zero())
+		if player then
+			player:set_pos(player_mod.free_spot(c.to))
+			set_speed(player)
+		end
+		return
+	end
+	-- (the arc: y = from.y + rise * u + bulge * 4u(1-u), its slope now)
+	local bulge = c.top - (c.from.y + c.to.y) / 2
+	local vy = ((c.to.y - c.from.y) + bulge * 4 * (1 - 2 * u)) / c.secs
+	core.nhv_player_drift(vector.new((c.to.x - c.from.x) / c.secs, vy, (c.to.z - c.from.z) / c.secs))
+end)
 
 -- (walking speed worked out again: a cutscene started or ended)
 function player_mod.refresh_speed()
@@ -427,20 +501,6 @@ local function footsteps(player)
 		step_dist = 0
 		nhv.sound.hook("footstep")
 	end
-end
-
--- Water and lava (a pool, a moat, lava, a wall of water): you're in them -
--- NetHack has you fall in - only once your whole body's over them; at the
--- edge, a foot over it, you're still on the ground beside it. (Not on the
--- Plane of Water, all water: its air bubbles say where you are - bubbles.lua.)
-local LIQUID = {[U.TYP.POOL] = true, [U.TYP.MOAT] = true, [U.TYP.LAVAPOOL] = true, [U.TYP.WATER] = true}
-local function body_inside(pos, tx, ty)
-	local c, m = U.tile_center(tx, ty), U.TILE / 2 - nhv.sim.HERO_R
-	return math.abs(pos.x - c.x) <= m and math.abs(pos.z - c.z) <= m
-end
-local function at_liquid_edge(pos, tx, ty)
-	local map = nh.snap and nh.snap.map
-	return map and not terrain.sky_floor and LIQUID[map.typ[U.idx(tx, ty)]] and not body_inside(pos, tx, ty)
 end
 
 local function step(player)
