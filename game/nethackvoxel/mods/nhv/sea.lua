@@ -126,13 +126,37 @@ local function fill(col, light)
 		{-SIZE, X1 - 1 + SIZE, -SIZE, -1}, {-SIZE, X1 - 1 + SIZE, Z1, Z1 - 1 + SIZE},
 		{-SIZE, U.TILE - 1, 0, Z1 - 1}, {X1, X1 - 1 + SIZE, 0, Z1 - 1},
 	}
-	local function strip(k)
+	local second = false
+	local strip
+	strip = function(k)
 		local s = strips[k]
-		if not s or my_gen ~= gen then
+		if my_gen ~= gen then
+			return
+		end
+		if not s and not second then
+			-- (all of it written: the level's own squares along its edges lit
+			-- again, from the sea as it is now - built first, they took their
+			-- light from whatever was there before; light reaches no further
+			-- than a map block in)
+			local band = 16
+			local hi = Y0 + H - 1
+			for _, b in ipairs({{0, X1 - 1, 0, band - 1}, {0, X1 - 1, Z1 - band, Z1 - 1},
+					{0, band - 1, 0, Z1 - 1}, {X1 - band, X1 - 1, 0, Z1 - 1}}) do
+				core.fix_light(vector.new(b[1], Y0, b[3]), vector.new(b[2], hi, b[4]))
+			end
+			-- (that works out whole map blocks - some of the sea's, by the
+			-- edge, too: the sea written over once more, its light as it was)
+			second = true
+			strip(1)
+			return
+		elseif not s then
 			return
 		end
 		local x0, x1, z0, z1 = s[1], s[2], s[3], s[4]
-		local p0, p1 = vector.new(x0, y0, z0), vector.new(x1, y1, z1)
+		-- (its blocks up to y1; its light all the way up - old light left
+		-- over it would come down into the level's edge)
+		local yl = Y0 + H - 1
+		local p0, p1 = vector.new(x0, y0, z0), vector.new(x1, yl, z1)
 		core.emerge_area(p0, p1, function(_, _, left)
 			if left > 0 or my_gen ~= gen then
 				return
@@ -146,8 +170,9 @@ local function fill(col, light)
 			-- whatever light was there before - fully lit, by an earlier sea)
 			local lit = light + light * 16
 			local air, bounds = terrain.cid("air"), terrain.cid("nhv:bounds")
-			for ly = 0, y1 - y0 do
+			for ly = 0, yl - y0 do
 				local id = col and col[ly] and terrain.cid(col[ly]) or air
+				local blocks = ly <= y1 - y0
 				-- (the level's invisible walls, one node out, stay where the sea
 				-- has nothing - over the liquid: it goes on under them)
 				local edge = id == air and bounds or id
@@ -158,14 +183,14 @@ local function fill(col, light)
 					local vi = area:index(x0, y, z)
 					for x = x0, x1 do
 						-- (outside the level, and its column 0)
-						if not inz or x < 0 or x >= X1 or (col and x < U.TILE) then
+						if blocks and (not inz or x < 0 or x >= X1 or (col and x < U.TILE)) then
 							local ring = x >= -1 and x <= X1 and z >= -1 and z <= Z1
 								and (zedge or x == -1 or x == X1)
 							ids[vi], p2[vi] = ring and edge or id, 0
+						end
+						if not inz or x < 0 or x >= X1 then
 							-- (column 0 is the level's: its light comes from the level)
-							if not inz or x < 0 or x >= X1 then
-								lt[vi] = lit
-							end
+							lt[vi] = lit
 						end
 						vi = vi + 1
 					end
