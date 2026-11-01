@@ -55,8 +55,8 @@ local TEXEL_SIZE = {"Texture pixels", "Half (8x8 a block)"}
 local TEXEL_STEPS = {{2, "2"}, {3, "3"}, {4, "4"}, {6, "6"}, {8, "8"}, {12, "12"}, {16, "16"}, {32, "32"}}
 -- raytraced light (raytrace.lua)
 local RAYTRACE = {"Off", "On"}
--- square light: map square by map square, its edges in steps (the VoxHack
--- engine's nhv_square_light: off, on)
+-- square light: block by block, its edges in steps (the VoxHack engine's
+-- nhv_square_light: off, on)
 local SQUARE = {"Off", "On"}
 local TEXEL_PATTERN = {{"bayer2", "Ordered 2x2"}, {"bayer4", "Ordered 4x4"}, {"bayer8", "Ordered 8x8"},
 	{"lines", "Lines"}, {"noise", "Noise"}}
