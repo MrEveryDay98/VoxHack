@@ -703,6 +703,28 @@ local function write_sky_floor(data, area, sq)
 	end
 end
 
+-- Under water: black blocks, not rock - whatever the square was built
+-- with under it (its bed, the rock below), down to the bottom
+local UNDER_WATER = {[T.POOL] = true, [T.MOAT] = true, [T.WATER] = true}
+local function blacken_under_water(data, area, sq)
+	local air, water, black = cid("air"), cid("nhv:water"), cid("nhv:b_black")
+	local ox, oz = U.tile_origin(sq.tx, sq.ty)
+	for lx = 0, U.TILE - 1 do
+		for lz = 0, U.TILE - 1 do
+			local under = false
+			for ly = prefabs.H - 1, 0, -1 do
+				local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+				local id = data.ids[vi]
+				if id == water then
+					under = true
+				elseif under and id ~= air then
+					data.ids[vi] = black
+				end
+			end
+		end
+	end
+end
+
 local function write_square(data, area, sq)
 	if sq.outer then
 		write_outer(data, area, sq)
@@ -768,6 +790,9 @@ local function write_square(data, area, sq)
 	end
 	if sq.overlay then
 		prefabs.write(data, area, sq.tx, sq.ty, sq.overlay, 0, false, styled_cid)
+	end
+	if UNDER_WATER[sq.typ] then
+		blacken_under_water(data, area, sq)
 	end
 	-- (the open-sky levels' ceilings aren't taken off here any more: they're
 	-- built open in the prefab editor's areas)

@@ -80,6 +80,17 @@ local function sample(map, kind)
 		end
 		col[prefabs.FLOOR] = kind == "lava" and "nhv:lava" or "nhv:water"
 	end
+	-- (under the water: black blocks, as under the level's own - terrain.lua)
+	if kind == "water" then
+		local under = false
+		for ly = H - 1, 0, -1 do
+			if col[ly] == "nhv:water" then
+				under = true
+			elseif under and col[ly] then
+				col[ly] = "nhv:b_black"
+			end
+		end
+	end
 	-- (open to the sky: no ceiling, however the square was built)
 	if terrain.open_sky then
 		for ly = prefabs.CEIL, H - 1 do
