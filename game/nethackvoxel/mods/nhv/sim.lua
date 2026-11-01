@@ -98,8 +98,23 @@ function sim.walk_center(map, x, y)
 	return vector.new(c.x, 0, c.z)
 end
 
--- does a body of radius r at p overlap a square it can't stand in (or an
--- open door's blocks)?
+-- (how far into an open door's blocks a body of radius r at p is: how many
+-- of its points, a quarter of a block apart, are in them)
+local function door_overlap(map, p, r)
+	local n = math.max(1, math.ceil(2 * r / 0.25))
+	local count = 0
+	for a = 0, n do
+		for b = 0, n do
+			if door_block_at(map, p.x - r + 2 * r * a / n, p.z - r + 2 * r * b / n) then
+				count = count + 1
+			end
+		end
+	end
+	return count
+end
+
+-- does a body of radius r at p overlap a square it can't stand in (or go
+-- further into an open door's blocks)?
 local function hits_terrain(e, map, p, r)
 	for _, ox in ipairs({-r, r}) do
 		for _, oz in ipairs({-r, r}) do
@@ -113,19 +128,13 @@ local function hits_terrain(e, map, p, r)
 			end
 		end
 	end
-	-- (the door's blocks: points across the body, at most a block apart -
-	-- a body wider than the doorway's gap, a mumak's, only its middle: it
-	-- brushes past them, as such a body does past walls, not stuck there)
+	-- (an open door's blocks: a step only refused if it takes the body
+	-- further into them - one already in them, NetHack having put it in
+	-- the middle of the door's square, steps out; a body wider than the
+	-- doorway's gap, a mumak's, only its middle counts: it brushes past them,
+	-- as such a body does past walls, not stuck there)
 	r = math.min(r, 0.9)
-	local n = math.max(1, math.ceil(2 * r))
-	for a = 0, n do
-		for b = 0, n do
-			if door_block_at(map, p.x - r + 2 * r * a / n, p.z - r + 2 * r * b / n) then
-				return true
-			end
-		end
-	end
-	return false
+	return door_overlap(map, p, r) > door_overlap(map, e.pos, r)
 end
 
 -- ---------------------------------------------------------------- sync
