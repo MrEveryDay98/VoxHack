@@ -199,7 +199,7 @@ local status_above = 90
 -- of its own in the ailments' box)
 local function cond_base(g, i)
 	if g then
-		return {x = g.ailments.x + g.inset, y = g.ailments.y + g.inset + (i - 1) * g.line_h}
+		return {x = g.ailments.x + g.inset, y = g.ailments.y + g.inset + g.title + (i - 1) * g.line_h}
 	end
 	return {x = 0, y = -status_above}
 end
@@ -335,7 +335,7 @@ local function update_here(player, snap)
 	local lines = {}
 	-- (in the side bars: in their box, as many as fit, cut to its width)
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
-	local most = g and math.max(1, g.here_max - 2) or HERE_MAX
+	local most = g and math.max(1, g.here_max - 1) or HERE_MAX
 	if h and h.x and not covered and not U.has(h.flags, U.HERO.SWALLOWED) then
 		local items = nhv.mobs.floor_items(h.x, h.y)
 		if #items > 0 then
@@ -349,7 +349,8 @@ local function update_here(player, snap)
 				lines[#lines + 1] = "  " .. o.name
 			end
 			if g then
-				lines[1] = U.has(h.flags, U.HERO.BLIND) and "You feel here:" or "Here:"
+				-- (the box has its name: "On the ground")
+				table.remove(lines, 1)
 				for k, line in ipairs(lines) do
 					if #line > g.box_chars then
 						lines[k] = line:sub(1, g.box_chars - 2) .. ".."
@@ -410,6 +411,23 @@ function hud.text_styles(player)
 	end
 end
 
+-- (text cut into lines of at most width characters, at the spaces)
+local function wrap(text, width)
+	local lines, line = {}, ""
+	for word in text:gmatch("%S+") do
+		if line ~= "" and #line + 1 + #word > width then
+			lines[#lines + 1] = line
+			line = word
+		else
+			line = line == "" and word or line .. " " .. word
+		end
+	end
+	if line ~= "" then
+		lines[#lines + 1] = line
+	end
+	return table.concat(lines, "\n")
+end
+
 local function update_messages(player)
 	local now = core.get_us_time() / 1e6
 	-- (while a prompt is up the messages stay: they're often what it's
@@ -429,8 +447,11 @@ local function update_messages(player)
 	local covered = nhv.ui.chat_open or (nhv.guide and nhv.guide.open)
 		or (nhv.title and nhv.title.open) or (nhv.ui.menu_open and not nhv.ui.open)
 	if not covered then
+		-- (with the side bars: wrapped to the view between them)
+		local g = nhv.sidebars and nhv.sidebars.geometry(player)
+		local most = g and math.max(20, math.floor((g.sw - 2 * g.w - 24) / g.char_w))
 		for _, m in ipairs(hud.messages) do
-			lines[#lines + 1] = m.text
+			lines[#lines + 1] = most and wrap(m.text, most) or m.text
 		end
 	end
 	local text = table.concat(lines, "\n")
@@ -447,22 +468,6 @@ end
 -- still go to the message log (T).
 local INSCR_TTL = 15
 local inscr = nil -- {square = "x,y", t = seconds} while one is shown
-
-local function wrap(text, width)
-	local lines, line = {}, ""
-	for word in text:gmatch("%S+") do
-		if line ~= "" and #line + 1 + #word > width then
-			lines[#lines + 1] = line
-			line = word
-		else
-			line = line == "" and word or line .. " " .. word
-		end
-	end
-	if line ~= "" then
-		lines[#lines + 1] = line
-	end
-	return table.concat(lines, "\n")
-end
 
 local function hero_square()
 	local h = nh.snap and nh.snap.hero
@@ -1127,8 +1132,8 @@ function hud.place_here(player)
 		local down = {x = 1, y = 1}
 		local ky = g.here.y + g.here.h - g.inset - g.line_h
 		local qy = g.hints_y + g.line_h
-		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + g.inset + 2})
-		put(hud.ids.here, R, down, {x = x, y = g.here.y + g.inset})
+		put(hud.ids.here_shadow, R, down, {x = x + 2, y = g.here.y + g.inset + g.title + 2})
+		put(hud.ids.here, R, down, {x = x, y = g.here.y + g.inset + g.title})
 		put(hud.ids.here_key_shadow, R, down, {x = x + 2, y = ky + 2})
 		put(hud.ids.here_key, R, down, {x = x, y = ky})
 		put(hud.ids.invoke_key_shadow, R, down, {x = g.hints_x + 2, y = qy + 2})

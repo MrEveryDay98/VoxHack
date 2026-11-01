@@ -5,7 +5,9 @@
 --   left:  your portrait, HP and Pw, your numbers (gold, AC, experience,
 --          the stats, alignment and turns), what you wear (the inventory's
 --          equipment slots), your two weapons side by side (the hotbar's,
---          hotbar.lua) and your quiver under them, and your ailments (the
+--          hotbar.lua) and your quiver under them, each with its name
+--          beside it, and between the weapons the mark of fighting with
+--          both (lit while you are: ui_labels.png); and your ailments (the
 --          status line's conditions, each in its colour)
 --   right: the map and the level; a small box of what's said (speech.lua),
 --          speakers' names in yellow, the newest at the bottom (the
@@ -41,6 +43,15 @@ sidebars.STAT_LINES = 3    -- the stats' lines (hud.lua's show_status)
 sidebars.AILMENT_LINES = 4 -- ailments the box shows
 sidebars.HINT_LINES = 4    -- the keys' hints at the bottom right
 local DIALOG_LINES = 4     -- what's said: its box's lines
+local KIND = 0xFFD080      -- (a box's name, over what's in it; an inventory kind's)
+local TITLES = {ail = "Ailments", log = "Dialogue", here = "On the ground"}
+-- the weapons' and quiver's names and the both-hands mark: ui_labels.png,
+-- a 4x4 sheet of 16x16 pictures, drawn twice their size
+local LABELS = "ui_labels.png"
+local LABEL = 32
+local function label_tex(n, dim)
+	return ("%s^[sheet:4x4:%d,0"):format(LABELS, n) .. (dim and "^[opacity:90" or "")
+end
 local HERE_LINES = 6       -- what's on the ground: its box's lines (with F)
 
 function sidebars.on()
@@ -105,7 +116,9 @@ function sidebars.geometry(player)
 	g.stats_y = y + IN + line_h + 2
 	y = y + g.stats.h + 6
 	-- (the ailments' box at the bottom: AILMENT_LINES of them)
-	local ah = sidebars.AILMENT_LINES * line_h + 2 * IN
+	-- (a named box's name takes a line at its top: g.title)
+	g.title = line_h
+	local ah = sidebars.AILMENT_LINES * line_h + 2 * IN + g.title
 	g.ailments = {x = PAD, y = sh - PAD - ah, w = inner, h = ah}
 	-- (the wear slots and their captions, 4 rows of 3 - each slot in the
 	-- middle of its third, its caption centred under it; then the two
@@ -114,15 +127,28 @@ function sidebars.geometry(player)
 	local gap = 4
 	local room = g.ailments.y - 8 - y
 	local cell = math.floor((inner - 2 * IN) / 3)
-	local by_h = math.floor((room - 2 * IN - 4 * (line_h + gap) - 16) / (4 + 2 * 1.4))
+	-- (and under them the weapons' box: its border, the two rows, 8 apart)
+	local by_h = math.floor((room - 4 * IN - 4 * (line_h + gap) - 16) / (4 + 2 * 1.4))
 	local S = math.max(16, math.min(by_h, cell - 2 * gap))
 	local step = S + line_h + gap
 	local ph_eq = math.floor(IN + 3 * step + S + line_h + IN)
 	g.equip = {x = PAD, y = y, w = inner, h = ph_eq, slot = S, step = step, cell = cell}
 	y = y + ph_eq + 8
-	local S2 = math.floor(math.min(S * 1.4, (inner - 8) / 2))
-	g.weapons = {size = S2, {x = PAD + 2, y = y}, {x = w - PAD - 2 - S2, y = y}}
+	-- (in their box: the weapons at the sides, their names in from them,
+	-- the both-hands mark in the middle; the quiver under, its name to its
+	-- left)
+	local S2 = math.floor(math.min(S * 1.4, (inner - 2 * IN - 3 * LABEL - 24) / 2))
+	g.arms = {x = PAD, y = y, w = inner, h = 2 * IN + 2 * S2 + 8}
+	y = y + IN
+	g.weapons = {size = S2, {x = PAD + IN, y = y}, {x = w - PAD - IN - S2, y = y}}
 	g.quiver = {x = math.floor((w - S2) / 2), y = y + S2 + 8, size = S2}
+	local ly = math.floor(y + (S2 - LABEL) / 2)
+	g.labels = {
+		wpn = {x = PAD + IN + S2 + 6, y = ly},
+		alt = {x = w - PAD - IN - S2 - 6 - LABEL, y = ly},
+		dual = {x = math.floor((w - LABEL) / 2), y = ly},
+		qvr = {x = g.quiver.x - 6 - LABEL, y = math.floor(g.quiver.y + (S2 - LABEL) / 2)},
+	}
 	-- right: the map, the level under it, in their box; what's said under
 	-- that; the hints at the bottom, the ground's box over them; the
 	-- inventory between
@@ -135,9 +161,9 @@ function sidebars.geometry(player)
 	g.hints_box = {x = -(w - PAD), y = sh - PAD - hb, w = inner, h = hb}
 	g.hints_y = g.hints_box.y + IN
 	g.hints_x = -(w - PAD - IN)
-	local dh = DIALOG_LINES * line_h + 2 * IN
+	local dh = DIALOG_LINES * line_h + 2 * IN + g.title
 	g.log = {x = -(w - PAD), y = top, w = inner, h = dh}
-	local hh = HERE_LINES * line_h + 2 * IN
+	local hh = HERE_LINES * line_h + 2 * IN + g.title
 	g.here = {x = -(w - PAD), y = g.hints_box.y - 8 - hh, w = inner, h = hh}
 	-- (lines of the list the ground's box has room for, over "F  Pick up")
 	g.here_max = HERE_LINES - 1
@@ -145,7 +171,7 @@ function sidebars.geometry(player)
 	g.inv = {x = -(w - PAD), y = iy, w = inner, h = math.max(line_h + 2 * IN, g.here.y - 8 - iy)}
 	g.inv_row = line_h + 4
 	g.inv_rows = math.max(1, math.floor((g.inv.h - 2 * IN) / g.inv_row))
-	g.log_rows = math.max(1, math.floor((g.log.h - 2 * IN) / line_h))
+	g.log_rows = math.max(1, math.floor((g.log.h - 2 * IN - g.title) / line_h))
 	-- (characters a line in a box)
 	g.box_chars = math.max(8, math.floor((inner - 2 * IN) / char_w))
 	g.k = k
@@ -191,6 +217,13 @@ local LEFT, RIGHT = {x = 0, y = 0}, {x = 1, y = 0}
 function sidebars.refresh(player, inv)
 	if not next(slot_ids) or not nhv.ui.EQUIP then
 		return
+	end
+	-- (the both-hands mark lit while you fight with both)
+	local h = nh.snap and nh.snap.hero
+	local dual = h and U.has(h.flags, U.HERO.TWOWEAP) or false
+	if ids.dual and shown.dual ~= dual then
+		shown.dual = dual
+		player:hud_change(ids.dual, "text", label_tex(3, not dual))
 	end
 	for _, slot in ipairs(nhv.ui.EQUIP) do
 		local s = slot_ids[slot.id]
@@ -255,6 +288,7 @@ function sidebars.rebuild(player)
 	-- the equipment panel and its slots
 	local e = g.equip
 	ids.panel = box(e, LEFT)
+	ids.arms = box(g.arms, LEFT)
 	local S = e.slot
 	for _, slot in ipairs(nhv.ui.EQUIP or {}) do
 		local mid = e.x + IN + slot.col * e.cell + e.cell / 2
@@ -284,6 +318,25 @@ function sidebars.rebuild(player)
 	-- the ailments' box (hud.lua writes them in it)
 	local a = g.ailments
 	ids.ailments = box(a, LEFT)
+	-- (the named boxes' names: the ailments' here, the right bar's two in
+	-- sidebars.relayout)
+	local function title(text, pos)
+		return add(player, {type = "text", position = pos, alignment = {x = 1, y = 1},
+			offset = {x = 0, y = 0}, z_index = -79, number = KIND, text = text,
+			style = sidebars.text_style()})
+	end
+	ids.t_ail = title(TITLES.ail, LEFT)
+	player:hud_change(ids.t_ail, "offset", {x = a.x + IN, y = a.y + IN})
+	ids.t_log = title(TITLES.log, RIGHT)
+	ids.t_here = title(TITLES.here, RIGHT)
+	-- the weapons' and quiver's names, the both-hands mark
+	for key, n in pairs({wpn = 0, alt = 1, qvr = 2, dual = 3}) do
+		local at = g.labels[key]
+		ids[key] = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},
+			offset = {x = at.x, y = at.y}, z_index = -79, scale = {x = LABEL / 16, y = LABEL / 16},
+			text = label_tex(n, key == "dual")})
+	end
+	shown.dual = false
 	-- the boxes: what's said, the inventory (its rows, and a mark of how
 	-- far down it's scrolled), what's on the ground (sidebars.relayout)
 	ids.log = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
@@ -329,6 +382,8 @@ function sidebars.relayout(player)
 	player:hud_change(ids.log, "text", nhv.skin.box(g.log.w, g.log.h))
 	player:hud_change(ids.here, "offset", {x = g.here.x, y = g.here.y})
 	player:hud_change(ids.here, "text", nhv.skin.box(g.here.w, g.here.h))
+	player:hud_change(ids.t_log, "offset", {x = g.log.x + IN, y = g.log.y + IN})
+	player:hud_change(ids.t_here, "offset", {x = g.here.x + IN, y = g.here.y + IN})
 	if #log_rows ~= g.log_rows then
 		for _, row in ipairs(log_rows) do
 			player:hud_remove(row.id)
@@ -336,12 +391,12 @@ function sidebars.relayout(player)
 		log_rows = {}
 		for r = 1, g.log_rows do
 			log_rows[r] = {id = add(player, {type = "text", position = RIGHT, alignment = {x = 1, y = 1},
-				offset = {x = g.log.x + IN, y = g.log.y + IN + (r - 1) * g.line_h}, z_index = 31,
+				offset = {x = g.log.x + IN, y = g.log.y + IN + g.title + (r - 1) * g.line_h}, z_index = 31,
 				number = 0xFFFFFF, text = "", style = sidebars.text_style()})}
 		end
 	else
 		for r, row in ipairs(log_rows) do
-			player:hud_change(row.id, "offset", {x = g.log.x + IN, y = g.log.y + IN + (r - 1) * g.line_h})
+			player:hud_change(row.id, "offset", {x = g.log.x + IN, y = g.log.y + IN + g.title + (r - 1) * g.line_h})
 		end
 	end
 	sidebars.render_log(player)
@@ -378,8 +433,8 @@ end
 -- ---------------------------------------------------------------- inventory
 -- what you carry, a line each (its picture, its letter and name), as the
 -- full inventory has it (ui.lua): grouped by kind in NetHack's order, the
--- kind's name over each group - from where it's scrolled to
-local KIND = 0xFFD080 -- (a kind's name, as the full inventory's)
+-- kind's name over each group (KIND: the full inventory's colour) - from
+-- where it's scrolled to
 function sidebars.render_inventory(player)
 	player = player or nhv.player.get()
 	local g = player and #inv_rows > 0 and sidebars.geometry(player)
