@@ -2,6 +2,24 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.16.0 (alpha) - 2026-11-01
+
+- **Side bars HUD layout** (Options > Graphics > HUD layout), for an old dungeon-crawler look: the HUD sits in brick bars either side of the view instead of over it.
+  - **Left:** your portrait, your name and title, HP and Pw, your stats, what you wear, your two weapons (marked when you fight with both) and your quiver with its ammo count, and your ailments.
+  - **Right:** the map and level, a small dialogue box, your inventory grouped by kind (scroll it with the mouse wheel), what's on the ground, and the key hints - every key's hint is always there, greyed out while it would do nothing.
+  - **Monsters next to you** crowd round your portrait, on the side they're on as you face, dithering in and out. When you die your portrait becomes your gravestone - or you in stone, if you were turned to stone.
+  - The command line, the held weapon and the messages all stay inside the view.
+- **HUD skin:** every box and slot is drawn from two pictures you can redraw yourself, ui_frame.png and ui_slot.png.
+- **Quick slots:** Shift + 1-5 uses an item you put there (from its menu: Quick slot, with what it should do), Ctrl + 1-5 casts a spell you put there (the spell menu's Quick...), at what you aim at or at yourself. Hold Shift or Ctrl to see them on the hotbar, with a line saying what the keys and mouse do.
+- **R** opens the full command list (as F3 does).
+- **Travel (_) walks you there** instead of putting you there at once: twice your walking speed, seen from behind, curving round corners and clear of walls and doors. The camera turns to face the way you go until you turn it yourself.
+- Monsters can no longer walk through an open door's own blocks.
+- The weapon in your hand is 40% bigger, lit by the light around you (the light you carry included), and dark while you're blind.
+- The big map covers the whole HUD, with a white border.
+- **Retro mode:** fades to black and white are dithered.
+- **The sprite sheet has a cell for every NetHack tile again**, males and females apart, so you can draw them differently. Your edited sprites are all kept.
+- Fixed: grazing iron bars could jump you to another square; the HUD flashed over the title screen for a frame as it loaded, and showed for a moment before a game faded in.
+
 ## v0.15.0 (alpha) - 2026-10-31
 
 - **Raytraced light** (Options > Graphics, off by default). A lit room's light goes out through its doorways in straight lines, fading with distance, with hard shadows from corners. Lamps and the light you carry cast shadows too.
