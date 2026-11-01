@@ -139,7 +139,7 @@ local function set_frame(player, on)
 		frame = nil
 	end
 	local side = on and side_frac(player)
-	if frame and frame.side ~= side then
+	if on and frame and frame.side ~= side then
 		set_frame(player, false) -- (the bars came or went, or the window changed)
 	end
 	if not on then
