@@ -1394,6 +1394,160 @@ local function meters_x()
 	return 12 + portrait_size() + 8
 end
 local portrait_shown, name_shown
+local S_GRAVE = 34 -- (NetHack's map symbol for a grave)
+local STONE = "^[hsl:0:-100:-12" -- (a statue's grey)
+
+-- turned to stone: your portrait goes grey when you die (NetHack's last
+-- words for it; a new game, or saved by life saving, clears it)
+nh.on_event(function(evs)
+	for _, ev in ipairs(evs) do
+		if ev.kind == "message" and (ev.text:find("You turn to stone") or ev.text:find("You are a statue")) then
+			hud.petrified = true
+		end
+	end
+end)
+nh.on_snapshot(function(snap)
+	if snap and snap.hero and not U.has(snap.hero.flags, U.HERO.DEAD) then
+		hud.petrified = nil
+	end
+end)
+
+-- ---------------------------------------------------------------- crowd
+-- In the side bars, the monsters in the squares next to you crowd round
+-- your portrait: those on your left (as you face) at its left, on your
+-- right at its right - one straight ahead or behind on whichever side has
+-- fewer -, nearest you first, then further out, then a row higher up
+-- behind; all behind you in the picture, never over you. Each dithers in
+-- as it comes and out as it goes (the retro darkening's patterns:
+-- nhv_dither_<n>.png).
+local CROWD_SIDE = 4    -- (places a side)
+local CROWD_STEP_S = 0.07 -- (a dither step)
+local crowd = {}        -- place -> {id=, side=, key=, tex=, step=0..4, shown=}
+local crowd_t = 0
+
+function hud.build_crowd(player, p, inner, base)
+	crowd = {}
+	local m = math.floor(inner * 0.72)
+	local cx, cy = p.x + p.w / 2, p.y + p.h / 2
+	-- (feet level with yours; the second row a little higher, behind)
+	local low = cy + inner / 2 - m / 2
+	local high = low - inner * 0.2
+	local most = p.w / 2 - nhv.skin.INSET - m / 2 - 2
+	local near = math.min(most, inner * 0.42 + m * 0.3)
+	local far = math.min(most, near + m * 0.5)
+	local places = {{near, low, 40}, {far, low, 40}, {near * 0.9, high, 39}, {far * 0.9, high, 39}}
+	for _, side in ipairs({-1, 1}) do
+		for k, pl in ipairs(places) do
+			local id = player:hud_add({
+				type = "image", position = base.position, alignment = {x = 0, y = 0},
+				offset = {x = cx + side * pl[1], y = pl[2]}, scale = {x = m / TILE_PX, y = m / TILE_PX},
+				z_index = pl[3], text = "blank.png",
+			})
+			meter_ids["crowd" .. side .. k] = id
+			crowd[#crowd + 1] = {id = id, side = side, order = k, step = 0}
+		end
+	end
+end
+
+-- the monsters next to you now: key -> {tex=, side=}
+local function crowd_wanted(player)
+	local h = nh.snap and nh.snap.hero
+	local out = {}
+	if not (h and h.x) or U.has(h.flags, U.HERO.DEAD) then
+		return out
+	end
+	local yaw = player:get_look_horizontal()
+	local rx, rz = math.cos(yaw), math.sin(yaw) -- (your right)
+	for key, e in pairs(nhv.mobs.mons) do
+		if e.x and e.tile and e.tile >= 0 and not e.silhouette
+				and math.max(math.abs(e.x - h.x), math.abs(e.y - h.y)) == 1 then
+			local dx, dz = (e.x - h.x) * U.TILE, -(e.y - h.y) * U.TILE
+			local s = dx * rx + dz * rz
+			out[key] = {tex = nhv_tiles.texture(e.tile), side = s > 0.5 and 1 or (s < -0.5 and -1 or 0)}
+		end
+	end
+	return out
+end
+
+core.register_globalstep(function(dtime)
+	crowd_t = crowd_t + dtime
+	if crowd_t < CROWD_STEP_S or #crowd == 0 then
+		return
+	end
+	crowd_t = 0
+	local player = nhv.player.get()
+	if not player then
+		return
+	end
+	local want = crowd_wanted(player)
+	-- (those still here keep their place while on its side; the gone go)
+	local placed = {}
+	for _, c in ipairs(crowd) do
+		local w = c.key and want[c.key]
+		if w and (w.side == c.side or w.side == 0) and not c.leaving then
+			placed[c.key] = true
+			c.tex = w.tex
+		elseif c.key and not c.leaving then
+			c.leaving = true
+		end
+	end
+	-- (the new ones: the first free place on their side, nearest first -
+	-- else the other side's)
+	local function free_on(side)
+		for k = 1, CROWD_SIDE do
+			for _, c in ipairs(crowd) do
+				if c.side == side and c.order == k and not c.key then
+					return c
+				end
+			end
+		end
+	end
+	local function count(side)
+		local n = 0
+		for _, c in ipairs(crowd) do
+			if c.side == side and c.key then
+				n = n + 1
+			end
+		end
+		return n
+	end
+	local keys = {}
+	for key in pairs(want) do
+		keys[#keys + 1] = key
+	end
+	table.sort(keys)
+	for _, key in ipairs(keys) do
+		if not placed[key] then
+			local w = want[key]
+			local side = w.side ~= 0 and w.side or (count(-1) <= count(1) and -1 or 1)
+			local c = free_on(side) or free_on(-side)
+			if c then
+				c.key, c.tex, c.step, c.leaving = key, w.tex, 0, nil
+			end
+		end
+	end
+	-- (dithering in and out, a step at a time)
+	for _, c in ipairs(crowd) do
+		if c.key then
+			if c.leaving then
+				c.step = c.step - 1
+				if c.step <= 0 then
+					c.key, c.leaving, c.step = nil, nil, 0
+				end
+			elseif c.step < 4 then
+				c.step = c.step + 1
+			end
+		end
+		local tex = "blank.png"
+		if c.key and c.step > 0 then
+			tex = c.step >= 4 and c.tex or (c.tex .. "^[mask:nhv_dither_" .. c.step .. ".png")
+		end
+		if tex ~= c.shown then
+			c.shown = tex
+			player:hud_change(c.id, "text", tex)
+		end
+	end
+end)
 
 function hud.build_meters(player)
 	for _, id in pairs(meter_ids) do
@@ -1401,6 +1555,7 @@ function hud.build_meters(player)
 	end
 	meter_ids, meter_last = {}, {}
 	portrait_shown, name_shown = nil, nil
+	crowd = {}
 	local w, h = meter_size()
 	local frame = nhv.theme and nhv.theme.retro() and "#AAAAAA" or "#000000"
 	local base = {position = {x = 0, y = 0}, alignment = {x = 1, y = 1}}
@@ -1478,8 +1633,17 @@ local function update_meters(player, h)
 		flash_gold(player, before, gold)
 	end
 	gold_last = h.gold
-	-- your sprite (polymorphed: what you've become) and "name the title"
+	-- your sprite (polymorphed: what you've become) and "name the title" -
+	-- dead, your gravestone; turned to stone, you in stone
 	local tex = h.tile and h.tile >= 0 and nhv_tiles.texture(h.tile) or "blank.png"
+	if U.has(h.flags, U.HERO.DEAD) then
+		local grave = core.nh_cmap_tile and core.nh_cmap_tile(S_GRAVE) or -1
+		if hud.petrified then
+			tex = tex .. STONE
+		elseif grave >= 0 then
+			tex = nhv_tiles.texture(grave)
+		end
+	end
 	if tex ~= portrait_shown then
 		portrait_shown = tex
 		player:hud_change(meter_ids.portrait, "text", tex)
@@ -1515,10 +1679,11 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 	local p = g.portrait
 	meter_ids.portrait_bg = player:hud_add({
 		type = "image", position = base.position, alignment = base.alignment,
-		offset = {x = p.x, y = p.y}, scale = {x = 1, y = 1}, z_index = 40,
+		offset = {x = p.x, y = p.y}, scale = {x = 1, y = 1}, z_index = 38,
 		text = nhv.skin.box(p.w, p.h),
 	})
 	local inner = math.min(p.w, p.h) - 2 * nhv.skin.INSET - 4
+	hud.build_crowd(player, p, inner, base)
 	meter_ids.portrait = player:hud_add({
 		type = "image", position = base.position, alignment = {x = 0, y = 0},
 		offset = {x = p.x + p.w / 2, y = p.y + p.h / 2}, scale = {x = inner / TILE_PX, y = inner / TILE_PX},

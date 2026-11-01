@@ -218,6 +218,20 @@ function sidebars.refresh(player, inv)
 	if not next(slot_ids) or not nhv.ui.EQUIP then
 		return
 	end
+	-- (how much is in the quiver: "x23")
+	if ids.ammo then
+		local q
+		for _, slot in ipairs(nhv.ui.EQUIP) do
+			if slot.quiver then
+				q = nhv.ui.equipped(slot, inv or {})
+			end
+		end
+		local text = q and ("x" .. (q.quan or 1)) or ""
+		if shown.ammo ~= text then
+			shown.ammo = text
+			player:hud_change(ids.ammo, "text", text)
+		end
+	end
 	-- (the both-hands mark lit while you fight with both)
 	local h = nh.snap and nh.snap.hero
 	local dual = h and U.has(h.flags, U.HERO.TWOWEAP) or false
@@ -337,6 +351,11 @@ function sidebars.rebuild(player)
 			text = label_tex(n, key == "dual")})
 	end
 	shown.dual = false
+	-- how much is in the quiver, right of it
+	ids.ammo = add(player, {type = "text", position = LEFT, alignment = {x = 1, y = 0},
+		offset = {x = g.quiver.x + g.quiver.size + 8, y = g.quiver.y + g.quiver.size / 2},
+		z_index = -79, number = 0xFFFFFF, text = "", style = sidebars.text_style()})
+	shown.ammo = nil
 	-- the boxes: what's said, the inventory (its rows, and a mark of how
 	-- far down it's scrolled), what's on the ground (sidebars.relayout)
 	ids.log = add(player, {type = "image", position = RIGHT, alignment = {x = 1, y = 1},
