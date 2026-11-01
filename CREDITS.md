@@ -30,11 +30,46 @@ licence. The licence texts are in the release's `licenses` folder
 | GeneralUser GS SoundFont | S. Christian Collins | GeneralUser GS License v2.0: free use, including commercial | OK (licence file ships) |
 | Test MIDI (`nhv_miditest.mid`) | Made for this project | Project's own | OK |
 | Sound effects `yh_*.ogg` | "You Hear A Clicking Sound - It Bites!" (YHACSIB), made by VoxHack's author | Project's own | OK |
-| Music (`nhv_music_*.ogg`), magic effect sounds (`nhv_sound_magiceffect`), footsteps (Freesound 268758) | Royalty-free / CC0 sources (per the author) | Free redistribution | OK |
+| Music (`nhv_music_*.ogg`) | OpenGameArt and others: one row each under **Music and sounds** below | CC0, CC BY 3.0, or unknown (see below) | See below |
+| Footsteps (`268758__deleted_user_5093904__footsteps.ogg`) | "Footsteps" by deleted_user_5093904, Freesound 268758 (https://freesound.org/people/deleted_user_5093904/sounds/268758/), converted to Ogg | CC BY 3.0 | OK: credited here (attribution required) |
+| Magic effect sounds (`nhv_sound_magiceffect`) | Royalty-free source (per the author; not in the download history) | Free redistribution (per the author) | Keep proof of the source |
+| Thunder (`thunders_sfx_01.ogg` to `_03.ogg`) | "Castle Thunders SFX", saved from YouTube (via yt-to-mp3.net); original source unknown | **Unknown** | **Needs checking**: find the original and its licence, or replace |
 | NetHackWiki pages (the in-game viewer, F2) | Fetched live from nethackwiki.com and cached on the player's computer; not bundled | CC BY-SA 3.0 (credited on every page) | OK |
 | Animalese, the voice a player may choose over SAM: its letters (`mods/nhv_sounds/animalese/animalese.wav`, unchanged) | From animalese.js by Josh Simmons (github.com/Acedio/animalese.js) | CC BY 4.0 | OK: credited here; the licence ships next to it (`animalese-LICENSE.md`) and in `licenses` |
 | Animalese's way of speaking (the engine's `sound/sam_voice.cpp`), done again from animalese.js | animalese.js, Copyright © 2014 Josh Simmons | MIT | OK (the notice ships in `animalese-LICENSE.md`) |
 | SAM, the live voice (`external/luanti/lib/sam`, built into the engine) | SAM (Software Automatic Mouth, Don't Ask Software, 1982), C port by Sebastian Macke (github.com/s-macke/SAM) | No licence: reverse-engineered abandonware whose owner couldn't be reached | Included; the risk is accepted, as the port's author describes (lib/sam/VOXHACK.md) |
+
+## Music and sounds
+
+Where each music track comes from, checked against the source pages
+(2026-11-01). CC0 needs no credit, but the authors are credited anyway,
+with the wording they asked for where they gave one.
+
+| Game file | Track | Author | Licence | Credit / notes |
+|---|---|---|---|---|
+| `nhv_music_title.ogg` | [Prologue Theme](https://opengameart.org/content/prologue-theme) | Cleyton Kauffman | CC0 | Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman |
+| `nhv_music_prologue.ogg` | [Forest Whisper Theme](https://opengameart.org/content/forest-whisper-theme) | Cleyton Kauffman | CC0 | Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman |
+| `nhv_music_shop1.ogg` | "Buy Something! (Radio Edit)", from [Shop Theme](https://opengameart.org/content/shop-theme) | Cleyton Kauffman | CC0 | Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman |
+| `nhv_music_dungeon1.ogg` | [The Old Tower Inn](https://opengameart.org/content/medieval-the-old-tower-inn) (shortened; matched by its sound, likely) | RandomMind | CC0 | |
+| `nhv_music_dungeon2.ogg` | [King's Feast](https://opengameart.org/content/medieval-kings-feast) | RandomMind | CC0 | |
+| `nhv_music_dungeon3.ogg` | [The Bard's Tale](https://opengameart.org/content/medieval-the-bards-tale) (shortened) | RandomMind | CC0 | |
+| `nhv_music_apocolypse.ogg` | "Apocalypse", from [JRPG Music Pack #3 (Evil)](https://opengameart.org/content/jrpg-pack-3-evil) | Juhani Junkala (SubspaceAudio) | CC0 | |
+| `nhv_music_epic1.ogg` | [Battle Theme A](https://opengameart.org/content/battle-theme-a) | cynicmusic | CC0 | |
+| `nhv_music_bigroom.ogg` | [QaziJamJam (orchestral battle theme)](https://opengameart.org/content/qazijamjam-orchestral-battle-theme) | Emma_MA | CC0 | Released into the public domain |
+| `nhv_music_temple.ogg` | [Shrine](https://opengameart.org/content/shrine) | yd | CC0 | |
+| `nhv_music_cavewonder.ogg` | "Cave Wonder", from [2 MIDI cave songs](https://opengameart.org/content/2-midi-cave-songs-cave-wonder-tinkering-cave) | tapatilorenzo | CC0 | |
+| `nhv_music_tinkering.ogg` | "Tinkering Cave", from [2 MIDI cave songs](https://opengameart.org/content/2-midi-cave-songs-cave-wonder-tinkering-cave) | tapatilorenzo | CC0 | |
+| `nhv_music_mines.ogg` | [Cave](https://opengameart.org/content/cave-apr-25) | Alex McCulloch (Pro Sensory) | CC0 | The author asks to be named in the credits: Alex McCulloch |
+| `nhv_music_darkambient.ogg` | [Dark Cavern Ambient](https://opengameart.org/content/dark-cavern-ambient) | Paul Wortmann | CC0 | |
+| `nhv_music_happyadveture.ogg` | [Happy Adventure Loop](https://opengameart.org/content/happy-adventure-loop) | TinyWorlds | CC0 | |
+| `nhv_music_tocatafuga.ogg` | [Toccata and Fugue in D Minor](https://opengameart.org/content/toccata-and-fugue-in-d-minor) | J. S. Bach, performed by Mario4536 (submitted by bart) | CC BY 3.0 | **Attribution required**: "Toccata and Fugue in D Minor by Johann Sebastian Bach, performed by Mario4536". Converted to Ogg |
+| `nhv_music_diesirae.ogg` | Verdi, Requiem: II. Dies Irae - a recording saved from YouTube (via yt-to-mp3.net) | Verdi (composition); performers unknown | **Unknown** | **Needs checking**: the composition is public domain, but a recording usually isn't. Find a recording with a free licence (e.g. Musopen, public-domain recordings) or replace |
+
+Downloaded but not in the game: "Lament for a Warrior's Soul" (RandomMind),
+"Inside the Overlord's Domain" (KarateStudios), "Determined Pursuit"
+(Emma_MA), the rest of JRPG Music Pack #3 (all CC0), and Freesound 123435
+"02362 fanfare announce a" by Robinhood76 - **CC BY-NC 4.0, non-commercial
+only**: don't use it in a paid release.
 
 ## Before a Steam release
 
@@ -43,8 +78,14 @@ licence. The licence texts are in the release's `licenses` folder
 2. **The name.** NetHack's licence covers the code, not the name. The game
    says "based on NetHack" in its description; ask the NetHack DevTeam if
    unsure.
-3. **Steamworks.** Don't link the Steamworks SDK into the game without
-   checking its compatibility with the copyleft licences first.
+3. **Steamworks.** The Steam build now ships Valve's `steam_api64.dll`
+   (from the Steamworks SDK) and loads it at runtime (`nhv_steam`: not
+   linked in, and absent from the zip and itch builds). Check that this is
+   compatible with NetHack's licence and the LGPL before shipping it.
+4. **Music and sounds of unknown origin.** The Dies Irae track and the
+   thunder sounds were saved from YouTube: find their licences or replace
+   them (see **Music and sounds**). Keep proof of the other sources' licences
+   (the pages linked above).
 
 The source is published with each release (this repository, with its
 `external/nethack` and `external/luanti` submodules), as NetHack's licence
