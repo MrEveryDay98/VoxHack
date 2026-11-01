@@ -27,7 +27,8 @@ local nh = nhv.nh
 local sidebars = {}
 nhv.sidebars = sidebars
 
-local BAR = "#6C91B6"     -- the bars
+local BAR = "ui_bricksidebar.png" -- the bars: its bricks across them
+local BRICK = 32           -- (its size)
 local EDGE = "#000000"    -- their edge on the view's side
 local EDGE_W = 3
 local PANEL = "#1A1A20"   -- the equipment panel
@@ -192,13 +193,24 @@ function sidebars.rebuild(player)
 		return
 	end
 	local W, H = g.w, math.ceil(g.sh)
-	-- the bars, under everything else on the HUD (over the world)
+	-- the bars, under everything else on the HUD (over the world): the
+	-- bricks, the left bar's from its left edge, the right's from its right
+	-- (each the mirror of the other's), a black edge on the view's side
+	local function bricks(from_right)
+		local t = {("[combine:%dx%d"):format(W, H)}
+		for y = 0, H - 1, BRICK do
+			for x = 0, W - 1, BRICK do
+				t[#t + 1] = (":%d,%d=%s"):format(from_right and W - BRICK - x or x, y, BAR)
+			end
+		end
+		return table.concat(t)
+	end
 	ids.left = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},
 		offset = {x = 0, y = 0}, z_index = -100,
-		text = ("[fill:%dx%d:%s^[fill:%dx%d:%d,0:%s"):format(W, H, BAR, EDGE_W, H, W - EDGE_W, EDGE)})
+		text = ("%s^[fill:%dx%d:%d,0:%s"):format(bricks(false), EDGE_W, H, W - EDGE_W, EDGE)})
 	ids.right = add(player, {type = "image", position = RIGHT, alignment = {x = -1, y = 1},
 		offset = {x = 0, y = 0}, z_index = -100,
-		text = ("[fill:%dx%d:%s^[fill:%dx%d:0,0:%s"):format(W, H, BAR, EDGE_W, H, EDGE)})
+		text = ("%s^[fill:%dx%d:0,0:%s"):format(bricks(true), EDGE_W, H, EDGE)})
 	-- the equipment panel and its slots
 	local e = g.equip
 	ids.panel = add(player, {type = "image", position = LEFT, alignment = {x = 1, y = 1},

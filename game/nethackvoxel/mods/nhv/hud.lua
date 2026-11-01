@@ -567,6 +567,13 @@ end
 -- element is its dark backdrop meanwhile.
 local TILE_PX = 16
 local BACKDROP = "[fill:16x16:#000000^[opacity:200"
+-- (with the side bars it hides them: there's no 3D view behind them to see)
+local BACKDROP_SOLID = "[fill:16x16:#000000"
+-- The big map is drawn over the rest of the HUD - the side bars, the
+-- hotbar, the wheel (wheel.lua) - its squares from BIG_Z up; a white
+-- border round it
+local BIG_Z = 200
+local BORDER = 2 -- (pixels)
 local tiles = {ids = {}, shown = {}, scale = nil}
 
 -- the picture for map square (x, y) as the big map shows it: what you
@@ -754,7 +761,7 @@ local function update_tiles(player, snap)
 					tiles.ids[i] = player:hud_add({
 						type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
 						offset = {x = (x + 0.5 - U.COLNO / 2) * s, y = (y + 0.5 - U.ROWNO / 2) * s},
-						scale = {x = s / TILE_PX, y = s / TILE_PX}, text = tex, z_index = 1,
+						scale = {x = s / TILE_PX, y = s / TILE_PX}, text = tex, z_index = BIG_Z + 1,
 						style = MAP_SCROLLS + BIG_MAP_ONLY,
 					})
 				end
@@ -818,7 +825,7 @@ local function update_map_icons(player)
 			icons[key] = {id = player:hud_add({
 				type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
 				offset = {x = x, y = y}, scale = {x = s / TILE_PX, y = s / TILE_PX},
-				text = tex, z_index = w.z, style = MAP_SCROLLS,
+				text = tex, z_index = BIG_Z + w.z, style = MAP_SCROLLS,
 			}), tex = tex, x = x, y = y, s = s}
 		else
 			if tex ~= ic.tex then
@@ -952,7 +959,11 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "scale", {x = s * U.COLNO / 16, y = s * U.ROWNO / 16})
 		player:hud_change(hud.ids.map, "offset", {x = 0, y = 0})
 		player:hud_change(hud.ids.map, "style", MAP_SCROLLS) -- (the backdrop goes across with it)
-		player:hud_change(hud.ids.map, "text", BACKDROP)
+		player:hud_change(hud.ids.map, "text", nhv.sidebars and nhv.sidebars.on() and BACKDROP_SOLID or BACKDROP)
+		player:hud_change(hud.ids.map, "z_index", BIG_Z)
+		local b = hud_px(player, BORDER)
+		player:hud_change(hud.ids.map_border, "scale", {x = s * U.COLNO + 2 * b, y = s * U.ROWNO + 2 * b})
+		player:hud_change(hud.ids.map_border, "text", "[fill:1x1:#FFFFFF")
 		update_tiles(player, nh.snap)
 		player:hud_set_flags({nhv_big_map = true})
 	else
@@ -969,6 +980,8 @@ local function place_map(player)
 		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
 		player:hud_change(hud.ids.map, "offset", {x = ox, y = oy})
 		player:hud_change(hud.ids.map, "style", 0)
+		player:hud_change(hud.ids.map, "z_index", 0)
+		player:hud_change(hud.ids.map_border, "text", "blank.png")
 		player:hud_set_flags({nhv_big_map = false}) -- (its squares hidden, kept)
 		if nh.snap and nh.snap.map then
 			player:hud_change(hud.ids.map, "text", map_png(nh.snap))
@@ -1226,9 +1239,15 @@ core.register_on_joinplayer(function(player)
 	-- the big map's facing arrow (over its squares and icons; update_map_arrow)
 	hud.ids.map_arrow = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
-		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "", z_index = 5, style = MAP_SCROLLS,
+		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "", z_index = BIG_Z + 5, style = MAP_SCROLLS,
 	})
 	arrow_shown = {}
+	-- (the big map's white border: under its backdrop, a little bigger)
+	hud.ids.map_border = player:hud_add({
+		type = "image", position = {x = 0.5, y = 0.45}, alignment = {x = 0, y = 0},
+		offset = {x = 0, y = 0}, scale = {x = 1, y = 1}, text = "blank.png", z_index = BIG_Z - 1,
+		style = MAP_SCROLLS,
+	})
 	hud.ids.map = player:hud_add({
 		type = "image", position = {x = 1, y = 0}, alignment = {x = -1, y = 1},
 		offset = {x = -10, y = 10}, scale = {x = 3, y = 3}, text = "blank.png",
