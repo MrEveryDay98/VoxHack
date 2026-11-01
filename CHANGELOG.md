@@ -18,6 +18,7 @@ Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) Â
 - The big map covers the whole HUD, with a white border.
 - **Retro mode:** fades to black and white are dithered.
 - **The sprite sheet has a cell for every NetHack tile again**, males and females apart, so you can draw them differently. Your edited sprites are all kept.
+- **Fixed: the game could crash shortly after switching retro mode on or off** (with dynamic shadows on).
 - Fixed: grazing iron bars could jump you to another square; the HUD flashed over the title screen for a frame as it loaded, and showed for a moment before a game faded in.
 
 ## v0.15.0 (alpha) - 2026-10-31
