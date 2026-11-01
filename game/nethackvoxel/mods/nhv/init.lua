@@ -80,7 +80,6 @@ end
 dofile(path .. "nh.lua")
 dofile(path .. "scale.lua")
 dofile(path .. "terrain.lua")
-dofile(path .. "lightcast.lua")
 dofile(path .. "ascii.lua")
 dofile(path .. "areas.lua")
 dofile(path .. "sea.lua")

@@ -660,11 +660,6 @@ end
 -- dithered, in steps of light)
 local LIT_LAYERS = {U.FLOOR_Y + 1, U.CEIL_Y - 1}
 function terrain.light_square(data, area, tx, ty)
-	-- (in the game the room's light is cast in straight lines instead:
-	-- lightcast.lua)
-	if nhv.lightcast then
-		return
-	end
 	local air, light = cid("air"), cid("nhv:room_light")
 	local ox, oz = U.tile_origin(tx, ty)
 	for _, y in ipairs(LIT_LAYERS) do
@@ -797,9 +792,6 @@ local function write_squares(sqs)
 	vm:set_data(data.ids)
 	vm:set_param2_data(data.p2)
 	vm:write_to_map(true)
-	if nhv.lightcast then
-		nhv.lightcast.redo()
-	end
 	-- (the light you carry was in what got rebuilt: it's put back at once,
 	-- instead of only when you next move)
 	local hl = terrain.hero_light_pos
@@ -1411,13 +1403,11 @@ function terrain.update_lights()
 	local level = carried > 0 and math.max(9, light_level(carried)) or 9
 	terrain.hero_light_node = level > 9 and ("nhv:hero_light_" .. level) or "nhv:hero_light"
 	terrain.hero_light_level = level
-	local changed = false
 	for k, p in pairs(ls_placed) do
 		local w = want[k]
 		local n = core.get_node(p).name
 		if not w and n:sub(1, 13) == "nhv:ls_light_" then
 			core.set_node(p, {name = "air"})
-			changed = true
 		end
 		if not w then
 			ls_placed[k] = nil
@@ -1429,15 +1419,9 @@ function terrain.update_lights()
 		if n == "air" or (n ~= name and n:sub(1, 13) == "nhv:ls_light_") then
 			core.set_node(w.pos, {name = name})
 			ls_placed[k] = w.pos
-			changed = true
 		elseif n == name then
 			ls_placed[k] = w.pos
 		end
-	end
-	-- (a light put out takes the rooms' cast light round it with it: cast
-	-- again - lightcast.lua)
-	if changed and nhv.lightcast then
-		nhv.lightcast.redo()
 	end
 end
 
