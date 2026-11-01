@@ -462,6 +462,10 @@ typedef struct nhv_rolling {
 } nhv_rolling;
 /* rolling boulders set rolling since the last call */
 NHV_API int nhv_get_rolls(nhv_rolling *buf, int max);
+/* Every boulder on the level, seen or not: 5 ints each into buf - x, y,
+ * whether the hero sees its square, its glyph, its tile - at most max;
+ * how many. */
+NHV_API int nhv_get_boulders(int *buf, int max);
 
 /* Light sources on the level: lit lamps and candles (carried, on the
  * floor, carried by monsters), glowing monsters, the hero if glowing.

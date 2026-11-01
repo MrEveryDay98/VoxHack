@@ -915,6 +915,33 @@ nhv_get_rolls(nhv_rolling *buf, int max)
     return n;
 }
 
+/* Every boulder on the level, seen or not: 5 ints each into buf - x, y,
+ * whether the hero sees its square (cansee), its glyph and tile - at most
+ * max; how many. (The host draws one in plain view of you, in the dark,
+ * all black, as it does monsters.) */
+NHV_API int
+nhv_get_boulders(int *buf, int max)
+{
+    int x, y, n = 0;
+    struct obj *otmp;
+
+    if (!(nhv_state() == NHV_WAITING || nhv_state() == NHV_ENDED)
+        || !program_state.in_moveloop)
+        return 0;
+    for (x = 1; x < COLNO; x++)
+        for (y = 0; y < ROWNO; y++) {
+            if (n >= max || !(otmp = sobj_at(BOULDER, x, y)))
+                continue;
+            buf[n * 5] = x;
+            buf[n * 5 + 1] = y;
+            buf[n * 5 + 2] = cansee(x, y) ? 1 : 0;
+            buf[n * 5 + 3] = obj_to_glyph(otmp, rn2_on_display_rng);
+            buf[n * 5 + 4] = glyphmap[buf[n * 5 + 3]].tileidx;
+            n++;
+        }
+    return n;
+}
+
 /* ---------------------------------------------------------------- rays
  * Rays (wands, spells, breath) handed over by dobuzz(); the host flies
  * and bounces them and reports what they reach. */

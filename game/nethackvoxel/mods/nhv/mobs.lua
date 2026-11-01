@@ -66,9 +66,9 @@ local function size_for(e, w)
 	return nhv_tiles.size(e.h, w)
 end
 
-local function sprite_props(tile, height)
+local function sprite_props(tile, height, kind)
 	local s = height / 2
-	local props = nhv_tiles.look(tile, height)
+	local props = nhv_tiles.look(tile, height, kind)
 	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
 	return props
 end
@@ -585,9 +585,62 @@ local function real_boulder(tx, ty)
 	return top and core.nh_obj_name(top.otyp) == "boulder" or false
 end
 
+-- Boulders as monsters (find_noclip_seen): one in plain view of where you
+-- are - not through walls, as far as the fog - on a square NetHack says
+-- you can't see (in the dark) is drawn where it really is, all black; one
+-- you remember there that isn't any more (moved in the dark) isn't drawn.
+-- Not while you're blind or hallucinating; noclipping in wizard mode, seen
+-- as they are. Returns the squares' dark boulders ({glyph, tile,
+-- silhouette}) and remembered ones gone, and a signature of both - looked
+-- for again a few times a second (update_noclip), as you move.
+local boulder_sig = ""
+local function find_dark_boulders(snap)
+	local dark, gone, parts = {}, {}, {}
+	local player = core.get_connected_players()[1]
+	if not (player and core.nh_get_boulders and snap.map and snap.hero) then
+		return dark, gone, ""
+	end
+	local noclip = nhv.wizard and nhv.wizard.noclipping()
+	local hf = snap.hero.flags or 0
+	if not noclip and (U.has(hf, U.HERO.BLIND) or U.has(hf, U.HERO.HALLU)) then
+		return dark, gone, ""
+	end
+	local eye = U.camera_pos(player)
+	local far = nhv.hud.fog_distance()
+	local function in_view(tx, ty)
+		local p = U.tile_center(tx, ty, nhv.terrain.stand_y(tx, ty) + BOULDER_H / 2)
+		return vector.distance(eye, p) < far and not wall_between(eye, p)
+	end
+	local real = {}
+	for _, b in ipairs(core.nh_get_boulders()) do
+		local i = U.idx(b.x, b.y)
+		real[i] = true
+		if not b.seen and in_view(b.x, b.y) then
+			dark[i] = {glyph = b.glyph, tile = b.tile, silhouette = not noclip}
+			parts[#parts + 1] = "b" .. i
+		end
+	end
+	local map = snap.map
+	for tx = 1, U.COLNO - 1 do
+		for ty = 0, U.ROWNO - 1 do
+			local i = U.idx(tx, ty)
+			if not real[i] then
+				local gi = nhv.glyph_info(map.mem[i])
+				if gi.kind == "obj" and core.nh_obj_name(gi.index) == "boulder" and in_view(tx, ty) then
+					gone[i] = true
+					parts[#parts + 1] = "g" .. i
+				end
+			end
+		end
+	end
+	return dark, gone, table.concat(parts, " ")
+end
+
 local function update_objects(snap)
 	local map = snap.map
 	local seen = {}
+	local dark, gone
+	dark, gone, boulder_sig = find_dark_boulders(snap)
 	local ball = mobs.ball
 	local hallu = snap.hero and U.has(snap.hero.flags, U.HERO.HALLU)
 	match_moves(map, snap.hero)
@@ -611,6 +664,14 @@ local function update_objects(snap)
 					g, tile = under.glyph, under.tile
 					gi = nhv.glyph_info(g)
 				end
+			end
+			-- (a boulder in plain view in the dark: where it is, all black;
+			-- one remembered that's gone: nothing)
+			if dark[i] then
+				g, tile = dark[i].glyph, dark[i].tile
+				gi = nhv.glyph_info(g)
+			elseif gone[i] then
+				goto next_square
 			end
 			if gi.kind == "obj" or gi.kind == "body" or gi.kind == "statue" then
 				seen[i] = true
@@ -636,9 +697,11 @@ local function update_objects(snap)
 					boulder = real_boulder(tx, ty)
 				end
 				local bw = boulder and boulder_w(map, tx, ty, BOULDER_H, snap.hero) or nil
-				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground) then
-					local props = sprite_props(tile, h)
-					e.bw = bw
+				local silhouette = dark[i] and dark[i].silhouette or false
+				if e and (e.tile ~= tile or e.h ~= h or e.bw ~= bw or e.ground ~= ground
+						or e.silhouette ~= silhouette) then
+					local props = sprite_props(tile, h, silhouette and "k" or nil)
+					e.bw, e.silhouette = bw, silhouette
 					if boulder then
 						-- boulders are solid; pushing into one tries to roll it
 						-- (its box a boulder's size from the floor up, even
@@ -1465,6 +1528,12 @@ local function update_noclip(dtime)
 	noclip_t = 0
 	if noclip_signature(find_noclip_seen(snap)) ~= noclip_sig then
 		update_monsters(snap)
+	end
+	if snap.map then
+		local _, _, sig = find_dark_boulders(snap)
+		if sig ~= boulder_sig then
+			update_objects(snap)
+		end
 	end
 end
 
