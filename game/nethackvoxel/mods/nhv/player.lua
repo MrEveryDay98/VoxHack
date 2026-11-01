@@ -619,6 +619,37 @@ local function footsteps(player)
 	end
 end
 
+-- An iron bars square's bars are only a row of its blocks: the body can
+-- stand in the open part either side of them, where NetHack won't let you
+-- (it refuses the square - and after a couple of refusals, with the body
+-- walked on further, it was put back: a jump). There it counts as in the
+-- open square beside it it's nearest - unless you're polymorphed into
+-- something that may slip between bars: then NetHack says.
+local function beside_bars(pos, tx, ty, h)
+	local map = nh.snap and nh.snap.map
+	if not (map and U.in_map(tx, ty)) or map.typ[U.idx(tx, ty)] ~= U.TYP.IRONBARS
+			or U.has(h.flags, U.HERO.POLY) then
+		return tx, ty
+	end
+	local best, bd
+	for dx = -1, 1 do
+		for dy = -1, 1 do
+			local x, y = tx + dx, ty + dy
+			if (dx ~= 0 or dy ~= 0) and terrain.passable(map, x, y) then
+				local c = U.tile_center(x, y)
+				local d = (c.x - pos.x) ^ 2 + (c.z - pos.z) ^ 2
+				if not bd or d < bd then
+					best, bd = {x, y}, d
+				end
+			end
+		end
+	end
+	if best then
+		return best[1], best[2]
+	end
+	return tx, ty
+end
+
 local function step(player)
 	local h = player_mod.hero
 	footsteps(player)
@@ -633,6 +664,7 @@ local function step(player)
 	end
 	local pos = player:get_pos()
 	local tx, ty = U.pos_to_tile(pos)
+	tx, ty = beside_bars(pos, tx, ty, h)
 	if tx == h.x and ty == h.y then
 		player_mod.ahead = nil
 		return
