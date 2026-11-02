@@ -12,6 +12,26 @@ do
 	end
 end
 
+-- The prefab editor is never in retro mode (blocks and colours seen as they
+-- are): turned off while it runs, and back on after it - or, if it closed
+-- without saying so (a crash), as the game next starts. (The setting is
+-- saved: it's put back, not left off for your next game.)
+if nhv.EDITOR then
+	if core.settings:get_bool("nhv_retro", false) then
+		core.settings:set_bool("nhv_retro_after_editor", true)
+		core.settings:set_bool("nhv_retro", false) -- (the engine switches at the next frame)
+	end
+	core.register_on_shutdown(function()
+		if core.settings:get_bool("nhv_retro_after_editor", false) then
+			core.settings:set_bool("nhv_retro", true)
+			core.settings:remove("nhv_retro_after_editor")
+		end
+	end)
+elseif core.settings:get_bool("nhv_retro_after_editor", false) then
+	core.settings:set_bool("nhv_retro", true)
+	core.settings:remove("nhv_retro_after_editor")
+end
+
 -- A world with a file named "nhv_intro" in it is the intro editor: the
 -- opening's forest (tools/make_intro_world.py).
 do
