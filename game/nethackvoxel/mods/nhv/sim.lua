@@ -6,7 +6,9 @@
 --   * a hostile monster that can see you walks straight at you,
 --   * one that can't follows a path over the map squares toward where it
 --     thinks you are,
---   * pets follow you and go after nearby hostiles, peacefuls wander.
+--   * pets go after nearby hostiles, and after food and things to fetch
+--     (NetHack says which), come after you when you get away from them, and
+--     amble about near you; peacefuls wander.
 -- When a body crosses into another square NetHack is told
 -- (core.nh_move_monster), which handles doors, traps and items and may
 -- refuse the square (it's occupied, too narrow, ...).
@@ -115,6 +117,8 @@ end
 
 -- does a body of radius r at p overlap a square it can't stand in (or go
 -- further into an open door's blocks)?
+local pet -- (pets: below)
+
 local function hits_terrain(e, map, p, r)
 	for _, ox in ipairs({-r, r}) do
 		for _, oz in ipairs({-r, r}) do
@@ -169,6 +173,7 @@ function sim.sync()
 		e.x, e.y = m.x, m.y
 		e.mndx, e.size, e.speed, e.flags = m.mndx, m.size, m.speed, m.flags
 		e.mux, e.muy = m.mux, m.muy
+		e.goalx, e.goaly = m.goalx or 0, m.goaly or 0
 		-- took damage since last time: flash red
 		if e.hp and m.hp and m.hp < e.hp and nhv.mobs then
 			nhv.mobs.flash(m.id, "r", 0.22)
@@ -341,6 +346,95 @@ local function nearest_hostile(e, within)
 	return best, bd
 end
 
+-- ---------------------------------------------------------------- pets
+-- A pet moves freely, but it's still NetHack's pet: it gets hungry, eats,
+-- picks things up and drops them where it stands, and shies away from
+-- stepping onto cursed things (dogmove.c's nhv_dog_turn, nhv_dog_step) -
+-- and NetHack says what nearby it's after, food or something to fetch
+-- (e.goalx, e.goaly), which it goes to. Otherwise: it goes after hostiles
+-- near it, comes after you when you get away from it, and while you're
+-- about it ambles about near you - to somewhere a few squares from you,
+-- sits there a while, then somewhere else.
+local PET_FAR = 3.5      -- (squares: further from you than this, it comes after you)
+local PET_ROAM = 3       -- (squares from you it ambles about within)
+local PET_SIT = {2, 7}   -- (turns it sits once it's got there)
+local PET_AMBLE = 0.55   -- (of its speed, ambling about)
+local PET_GIVE_UP = 8    -- (turns: not got there by then, somewhere else)
+
+-- somewhere to amble to: a square near you it can walk to (not yours)
+local function pet_spot(e, map, hero)
+	for _ = 1, 10 do
+		local x = hero.x + math.random(-PET_ROAM, PET_ROAM)
+		local y = hero.y + math.random(-PET_ROAM, PET_ROAM)
+		if not (x == hero.x and y == hero.y) and square_passable(map, x, y) and not boulder_at(x, y)
+				and nhv.path.find(e.x, e.y, x, y, function(px, py) return square_passable(map, px, py) end,
+					function(px, py) return is_door(map, px, py) end, 60) then
+			return x, y
+		end
+	end
+end
+
+function pet(e, map, dist, hp, hero)
+	local touch = e.r + sim.HERO_R
+	local foe, fd = nearest_hostile(e, 4 * TILE)
+	if foe then
+		e.roam = nil
+		if fd <= e.r + foe.r + sim.REACH then
+			e.target = foe.id
+		else
+			move_toward(e, map, foe.pos, dist, e.r + foe.r + sim.REACH * 0.6, hp)
+		end
+		return
+	end
+	-- after food, or something to fetch
+	if e.goalx and e.goalx > 0 then
+		e.roam = nil
+		if e.x ~= e.goalx or e.y ~= e.goaly then
+			if not follow_path(e, map, e.goalx, e.goaly, dist, hp) then
+				move_toward(e, map, center_of(e.goalx, e.goaly), dist, 0.1, hp)
+			end
+		end
+		return
+	end
+	-- you've got away from it: after you
+	if hp and flat_dist(e.pos, hp) > PET_FAR * TILE then
+		e.roam = nil
+		if not follow_path(e, map, hero.x, hero.y, dist, hp) then
+			move_toward(e, map, hp, dist, touch + 1.0, hp)
+		end
+		return
+	end
+	-- ambling about near you (somewhere new once you've moved off from
+	-- where it was going, or it couldn't get there)
+	local now = nhv.clock.game
+	local r = e.roam
+	if r and (math.max(math.abs(r.x - hero.x), math.abs(r.y - hero.y)) > PET_ROAM + 1
+			or (not r.sit and now > r.t0 + PET_GIVE_UP)) then
+		r = nil
+	end
+	if not r then
+		local x, y = pet_spot(e, map, hero)
+		if not x then
+			return
+		end
+		r = {x = x, y = y, t0 = now}
+		e.roam = r
+	end
+	if r.sit then
+		if now > r.sit then
+			e.roam = nil
+		end
+		return
+	end
+	if e.x == r.x and e.y == r.y and flat_dist(e.pos, sim.walk_center(map, r.x, r.y)) < 0.6 then
+		r.sit = now + PET_SIT[1] + math.random() * (PET_SIT[2] - PET_SIT[1])
+		return
+	end
+	if not follow_path(e, map, r.x, r.y, dist * PET_AMBLE, hp) then
+		e.roam = nil
+	end
+end
+
 -- You're up a built staircase (or anything with a climbing path) in your
 -- square: a monster beside it, after you, climbs the path - block by
 -- block - to the one nearest you, instead of waiting below for you to come
@@ -410,20 +504,7 @@ local function think(e, map, dturns, hp, hero)
 	end
 	local touch = e.r + sim.HERO_R
 	if has(e.flags, MF.TAME) then
-		local foe, fd = nearest_hostile(e, 4 * TILE)
-		if foe then
-			if fd <= e.r + foe.r + sim.REACH then
-				e.target = foe.id
-			else
-				move_toward(e, map, foe.pos, dist, e.r + foe.r + sim.REACH * 0.6, hp)
-			end
-			return
-		end
-		if hp and flat_dist(e.pos, hp) > 2.2 * TILE then
-			if not follow_path(e, map, hero.x, hero.y, dist, hp) then
-				move_toward(e, map, hp, dist, touch + 1.0, hp)
-			end
-		end
+		pet(e, map, dist, hp, hero)
 		return
 	end
 	if has(e.flags, MF.PEACEFUL) then

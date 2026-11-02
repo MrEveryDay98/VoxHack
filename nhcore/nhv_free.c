@@ -535,6 +535,12 @@ nhv_get_all_monsters(nhv_monfull *buf, int max)
         f.size = m->data->msize;
         f.mux = m->mux, f.muy = m->muy;
         f.hp = m->mhp, f.hpmax = m->mhpmax;
+        if (m->mtame) {
+            coordxy gx, gy;
+
+            if (nhv_pet_goal(m, &gx, &gy))
+                f.goalx = gx, f.goaly = gy;
+        }
         if (m->mtame)
             f.flags |= NHV_MF_TAME;
         if (m->mpeaceful)

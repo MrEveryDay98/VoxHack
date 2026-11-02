@@ -423,6 +423,8 @@ typedef struct nhv_monfull {
     int mux, muy;   /* where it thinks the hero is */
     int flags;      /* NHV_MF_* */
     int hp, hpmax;
+    int goalx, goaly; /* a pet: the square of the food or thing to fetch
+                         it's after (dog_goal), 0 0 if none */
 } nhv_monfull;
 /* Every monster on the level (true state, for the host's simulation;
  * only draw what nhv_get_monsters() says the hero perceives). */
