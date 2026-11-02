@@ -51,12 +51,6 @@ header.hero p.tag { font-size: 1.25rem; color: var(--dim); margin: 18px auto 28p
 .shot img { width: 100%; display: block; border: 2px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
 
 h2 { font-family: "Retro", ui-monospace, monospace; color: var(--gold); font-weight: normal; font-size: 1.5rem; margin: 48px 0 16px; }
-.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-.feature { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; }
-.feature h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--text); }
-.feature p { margin: 0; color: var(--dim); }
-.feature.star { border-color: var(--gold-deep); box-shadow: inset 0 0 0 1px var(--gold-deep); }
-.feature.star h3 { color: var(--gold); }
 
 table.keys { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 table.keys td { padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
@@ -112,15 +106,8 @@ footer { margin: 64px 0 40px; padding-top: 20px; border-top: 1px solid var(--lin
 </blockquote>
 
 <h2>What it is</h2>
-<div class="features">
-  <div class="feature star"><h3>NetHackWiki built in: press F2</h3><p>Point at any monster, item, fountain or trap and press F2: its NetHackWiki page opens right in the game, formatting, pictures and all. Only what you know: an unidentified potion opens the general Potion page.</p></div>
-  <div class="feature"><h3>The real NetHack underneath</h3><p>The whole of NetHack 3.7 runs the game: every monster, item, trap, prayer and death is NetHack's own.</p></div>
-  <div class="feature"><h3>A dungeon you walk through</h3><p>Move freely, look around, swing at what's in front of you. Time crawls while you stand still and runs as you move.</p></div>
-  <div class="feature"><h3>Built from NetHack's levels</h3><p>Every level is built in 3D from NetHack's own map, with special levels hand-made as places of their own.</p></div>
-  <div class="feature"><h3>Mouse and hotbar play</h3><p>Aim with the crosshair, act with a right-click wheel, and keep NetHack's command line one key away.</p></div>
-  <div class="feature"><h3>Sound and atmosphere</h3><p>Sound effects for NetHack's events, music for each part of the dungeon, and skies above the open levels.</p></div>
-  <div class="feature"><h3>Your saves stay put</h3><p>Unzip and play. Your game, settings and high scores live in the game's own folder.</p></div>
-</div>
+<p>VoxHack is NetHack 3.7, played in first person. Every level NetHack makes is built around you as a 3D voxel world, and you walk through it freely: you look around, swing at whatever is in front of you, and watch monsters come down the corridor as NetHack's own tile sprites. Time crawls while you stand still and runs as you move, so you keep NetHack's turns without the game feeling turn-based. The special levels, from Sokoban and the Oracle to the Planes, are built by hand as places of their own, with sound, music and skies to match.</p>
+<p>Underneath, NetHack itself is unchanged. The whole game runs inside VoxHack and decides every rule, every roll of the dice, every monster and every death; VoxHack shows it to you and turns what you do into NetHack's commands, with NetHack's own command line a key away when you want it. When you're not sure what something is, point at it and press F2 to read its NetHackWiki page without leaving the game. VoxHack is free, open source, in early alpha, and runs on Windows.</p>
 
 <div class="shot"><img src="assets/shot-minetown.jpg" alt="Minetown in the Gnomish Mines: two watchmen on patrol between Izchak's Lighting Store and a general store"></div>
 
