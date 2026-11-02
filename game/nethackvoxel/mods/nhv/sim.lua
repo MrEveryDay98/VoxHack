@@ -175,7 +175,16 @@ local function pet_walk(e, x, y)
 		end
 	end
 	local pts = nhv.path.body_route(squares, e.pos, to, heights) or {{x = to.x, z = to.z}}
-	e.walk = {pts = pts, i = 1, last = {x = x, y = y}}
+	-- (its pace: the whole way in a turn - so it gets there as NetHack's
+	-- next move comes, not early, to stand and wait: a cat goes one square
+	-- one turn and two the next - never slower than half its speed)
+	local len, prev = 0, e.pos
+	for _, p in ipairs(pts) do
+		len = len + math.sqrt((p.x - prev.x) ^ 2 + (p.z - prev.z) ^ 2)
+		prev = p
+	end
+	local pace = math.max(len, math.max((e.speed or 12) / 12, 0.5) * TILE * 0.5)
+	e.walk = {pts = pts, i = 1, last = {x = x, y = y}, pace = pace}
 end
 
 -- Bring our bodies in line with NetHack's list of monsters.
@@ -407,16 +416,12 @@ end
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
 	if e.walk then
-		-- a pet's body walking after NetHack's pet (pet_walk): at its own
-		-- pace - faster when it's fallen behind (more than a diagonal step)
+		-- a pet's body walking after NetHack's pet (pet_walk): at the pace
+		-- that gets it there in a turn, eased from the last one's (no
+		-- lurching from one square a turn to two)
 		local w = e.walk
-		local left = 0
-		local prev = e.pos
-		for k = w.i, #w.pts do
-			left = left + math.sqrt((w.pts[k].x - prev.x) ^ 2 + (w.pts[k].z - prev.z) ^ 2)
-			prev = w.pts[k]
-		end
-		local step = math.max((e.speed or 12) / 12, 0.5) * dturns * TILE * math.max(1, left / (1.5 * TILE))
+		e.wpace = e.wpace and (e.wpace + (w.pace - e.wpace) * math.min(1, dturns * 6)) or w.pace
+		local step = e.wpace * dturns
 		while step > 0 and w.pts[w.i] do
 			local p = w.pts[w.i]
 			local dx, dz = p.x - e.pos.x, p.z - e.pos.z
