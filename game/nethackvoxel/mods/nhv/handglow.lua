@@ -14,7 +14,7 @@ nhv.handglow = handglow
 
 local WARN_COLORS = { -- (NetHack's CLR_*: the warning artifacts' glows)
 	[1] = {255, 60, 50},     -- red (Grimtooth)
-	[12] = {185, 228, 255},  -- bright blue: light blue (Sting, Orcrist) - pale, as it's a tint over the blade
+	[12] = {140, 205, 255},  -- bright blue: light blue (Sting, Orcrist)
 }
 local CONF_COLOR = {255, 50, 40} -- (your hands glowing red)
 local WARN_NEAR = 10 -- (how far off the nearest is counted, squares)
