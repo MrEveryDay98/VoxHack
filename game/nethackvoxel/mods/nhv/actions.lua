@@ -60,6 +60,18 @@ local WAIT_US = {item = 5000000, wheel = 5000000}
 local WAIT_KEY_US = 600000
 local waiting -- {a=, info=, until_t=}
 
+-- A blow - an attack, a kick - starts no sooner than this after the last:
+-- one free (a fast hero's extra move: no time to wait out), with the
+-- button held, would start at once, and the swing or kick play twice over
+local BLOW_GAP_US = 300000
+local last_blow = 0
+local function blow_too_soon()
+	return core.get_us_time() - last_blow < BLOW_GAP_US
+end
+local function blow_started()
+	last_blow = core.get_us_time()
+end
+
 local function run_now(a, info)
 	-- (answers it gives to NetHack's questions on the way, each to the
 	-- question it's for: ui.lua's queued answers)
@@ -70,6 +82,12 @@ local function run_now(a, info)
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
 	else
+		if actions.is_kick(a.keys) then
+			if blow_too_soon() then
+				return
+			end
+			blow_started()
+		end
 		if not actions.kick_start(a.keys) then
 			actions.swing()
 		end
@@ -154,6 +172,18 @@ local function kick_square(keys)
 		end
 	end
 	return nil
+end
+
+-- (are these a kick's keys?)
+function actions.is_kick(keys)
+	if type(keys) == "string" then
+		local t = {}
+		for c in keys:gmatch(".") do
+			t[#t + 1] = {key = c}
+		end
+		keys = t
+	end
+	return kick_square(keys or {}) ~= nil
 end
 
 -- (a kick's keys: start its look; false if they aren't a kick)
@@ -502,9 +532,10 @@ function actions.attack(player, prefer_id, target)
 	if nhv.spells.release(player) then
 		return
 	end
-	if busy() or nhv.clock.busy() then
+	if busy() or nhv.clock.busy() or blow_too_soon() then
 		return
 	end
+	blow_started()
 	local h = hero()
 	if U.has(h.flags, U.HERO.SWALLOWED) then
 		nhv.clock.act("Fl", {kind = "attack"})
