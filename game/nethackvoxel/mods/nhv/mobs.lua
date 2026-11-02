@@ -274,6 +274,8 @@ local function mon_draw_pos(e)
 	local base
 	if body and body.x == e.x and body.y == e.y then
 		base = body.pos
+	elseif e.marker_at then
+		base = e.marker_at -- (an unseen monster's marker: below)
 	else
 		base = U.tile_center(e.x, e.y)
 	end
@@ -422,6 +424,18 @@ local function update_monsters(snap)
 		end
 		if e then
 			e.x, e.y, e.mon = m.x, m.y, m
+			-- NetHack's marker for a monster you can't see ('I'): where its
+			-- body really was when it was noticed - it stays there (you
+			-- don't see it go), and is hit there (actions.lua)
+			if e.marker_at == nil and m.id == 0 and U.has(m.flags, U.MON_INVIS) then
+				e.marker_at = false
+				for _, b in pairs(nhv.sim.mons) do
+					if b.x == m.x and b.y == m.y then
+						e.marker_at = vector.new(b.pos.x, 0, b.pos.z)
+						break
+					end
+				end
+			end
 			if tail then
 				e.id, e.tail_of = nil, m.id
 			else

@@ -518,7 +518,7 @@ function actions.attack(player, prefer_id, target)
 	if target == nil and prefer_id == nil then
 		local seg = aimed_segment(player)
 		if seg then
-			return actions.attack_worm(player, seg, nhv.mobs.mons[seg.nh_key])
+			return actions.attack_entity(player, seg)
 		end
 	end
 	local t = target or attack_target(player, prefer_id)
@@ -590,11 +590,14 @@ function actions.attack_entity(player, ent)
 	if ent.name == "nhv:wormseg" then
 		return actions.attack_worm(player, ent, e)
 	end
+	if e and not e.id and not e.tail_of and e.mon and U.has(e.mon.flags, U.MON_INVIS) then
+		return actions.attack_marker(player, ent, e)
+	end
 	actions.attack(player, e and (e.id or e.tail_of))
 end
 
 -- the segment of a worm's body you aim at, if that's what you aim at (not
--- a wall or another monster in front of it)
+-- a wall or another monster in front of it) - or an unseen monster's marker
 aimed_segment = function(player)
 	local eye = vector.add(player:get_pos(), vector.new(0, player:get_properties().eye_height or 1.5, 0))
 	local to = vector.add(eye, vector.multiply(player:get_look_dir(), 8))
@@ -606,9 +609,39 @@ aimed_segment = function(player)
 			if ent and ent.name == "nhv:wormseg" and ent.nh_key then
 				return ent
 			elseif ent and ent.name == "nhv:mon" then
+				-- (an unseen monster's marker: it, as a worm's body is)
+				local e = ent.nh_key and nhv.mobs.mons[ent.nh_key]
+				if e and not e.id and not e.tail_of and e.mon and U.has(e.mon.flags, U.MON_INVIS) then
+					return ent
+				end
 				return nil
 			end
 		end
+	end
+end
+
+-- The marker of a monster you can't see that you aim at (NetHack's 'I',
+-- where its body was: mobs.lua): within your reach, the blow goes there -
+-- at whoever is on its square now, else into the empty square (NetHack
+-- clears the marker: "You attack thin air"); out of reach, as any swing.
+function actions.attack_marker(player, ent, e)
+	local at = ent.object and ent.object:get_pos()
+	local pos = player:get_pos()
+	local h = hero()
+	if not (at and h and h.x) or vector.distance(vector.new(at.x, 0, at.z), vector.new(pos.x, 0, pos.z))
+			> nhv.sim.HERO_R + nhv.sim.REACH + 0.5 then
+		return actions.attack(player, false)
+	end
+	for id, b in pairs(nhv.sim.mons) do
+		if b.x == e.x and b.y == e.y then
+			return actions.attack(player, id, {id = id, tx = e.x, ty = e.y})
+		end
+	end
+	local dx, dy = U.sign(e.x - h.x), U.sign(e.y - h.y)
+	if (dx ~= 0 or dy ~= 0) and not busy() and not nhv.clock.busy() then
+		actions.melee_swing(0)
+		nhv.sound.hook("hero_swing")
+		nhv.clock.act({{key = "F"}, {key = U.dir_key(dx, dy)}}, {kind = "attack"})
 	end
 end
 
