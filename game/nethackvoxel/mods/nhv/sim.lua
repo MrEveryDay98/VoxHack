@@ -366,6 +366,35 @@ end
 -- one monster's movement for this step
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
+	if e.glide and has(e.flags, MF.TAME) then
+		-- a pet: NetHack chose the square (dog_move); its body walks there at
+		-- its own pace, turning smoothly and not stopping between the
+		-- squares it's sent to - faster only when it's fallen behind
+		local d = flat_dist(e.pos, e.glide)
+		local pace = math.max((e.speed or 12) / 12, 0.5) * TILE * math.max(1.15, d / TILE)
+		-- (slowing down only where it's going to stop: the last bit of the way)
+		local want = d > 0.001 and vector.multiply(vector.direction(e.pos, e.glide), math.min(pace, d * 4))
+			or vector.zero()
+		want.y = 0
+		local v = e.vel or vector.zero()
+		e.vel = vector.add(v, vector.multiply(vector.subtract(want, v), math.min(1, dturns * 8)))
+		local step = vector.multiply(e.vel, dturns)
+		if vector.length(step) >= d then
+			e.pos, e.glide = e.glide, nil
+		else
+			e.pos = vector.add(e.pos, step)
+			e.pos.y = 0
+		end
+		return
+	end
+	-- (a pet there, between NetHack's moves: what way it was going fades,
+	-- so the next square it's sent to carries on from it, not from a stop)
+	if e.vel then
+		e.vel = vector.multiply(e.vel, math.max(0, 1 - dturns * 4))
+		if vector.length(e.vel) < 0.01 then
+			e.vel = nil
+		end
+	end
 	if e.glide then
 		-- NetHack already put it there: slide straight in, quickly (at
 		-- least a square per turn), through anything in the way
