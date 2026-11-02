@@ -313,6 +313,7 @@ function editor.on_ready(player)
 			setup_world()
 			-- capture every cell as it stands (keeps earlier, unsaved builds)
 			editor.save_all()
+			editor.rebuild_moved_areas()
 			if player:get_pos().y < BASE_Y - 4 then
 				to_spawn(player)
 			end
@@ -582,6 +583,27 @@ end
 -- all its height, the first time you go to it - what you built over layer
 -- 19 still stands in the editor world; once per area)
 local TALL_KEY = "recaptured_h" .. H .. "_"
+
+-- Areas whose templates were stored a row or column off (dumped before the
+-- dump undid NetHack's level flips): their files were moved onto the fixed
+-- templates, and their plates - still standing the old way round - are
+-- built again from their files, once.
+local MOVED_AREAS = {"asmodeus#1", "medusa-1#1", "knox#1", "wizard3#1", "Val-strt#1"}
+function editor.rebuild_moved_areas()
+	for _, id in ipairs(MOVED_AREAS) do
+		local key = "moved_onto_fixed_template_" .. id
+		local t = areas.templates[id]
+		if t and storage:get_string(key) == "" then
+			if storage:get_string("area_laid_" .. id) == "" then
+				storage:set_string(key, "1") -- (never laid out: it will be, from its file)
+			else
+				build_area(t, true, function()
+					storage:set_string(key, "1")
+				end)
+			end
+		end
+	end
+end
 
 core.register_chatcommand("area", {
 	params = "[reset | reload] [<name>] | revert | recapture",
