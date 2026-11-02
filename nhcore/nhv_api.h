@@ -296,6 +296,13 @@ typedef struct nhv_hero {
     char level_desc[32];    /* e.g. "Dlvl:3" */
     char ability[24];       /* what #monster would do now ("Breathe",
                                "Spit"...), "" when it would do nothing */
+    int umconf;             /* confuse monster: hits left with glowing hands
+                               (u.umconf) */
+    int warn_cnt;           /* a wielded warning artifact (Sting, Orcrist,
+                               Grimtooth): how many monsters it glows for */
+    int warn_dist;          /* (and how far the nearest is, in squares; -1:
+                               none) */
+    int warn_color;         /* (its glow's colour, CLR_*; -1: none) */
 } nhv_hero;
 
 NHV_API void nhv_get_hero(nhv_hero *out);

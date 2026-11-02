@@ -827,6 +827,29 @@ nhv_get_hero(nhv_hero *out)
              svd.dungeons[u.uz.dnum].dname);
     (void) describe_level(out->level_desc, 0);
     Snprintf(out->ability, sizeof out->ability, "%s", nhv_monability());
+    out->umconf = (int) u.umconf;
+    /* a wielded warning artifact glowing for the monsters it warns of
+       (artifact.c's Sting_effects): how many, the nearest, its colour */
+    out->warn_dist = out->warn_color = -1;
+    if (u_wield_art(ART_STING) || u_wield_art(ART_ORCRIST)
+        || u_wield_art(ART_GRIMTOOTH)) {
+        struct monst *mon;
+
+        out->warn_cnt = gw.warn_obj_cnt;
+        /* (artilist's acolor: Grimtooth red, the elven blades light blue) */
+        out->warn_color = u_wield_art(ART_GRIMTOOTH) ? CLR_RED
+                                                     : CLR_BRIGHT_BLUE;
+        for (mon = fmon; mon; mon = mon->nmon) {
+            int d;
+
+            if (DEADMONSTER(mon) || !Warn_of_mon
+                || !(svc.context.warntype.obj & mon->data->mflags2))
+                continue;
+            d = distmin(u.ux, u.uy, mon->mx, mon->my);
+            if (out->warn_dist < 0 || d < out->warn_dist)
+                out->warn_dist = d;
+        }
+    }
 }
 
 static void
@@ -849,10 +872,6 @@ fill_obj(struct obj *otmp, nhv_obj *o)
         o->flags |= NHV_OBJ_QUIVERED;
     if (otmp->owornmask & W_SWAPWEP)
         o->flags |= NHV_OBJ_ALTWEP;
-    if (otmp->bknown && otmp->cursed)
-        o->flags |= NHV_OBJ_CURSED_KNOWN;
-    if (otmp->bknown && otmp->blessed)
-        o->flags |= NHV_OBJ_BLESSED_KNOWN;
     if (Is_container(otmp))
         o->flags |= NHV_OBJ_CONTAINER;
     if (otmp->lamplit)
@@ -861,6 +880,12 @@ fill_obj(struct obj *otmp, nhv_obj *o)
     o->armcat = (otmp->oclass == ARMOR_CLASS) ? objects[otmp->otyp].oc_armcat
                                               : -1;
     Snprintf(o->name, sizeof o->name, "%s", doname(otmp));
+    /* (known blessed or cursed: after its name - naming it is what lets a
+       priest know, the first time they see it) */
+    if (otmp->bknown && otmp->cursed)
+        o->flags |= NHV_OBJ_CURSED_KNOWN;
+    if (otmp->bknown && otmp->blessed)
+        o->flags |= NHV_OBJ_BLESSED_KNOWN;
     /* (after its name: naming it is what marks it seen up close, which
        its picture depends on - else a gem looked at for the first time,
        in a box say, shows as the generic gem) */
