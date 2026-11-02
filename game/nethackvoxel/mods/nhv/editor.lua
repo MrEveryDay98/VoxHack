@@ -419,6 +419,9 @@ local function build_area(t, build, done)
 		-- terrain.lua's describe)
 		local built_any = areas.built(t.id)
 		local open_level = nhv.terrain.OPEN_SKY[t.proto]
+		-- (a ceiling made over the parts - the Special levels page: the
+		-- squares you haven't built keep theirs; areas.ceiling_for)
+		local roofed = areas.ceiling_for(t.proto).area
 		for cy = 0, t.h - 1 do
 			for cx = 0, t.w - 1 do
 				local so = square_origin(t, cx, cy)
@@ -442,10 +445,10 @@ local function build_area(t, build, done)
 						local slot, rot = nhv.terrain.base_slot(map, U.idx(tx, ty), tx, ty, nil)
 						prefabs.write_at(data, va, so, prefabs.get(slot).nodes, rot, true, styled)
 						-- (a door: its lintel, not its ceiling, as in the game)
-						if nhv.terrain.DOOR_SLOTS[slot] then
+						if nhv.terrain.DOOR_SLOTS[slot] and not roofed then
 							nhv.terrain.clear_over_lintel(data, va, so)
 						elseif (built_any or (open_level and nhv.terrain.OPEN_LIQUID[typ]))
-								and not nhv.terrain.ROOF_KEPT[slot] then
+								and not roofed and not nhv.terrain.ROOF_KEPT[slot] then
 							nhv.terrain.clear_over_lintel(data, va, so)
 						end
 					end

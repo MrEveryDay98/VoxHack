@@ -382,6 +382,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, sky_api.save(data))
             except (ValueError, TypeError) as e:
                 return self.send(400, {"error": str(e)})
+        if path == "/api/splev/ceilings":
+            try:
+                return self.send(200, {"ceilings": splev_api.save_ceilings(data)})
+            except (ValueError, TypeError, OSError) as e:
+                return self.send(400, {"error": str(e)})
         if path == "/api/effects":
             try:
                 return self.send(200, {"effects": effects_api.save(data)})

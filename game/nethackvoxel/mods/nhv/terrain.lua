@@ -602,7 +602,8 @@ local CAPPED = {[T.WATER] = true, [T.LAVAWALL] = true, [T.IRONBARS] = true}
 local function write_ascii(data, area, sq)
 	local code, color, solid = sq.ascii[1], sq.ascii[2], sq.ascii[3]
 	local ch, black, air = cid(nhv.ascii.block(code, color)), cid(nhv.ascii.block(32)), cid("air")
-	local roof = CAPPED[sq.typ] or not (terrain.open_sky or sq.roofless or (terrain.open_area and solid))
+	local roof = CAPPED[sq.typ] or sq.keep_roof
+		or not (terrain.open_sky or sq.roofless or (terrain.open_area and solid))
 	local ox, oz = U.tile_origin(sq.tx, sq.ty)
 	for ly = 0, prefabs.H - 1 do
 		local id, p2 = air, 0
@@ -762,13 +763,27 @@ local function write_square(data, area, sq)
 			end
 			prefabs.write_at(data, area, o, floor, 0, false, styled_cid)
 		end
+		if sq.area_roof then
+			-- (a ceiling made over the hand-built parts - areas.ceiling_for:
+			-- the usual prefab's, where you left the ceiling layer empty)
+			local air = cid("air")
+			for i, nd in pairs(prefabs.get(sq.slot).nodes) do
+				local lx, ly, lz = prefabs.unindex(i)
+				if ly == prefabs.CEIL then
+					local vi = area:index(ox + lx, prefabs.Y0 + ly, oz + lz)
+					if data.ids[vi] == air then
+						data.ids[vi], data.p2[vi] = styled_cid(nd.n), nd.p2 or 0
+					end
+				end
+			end
+		end
 	else
 		prefabs.write(data, area, sq.tx, sq.ty, sq.slot, sq.rot, true, styled_cid)
 		if sq.bar_arms and sq.bar_arms ~= "" then
 			write_bar_arms(data, area, sq)
 		end
 		carve_corners(data, area, sq)
-		if (terrain.open_area and sq.slot == "stone") or sq.roofless then
+		if ((terrain.open_area and sq.slot == "stone") or sq.roofless) and not sq.keep_roof then
 			-- (open to the sky: rock you didn't build in the area stops at
 			-- wall height, not a dark cliff up to where the ceiling would be;
 			-- in an area open to the sky, the usual prefabs have nothing
@@ -878,7 +893,10 @@ local function square_open(sq)
 		return false
 	end
 	if sq.area_cell then
-		return nodes_open(sq.area_cell.nodes)
+		return not sq.area_roof and nodes_open(sq.area_cell.nodes)
+	end
+	if sq.sky_open then
+		return true
 	end
 	local slot = sq.slot
 	if not slot or NO_SKY_SLOT[slot] or slot:find("^trap_") then
@@ -1057,10 +1075,26 @@ local function describe(map, tx, ty)
 	end
 	-- a special level's hand-built area covers it? (areas.lua)
 	local cell, cell_id, floor_only = nhv.areas.cell(tx, ty, sq.typ, map)
+	local in_area = cell ~= nil or nhv.areas.in_region(tx, ty, map)
+	-- (the level's ceilings over its hand-built parts and round them, if
+	-- they're set - areas.ceiling_for; not set, as they always were)
+	local ceiling
+	if in_area then
+		ceiling = terrain.ceil_area
+	else
+		ceiling = terrain.ceil_outside
+	end
+	if ceiling then
+		sq.keep_roof = true
+	end
 	if cell then
 		sq.area_cell = cell
 		sq.area_floor = floor_only -- (with the usual prefab's floor: write_square)
-	elseif (nhv.areas.in_region(tx, ty, map)
+		sq.area_roof = ceiling or nil
+	elseif ceiling == false and not in_area and not ROOF_KEPT[sq.slot] then
+		-- no ceiling round the parts: the sky over it all
+		sq.roofless, sq.sky_open = true, true
+	elseif not ceiling and (in_area
 				or (terrain.open_area and nhv.areas.near_open_area(tx, ty, OPEN_RIM))
 				or (terrain.open_sky and OPEN_LIQUID[sq.typ]) or terrain.no_roof)
 			and not ROOF_KEPT[sq.slot] and not terrain.DOOR_SLOTS[sq.slot] then
@@ -1074,7 +1108,9 @@ local function describe(map, tx, ty)
 		-- a door in a hand-built area: from the lintel up, what you built at
 		-- that spot; nothing built there - the door's lintel only
 		local inside, top, top_id = nhv.areas.door_top(tx, ty, map)
-		if inside then
+		-- (a ceiling made over the parts: nothing built over the door, its
+		-- own prefab's lintel and ceiling)
+		if inside and (top or not terrain.ceil_area) then
 			sq.door_top = top or false
 			cell_id = "top:" .. (top_id or "none")
 		end
@@ -1092,7 +1128,8 @@ local function describe(map, tx, ty)
 	-- (seeing a square for the first time doesn't change what's built)
 	-- (roofless changing - in an area open to the sky - rebuilds it too)
 	sq.key = table.concat({sq.typ, lit and 1 or 0, sq.slot or "",
-		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or "", sq.bar_arms or ""}, ":")
+		sq.rot or 0, sq.overlay or "", cell_id or "", sq.roofless and "open" or "", sq.bar_arms or "",
+		sq.keep_roof and "roof" or ""}, ":")
 	-- (ASCII mode: its character instead - ascii.lua; seeing it, or what's
 	-- remembered there changing, does change what's built then)
 	if sq.outer then
@@ -1102,7 +1139,8 @@ local function describe(map, tx, ty)
 	elseif nhv.ascii and nhv.ascii.on then
 		local code, color, solid = nhv.ascii.square(map, i, true)
 		sq.ascii = {code, color, solid}
-		sq.key = ("ascii:%d:%d:%s:%s"):format(code, color, solid and 1 or 0, sq.roofless and "open" or "")
+		sq.key = ("ascii:%d:%d:%s:%s:%s"):format(code, color, solid and 1 or 0, sq.roofless and "open" or "",
+			sq.keep_roof and "roof" or "")
 	end
 	return i, sq
 end
@@ -1214,6 +1252,16 @@ function terrain.update(map, force)
 	-- (open to the sky or not: known once NetHack has said which level
 	-- this is; it changing redraws everything)
 	local open, sky_floor, no_roof, open_edge = level_open_sky()
+	-- (the level's ceilings as set on the editor's Special levels page -
+	-- areas.ceiling_for; changing them redraws everything)
+	local ceil_area, ceil_outside
+	if not nhv.EDITOR then
+		ceil_area, ceil_outside = nhv.areas.level_ceilings()
+	end
+	if ceil_area ~= terrain.ceil_area or ceil_outside ~= terrain.ceil_outside then
+		terrain.ceil_area, terrain.ceil_outside = ceil_area, ceil_outside
+		force = true
+	end
 	-- (raytraced light turned on or off: everything built again, with the
 	-- rooms' light blocks or without them - raytrace.lua)
 	local rt = nhv.raytrace and nhv.raytrace.on() or false

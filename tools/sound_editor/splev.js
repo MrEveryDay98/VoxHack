@@ -233,9 +233,57 @@ const Splev = (() => {
         <p class="sl-meta"><b>Around ${lv.parts.length > 1 ? "them" : "it"}:</b> ${esc(lv.outside)}.
           <b>Flips:</b> ${esc(FLIPS[lv.allow] || "?")}${lv.allow ? " (the whole level, parts and all; the game turns your built squares to match)" : ""}.
           ${regs.length ? "<b>Regions:</b> " + esc(regs.join("; ")) + "." : ""}</p>
+        ${ceilingsRow(lv)}
         <canvas class="sl-map"></canvas>
         <div class="sl-hover">Point at a square to see what it is.</div>
       </article>`;
+  }
+
+  // the level's ceilings (areas.ceiling_for in the game): a side not set is
+  // built as it always was
+  const CEIL_AUTO = {
+    area: "as it always was: only the ceilings you built",
+    outside: "as it always was: the usual ceilings (left open over the sea, and round a part you built open to the sky)",
+  };
+  function ceilingsRow(lv) {
+    const box = (side, label) => {
+      const set = lv.ceilings[side] !== undefined && lv.ceilings[side] !== null;
+      const on = set ? lv.ceilings[side] : lv.ceilings_auto[side];
+      const auto = side === "outside" && !lv.ceilings_auto.outside
+        ? "as it always was: none, open to the sky" : CEIL_AUTO[side];
+      return `<label class="check" title="${esc(set ? "Set here" : auto)}">
+          <input type="checkbox" data-ceil="${side}" ${on ? "checked" : ""}> ${esc(label)}
+          ${set ? `<button class="link" data-ceil-reset="${side}" title="Build it as it always was">reset</button>` : `<span class="sl-dim">(as always)</span>`}
+        </label>`;
+    };
+    const has = lv.parts.length > 0;
+    return `<div class="sl-ceil"><b>Ceilings:</b>
+        ${has ? box("area", lv.parts.length > 1 ? "over the hand-built parts" : "over the hand-built part") : ""}
+        ${box("outside", has ? "over the rest of the level" : "over the level")}
+      </div>`;
+  }
+
+  async function setCeiling(lv, side, value) {
+    const next = Object.assign({}, lv.ceilings, { [side]: value });
+    try {
+      const res = await api("/api/splev/ceilings", { method: "PUT", json: { proto: lv.proto, area: next.area ?? null, outside: next.outside ?? null } });
+      lv.ceilings = res.ceilings || {};
+      toast(`${lv.name}: saved - the game builds the level again in a couple of seconds`);
+    } catch (e) {
+      toast("Could not save: " + e.message);
+    }
+    const el = document.querySelector(`.sl-card[data-proto="${CSS.escape(lv.proto)}"] .sl-ceil`);
+    if (el) {
+      el.outerHTML = ceilingsRow(lv);
+      wireCeilings(lv);
+    }
+  }
+
+  function wireCeilings(lv) {
+    const el = document.querySelector(`.sl-card[data-proto="${CSS.escape(lv.proto)}"] .sl-ceil`);
+    if (!el) return;
+    el.querySelectorAll("input[data-ceil]").forEach((cb) => cb.addEventListener("change", () => setCeiling(lv, cb.dataset.ceil, cb.checked)));
+    el.querySelectorAll("button[data-ceil-reset]").forEach((b) => b.addEventListener("click", (e) => { e.preventDefault(); setCeiling(lv, b.dataset.ceilReset, null); }));
   }
 
   function matches(lv) {
@@ -255,6 +303,7 @@ const Splev = (() => {
       const lv = data.levels.find((l) => l.proto === el.dataset.proto);
       const cv = el.querySelector("canvas");
       draw(cv, lv);
+      wireCeilings(lv);
       const hover = el.querySelector(".sl-hover");
       cv.addEventListener("mousemove", (e) => {
         const r = cv.getBoundingClientRect();

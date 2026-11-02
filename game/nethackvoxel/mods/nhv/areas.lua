@@ -374,6 +374,9 @@ end
 -- height (terrain.lua).
 local open_cache = {} -- template id -> boolean
 local function area_open(t)
+	if areas.ceiling_for(t.proto).area then
+		return false -- (a ceiling is made over it: areas.ceiling_for)
+	end
 	if open_cache[t.id] == nil then
 		local cells = areas.get(t.id).cells
 		local floors, roofed = 0, 0
@@ -406,6 +409,76 @@ function areas.open_to_sky()
 		end
 	end
 	return false
+end
+
+-- ---------------------------------------------------------------- ceilings
+-- Whether the game makes a ceiling over a special level's hand-built parts
+-- and over the rest of the level, set per level on the VoxHack Editor's
+-- Special levels page: mod_data/nhv/areas/ceilings.json, {"<level file>":
+-- {"area": true, "outside": false}}. Not set, a level is built as it always
+-- was: over the parts, only the ceilings you built; round them, the usual
+-- ceilings (open over the sea and round an area open to the sky on the
+-- open-sky levels, none on Juiblex's swamp - terrain.lua). A ceiling made
+-- over the parts fills only the ceiling layer you left empty: nothing you
+-- built is replaced. The file is read again while the game runs.
+local CEILINGS_FILE = DATA_DIR .. DIR_DELIM .. "ceilings.json"
+areas.ceilings = {}
+local ceilings_text = nil
+local function read_ceilings()
+	local f = io.open(CEILINGS_FILE, "r")
+	local text = f and f:read("*a") or ""
+	if f then
+		f:close()
+	end
+	if text == ceilings_text then
+		return
+	end
+	ceilings_text = text
+	local c = text ~= "" and core.parse_json(text) or {}
+	areas.ceilings = type(c) == "table" and c or {}
+	open_cache = {}
+end
+read_ceilings()
+do
+	local wait = 0
+	core.register_globalstep(function(dtime)
+		wait = wait - dtime
+		if wait <= 0 then
+			wait = 2
+			read_ceilings()
+		end
+	end)
+end
+
+-- a level's setting (by its level file: "asmodeus", "medusa-2"): area,
+-- outside - each true (a ceiling), false (none) or nil (as it always was)
+function areas.ceiling_for(proto)
+	local c = areas.ceilings[proto]
+	if type(c) ~= "table" then
+		return {}
+	end
+	local function side(v)
+		if v == nil then
+			return nil
+		end
+		return v == true
+	end
+	return {area = side(c.area), outside = side(c.outside)}
+end
+
+-- the level you're on's: area, outside (as areas.ceiling_for)
+function areas.level_ceilings()
+	local area, outside
+	for v in pairs(areas.level_variants()) do
+		local c = areas.ceiling_for(v)
+		if c.area ~= nil then
+			area = c.area
+		end
+		if c.outside ~= nil then
+			outside = c.outside
+		end
+	end
+	return area, outside
 end
 
 -- The special level variants the level you're on was built from (as NetHack

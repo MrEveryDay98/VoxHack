@@ -12,7 +12,12 @@ Reads:
                     how much of each one is built
   external/nethack/dat/*.lua
                     how each level file places its maps and fills the rest
+
+and reads and writes mod_data/nhv/areas/ceilings.json: whether the game
+makes a ceiling over each level's hand-built parts and over the rest of it
+(areas.ceiling_for; a level not set is built as it always was).
 """
+import json
 import os
 import re
 
@@ -26,6 +31,11 @@ AREAS = os.path.join(ROOT, "external", "luanti", "mod_data", "nhv", "areas")
 DAT = sky_api.DAT
 
 COLNO, ROWNO = 80, 21
+CEILINGS = os.path.join(AREAS, "ceilings.json")
+PROTO_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+# levels with no ceiling round their parts as they always were (terrain.lua's
+# NO_ROOF)
+NO_ROOF = {"juiblex"}
 
 # what fills a level before its maps go in (des.level_init's style)
 FILLS = {
@@ -122,6 +132,40 @@ def _built(proto, n, w, h):
         return 0
 
 
+def load_ceilings():
+    try:
+        with open(CEILINGS, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_ceilings(data):
+    """{"proto", "area", "outside"}: each side true, false or null (as it
+    always was); the level's settings as saved"""
+    proto = str(data.get("proto") or "")
+    if not PROTO_RE.match(proto):
+        raise ValueError("bad level")
+    all_ = load_ceilings()
+    cur = {}
+    for side in ("area", "outside"):
+        v = data.get(side)
+        if v is not None:
+            cur[side] = bool(v)
+    if cur:
+        all_[proto] = cur
+    else:
+        all_.pop(proto, None)
+    os.makedirs(AREAS, exist_ok=True)
+    tmp = CEILINGS + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(dict(sorted(all_.items())), f, indent=1)
+        f.write("\n")
+    os.replace(tmp, CEILINGS)
+    return cur
+
+
 def load():
     levels = {}
     try:
@@ -153,6 +197,7 @@ def load():
             lv["portals"].append({"x": int(p[2]), "y": int(p[3])})
 
     tpl = _templates()
+    ceilings = load_ceilings()
     groups = []
     seen = set()
     order = []
@@ -186,6 +231,9 @@ def load():
             if len(maps) == len(lv["parts"]):
                 part["placed"] = _placement(maps[part["n"] - 1])
         lv.update({"group": group, "name": name, "outside": _outside(info),
-                   "flags": info.get("flags", []), "style": info.get("style")})
+                   "flags": info.get("flags", []), "style": info.get("style"),
+                   "ceilings": ceilings.get(proto) if isinstance(ceilings.get(proto), dict) else {},
+                   # (as it always was, not set)
+                   "ceilings_auto": {"area": False, "outside": proto not in NO_ROOF}})
         out.append(lv)
     return {"levels": out, "cols": COLNO, "rows": ROWNO}
