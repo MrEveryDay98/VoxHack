@@ -33,6 +33,9 @@ def load():
     data.setdefault("version", 1)
     data.setdefault("skies", [])
     data.setdefault("levels", {})
+    # (not saved yet: the default times, to start from)
+    if not isinstance(data.get("retro16"), dict):
+        data["retro16"] = json.loads(json.dumps(RETRO16_DEFAULT))
     return data
 
 
@@ -233,6 +236,34 @@ def clean_sky(s):
     }
 
 
+# 16-colour retro mode's sky colours (EGA's 16 - the second stage shader's
+# nhvSky16), and the times of day they're set for by default
+EGA = ["#000000", "#0000AA", "#00AA00", "#00AAAA", "#AA0000", "#AA00AA", "#AA5500", "#AAAAAA",
+       "#555555", "#5555FF", "#55FF55", "#55FFFF", "#FF5555", "#FF55FF", "#FFFF55", "#FFFFFF"]
+TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+RETRO16_DEFAULT = {"on": True, "times": [
+    {"at": "05:00", "sky": "#AA00AA", "horizon": "#FF5555", "fade": 60},
+    {"at": "07:00", "sky": "#5555FF", "horizon": "#55FFFF", "fade": 60},
+    {"at": "18:00", "sky": "#AA00AA", "horizon": "#AA5500", "fade": 60},
+    {"at": "20:00", "sky": "#000000", "horizon": "#0000AA", "fade": 60},
+]}
+
+
+def clean_retro16(r):
+    r = r if isinstance(r, dict) else {}
+    times = []
+    for t in (r.get("times") or [])[:48]:
+        if not isinstance(t, dict) or not TIME_RE.match(str(t.get("at", ""))):
+            continue
+        sky = str(t.get("sky") or "").upper()
+        hor = str(t.get("horizon") or "").upper()
+        times.append({"at": t["at"], "sky": sky if sky in EGA else "#5555FF",
+                      "horizon": hor if hor in EGA else "#55FFFF",
+                      "fade": int(_num(t.get("fade"), 0, 720, 60))})
+    times.sort(key=lambda t: t["at"])
+    return {"on": bool(r.get("on")), "times": times}
+
+
 def save(data):
     skies = [clean_sky(s) for s in data.get("skies", []) if isinstance(s, dict)]
     ids = [s["id"] for s in skies]
@@ -247,9 +278,10 @@ def save(data):
         shutil.copyfile(DATA, DATA + ".bak")
     tmp = DATA + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"version": 1, "skies": skies, "levels": levels}, f, indent=1)
+        json.dump({"version": 1, "skies": skies, "levels": levels,
+                   "retro16": clean_retro16(data.get("retro16"))}, f, indent=1)
     os.replace(tmp, DATA)
-    return {"skies": skies, "levels": levels}
+    return {"skies": skies, "levels": levels, "retro16": clean_retro16(data.get("retro16"))}
 
 
 def upload_texture(name, data):

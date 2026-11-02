@@ -330,3 +330,11 @@ button.ok { background: var(--ok); border-color: var(--ok); color: #0c1f12; font
 .sl-ceil > b { font-weight: 600; }
 .sl-ceil .check { color: var(--text); }
 button.link { background: none; border: none; padding: 0 2px; color: var(--accent); font-size: 12px; text-decoration: underline; }
+/* Sky: 16-colour retro sky */
+.sky-retro { margin-top: 16px; }
+.sky-retro-strip { display: block; width: 100%; max-width: 864px; height: 64px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; }
+.sky-retro-hours { display: flex; justify-content: space-between; max-width: 864px; font-size: 11px; margin: 2px 0 12px; }
+.sky-retro-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 18px; padding: 10px 0; border-top: 1px solid var(--line); }
+.sky-ega { display: grid; grid-template-columns: repeat(8, 18px); gap: 3px; }
+.sky-ega-swatch { width: 18px; height: 18px; padding: 0; border: 1px solid #000; border-radius: 3px; }
+.sky-ega-swatch.on { outline: 2px solid var(--accent); outline-offset: 1px; }

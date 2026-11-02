@@ -54,6 +54,7 @@ const Sky = (() => {
       const res = await api("/api/sky", { method: "PUT", json: data });
       data.skies = res.skies;
       data.levels = res.levels;
+      data.retro16 = res.retro16;
       dirty = false;
       $("#skySave").disabled = true;
       $("#skyDirty").hidden = true;
@@ -537,6 +538,83 @@ void main() {
       others.length ? el("div", {}, el("h4", {}, "Other names"), ...others) : null);
   }
 
+  // 16-colour retro mode's sky: its colours by the time of day (EGA's 16, the
+  // ones the game's 16-colour sky can show), each dithering in over a while
+  // from its time - for every day and night sky (sky.lua's retro16_colours)
+  const EGA = ["#000000", "#0000AA", "#00AA00", "#00AAAA", "#AA0000", "#AA00AA", "#AA5500", "#AAAAAA",
+    "#555555", "#5555FF", "#55FF55", "#55FFFF", "#FF5555", "#FF55FF", "#FFFF55", "#FFFFFF"];
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const bayer = (x, y) => (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
+  const minutes = (at) => { const m = /^(\d\d?):(\d\d)$/.exec(at || ""); return m ? +m[1] * 60 + +m[2] : null; };
+
+  // the colours at minute `now` of the day: {from, to, f} as the game works
+  // them out
+  function retroAt(times, now) {
+    const ts = times.map((t) => ({ at: minutes(t.at), t })).filter((e) => e.at !== null).sort((a, b) => a.at - b.at);
+    if (!ts.length) return null;
+    let i = ts.length - 1;
+    ts.forEach((e, k) => { if (e.at <= now) i = k; });
+    const cur = ts[i], prev = ts[(i - 1 + ts.length) % ts.length];
+    const since = ((now - cur.at) % 1440 + 1440) % 1440;
+    const fade = Math.max(0, +cur.t.fade || 0);
+    return since < fade ? { from: prev.t, to: cur.t, f: since / fade } : { from: cur.t, to: cur.t, f: 0 };
+  }
+
+  // the day as a strip: each column a few minutes, the top half the sky's
+  // top colour, the bottom its horizon - dithered as the game does
+  function retroStrip(r) {
+    const W = 576, H = 48;
+    const cv = el("canvas", { width: W, height: H, class: "sky-retro-strip" });
+    const g = cv.getContext("2d");
+    for (let x = 0; x < W; x++) {
+      const at = retroAt(r.times, (x / W) * 1440);
+      for (let y = 0; y < H; y++) {
+        let col = "#000000";
+        if (at) {
+          const next = bayer(y, x) < at.f;  // (as the shader: the pattern turned)
+          const c = next ? at.to : at.from;
+          col = y < H / 2 ? c.sky : c.horizon;
+        }
+        g.fillStyle = col;
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+    return cv;
+  }
+
+  function egaPick(obj, key) {
+    return el("div", { class: "sky-ega" }, ...EGA.map((c) => el("button", {
+      class: "sky-ega-swatch" + (obj[key] === c ? " on" : ""), style: `background:${c}`, title: c,
+      onclick: () => { obj[key] = c; touch(); render(); },
+    })));
+  }
+
+  function retroEditor() {
+    if (!data.retro16 || typeof data.retro16 !== "object") data.retro16 = { on: false, times: [] };
+    const r = data.retro16;
+    r.times = r.times || [];
+    const rows = r.times.map((t, i) => el("div", { class: "sky-retro-row" },
+      field("From", el("input", { type: "time", value: t.at, onchange: (e) => { t.at = e.target.value || t.at; touch(); render(); } })),
+      field("Top of the sky", egaPick(t, "sky")),
+      field("Horizon", egaPick(t, "horizon")),
+      field("Dithers in over", slider(t, "fade", 0, 240, 5, (v) => (+v ? (+v) + " min" : "at once"))),
+      el("button", { class: "small", onclick: () => { r.times.splice(i, 1); touch(); render(); } }, "Remove")));
+    return el("div", { class: "blk-editor sky-retro" },
+      el("h4", {}, "16-colour retro sky"),
+      el("p", { class: "muted" }, "In retro mode's 16 colours, a day and night sky shows these colours instead of its own (which drift through every shade and come out as different ones of the 16 as the day goes). From each time the sky dithers into that time's colours, then keeps them till the next. Top and horizon dither into each other down the sky too. It follows the real clock, like the day and night sky."),
+      check(r, "on", "Use these colours in 16-colour mode", render),
+      r.on ? el("div", {},
+        retroStrip(r),
+        el("div", { class: "sky-retro-hours muted" }, ...[0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => el("span", {}, `${h}:00`))),
+        ...rows,
+        el("button", { class: "add", onclick: () => {
+          const last = r.times[r.times.length - 1];
+          r.times.push({ at: "12:00", sky: last ? last.sky : "#5555FF", horizon: last ? last.horizon : "#55FFFF", fade: 60 });
+          r.times.sort((a, b) => (minutes(a.at) || 0) - (minutes(b.at) || 0));
+          touch(); render();
+        } }, "+ Add a time")) : null);
+  }
+
   function render() {
     const root = $("#skyBody");
     if (!root) return;
@@ -569,7 +647,7 @@ void main() {
     root.replaceChildren(el("div", { class: "blk-layout" }, list,
       s ? el("div", {}, actions, skyEditor(s))
         : el("p", { class: "muted" }, "No skies yet: make one with “+ New sky”.")),
-    levelsEditor());
+    levelsEditor(), retroEditor());
   }
 
   return { load, save, render, isDirty: () => dirty };

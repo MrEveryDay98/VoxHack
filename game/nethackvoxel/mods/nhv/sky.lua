@@ -30,6 +30,10 @@
 --            the bolt)}: bolts across the sky now and then, high over you
 --   levels: level -> sky id: a special level variant ("medusa-2"), or the
 --           name before its "-" ("medusa", "bigrm"), or "default"
+--   retro16: {on, times = {{at ("HH:MM"), sky, horizon (16 colours'),
+--           fade (minutes)}, ...}}: in 16-colour retro mode, a day and night
+--           sky's colours by the time of day - from each time, the sky
+--           dithers into its colours over its fade (retro16_colours)
 
 local U = nhv.util
 local nh = nhv.nh
@@ -233,6 +237,55 @@ local function real_time_of_day()
 	return (t.hour * 3600 + t.min * 60 + t.sec) / 86400
 end
 
+-- 16-colour retro mode: a day and night sky in the colours the Sky tab sets
+-- for the time of day (skies.json's retro16), not Luanti's own, which drift
+-- through every colour on the way and come out as different ones of the 16
+-- from one moment to the next. From each time on the list the sky dithers
+-- into its colours, over its fade; then they stay till the next time. For
+-- the engine ("nhv_sky_retro", sky.cpp): the horizon and top colours now,
+-- the ones dithering in, and how far - "" when it's not that mode.
+local function retro16_colours(s, tod)
+	local r = sky.data.retro16
+	if not (s and s.daynight and type(r) == "table" and r.on and type(r.times) == "table")
+			or not core.settings:get_bool("nhv_retro", false)
+			or core.settings:get("nhv_retro_palette") ~= "ega" then
+		return ""
+	end
+	local times = {}
+	for _, t in ipairs(r.times) do
+		local h, m = tostring(t.at or ""):match("^(%d%d?):(%d%d)$")
+		if h then
+			times[#times + 1] = {at = tonumber(h) * 60 + tonumber(m), t = t}
+		end
+	end
+	if #times == 0 then
+		return ""
+	end
+	table.sort(times, function(a, b) return a.at < b.at end)
+	local now = (tod % 1) * 1440
+	-- (the latest time gone by - before the day's first, yesterday's last)
+	local i = #times
+	for k, e in ipairs(times) do
+		if e.at <= now then
+			i = k
+		end
+	end
+	local cur, prev = times[i], times[(i - 2) % #times + 1]
+	local since = (now - cur.at) % 1440
+	local fade = math.max(0, tonumber(cur.t.fade) or 0)
+	local from, f = cur, 0
+	if since < fade then
+		from, f = prev, since / fade
+	end
+	local out = {}
+	for _, c in ipairs({from.t.horizon, from.t.sky, cur.t.horizon, cur.t.sky}) do
+		local cr, cg, cb = rgb(c)
+		out[#out + 1] = ("%.4f,%.4f,%.4f"):format(cr, cg, cb)
+	end
+	out[#out + 1] = ("%.4f"):format(f)
+	return table.concat(out, ",")
+end
+
 -- (sky.scene: a level's name - "astral" - whose sky is shown whatever
 -- the level: the new character screen's scene, showroom.lua; "opening":
 -- the opening's forest, intro_play.lua - the default sky if it has none)
@@ -249,6 +302,11 @@ function sky.update()
 		core.set_timeofday(sky.time)
 	elseif s and s.daynight then
 		core.set_timeofday(real_time_of_day())
+	end
+	local retro = retro16_colours(s, sky.time or real_time_of_day())
+	if retro ~= sky.retro_shown then
+		sky.retro_shown = retro
+		core.settings:set("nhv_sky_retro", retro)
 	end
 end
 
@@ -318,6 +376,7 @@ end)
 -- (not left set for the next start: the game sets it as it needs it)
 core.register_on_shutdown(function()
 	core.settings:set("nhv_sky", "")
+	core.settings:set("nhv_sky_retro", "")
 end)
 
 return sky
