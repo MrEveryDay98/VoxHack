@@ -272,7 +272,10 @@ end
 local function mon_draw_pos(e)
 	local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 	local base
-	if body and body.x == e.x and body.y == e.y then
+	-- (its body, where it's within a couple of squares of where NetHack has
+	-- it - a pet's walks a little behind NetHack's: sim.lua's pet_walk -
+	-- not a body left behind by a teleport the bodies haven't heard of yet)
+	if body and e.x and math.abs(body.x - e.x) <= 2 and math.abs(body.y - e.y) <= 2 then
 		base = body.pos
 	elseif e.marker_at then
 		base = e.marker_at -- (an unseen monster's marker: below)

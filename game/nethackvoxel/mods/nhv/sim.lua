@@ -158,7 +158,14 @@ local function pet_walk(e, x, y)
 	if e.walk and e.walk.last then
 		all[#all + 1] = e.walk.last
 	end
-	all[#all + 1] = {x = x, y = y}
+	-- (the squares between, if it went more than one: the way through them)
+	local from = all[#all]
+	local between = map and nhv.path.find(from.x, from.y, x, y,
+		function(px, py) return square_passable(map, px, py) end,
+		function(px, py) return is_door(map, px, py) end, 200, true)
+	for _, sq in ipairs(between or {{x = x, y = y}}) do
+		all[#all + 1] = sq
+	end
 	local squares, heights = {}, {}
 	for _, sq in ipairs(all) do
 		local last = squares[#squares]
@@ -187,7 +194,9 @@ function sim.sync()
 			-- mover): a step to the next square glides there - a pet's body
 			-- walks there - a jump snaps
 			local adj = math.abs(e.x - m.x) <= 1 and math.abs(e.y - m.y) <= 1
-			if adj and U.has(m.flags or 0, MF.TAME) then
+			-- (a fast pet may have gone two or three squares since: walked too)
+			local near = math.abs(e.x - m.x) <= 3 and math.abs(e.y - m.y) <= 3
+			if near and U.has(m.flags or 0, MF.TAME) then
 				e.glide = nil
 				pet_walk(e, m.x, m.y)
 			elseif adj then
@@ -522,7 +531,8 @@ end
 local function separate(dturns)
 	local list = {}
 	for _, e in pairs(sim.mons) do
-		if not e.glide then
+		-- (not one gliding, or a pet walking after NetHack's: on their way)
+		if not e.glide and not e.walk then
 			list[#list + 1] = e
 		end
 	end
