@@ -43,6 +43,11 @@ header.hero p.tag { font-size: 1.25rem; color: var(--dim); margin: 18px auto 28p
 .downloads b { font-family: "Retro", ui-monospace, monospace; font-weight: normal; color: var(--gold); font-size: 1.4rem; margin-right: 6px; }
 
 .shot { margin: 8px 0 56px; }
+.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 0 0 56px; }
+.gallery a { display: block; }
+.gallery img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border: 2px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
+.gallery a:hover img { border-color: var(--gold-deep); }
+@media (max-width: 600px) { .gallery { grid-template-columns: 1fr; } }
 .shot img { width: 100%; display: block; border: 2px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
 
 h2 { font-family: "Retro", ui-monospace, monospace; color: var(--gold); font-weight: normal; font-size: 1.5rem; margin: 48px 0 16px; }
@@ -118,6 +123,18 @@ footer { margin: 64px 0 40px; padding-top: 20px; border-top: 1px solid var(--lin
 </div>
 
 <div class="shot"><img src="assets/shot-minetown.jpg" alt="Minetown in the Gnomish Mines: two watchmen on patrol between Izchak's Lighting Store and a general store"></div>
+
+<h2>Screenshots</h2>
+<div class="gallery">
+  <a href="assets/screens/01-delphi.png"><img src="assets/screens/01-delphi.png" alt="The Oracle's centaur fountains at Delphi" loading="lazy"></a>
+  <a href="assets/screens/02-open-sky.png"><img src="assets/screens/02-open-sky.png" alt="Open sky over dark water, fighting with a weapon in each hand" loading="lazy"></a>
+  <a href="assets/screens/03-third-person.png"><img src="assets/screens/03-third-person.png" alt="A Rogue seen in third person, with a demon beside them" loading="lazy"></a>
+  <a href="assets/screens/04-crowd.png"><img src="assets/screens/04-crowd.png" alt="The side bars HUD, monsters crowding round the hero" loading="lazy"></a>
+  <a href="assets/screens/05-mines-pit.png"><img src="assets/screens/05-mines-pit.png" alt="A spiked pit in the Gnomish Mines, side bars HUD" loading="lazy"></a>
+  <a href="assets/screens/06-gehennom.png"><img src="assets/screens/06-gehennom.png" alt="Gehennom under its burning sky" loading="lazy"></a>
+  <a href="assets/screens/07-minotaur.png"><img src="assets/screens/07-minotaur.png" alt="A minotaur in Gehennom's dark" loading="lazy"></a>
+  <a href="assets/screens/08-burning-sky.png"><img src="assets/screens/08-burning-sky.png" alt="A monster under the burning sky, HUD hidden" loading="lazy"></a>
+</div>
 
 <h2>How to play</h2>
 <ol class="steps">
