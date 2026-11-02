@@ -6,8 +6,7 @@
 --   * a hostile monster that can see you walks straight at you,
 --   * one that can't follows a path over the map squares toward where it
 --     thinks you are,
---   * peacefuls wander; pets are NetHack's own (it moves them square by
---     square, as it does shopkeepers, and their bodies glide after them).
+--   * pets follow you and go after nearby hostiles, peacefuls wander.
 -- When a body crosses into another square NetHack is told
 -- (core.nh_move_monster), which handles doors, traps and items and may
 -- refuse the square (it's occupied, too narrow, ...).
@@ -144,49 +143,6 @@ local function center_of(x, y)
 	return vector.new(c.x, 0, c.z)
 end
 
--- A pet: NetHack walks it square by square (dog_move - where it wanders
--- off to, what it fetches, what it won't step on); its body walks after it
--- through the blocks, as yours does when you travel (path.body_route: round
--- walls and corners, through a tight corner's gap, keeping off the walls),
--- from where it is - on its way to the last square, through that one - to
--- the middle of the square NetHack put it on.
-local function pet_walk(e, x, y)
-	local map = nh.snap and nh.snap.map
-	local to = map and sim.walk_center(map, x, y) or center_of(x, y)
-	local bx, by = U.pos_to_tile(e.pos)
-	local all = {{x = bx, y = by}}
-	if e.walk and e.walk.last then
-		all[#all + 1] = e.walk.last
-	end
-	-- (the squares between, if it went more than one: the way through them)
-	local from = all[#all]
-	local between = map and nhv.path.find(from.x, from.y, x, y,
-		function(px, py) return square_passable(map, px, py) end,
-		function(px, py) return is_door(map, px, py) end, 200, true)
-	for _, sq in ipairs(between or {{x = x, y = y}}) do
-		all[#all + 1] = sq
-	end
-	local squares, heights = {}, {}
-	for _, sq in ipairs(all) do
-		local last = squares[#squares]
-		if U.in_map(sq.x, sq.y) and not (last and last.x == sq.x and last.y == sq.y) then
-			squares[#squares + 1] = sq
-			heights[U.idx(sq.x, sq.y)] = nhv.terrain.stand_y(sq.x, sq.y)
-		end
-	end
-	local pts = nhv.path.body_route(squares, e.pos, to, heights) or {{x = to.x, z = to.z}}
-	-- (its pace: the whole way in a turn - so it gets there as NetHack's
-	-- next move comes, not early, to stand and wait: a cat goes one square
-	-- one turn and two the next - never slower than half its speed)
-	local len, prev = 0, e.pos
-	for _, p in ipairs(pts) do
-		len = len + math.sqrt((p.x - prev.x) ^ 2 + (p.z - prev.z) ^ 2)
-		prev = p
-	end
-	local pace = math.max(len, math.max((e.speed or 12) / 12, 0.5) * TILE * 0.5)
-	e.walk = {pts = pts, i = 1, last = {x = x, y = y}, pace = pace}
-end
-
 -- Bring our bodies in line with NetHack's list of monsters.
 function sim.sync()
 	local all = core.nh_get_all_monsters() or {}
@@ -200,19 +156,13 @@ function sim.sync()
 			sim.mons[m.id] = e
 		elseif e.x ~= m.x or e.y ~= m.y then
 			-- NetHack moved it itself (teleport, displacement, dodging, a grid
-			-- mover): a step to the next square glides there - a pet's body
-			-- walks there - a jump snaps
+			-- mover): a step to the next square glides there, a jump snaps
 			local adj = math.abs(e.x - m.x) <= 1 and math.abs(e.y - m.y) <= 1
-			-- (a fast pet may have gone two or three squares since: walked too)
-			local near = math.abs(e.x - m.x) <= 3 and math.abs(e.y - m.y) <= 3
-			if near and U.has(m.flags or 0, MF.TAME) then
-				e.glide = nil
-				pet_walk(e, m.x, m.y)
-			elseif adj then
+			if adj then
 				e.glide = center_of(m.x, m.y)
 			else
 				e.pos = center_of(m.x, m.y)
-				e.glide, e.walk = nil, nil
+				e.glide = nil
 			end
 			e.path = nil
 		end
@@ -377,6 +327,20 @@ local function wander(e, map, dist, hp)
 	follow_path(e, map, e.wander.x, e.wander.y, dist * 0.6, hp)
 end
 
+-- nearest hostile monster to e within `within` nodes
+local function nearest_hostile(e, within)
+	local best, bd
+	for _, o in pairs(sim.mons) do
+		if o ~= e and not has(o.flags, MF.TAME) and not has(o.flags, MF.PEACEFUL) then
+			local d = flat_dist(e.pos, o.pos)
+			if d <= within and (not bd or d < bd) then
+				best, bd = o, d
+			end
+		end
+	end
+	return best, bd
+end
+
 -- You're up a built staircase (or anything with a climbing path) in your
 -- square: a monster beside it, after you, climbs the path - block by
 -- block - to the one nearest you, instead of waiting below for you to come
@@ -415,31 +379,6 @@ end
 -- one monster's movement for this step
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
-	if e.walk then
-		-- a pet's body walking after NetHack's pet (pet_walk): at the pace
-		-- that gets it there in a turn, eased from the last one's (no
-		-- lurching from one square a turn to two)
-		local w = e.walk
-		e.wpace = e.wpace and (e.wpace + (w.pace - e.wpace) * math.min(1, dturns * 6)) or w.pace
-		local step = e.wpace * dturns
-		while step > 0 and w.pts[w.i] do
-			local p = w.pts[w.i]
-			local dx, dz = p.x - e.pos.x, p.z - e.pos.z
-			local d = math.sqrt(dx * dx + dz * dz)
-			if d <= step then
-				e.pos = vector.new(p.x, 0, p.z)
-				step = step - d
-				w.i = w.i + 1
-			else
-				e.pos = vector.new(e.pos.x + dx / d * step, 0, e.pos.z + dz / d * step)
-				step = 0
-			end
-		end
-		if not w.pts[w.i] then
-			e.walk = nil
-		end
-		return
-	end
 	if e.glide then
 		-- NetHack already put it there: slide straight in, quickly (at
 		-- least a square per turn), through anything in the way
@@ -470,7 +409,23 @@ local function think(e, map, dturns, hp, hero)
 		return
 	end
 	local touch = e.r + sim.HERO_R
-	-- (pets are grid movers: NetHack's own pets, dog_move - nhv_grid_mover)
+	if has(e.flags, MF.TAME) then
+		local foe, fd = nearest_hostile(e, 4 * TILE)
+		if foe then
+			if fd <= e.r + foe.r + sim.REACH then
+				e.target = foe.id
+			else
+				move_toward(e, map, foe.pos, dist, e.r + foe.r + sim.REACH * 0.6, hp)
+			end
+			return
+		end
+		if hp and flat_dist(e.pos, hp) > 2.2 * TILE then
+			if not follow_path(e, map, hero.x, hero.y, dist, hp) then
+				move_toward(e, map, hp, dist, touch + 1.0, hp)
+			end
+		end
+		return
+	end
 	if has(e.flags, MF.PEACEFUL) then
 		wander(e, map, dist, hp)
 		return
@@ -536,8 +491,7 @@ end
 local function separate(dturns)
 	local list = {}
 	for _, e in pairs(sim.mons) do
-		-- (not one gliding, or a pet walking after NetHack's: on their way)
-		if not e.glide and not e.walk then
+		if not e.glide then
 			list[#list + 1] = e
 		end
 	end

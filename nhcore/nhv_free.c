@@ -54,16 +54,11 @@ nhv_mon_melee_target(struct monst *mtmp)
     return (struct monst *) 0;
 }
 
-/* monsters NetHack moves square by square, as it always does (the host's
-   bodies glide after them): shopkeepers, guards, priests, long worms, what
-   holds you - and pets, so they're NetHack's own pets (dog_move: wandering
-   off and back, picking things up and dropping them, eating, going only
-   reluctantly onto cursed things) */
 boolean
 nhv_grid_mover(struct monst *mtmp)
 {
     return (mtmp->isshk || mtmp->isgd || mtmp->ispriest || mtmp->wormno
-            || mtmp->mtame || mtmp == u.ustuck
+            || mtmp == u.ustuck
 #ifdef MAIL_STRUCTURES
             || mtmp->data == &mons[PM_MAIL_DAEMON]
 #endif

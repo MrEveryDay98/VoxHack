@@ -272,10 +272,7 @@ end
 local function mon_draw_pos(e)
 	local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 	local base
-	-- (its body, where it's within a couple of squares of where NetHack has
-	-- it - a pet's walks a little behind NetHack's: sim.lua's pet_walk -
-	-- not a body left behind by a teleport the bodies haven't heard of yet)
-	if body and e.x and math.abs(body.x - e.x) <= 2 and math.abs(body.y - e.y) <= 2 then
+	if body and body.x == e.x and body.y == e.y then
 		base = body.pos
 	elseif e.marker_at then
 		base = e.marker_at -- (an unseen monster's marker: below)
@@ -1557,20 +1554,15 @@ end
 -- (the client eases between those, unevenly - they come at uneven times:
 -- it shook), but given a velocity the client moves it by every frame -
 -- the pace of where it's to be, and a pull toward it - told again only
--- when that changes. Where it's to be jumping (a teleport, a new level...),
--- it's put there; only lagging behind - a fast monster turning round, time
--- running fast while you search - it's drawn harder, not put there.
+-- when that changes. Far off (a teleport, a new level...), it's put there.
 local STEER_PULL = 5   -- (per second: how hard it's drawn to where it's to be)
-local STEER_SNAP = 3   -- (nodes: where it's to be jumping further than this, put there)
-local STEER_FAR = 12   -- (nodes: lagging further behind than this, put there all the same)
+local STEER_SNAP = 3   -- (nodes: further off than this, put there)
 local ZERO = vector.zero()
 local function steer(e, pos, dtime)
 	local obj = e.obj
 	local cur = obj:get_pos()
 	local err = vector.subtract(pos, cur)
-	-- (further than even a fast monster in fast time goes in that while)
-	local jumped = not e.last_target or vector.distance(pos, e.last_target) > STEER_SNAP + 40 * dtime
-	if jumped or vector.length(err) > STEER_FAR or dtime <= 0 then
+	if vector.length(err) > STEER_SNAP or dtime <= 0 then
 		obj:set_pos(pos)
 		obj:set_velocity(ZERO)
 		e.steer_v, e.pace, e.last_target = ZERO, ZERO, pos
@@ -1579,10 +1571,7 @@ local function steer(e, pos, dtime)
 	local pace = e.last_target and vector.divide(vector.subtract(pos, e.last_target), dtime) or ZERO
 	e.last_target = pos
 	e.pace = vector.add(e.pace or ZERO, vector.multiply(vector.subtract(pace, e.pace or ZERO), math.min(1, dtime * 8)))
-	-- (further behind than a body's width: pulled harder, so it catches up -
-	-- never past where it's to be before it's steered again)
-	local pull = math.min(STEER_PULL * math.max(1, vector.length(err)), 0.8 / dtime)
-	local v = vector.add(e.pace, vector.multiply(err, pull))
+	local v = vector.add(e.pace, vector.multiply(err, STEER_PULL))
 	if vector.length(v) < 0.03 and vector.length(err) < 0.02 then
 		v = ZERO
 	end
