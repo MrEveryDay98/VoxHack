@@ -6,7 +6,8 @@
 --   * a hostile monster that can see you walks straight at you,
 --   * one that can't follows a path over the map squares toward where it
 --     thinks you are,
---   * pets follow you and go after nearby hostiles, peacefuls wander.
+--   * peacefuls wander; pets are NetHack's own (it moves them square by
+--     square, as it does shopkeepers, and their bodies glide after them).
 -- When a body crosses into another square NetHack is told
 -- (core.nh_move_monster), which handles doors, traps and items and may
 -- refuse the square (it's occupied, too narrow, ...).
@@ -327,20 +328,6 @@ local function wander(e, map, dist, hp)
 	follow_path(e, map, e.wander.x, e.wander.y, dist * 0.6, hp)
 end
 
--- nearest hostile monster to e within `within` nodes
-local function nearest_hostile(e, within)
-	local best, bd
-	for _, o in pairs(sim.mons) do
-		if o ~= e and not has(o.flags, MF.TAME) and not has(o.flags, MF.PEACEFUL) then
-			local d = flat_dist(e.pos, o.pos)
-			if d <= within and (not bd or d < bd) then
-				best, bd = o, d
-			end
-		end
-	end
-	return best, bd
-end
-
 -- You're up a built staircase (or anything with a climbing path) in your
 -- square: a monster beside it, after you, climbs the path - block by
 -- block - to the one nearest you, instead of waiting below for you to come
@@ -409,23 +396,7 @@ local function think(e, map, dturns, hp, hero)
 		return
 	end
 	local touch = e.r + sim.HERO_R
-	if has(e.flags, MF.TAME) then
-		local foe, fd = nearest_hostile(e, 4 * TILE)
-		if foe then
-			if fd <= e.r + foe.r + sim.REACH then
-				e.target = foe.id
-			else
-				move_toward(e, map, foe.pos, dist, e.r + foe.r + sim.REACH * 0.6, hp)
-			end
-			return
-		end
-		if hp and flat_dist(e.pos, hp) > 2.2 * TILE then
-			if not follow_path(e, map, hero.x, hero.y, dist, hp) then
-				move_toward(e, map, hp, dist, touch + 1.0, hp)
-			end
-		end
-		return
-	end
+	-- (pets are grid movers: NetHack's own pets, dog_move - nhv_grid_mover)
 	if has(e.flags, MF.PEACEFUL) then
 		wander(e, map, dist, hp)
 		return
