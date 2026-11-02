@@ -2,6 +2,13 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.18.0 (alpha) - 2026-11-01
+
+- **Glowing hands and blades.** After reading a scroll of confuse monster, what's in your hands glows red, pulsing slowly, brighter the more hits are left. Sting and Orcrist glow light blue across the blade while they warn of orcs (Grimtooth red, for elves), pulsing faster the nearer the nearest one is. In retro mode the glow is a dithered overlay of its colour.
+- **The camera flashes at the monster under your crosshair**, not only along the 8 directions (as wands and throws already did). It still blinds only the first monster in its way.
+- A priest knows an item's blessed or cursed status the first time they see it.
+- No more stray Luanti messages: Z (the big map) no longer says zoom is disabled, and V (the minimap) says nothing. Outside wizard mode the fly, fast and noclip keys do nothing at all, and + and - no longer change the view distance.
+
 ## v0.17.0 (alpha) - 2026-11-01
 
 - **Worms have bodies.** A long worm's tail is one body, snaking from its head through the squares it covers, drawn with the tail's sprite, thinning toward the tip. Purple worms (and the baby worms) get a short body behind them, only for looks: NetHack has them on one square.
