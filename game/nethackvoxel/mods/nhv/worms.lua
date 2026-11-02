@@ -394,6 +394,18 @@ worms.heads = {}
 worms.covered = {}
 worms.squares = {}
 
+-- Where you last hit a worm's body (actions.lua): its blood sprays from
+-- there, not its head (mobs.flash). {id, pos, size, t}
+local last_hit = nil
+function worms.hit_at(id, pos, size)
+	last_hit = {id = id, pos = pos, size = size, t = core.get_us_time()}
+end
+function worms.hit_pos(id)
+	if last_hit and last_hit.id == id and core.get_us_time() - last_hit.t < 1.5e6 then
+		return last_hit.pos, last_hit.size
+	end
+end
+
 -- Hurt (or attacking), a worm's sprite flashes (mobs.flash): its whole
 -- body with it. worm id -> {kind (nhv_tiles.FLASH), until}
 local flashing = {}

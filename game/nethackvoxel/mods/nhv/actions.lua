@@ -623,6 +623,10 @@ function actions.attack_worm(player, ent, e)
 	local touch = at and vector.distance(vector.new(at.x, 0, at.z), vector.new(pos.x, 0, pos.z))
 		<= nhv.sim.HERO_R + nhv.sim.REACH + size * 0.4
 	if id and touch then
+		-- (its blood from where you hit it: worms.lua, mobs.flash)
+		if nhv.worms then
+			nhv.worms.hit_at(id, at, size)
+		end
 		for _, m in pairs(nhv.mobs.mons) do
 			local p
 			if m.tail_of == id then

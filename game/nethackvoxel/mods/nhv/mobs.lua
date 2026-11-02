@@ -1060,6 +1060,14 @@ function mobs.flash(id, kind, secs)
 		nhv.worms.flash(id, kind, secs)
 	end
 	local e = mobs.mons["id" .. id]
+	-- (a worm hit in its body: blood from there)
+	local hit, hit_size = nil, nil
+	if kind == "r" and nhv.worms then
+		hit, hit_size = nhv.worms.hit_pos(id)
+		if hit then
+			mobs.blood_at(hit, hit_size * 2)
+		end
+	end
 	if not e or not e.tile or not e.obj:get_pos() then
 		return
 	end
@@ -1067,7 +1075,7 @@ function mobs.flash(id, kind, secs)
 	if not e.ghost then -- (a ghost doesn't flash)
 		e.obj:set_properties(look_for(e, kind))
 	end
-	if kind == "r" then
+	if kind == "r" and not hit then
 		mobs.blood(e)
 	end
 end
@@ -1075,10 +1083,13 @@ end
 -- a spray of red particles from a monster that was hurt
 function mobs.blood(e)
 	local pos = e.obj:get_pos()
-	if not pos then
-		return
+	if pos then
+		mobs.blood_at(pos, e.h or 1.5)
 	end
-	local h = e.h or 1.5
+end
+
+-- (from pos, the middle of a body h tall)
+function mobs.blood_at(pos, h)
 	local w = h * 0.3
 	core.add_particlespawner({
 		amount = math.floor(14 + h * 8), time = 0.08,
@@ -1106,8 +1117,20 @@ local function swipe(e, target)
 	})
 end
 
+-- A monster's melee attack whooshes as your swing does, higher (the swing
+-- sound's hooks: hero_swing; and, missing, hero_swing_miss_air)
+local MON_SWING_PITCH = 1.35
 nhv.nh.on_event(function(evs)
+	local swinger = nil -- (the last monster to swing: a miss is its)
 	for _, ev in ipairs(evs) do
+		if ev.kind == "message" and swinger and ev.text and ev.text:find(" misses[ !.]")
+				and not ev.text:find("^You ") then
+			local p = swinger.obj:get_pos()
+			if p then
+				nhv.sound.hook("hero_swing_miss_air", {pos = p, pitch = MON_SWING_PITCH})
+			end
+			swinger = nil
+		end
 		if ev.kind == "combat" then
 			local kind, a, b, melee = ev.text:match("^(%a+) (%d+) (%d+) (%d)")
 			-- a monster died (even from one hit): blood where its body was
@@ -1119,7 +1142,9 @@ nhv.nh.on_event(function(evs)
 				a, b = tonumber(a), tonumber(b)
 				mobs.flash(a, "w", 0.12)
 				local e = mobs.mons["id" .. a]
-				if e and melee == "1" then
+				if e and melee == "1" and e.obj:get_pos() then
+					nhv.sound.hook("hero_swing", {pos = e.obj:get_pos(), pitch = MON_SWING_PITCH})
+					swinger = e
 					local target
 					if b == 0 then
 						local p = core.get_connected_players()[1]

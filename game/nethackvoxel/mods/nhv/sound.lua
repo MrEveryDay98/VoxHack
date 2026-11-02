@@ -276,7 +276,7 @@ function sound.hook(id, opts)
 	local gain = (entry.volume or 100) / 100 * ((opts.volume or 100) / 100)
 		* ((sound.cfg.master.effects or 100) / 100)
 	local pv = entry.pitch_var or 0
-	local params = {gain = gain, pitch = 1 + (math.random() * 2 - 1) * pv}
+	local params = {gain = gain, pitch = (1 + (math.random() * 2 - 1) * pv) * (opts.pitch or 1)}
 	-- the hero's own voice (hooks ticked "Player voice" in the sound
 	-- editor: hurt, yawning...) is higher for a female hero
 	local hero = nh.snap and nh.snap.hero
