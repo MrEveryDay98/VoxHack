@@ -496,6 +496,27 @@ function hud.messages_bottom()
 	return hud.msg_y + n * nhv.sidebars.text_metrics()
 end
 
+-- A blow - an attack, a kick - that took no time: NetHack gave a fast hero
+-- an extra move (clock.lua). Said under the crosshair for a moment, so the
+-- next one, coming at once, is seen to be meant.
+local EXTRA_S = 0.9
+local extra_until = 0
+function hud.extra_move()
+	local player = nhv.player.get()
+	if not (player and hud.ids.extra) then
+		return
+	end
+	extra_until = core.get_us_time() + EXTRA_S * 1e6
+	player:hud_change(hud.ids.extra, "text", "Extra move!")
+	player:hud_change(hud.ids.extra_shadow, "text", "Extra move!")
+	core.after(EXTRA_S + 0.05, function()
+		if core.get_us_time() >= extra_until and player:is_player() and hud.ids.extra then
+			player:hud_change(hud.ids.extra, "text", "")
+			player:hud_change(hud.ids.extra_shadow, "text", "")
+		end
+	end)
+end
+
 -- Inscriptions on the floor (engravings, graffiti, headstones...) are shown
 -- low in the middle of the screen in gold, not with the messages (NetHack's
 -- "Something is written here in the dust." line before them still is).
@@ -1283,6 +1304,15 @@ core.register_on_joinplayer(function(player)
 	hud.ids.inscr_shadow = centre(true)
 	hud.ids.inscr = centre(false)
 	inscr = nil
+	-- "Extra move!" just under the crosshair, for a moment (hud.extra_move)
+	hud.ids.extra_shadow = player:hud_add({
+		type = "text", position = {x = 0.5, y = 0.54}, alignment = {x = 0, y = 1},
+		offset = {x = 2, y = 2}, number = 0x000000, text = "", z_index = 22,
+	})
+	hud.ids.extra = player:hud_add({
+		type = "text", position = {x = 0.5, y = 0.54}, alignment = {x = 0, y = 1},
+		offset = {x = 0, y = 0}, number = 0x90D8FF, text = "", z_index = 23,
+	})
 	-- what lies on your square, down the left side: no box, a black shadow
 	-- (the same text again, a little down and right, behind it). "F  Pick up"
 	-- sits at a fixed place low on the left, the list above it, growing up

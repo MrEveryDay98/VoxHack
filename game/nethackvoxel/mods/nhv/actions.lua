@@ -70,10 +70,13 @@ local function run_now(a, info)
 	if a.free then
 		nh.act(a.keys, info or {kind = "info"})
 	else
-		if not actions.kick_start(a.keys) then
+		info = info or {kind = "action"}
+		if actions.kick_start(a.keys) then
+			info.blow = true -- (a kick: clock.lua tells if it took no time)
+		else
 			actions.swing()
 		end
-		nhv.clock.act(a.keys, info or {kind = "action"})
+		nhv.clock.act(a.keys, info)
 	end
 end
 
