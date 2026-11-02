@@ -236,17 +236,27 @@ def clean_sky(s):
     }
 
 
-# 16-colour retro mode's sky colours (EGA's 16 - the second stage shader's
-# nhvSky16), and the times of day they're set for by default
-EGA = ["#000000", "#0000AA", "#00AA00", "#00AAAA", "#AA0000", "#AA00AA", "#AA5500", "#AAAAAA",
-       "#555555", "#5555FF", "#55FF55", "#55FFFF", "#FF5555", "#FF55FF", "#FFFF55", "#FFFFFF"]
+# 16-colour retro mode's sky colours: NetHack's tiles' 16, the ones the rest
+# of that mode is drawn in (the second stage shader's nhvTiles16), and the
+# times of day they're set for till you set your own (sky.lua's too)
+PALETTE16 = ["#000000", "#914700", "#CC4F00", "#FF0000", "#FF6C00", "#FFB691", "#FFFF00", "#6CFF00",
+             "#009100", "#486C6C", "#6C91B6", "#00B6FF", "#0000FF", "#FF00FF", "#D7D7D7", "#FFFFFF"]
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 RETRO16_DEFAULT = {"on": True, "times": [
-    {"at": "05:00", "sky": "#AA00AA", "horizon": "#FF5555", "fade": 60},
-    {"at": "07:00", "sky": "#5555FF", "horizon": "#55FFFF", "fade": 60},
-    {"at": "18:00", "sky": "#AA00AA", "horizon": "#AA5500", "fade": 60},
-    {"at": "20:00", "sky": "#000000", "horizon": "#0000AA", "fade": 60},
+    {"at": "05:00", "sky": "#FF00FF", "horizon": "#FF6C00", "fade": 60},
+    {"at": "07:00", "sky": "#00B6FF", "horizon": "#6C91B6", "fade": 60},
+    {"at": "18:00", "sky": "#FF00FF", "horizon": "#CC4F00", "fade": 60},
+    {"at": "20:00", "sky": "#000000", "horizon": "#0000FF", "fade": 60},
 ]}
+
+
+def _nearest16(c, default):
+    """the palette's colour nearest c ("#RRGGBB"), or default"""
+    m = re.match(r"^#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$", c)
+    if not m:
+        return default
+    rgb = [int(x, 16) for x in m.groups()]
+    return min(PALETTE16, key=lambda p: sum((int(p[1 + 2 * i:3 + 2 * i], 16) - rgb[i]) ** 2 for i in range(3)))
 
 
 def clean_retro16(r):
@@ -257,8 +267,8 @@ def clean_retro16(r):
             continue
         sky = str(t.get("sky") or "").upper()
         hor = str(t.get("horizon") or "").upper()
-        times.append({"at": t["at"], "sky": sky if sky in EGA else "#5555FF",
-                      "horizon": hor if hor in EGA else "#55FFFF",
+        times.append({"at": t["at"], "sky": _nearest16(sky, "#00B6FF"),
+                      "horizon": _nearest16(hor, "#6C91B6"),
                       "fade": int(_num(t.get("fade"), 0, 720, 60))})
     times.sort(key=lambda t: t["at"])
     return {"on": bool(r.get("on")), "times": times}

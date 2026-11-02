@@ -538,11 +538,12 @@ void main() {
       others.length ? el("div", {}, el("h4", {}, "Other names"), ...others) : null);
   }
 
-  // 16-colour retro mode's sky: its colours by the time of day (EGA's 16, the
-  // ones the game's 16-colour sky can show), each dithering in over a while
-  // from its time - for every day and night sky (sky.lua's retro16_colours)
-  const EGA = ["#000000", "#0000AA", "#00AA00", "#00AAAA", "#AA0000", "#AA00AA", "#AA5500", "#AAAAAA",
-    "#555555", "#5555FF", "#55FF55", "#55FFFF", "#FF5555", "#FF55FF", "#FFFF55", "#FFFFFF"];
+  // 16-colour retro mode's sky: its colours by the time of day (NetHack's
+  // tiles' 16, the ones the rest of that mode is drawn in), each dithering in
+  // over a while from its time - for every day and night sky (sky.lua's
+  // retro16_colours)
+  const PALETTE16 = ["#000000", "#914700", "#CC4F00", "#FF0000", "#FF6C00", "#FFB691", "#FFFF00", "#6CFF00",
+    "#009100", "#486C6C", "#6C91B6", "#00B6FF", "#0000FF", "#FF00FF", "#D7D7D7", "#FFFFFF"];
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const bayer = (x, y) => (BAYER[(y % 4) * 4 + (x % 4)] + 0.5) / 16;
   const minutes = (at) => { const m = /^(\d\d?):(\d\d)$/.exec(at || ""); return m ? +m[1] * 60 + +m[2] : null; };
@@ -583,7 +584,7 @@ void main() {
   }
 
   function egaPick(obj, key) {
-    return el("div", { class: "sky-ega" }, ...EGA.map((c) => el("button", {
+    return el("div", { class: "sky-ega" }, ...PALETTE16.map((c) => el("button", {
       class: "sky-ega-swatch" + (obj[key] === c ? " on" : ""), style: `background:${c}`, title: c,
       onclick: () => { obj[key] = c; touch(); render(); },
     })));
@@ -601,7 +602,7 @@ void main() {
       el("button", { class: "small", onclick: () => { r.times.splice(i, 1); touch(); render(); } }, "Remove")));
     return el("div", { class: "blk-editor sky-retro" },
       el("h4", {}, "16-colour retro sky"),
-      el("p", { class: "muted" }, "In retro mode's 16 colours, a day and night sky shows these colours instead of its own (which drift through every shade and come out as different ones of the 16 as the day goes). From each time the sky dithers into that time's colours, then keeps them till the next. Top and horizon dither into each other down the sky too. It follows the real clock, like the day and night sky."),
+      el("p", { class: "muted" }, "In retro mode's 16 colours (NetHack's own, as everything else is then), a day and night sky shows these colours instead of its own (which drift through every shade and come out as different ones of the 16 as the day goes). From each time the sky dithers into that time's colours, then keeps them till the next. Top and horizon dither into each other down the sky too. It follows the real clock, like the day and night sky."),
       check(r, "on", "Use these colours in 16-colour mode", render),
       r.on ? el("div", {},
         retroStrip(r),
@@ -609,7 +610,7 @@ void main() {
         ...rows,
         el("button", { class: "add", onclick: () => {
           const last = r.times[r.times.length - 1];
-          r.times.push({ at: "12:00", sky: last ? last.sky : "#5555FF", horizon: last ? last.horizon : "#55FFFF", fade: 60 });
+          r.times.push({ at: "12:00", sky: last ? last.sky : "#00B6FF", horizon: last ? last.horizon : "#6C91B6", fade: 60 });
           r.times.sort((a, b) => (minutes(a.at) || 0) - (minutes(b.at) || 0));
           touch(); render();
         } }, "+ Add a time")) : null);

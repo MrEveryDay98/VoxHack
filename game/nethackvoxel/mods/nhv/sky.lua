@@ -30,10 +30,11 @@
 --            the bolt)}: bolts across the sky now and then, high over you
 --   levels: level -> sky id: a special level variant ("medusa-2"), or the
 --           name before its "-" ("medusa", "bigrm"), or "default"
---   retro16: {on, times = {{at ("HH:MM"), sky, horizon (16 colours'),
---           fade (minutes)}, ...}}: in 16-colour retro mode, a day and night
---           sky's colours by the time of day - from each time, the sky
---           dithers into its colours over its fade (retro16_colours)
+--   retro16: {on, times = {{at ("HH:MM"), sky, horizon (NetHack's tiles'
+--           16 colours), fade (minutes)}, ...}}: in 16-colour retro mode, a
+--           day and night sky's colours by the time of day - from each
+--           time, the sky dithers into its colours over its fade
+--           (retro16_colours; RETRO16_DEFAULT till it's saved)
 
 local U = nhv.util
 local nh = nhv.nh
@@ -244,8 +245,18 @@ end
 -- into its colours, over its fade; then they stay till the next time. For
 -- the engine ("nhv_sky_retro", sky.cpp): the horizon and top colours now,
 -- the ones dithering in, and how far - "" when it's not that mode.
+-- (the editor's starting times: sky_api.py's RETRO16_DEFAULT)
+local RETRO16_DEFAULT = {on = true, times = {
+	{at = "05:00", sky = "#FF00FF", horizon = "#FF6C00", fade = 60},
+	{at = "07:00", sky = "#00B6FF", horizon = "#6C91B6", fade = 60},
+	{at = "18:00", sky = "#FF00FF", horizon = "#CC4F00", fade = 60},
+	{at = "20:00", sky = "#000000", horizon = "#0000FF", fade = 60},
+}}
 local function retro16_colours(s, tod)
 	local r = sky.data.retro16
+	if r == nil then
+		r = RETRO16_DEFAULT
+	end
 	if not (s and s.daynight and type(r) == "table" and r.on and type(r.times) == "table")
 			or not core.settings:get_bool("nhv_retro", false)
 			or core.settings:get("nhv_retro_palette") ~= "ega" then
