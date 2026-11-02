@@ -1573,10 +1573,17 @@ local function steer(e, pos, dtime)
 	end
 	local pace = e.last_target and vector.divide(vector.subtract(pos, e.last_target), dtime) or ZERO
 	e.last_target = pos
-	e.pace = vector.add(e.pace or ZERO, vector.multiply(vector.subtract(pace, e.pace or ZERO), math.min(1, dtime * 8)))
-	local v = vector.add(e.pace, vector.multiply(err, STEER_PULL))
-	if vector.length(v) < 0.03 and vector.length(err) < 0.02 then
-		v = ZERO
+	-- (where it's to be stopping: its pace drops off quickly - eased as
+	-- slowly as it picks up, it carried the sprite on past where it stopped,
+	-- to slide back when it set off again)
+	local still = vector.length(pace) < 0.05
+	e.pace = vector.add(e.pace or ZERO, vector.multiply(vector.subtract(pace, e.pace or ZERO),
+		math.min(1, dtime * (still and 20 or 8))))
+	-- (got as far as where it's to be, or past it: not driven on any further)
+	local onward = vector.dot(err, e.pace) > 0 and e.pace or ZERO
+	local v = vector.add(onward, vector.multiply(err, STEER_PULL))
+	if still and vector.length(err) < 0.05 then
+		v = ZERO -- (there: settled, not rocking about it)
 	end
 	if not e.steer_v or vector.distance(v, e.steer_v) > 0.08 then
 		e.steer_v = v

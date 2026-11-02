@@ -285,14 +285,15 @@ local function boulder_at(x, y)
 	return o and o.boulder
 end
 
--- follow a square path toward goal square gx, gy
-local function follow_path(e, map, gx, gy, dist, hp)
+-- follow a square path toward goal square gx, gy (round square `avoid`,
+-- {x, y}, if it's given: your square, for a pet ambling about)
+local function follow_path(e, map, gx, gy, dist, hp, avoid)
 	local now = nhv.clock.game
 	if not e.path or e.path_goal ~= gx * 32 + gy or now > e.repath then
 		e.path = nhv.path.find(e.x, e.y, gx, gy,
 			function(x, y) return square_passable(map, x, y)
 				and not (e.blocked[x * 32 + y] and e.blocked[x * 32 + y] > now)
-				and not boulder_at(x, y) end,
+				and not boulder_at(x, y) and not (avoid and x == avoid.x and y == avoid.y) end,
 			function(x, y) return is_door(map, x, y) end)
 		e.path_goal = gx * 32 + gy
 		e.repath = now + REPATH
@@ -332,13 +333,28 @@ local function wander(e, map, dist, hp)
 	follow_path(e, map, e.wander.x, e.wander.y, dist * 0.6, hp)
 end
 
--- nearest hostile monster to e within `within` nodes
-local function nearest_hostile(e, within)
+-- is the way from a to b clear of walls (no reaching round a corner)?
+local function clear_line(map, a, b)
+	local d = flat_dist(a, b)
+	local n = math.max(1, math.ceil(d / 0.5))
+	for k = 1, n - 1 do
+		local p = vector.new(a.x + (b.x - a.x) * k / n, 0, a.z + (b.z - a.z) * k / n)
+		local tx, ty = U.pos_to_tile(p)
+		if not square_passable(map, tx, ty) then
+			return false
+		end
+	end
+	return true
+end
+
+-- nearest hostile monster to e within `within` nodes, with no wall in
+-- between (not one in the next room, through the wall)
+local function nearest_hostile(e, within, map)
 	local best, bd
 	for _, o in pairs(sim.mons) do
 		if o ~= e and not has(o.flags, MF.TAME) and not has(o.flags, MF.PEACEFUL) then
 			local d = flat_dist(e.pos, o.pos)
-			if d <= within and (not bd or d < bd) then
+			if d <= within and (not bd or d < bd) and clear_line(map, e.pos, o.pos) then
 				best, bd = o, d
 			end
 		end
@@ -367,8 +383,9 @@ local function pet_spot(e, map, hero)
 		local x = hero.x + math.random(-PET_ROAM, PET_ROAM)
 		local y = hero.y + math.random(-PET_ROAM, PET_ROAM)
 		if not (x == hero.x and y == hero.y) and square_passable(map, x, y) and not boulder_at(x, y)
-				and nhv.path.find(e.x, e.y, x, y, function(px, py) return square_passable(map, px, py) end,
-					function(px, py) return is_door(map, px, py) end, 60) then
+				and nhv.path.find(e.x, e.y, x, y, function(px, py)
+					return square_passable(map, px, py) and not (px == hero.x and py == hero.y)
+				end, function(px, py) return is_door(map, px, py) end, 60) then
 			return x, y
 		end
 	end
@@ -376,7 +393,7 @@ end
 
 function pet(e, map, dist, hp, hero)
 	local touch = e.r + sim.HERO_R
-	local foe, fd = nearest_hostile(e, 4 * TILE)
+	local foe, fd = nearest_hostile(e, 4 * TILE, map)
 	if foe then
 		e.roam = nil
 		if fd <= e.r + foe.r + sim.REACH then
@@ -430,7 +447,16 @@ function pet(e, map, dist, hp, hero)
 		r.sit = now + PET_SIT[1] + math.random() * (PET_SIT[2] - PET_SIT[1])
 		return
 	end
-	if not follow_path(e, map, r.x, r.y, dist * PET_AMBLE, hp) then
+	-- (round your square; getting nowhere - you in the way, another
+	-- monster - for a turn: somewhere else)
+	if not r.check or now > r.check.t + 1 then
+		if r.check and flat_dist(e.pos, r.check.pos) < 0.3 then
+			e.roam = nil
+			return
+		end
+		r.check = {t = now, pos = e.pos}
+	end
+	if not follow_path(e, map, r.x, r.y, dist * PET_AMBLE, hp, hero) then
 		e.roam = nil
 	end
 end
@@ -609,20 +635,6 @@ function sim.update(dturns)
 		think(e, snap.map, dturns, hp, hero)
 	end
 	separate(dturns)
-end
-
--- is the way from a to b clear of walls (no reaching round a corner)?
-local function clear_line(map, a, b)
-	local d = flat_dist(a, b)
-	local n = math.max(1, math.ceil(d / 0.5))
-	for k = 1, n - 1 do
-		local p = vector.new(a.x + (b.x - a.x) * k / n, 0, a.z + (b.z - a.z) * k / n)
-		local tx, ty = U.pos_to_tile(p)
-		if not square_passable(map, tx, ty) then
-			return false
-		end
-	end
-	return true
 end
 
 -- Tell NetHack who can reach the hero / what pets are fighting: a body
