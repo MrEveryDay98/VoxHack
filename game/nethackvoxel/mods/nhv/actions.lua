@@ -609,28 +609,32 @@ aimed_segment = function(player)
 	end
 end
 
--- A worm's body you aim at (worms.lua): what's nearest the segment you aim
--- at of what you can hit of that worm - a square of its tail next to you,
--- or the worm itself in your reach (a purple worm's body is only to look
--- at: NetHack has it on its own square)
+-- A worm's body you aim at (worms.lua): any segment of it within your reach
+-- is hit - the blow lands on the worm's own square (NetHack's) nearest it,
+-- a square of its tail or its head, wherever that is (#nhvattack aims
+-- there); a purple worm's body, on the worm. Out of your reach: as any
+-- swing.
 function actions.attack_worm(player, ent, e)
 	local id = e and (e.id or e.tail_of)
 	local at = ent.object and ent.object:get_pos()
-	local h = hero()
 	local pos = player:get_pos()
 	local best, bd
-	if id and at and h and h.x then
+	local size = at and ent.object:get_properties().visual_size.x or 0
+	local touch = at and vector.distance(vector.new(at.x, 0, at.z), vector.new(pos.x, 0, pos.z))
+		<= nhv.sim.HERO_R + nhv.sim.REACH + size * 0.4
+	if id and touch then
 		for _, m in pairs(nhv.mobs.mons) do
-			local p, t
-			if m.tail_of == id and math.max(math.abs(m.x - h.x), math.abs(m.y - h.y)) == 1 then
-				p, t = U.tile_center(m.x, m.y), {id = id, tx = m.x, ty = m.y}
-			elseif m.id == id and nhv.sim.body(id) and nhv.sim.in_reach(id, pos) then
-				p, t = nhv.sim.body(id).pos, m
+			local p
+			if m.tail_of == id then
+				p = U.tile_center(m.x, m.y)
+			elseif m.id == id then
+				local b = nhv.sim.body(id)
+				p = b and b.pos or U.tile_center(m.x, m.y)
 			end
 			if p then
 				local d = vector.distance(vector.new(p.x, 0, p.z), vector.new(at.x, 0, at.z))
 				if not bd or d < bd then
-					best, bd = t, d
+					best, bd = {id = id, tx = m.x, ty = m.y}, d
 				end
 			end
 		end

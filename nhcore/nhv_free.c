@@ -416,6 +416,8 @@ donhvpole(void)
 /* #nhvattack id [x y]: melee a monster the host says is within reach -
    at x,y, one of its tail segments next to you, when it's a long worm's
    (there NetHack hits the tail, and may cut the worm in two) */
+coordxy nhv_hit_x = -1, nhv_hit_y = -1;
+
 int
 donhvattack(void)
 {
@@ -426,15 +428,21 @@ donhvattack(void)
     if (!mtmp)
         return nhv_ok();
     dx = sgn(mtmp->mx - u.ux), dy = sgn(mtmp->my - u.uy);
-    if (tx > 0 && isok(tx, ty) && m_at(tx, ty) == mtmp
-        && distmin(u.ux, u.uy, tx, ty) == 1)
-        dx = tx - u.ux, dy = ty - u.uy;
+    /* a square of the monster's given (a long worm's segment: the one the
+       player hit, the body's in reach there - wherever its square is):
+       that's where the blow lands (uhitm.c's do_attack), toward it */
+    if (tx > 0 && isok(tx, ty) && m_at(tx, ty) == mtmp) {
+        nhv_hit_x = tx, nhv_hit_y = ty;
+        if (tx != u.ux || ty != u.uy)
+            dx = sgn(tx - u.ux), dy = sgn(ty - u.uy);
+    }
     if (!dx && !dy)
         dx = 1;
     u.dx = dx, u.dy = dy, u.dz = 0;
     svc.context.forcefight = 1;
     (void) do_attack(mtmp);
     svc.context.forcefight = 0;
+    nhv_hit_x = nhv_hit_y = -1;
     return ECMD_TIME;
 }
 
