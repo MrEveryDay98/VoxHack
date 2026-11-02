@@ -517,7 +517,10 @@ function hud.extra_move()
 		local def = of and player:hud_get(of)
 		line = def and def.text
 	end
-	local from, to = line and line:find("T:%d+")
+	local from, to
+	if line then
+		from, to = line:find("T:%d+")
+	end
 	if not (of and from) then
 		return
 	end
