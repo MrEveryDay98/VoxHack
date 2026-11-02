@@ -1196,8 +1196,14 @@ static struct {
         int x, y, w, h;
     } r[MAXSPREG];
     int flip, minx, miny, maxx, maxy; /* flip_level's, once built */
+    int allow;                        /* the flips the level file allows */
+    int nlr;                          /* its stair, branch, teleport regions */
+    struct {
+        int t, x1, y1, x2, y2, dx1, dy1, dx2, dy2;
+    } lr[MAXSPREG];
 } splev;
 static FILE *splev_out; /* #nhvsplevdump: templates go here */
+static FILE *splev_lev_out; /* and the whole levels, for the documentation */
 
 void
 nhv_splev_begin(const char *protofile)
@@ -1207,6 +1213,8 @@ nhv_splev_begin(const char *protofile)
     splev.active = TRUE;
     splev.n = 0;
     splev.flip = 0;
+    splev.allow = 0;
+    splev.nlr = 0;
     Snprintf(splev.proto, sizeof splev.proto, "%s", protofile);
     if ((dot = strrchr(splev.proto, '.')) != 0)
         *dot = '\0'; /* ("minetn-3.lua" -> "minetn-3") */
@@ -1223,6 +1231,112 @@ nhv_splev_flip(int flp, int minx, int miny, int maxx, int maxy)
     splev.flip = flp & 3;
     splev.minx = minx, splev.miny = miny;
     splev.maxx = maxx, splev.maxy = maxy;
+}
+
+/* the level file's regions for its stairs, branch and teleport arrivals,
+   just before fixup_special places the stairs and lets them go (and the
+   flips the file allows) */
+void
+nhv_splev_lregions(int allow)
+{
+    int i;
+
+    if (!splev.active)
+        return;
+    splev.allow = allow & 3;
+    splev.nlr = 0;
+    for (i = 0; i < gn.num_lregions && splev.nlr < MAXSPREG; i++) {
+        lev_region *r = &gl.lregions[i];
+
+        splev.lr[splev.nlr].t = r->rtype;
+        splev.lr[splev.nlr].x1 = r->inarea.x1, splev.lr[splev.nlr].y1 = r->inarea.y1;
+        splev.lr[splev.nlr].x2 = r->inarea.x2, splev.lr[splev.nlr].y2 = r->inarea.y2;
+        splev.lr[splev.nlr].dx1 = r->delarea.x1, splev.lr[splev.nlr].dy1 = r->delarea.y1;
+        splev.lr[splev.nlr].dx2 = r->delarea.x2, splev.lr[splev.nlr].dy2 = r->delarea.y2;
+        splev.nlr++;
+    }
+}
+
+/* where square x, y of the level as its file made it is now (or, the
+   same thing, where one now came from): NetHack may have flipped it */
+static int
+splev_fx(int x)
+{
+    return ((splev.flip & 2) && x >= splev.minx && x <= splev.maxx)
+               ? splev.maxx - x + splev.minx : x;
+}
+
+static int
+splev_fy(int y)
+{
+    return ((splev.flip & 1) && y >= splev.miny && y <= splev.maxy)
+               ? splev.maxy - y + splev.miny : y;
+}
+
+static int
+splev_ux(int x)
+{
+    return (splev.flip & 2) ? splev.maxx - x + splev.minx : x;
+}
+
+static int
+splev_uy(int y)
+{
+    return (splev.flip & 1) ? splev.maxy - y + splev.miny : y;
+}
+
+/* #nhvsplevdump: the whole level as its file made it (before any flip) -
+   "L <proto> <allowed flips> <terrain, row by row>", its stair, branch and
+   teleport regions "R <proto> <type> <x1> <y1> <x2> <y2> <and the area
+   left out of it, or 0s>", its fixed regions "Q <proto> <n> <x> <y> <w>
+   <h>", its stairs and ladders "S <proto> <x> <y> <up> <ladder> <to another
+   dungeon>" and magic portals "P <proto> <x> <y>" */
+static void
+splev_dump_level(void)
+{
+    int i, x, y, a, b;
+    stairway *st;
+    struct trap *t;
+
+    if (!splev_lev_out)
+        return;
+    fprintf(splev_lev_out, "L %s %d ", splev.proto, splev.allow);
+    for (y = 0; y < ROWNO; y++)
+        for (x = 0; x < COLNO; x++)
+            fputc('0' + levl[splev_fx(x)][splev_fy(y)].typ, splev_lev_out);
+    fputc('\n', splev_lev_out);
+    for (i = 0; i < splev.nlr; i++) {
+        int c[8];
+
+        /* (flip_level turns these round whether they're in what it
+           flips or not: they're turned back the same way) */
+        c[0] = splev_ux(splev.lr[i].x1), c[2] = splev_ux(splev.lr[i].x2);
+        c[1] = splev_uy(splev.lr[i].y1), c[3] = splev_uy(splev.lr[i].y2);
+        c[4] = splev_ux(splev.lr[i].dx1), c[6] = splev_ux(splev.lr[i].dx2);
+        c[5] = splev_uy(splev.lr[i].dy1), c[7] = splev_uy(splev.lr[i].dy2);
+        if (c[4] < 0 || c[5] < 0) /* (no area left out: -1s) */
+            c[4] = c[5] = c[6] = c[7] = 0;
+        for (a = 0; a < 8; a += 4) /* (corners in order again) */
+            for (b = 0; b < 2; b++)
+                if (c[a + b] > c[a + b + 2]) {
+                    int tmp = c[a + b];
+
+                    c[a + b] = c[a + b + 2], c[a + b + 2] = tmp;
+                }
+        fprintf(splev_lev_out, "R %s %d %d %d %d %d %d %d %d %d\n", splev.proto,
+                splev.lr[i].t, c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]);
+    }
+    for (i = 0; i < splev.n; i++)
+        fprintf(splev_lev_out, "Q %s %d %d %d %d %d\n", splev.proto, i + 1,
+                splev.r[i].x, splev.r[i].y, splev.r[i].w, splev.r[i].h);
+    for (st = gs.stairs; st; st = st->next)
+        fprintf(splev_lev_out, "S %s %d %d %d %d %d\n", splev.proto,
+                splev_fx(st->sx), splev_fy(st->sy), st->up ? 1 : 0,
+                st->isladder ? 1 : 0, st->tolev.dnum != u.uz.dnum ? 1 : 0);
+    for (t = gf.ftrap; t; t = t->ntrap)
+        if (t->ttyp == MAGIC_PORTAL)
+            fprintf(splev_lev_out, "P %s %d %d\n", splev.proto,
+                    splev_fx(t->tx), splev_fy(t->ty));
 }
 
 void
@@ -1260,6 +1374,7 @@ nhv_splev_end(void)
     if (!splev.active)
         return;
     splev.active = FALSE;
+    splev_dump_level();
     for (i = 0; i < splev.n; i++) {
         if (splev_out) {
             /* "<proto> <n> <x> <y> <w> <h> <terrain>", the terrain types
@@ -1311,6 +1426,7 @@ donhvsplevdump(void)
         pline("Can't write splev_templates.txt.");
         return nhv_ok();
     }
+    splev_lev_out = fopen("splev_levels.txt", "w");
     for (sp = svs.sp_levchn; sp; sp = sp->next) {
         /* (the Planes of Air and Water move around: nothing fixed) */
         if (!strcmp(sp->proto, "air") || !strcmp(sp->proto, "water")
@@ -1331,6 +1447,9 @@ donhvsplevdump(void)
     putenv(envbuf);
     fclose(splev_out);
     splev_out = 0;
+    if (splev_lev_out)
+        fclose(splev_lev_out);
+    splev_lev_out = 0;
     /* back to a fresh copy of where we started */
     makemap_prepost(TRUE, FALSE);
     u.uz = here;

@@ -33,6 +33,7 @@
   <button role="tab" data-tab="blocks">Blocks</button>
   <button role="tab" data-tab="effects">Effects</button>
   <button role="tab" data-tab="sky">Sky</button>
+  <button role="tab" data-tab="splev">Special levels</button>
 </nav>
 
 <main>
@@ -109,6 +110,10 @@
     <div id="skyBody"></div>
   </section>
 
+  <section id="tab-splev" class="tab" hidden>
+    <div id="splevBody"></div>
+  </section>
+
   <section id="tab-extract" class="tab" hidden>
     <p class="hint">Cut sound effects out of a long recording: mark the clips on its waveform, name them, and save. Each is saved to the Sound library as its own sound, with a short fade at each end if you like (so it doesn't click).</p>
     <div id="extractBody"></div>
@@ -155,6 +160,7 @@
 <script src="/blocks.js"></script>
 <script src="/effects.js"></script>
 <script src="/sky.js"></script>
+<script src="/splev.js"></script>
 <script src="/extract.js"></script>
 <script src="/app.js"></script>
 </body>

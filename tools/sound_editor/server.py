@@ -39,6 +39,7 @@ import blocks_api  # noqa: E402
 import effects_api  # noqa: E402
 import extract_api  # noqa: E402
 import sky_api  # noqa: E402
+import splev_api  # noqa: E402
 import speakable  # noqa: E402
 import samvoice  # noqa: E402
 
@@ -67,6 +68,7 @@ CATALOG = os.path.join(MOD, "catalog")
 STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
           "/voices.js": ("voices.js", "text/javascript"),
           "/blocks.js": ("blocks.js", "text/javascript"), "/effects.js": ("effects.js", "text/javascript"), "/sky.js": ("sky.js", "text/javascript"),
+          "/splev.js": ("splev.js", "text/javascript"),
           "/texgen.js": ("texgen.js", "text/javascript"), "/extract.js": ("extract.js", "text/javascript"),
           "/style.css": ("style.css", "text/css")}
 NAME_RE = re.compile(r"^[a-z0-9_]{1,80}$")
@@ -322,6 +324,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/sky":
             return self.send(200, {"data": sky_api.load(), "textures": sky_api.textures(),
                                    "levels": sky_api.level_names()})
+        if path == "/api/splev":
+            return self.send(200, splev_api.load())
         if path == "/api/effects":
             return self.send(200, {"data": effects_api.load(), "textures": effects_api.textures(),
                                    "sheet": blocks_api.sheet_info(),

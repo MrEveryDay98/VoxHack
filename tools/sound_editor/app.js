@@ -624,6 +624,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   if (b.dataset.tab === "blocks") Blocks.render();
   if (b.dataset.tab === "effects") Effects.render();
   if (b.dataset.tab === "sky") Sky.render();
+  if (b.dataset.tab === "splev") Splev.render();
   if (b.dataset.tab === "extract") Extract.render();
   history.replaceState(null, "", "#" + b.dataset.tab);
 }));
