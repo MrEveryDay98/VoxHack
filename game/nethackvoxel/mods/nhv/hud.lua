@@ -1504,7 +1504,8 @@ local function crowd_wanted(player)
 	local yaw = player:get_look_horizontal()
 	local rx, rz = math.cos(yaw), math.sin(yaw) -- (your right)
 	for key, e in pairs(nhv.mobs.mons) do
-		if e.x and e.tile and e.tile >= 0 and not e.silhouette
+		-- (not a long worm's tail squares: its head's there if it's near)
+		if e.x and e.tile and e.tile >= 0 and not e.silhouette and not e.tail_of
 				and math.max(math.abs(e.x - h.x), math.abs(e.y - h.y)) == 1 then
 			local dx, dz = (e.x - h.x) * U.TILE, -(e.y - h.y) * U.TILE
 			local s = dx * rx + dz * rz
