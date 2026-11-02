@@ -2,6 +2,25 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.17.0 (alpha) - 2026-11-01
+
+- **Worms have bodies.** A long worm's tail is one body, snaking from its head through the squares it covers, drawn with the tail's sprite, thinning toward the tip. Purple worms (and the baby worms) get a short body behind them, only for looks: NetHack has them on one square.
+  - **Any segment you can reach can be hit:** the blow lands on the part of the worm nearest it (cutting a long worm in two as usual). When a worm is hurt its whole body flashes, and it bleeds where you hit it.
+  - Long worms bite like every other monster: only when their head reaches you.
+  - The big map shows every segment where it really is.
+- **Swallowed by a worm, you're inside its body:** its head is ahead of you, the segments round you swell to your size, and you see only as far as a blind hero would. Seen from behind, you aren't drawn; in first person NetHack's engulf frame is still there.
+- **Extra moves:** when you're fast enough for NetHack to give you a free blow, the turn counter flashes light blue and the blow's sound echoes.
+- Monsters' swings and misses whoosh like yours, a little higher.
+- **Pets give off hearts** now and then. The heart is an effect you can change in the VoxHack Editor (Effects tab), and a sound can go on it too.
+- The corner map shows pets pink and peaceful monsters amber.
+- **Travel passes the turns as you walk**, so monsters move meanwhile, and whatever interrupts travel in NetHack stops you there. A movement key of your own stops it too.
+- An unseen monster's marker sits where it really was, and is hit there.
+- Being swallowed: NetHack's engulf frame covers only the view, not the HUD.
+- The artifact name in its cutscene sits under the messages instead of over them.
+- The ring slots are labelled RING-L and RING-R.
+- Credits: every music track is listed with its source, author and licence.
+- Fixed: a big pet (a mumak) getting stuck in an open doorway, or not coming through one; the HUD flashing for a frame as the title screen came up; a crash when you stopped being swallowed; seams in the engulf frame.
+
 ## v0.16.0 (alpha) - 2026-11-01
 
 - **Side bars HUD layout** (Options > Graphics > HUD layout), for an old dungeon-crawler look: the HUD sits in brick bars either side of the view instead of over it.
