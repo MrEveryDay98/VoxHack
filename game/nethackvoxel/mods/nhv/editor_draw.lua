@@ -345,6 +345,11 @@ core.register_chatcommand("nhvkey", {
 	description = "(VoxHack) a game key; in the editor, middle mouse picks a block",
 	func = function(pname, param)
 		local player = core.get_player_by_name(pname)
+		if param == "retro" then
+			-- (F7: retro mode on or off - the engine switches at the next frame)
+			core.settings:set_bool("nhv_retro", not core.settings:get_bool("nhv_retro", false))
+			return true
+		end
 		if param ~= "look" or not player then
 			return true
 		end

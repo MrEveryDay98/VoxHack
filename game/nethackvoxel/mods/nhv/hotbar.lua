@@ -590,6 +590,15 @@ end
 core.register_chatcommand("nhvkey", {
 	description = "(VoxHack) action key",
 	func = function(pname, param)
+		if param == "retro" then
+			-- (F7: retro mode on or off, as Options > Graphics does it -
+			-- the HUD laid out again for the screen it's on now)
+			local player = core.get_player_by_name(pname)
+			if player and nhv.graphics then
+				nhv.graphics.set_retro(player, not core.settings:get_bool("nhv_retro", false))
+			end
+			return true
+		end
 		if nhv.cutscene and nhv.cutscene.active then
 			return true -- (a cutscene: keys do nothing, and aren't kept)
 		end

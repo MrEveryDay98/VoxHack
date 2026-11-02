@@ -54,6 +54,7 @@ help.SECTIONS = {
 		{"F2", "NetHackWiki: the page for what you're pointing at, or the last page you read (F2 again closes it)"},
 		{"F3", "Find any command: type part of its name or what it does, Enter does it (F3 again closes it)"},
 		{"F4", "ASCII mode on or off: the world drawn in NetHack's characters (the Rogue level always is)"},
+		{"F7", "Retro mode on or off (Options > Graphics > Retro mode): in the prefab editor too"},
 		{"F5", "Debug info: position, frame rate..."},
 		{"F6", "The profiler (performance graphs)"},
 		{"F10", "The console (the message log)"},
