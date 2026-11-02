@@ -105,30 +105,6 @@ def effect_chain(effects):
     return "/".join(out)
 
 
-def migrate_cast(cast):
-    """Casts from the Kokoro / ElevenLabs editor: only SAM's parts stay. A
-    line's edited spoken text becomes what SAM reads for it."""
-    for name, sc in list(cast.get("speakers", {}).items()):
-        for k in list(sc):
-            if k != "sam":
-                del sc[k]
-        if not sc:
-            del cast["speakers"][name]
-    for line_id, ln in list(cast.get("lines", {}).items()):
-        if ln.get("spoken") and not ln.get("sam_text"):
-            ln["sam_text"] = ln["spoken"]
-        for k in list(ln):
-            if k not in ("cast", "sam_voice", "sam_text", "mood"):
-                del ln[k]
-        if not ln:
-            del cast["lines"][line_id]
-    for k in list(cast):
-        if k not in ("version", "speakers", "lines"):
-            del cast[k]
-    cast["version"] = 3
-    return cast
-
-
 def _clamp(v):
     return max(1, min(255, int(round(v))))
 
@@ -210,8 +186,6 @@ class Voices:
             cast = json.loads(json.dumps(DEFAULT_CAST))
         for k, v in DEFAULT_CAST.items():
             cast.setdefault(k, json.loads(json.dumps(v)))
-        if cast.get("version", 1) < 3:
-            migrate_cast(cast)
         return cast
 
     def load_dict(self):
