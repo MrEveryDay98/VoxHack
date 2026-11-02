@@ -138,6 +138,22 @@ local function hits_terrain(e, map, p, r)
 	return door_overlap(map, p, r) > door_overlap(map, e.pos, r)
 end
 
+-- is there no solid block where a body of radius r at p stands (as the
+-- level's built: a corridor corner's gap carved out - terrain.lua's
+-- carve_corners)?
+local function body_clear(p, r)
+	for _, ox in ipairs({-r, r}) do
+		for _, oz in ipairs({-r, r}) do
+			local def = core.registered_nodes[core.get_node(vector.new(math.floor(p.x + ox + 0.5),
+				U.FLOOR_Y + 2, math.floor(p.z + oz + 0.5))).name]
+			if def and def.walkable then
+				return false
+			end
+		end
+	end
+	return true
+end
+
 -- ---------------------------------------------------------------- sync
 local function center_of(x, y)
 	local c = U.tile_center(x, y)
@@ -379,6 +395,17 @@ local function think(e, map, dturns, hp, hero)
 		local v = e.vel or vector.zero()
 		e.vel = vector.add(v, vector.multiply(vector.subtract(want, v), math.min(1, dturns * 8)))
 		local step = vector.multiply(e.vel, dturns)
+		-- (turning smoothly would take it into a wall - round a corridor's
+		-- tight corner - or it's brushing one: straight along NetHack's line,
+		-- through the corner's gap, instead)
+		local rr = math.min(e.r, 0.4) * 0.8
+		if d > 0.001 and not body_clear(vector.add(e.pos, step), rr) then
+			local speed = vector.length(e.vel)
+			local dir = vector.direction(e.pos, e.glide)
+			dir.y = 0
+			e.vel = vector.multiply(dir, speed)
+			step = vector.multiply(e.vel, dturns)
+		end
 		if vector.length(step) >= d then
 			e.pos, e.glide = e.glide, nil
 		else
