@@ -452,8 +452,12 @@ local function update_monsters(snap)
 				e.tail_hidden = hide
 				e.obj:set_properties({is_visible = not hide})
 			end
-			e.obj:set_pos(mon_draw_pos(e))
+			-- (put there only when new: one already about is steered there -
+			-- put there whenever the list changed, as it does when one steps
+			-- into the next square, it was put on to where its body was,
+			-- ahead of the sprite setting off after it)
 			if fresh then
+				e.obj:set_pos(mon_draw_pos(e))
 				fade_in(e)
 			end
 		end
