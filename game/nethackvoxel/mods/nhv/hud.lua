@@ -484,6 +484,18 @@ local function update_messages(player)
 	end
 end
 
+-- (where the message lines start - set as the HUD's laid out - and end,
+-- from the top of the screen: what goes under them, the artifact's name
+-- in its cutscene - cutscene.lua)
+hud.msg_y = 60
+function hud.messages_bottom()
+	local n = 0
+	if msg_shown and msg_shown ~= "" then
+		n = select(2, msg_shown:gsub("\n", "")) + 1
+	end
+	return hud.msg_y + n * nhv.sidebars.text_metrics()
+end
+
 -- Inscriptions on the floor (engravings, graffiti, headstones...) are shown
 -- low in the middle of the screen in gold, not with the messages (NetHack's
 -- "Something is written here in the dust." line before them still is).
@@ -1661,7 +1673,8 @@ function hud.build_meters(player)
 	info_shown = nil
 	-- (the message lines start below all that: long ones don't run over it)
 	if hud.ids.msg then
-		player:hud_change(hud.ids.msg, "offset", {x = 0, y = meter_y(#METERS) + 2 * h + 14})
+		hud.msg_y = meter_y(#METERS) + 2 * h + 14
+		player:hud_change(hud.ids.msg, "offset", {x = 0, y = hud.msg_y})
 	end
 end
 
@@ -1782,7 +1795,8 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 	end
 	info_shown = nil
 	if hud.ids.msg then
-		player:hud_change(hud.ids.msg, "offset", {x = 0, y = 60})
+		hud.msg_y = 60
+		player:hud_change(hud.ids.msg, "offset", {x = 0, y = hud.msg_y})
 	end
 end
 

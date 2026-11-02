@@ -82,6 +82,11 @@ local function artifact_tile(o_id)
 	end
 end
 
+-- (the artifact's name: just under the message lines, from the top)
+local function title_y()
+	return math.floor((nhv.hud.messages_bottom and nhv.hud.messages_bottom() or 120) + 10)
+end
+
 local function start(player, p)
 	local arts = nhv.achievements and nhv.achievements.ARTIFACTS or {}
 	local name = arts[p.n] and arts[p.n][2] or "an artifact"
@@ -125,16 +130,21 @@ local function start(player, p)
 			texture = "[fill:2x2:#FFE890", glow = 14, playername = player:get_player_name(),
 		}),
 	}
-	-- the screen's edges darkened, and the artifact's name at the top
+	-- the screen's edges darkened, and the artifact's name at the top, just
+	-- under the messages (kept there as they come and go: below)
 	scene.hud[#scene.hud + 1] = player:hud_add({
 		type = "image", position = {x = 0.5, y = 0.5}, alignment = {x = 0, y = 0},
 		scale = {x = -100, y = -100}, text = "nhv_vignette.png^[multiply:#000000^[opacity:200", z_index = 50,
 	})
+	scene.title, scene.title_y = {}, title_y()
 	for _, l in ipairs({{0x000000, 3}, {0xFFD25A, 0}}) do
-		scene.hud[#scene.hud + 1] = player:hud_add({
-			type = "text", position = {x = 0.5, y = 0.16}, alignment = {x = 0, y = 0},
-			offset = {x = l[2], y = l[2]}, size = {x = 2, y = 0}, number = l[1], text = name, z_index = 51,
+		local id = player:hud_add({
+			type = "text", position = {x = 0.5, y = 0}, alignment = {x = 0, y = 1},
+			offset = {x = l[2], y = scene.title_y + l[2]}, size = {x = 2, y = 0}, number = l[1], text = name,
+			z_index = 51,
 		})
+		scene.hud[#scene.hud + 1] = id
+		scene.title[#scene.title + 1] = {id = id, d = l[2]}
 	end
 	nhv.sound.hook("artifact_obtained", {pos = vector.new(pos.x, pos.y + 1, pos.z)})
 	core.log("action", "[nhv] artifact cutscene: " .. name)
@@ -191,6 +201,14 @@ core.register_globalstep(function(dtime)
 		end
 		scene.t = scene.t + dtime
 		local k = scene.t / DURATION
+		-- (the name under the messages, as many lines as there are)
+		local y = title_y()
+		if y ~= scene.title_y then
+			scene.title_y = y
+			for _, t in ipairs(scene.title or {}) do
+				player:hud_change(t.id, "offset", {x = t.d, y = y + t.d})
+			end
+		end
 		player:set_look_horizontal(scene.yaw + PAN * smooth(k))
 		player:set_look_vertical(PITCH)
 		-- (held up, bobbing a little)
