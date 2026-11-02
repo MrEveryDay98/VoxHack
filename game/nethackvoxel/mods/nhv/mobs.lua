@@ -272,7 +272,10 @@ end
 local function mon_draw_pos(e)
 	local body = e.id and e.id > 0 and nhv.sim.body(e.id)
 	local base
-	if body and body.x == e.x and body.y == e.y then
+	-- (its body - also just as it's stepped into the next square, before
+	-- the monster here hears of that: it'd be drawn back in the middle of
+	-- the last one for a moment)
+	if body and e.x and math.abs(body.x - e.x) <= 1 and math.abs(body.y - e.y) <= 1 then
 		base = body.pos
 	elseif e.marker_at then
 		base = e.marker_at -- (an unseen monster's marker: below)
