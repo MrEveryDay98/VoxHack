@@ -35,7 +35,8 @@ TAIL_LOOK = TAIL_LOOK and TAIL_LOOK.look or {tile = 0}
 local WIDTH = 0.9      -- a segment's picture next to the head, for the head's height
 local TIP = 0.13       -- at the very end of the tail, for that
 local BEHIND = 0.18    -- where it comes out: behind the head's middle, for its height
-local LENGTH = 4       -- a body with no tail: how long, for the head's height
+local LENGTH = 1.1     -- a body with no tail (only to look at): how long, for the head's height
+local MAX_BODY = 3     -- (and how many segments at most: NetHack's worm is on one square)
 local SPACING = 0.45   -- from one segment to the next, for their size
 local WAVE = 0.15      -- how far it snakes from side to side (nodes)
 local WAVE_LEN = 7     -- (nodes from one bend to the next the same way)
@@ -373,7 +374,7 @@ local function targets(w, phase)
 			local floor = U.in_map(tx, ty) and nhv.terrain.stand_y(tx, ty) or U.STAND_Y
 			out[#out + 1] = {pos = vector.new(p.x, floor + wd / 2, p.z), w = wd, key = s.key}
 			d = d + wd * SPACING
-		until d > len + 1e-3
+		until d > len + 1e-3 or (w.only_looks and #out >= MAX_BODY)
 	end
 	return out
 end
