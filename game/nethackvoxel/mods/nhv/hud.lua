@@ -497,24 +497,48 @@ function hud.messages_bottom()
 end
 
 -- A blow - an attack, a kick - that took no time: NetHack gave a fast hero
--- an extra move (clock.lua). Said under the crosshair for a moment, so the
--- next one, coming at once, is seen to be meant.
-local EXTRA_S = 0.9
-local extra_until = 0
+-- an extra move (clock.lua). The turn counter flashes light blue, three
+-- times, quickly: the same line over it, all but "T:<n>" blanked (the
+-- fonts' letters are all one width, so it lines up) - the side bars' stats
+-- line it's on, or the status line.
+local TURN_FLASH = 0x90D8FF
+local turn_flash = nil -- {id, of (the HUD element it's over)}
+local turn_seq = 0
 function hud.extra_move()
 	local player = nhv.player.get()
-	if not (player and hud.ids.extra) then
+	if not player then
 		return
 	end
-	extra_until = core.get_us_time() + EXTRA_S * 1e6
-	player:hud_change(hud.ids.extra, "text", "Extra move!")
-	player:hud_change(hud.ids.extra_shadow, "text", "Extra move!")
-	core.after(EXTRA_S + 0.05, function()
-		if core.get_us_time() >= extra_until and player:is_player() and hud.ids.extra then
-			player:hud_change(hud.ids.extra, "text", "")
-			player:hud_change(hud.ids.extra_shadow, "text", "")
+	local of, line
+	if nhv.sidebars and nhv.sidebars.geometry(player) then
+		of, line = nhv.sidebars.turns_line()
+	else
+		of = hud.ids.status
+		local def = of and player:hud_get(of)
+		line = def and def.text
+	end
+	local from, to = line and line:find("T:%d+")
+	if not (of and from) then
+		return
+	end
+	-- (made again over it each time: where it is now, as it's drawn now)
+	if turn_flash then
+		player:hud_remove(turn_flash.id)
+	end
+	local def = table.copy(player:hud_get(of))
+	def.number, def.text, def.z_index = TURN_FLASH, "", (def.z_index or 0) + 1
+	turn_flash = {id = player:hud_add(def), of = of}
+	local text = (" "):rep(from - 1) .. line:sub(from, to) .. (" "):rep(#line - to)
+	turn_seq = turn_seq + 1
+	local mine = turn_seq
+	local function set(on)
+		if mine == turn_seq and turn_flash and player:is_player() then
+			player:hud_change(turn_flash.id, "text", on and text or "")
 		end
-	end)
+	end
+	for i = 0, 5 do
+		core.after(i * 0.07, set, i % 2 == 0)
+	end
 end
 
 -- Inscriptions on the floor (engravings, graffiti, headstones...) are shown
@@ -1304,15 +1328,7 @@ core.register_on_joinplayer(function(player)
 	hud.ids.inscr_shadow = centre(true)
 	hud.ids.inscr = centre(false)
 	inscr = nil
-	-- "Extra move!" just under the crosshair, for a moment (hud.extra_move)
-	hud.ids.extra_shadow = player:hud_add({
-		type = "text", position = {x = 0.5, y = 0.54}, alignment = {x = 0, y = 1},
-		offset = {x = 2, y = 2}, number = 0x000000, text = "", z_index = 22,
-	})
-	hud.ids.extra = player:hud_add({
-		type = "text", position = {x = 0.5, y = 0.54}, alignment = {x = 0, y = 1},
-		offset = {x = 0, y = 0}, number = 0x90D8FF, text = "", z_index = 23,
-	})
+
 	-- what lies on your square, down the left side: no box, a black shadow
 	-- (the same text again, a little down and right, behind it). "F  Pick up"
 	-- sits at a fixed place low on the left, the list above it, growing up

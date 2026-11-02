@@ -290,6 +290,16 @@ function sound.hook(id, opts)
 	else
 		params.to_player = p:get_player_name()
 	end
+	-- (just the echoes of a sound already played: an extra move's blow,
+	-- clock.lua - known only once it's struck)
+	if opts.echo then
+		for _, echo in ipairs(FREE_ECHOES) do
+			local copy = table.copy(params)
+			copy.gain = params.gain * echo[2]
+			core.after(echo[1], core.sound_play, name, copy)
+		end
+		return
+	end
 	if opts.free then
 		params.pitch = params.pitch * FREE_PITCH
 		for _, echo in ipairs(FREE_ECHOES) do

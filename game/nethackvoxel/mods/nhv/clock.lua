@@ -266,9 +266,11 @@ nh.on_snapshot(function(snap, action)
 	if prev and action and action.kind ~= "tick" and action.kind ~= "hmove" then
 		local passed = snap.hero.moves - prev
 		-- (a blow that took no turn at all: a fast hero's extra move -
-		-- NetHack's own; shown, hud.lua)
+		-- NetHack's own: the turn counter flashes, hud.lua, and the blow's
+		-- sound echoes)
 		if passed == 0 and (action.kind == "attack" or action.kind == "swing" or action.blow) and nhv.hud then
 			nhv.hud.extra_move()
+			nhv.sound.hook(action.kind == "attack" and "hero_swing" or "hero_swing_miss_air", {echo = true})
 		end
 		if passed > 0 and passed < 1000 then -- (not a level change's jump)
 			local owed = passed * 1.0

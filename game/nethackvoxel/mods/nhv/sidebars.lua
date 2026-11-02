@@ -448,6 +448,16 @@ function sidebars.stat_chars(g)
 end
 
 -- the stats' lines (hud.lua's show_status)
+-- the stats line the turn counter's on: its HUD element and text (the
+-- turn counter's flash, hud.extra_move)
+function sidebars.turns_line()
+	for i = sidebars.STAT_LINES, 1, -1 do
+		if stats_shown[i] and stats_shown[i]:find("T:%d") then
+			return ids["stat" .. i], stats_shown[i]
+		end
+	end
+end
+
 function sidebars.set_stats(player, lines)
 	for i = 1, sidebars.STAT_LINES do
 		local id, text = ids["stat" .. i], lines[i] or ""
