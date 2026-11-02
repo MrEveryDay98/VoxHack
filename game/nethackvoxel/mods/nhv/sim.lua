@@ -138,26 +138,37 @@ local function hits_terrain(e, map, p, r)
 	return door_overlap(map, p, r) > door_overlap(map, e.pos, r)
 end
 
--- is there no solid block where a body of radius r at p stands (as the
--- level's built: a corridor corner's gap carved out - terrain.lua's
--- carve_corners)?
-local function body_clear(p, r)
-	for _, ox in ipairs({-r, r}) do
-		for _, oz in ipairs({-r, r}) do
-			local def = core.registered_nodes[core.get_node(vector.new(math.floor(p.x + ox + 0.5),
-				U.FLOOR_Y + 2, math.floor(p.z + oz + 0.5))).name]
-			if def and def.walkable then
-				return false
-			end
-		end
-	end
-	return true
-end
-
 -- ---------------------------------------------------------------- sync
 local function center_of(x, y)
 	local c = U.tile_center(x, y)
 	return vector.new(c.x, 0, c.z)
+end
+
+-- A pet: NetHack walks it square by square (dog_move - where it wanders
+-- off to, what it fetches, what it won't step on); its body walks after it
+-- through the blocks, as yours does when you travel (path.body_route: round
+-- walls and corners, through a tight corner's gap, keeping off the walls),
+-- from where it is - on its way to the last square, through that one - to
+-- the middle of the square NetHack put it on.
+local function pet_walk(e, x, y)
+	local map = nh.snap and nh.snap.map
+	local to = map and sim.walk_center(map, x, y) or center_of(x, y)
+	local bx, by = U.pos_to_tile(e.pos)
+	local all = {{x = bx, y = by}}
+	if e.walk and e.walk.last then
+		all[#all + 1] = e.walk.last
+	end
+	all[#all + 1] = {x = x, y = y}
+	local squares, heights = {}, {}
+	for _, sq in ipairs(all) do
+		local last = squares[#squares]
+		if U.in_map(sq.x, sq.y) and not (last and last.x == sq.x and last.y == sq.y) then
+			squares[#squares + 1] = sq
+			heights[U.idx(sq.x, sq.y)] = nhv.terrain.stand_y(sq.x, sq.y)
+		end
+	end
+	local pts = nhv.path.body_route(squares, e.pos, to, heights) or {{x = to.x, z = to.z}}
+	e.walk = {pts = pts, i = 1, last = {x = x, y = y}}
 end
 
 -- Bring our bodies in line with NetHack's list of monsters.
@@ -173,13 +184,17 @@ function sim.sync()
 			sim.mons[m.id] = e
 		elseif e.x ~= m.x or e.y ~= m.y then
 			-- NetHack moved it itself (teleport, displacement, dodging, a grid
-			-- mover): a step to the next square glides there, a jump snaps
+			-- mover): a step to the next square glides there - a pet's body
+			-- walks there - a jump snaps
 			local adj = math.abs(e.x - m.x) <= 1 and math.abs(e.y - m.y) <= 1
-			if adj then
+			if adj and U.has(m.flags or 0, MF.TAME) then
+				e.glide = nil
+				pet_walk(e, m.x, m.y)
+			elseif adj then
 				e.glide = center_of(m.x, m.y)
 			else
 				e.pos = center_of(m.x, m.y)
-				e.glide = nil
+				e.glide, e.walk = nil, nil
 			end
 			e.path = nil
 		end
@@ -382,45 +397,34 @@ end
 -- one monster's movement for this step
 local function think(e, map, dturns, hp, hero)
 	e.target = nil
-	if e.glide and has(e.flags, MF.TAME) then
-		-- a pet: NetHack chose the square (dog_move); its body walks there at
-		-- its own pace, turning smoothly and not stopping between the
-		-- squares it's sent to - faster only when it's fallen behind
-		local d = flat_dist(e.pos, e.glide)
-		local pace = math.max((e.speed or 12) / 12, 0.5) * TILE * math.max(1.15, d / TILE)
-		-- (slowing down only where it's going to stop: the last bit of the way)
-		local want = d > 0.001 and vector.multiply(vector.direction(e.pos, e.glide), math.min(pace, d * 4))
-			or vector.zero()
-		want.y = 0
-		local v = e.vel or vector.zero()
-		e.vel = vector.add(v, vector.multiply(vector.subtract(want, v), math.min(1, dturns * 8)))
-		local step = vector.multiply(e.vel, dturns)
-		-- (turning smoothly would take it into a wall - round a corridor's
-		-- tight corner - or it's brushing one: straight along NetHack's line,
-		-- through the corner's gap, instead)
-		local rr = math.min(e.r, 0.4) * 0.8
-		if d > 0.001 and not body_clear(vector.add(e.pos, step), rr) then
-			local speed = vector.length(e.vel)
-			local dir = vector.direction(e.pos, e.glide)
-			dir.y = 0
-			e.vel = vector.multiply(dir, speed)
-			step = vector.multiply(e.vel, dturns)
+	if e.walk then
+		-- a pet's body walking after NetHack's pet (pet_walk): at its own
+		-- pace - faster when it's fallen behind (more than a diagonal step)
+		local w = e.walk
+		local left = 0
+		local prev = e.pos
+		for k = w.i, #w.pts do
+			left = left + math.sqrt((w.pts[k].x - prev.x) ^ 2 + (w.pts[k].z - prev.z) ^ 2)
+			prev = w.pts[k]
 		end
-		if vector.length(step) >= d then
-			e.pos, e.glide = e.glide, nil
-		else
-			e.pos = vector.add(e.pos, step)
-			e.pos.y = 0
+		local step = math.max((e.speed or 12) / 12, 0.5) * dturns * TILE * math.max(1, left / (1.5 * TILE))
+		while step > 0 and w.pts[w.i] do
+			local p = w.pts[w.i]
+			local dx, dz = p.x - e.pos.x, p.z - e.pos.z
+			local d = math.sqrt(dx * dx + dz * dz)
+			if d <= step then
+				e.pos = vector.new(p.x, 0, p.z)
+				step = step - d
+				w.i = w.i + 1
+			else
+				e.pos = vector.new(e.pos.x + dx / d * step, 0, e.pos.z + dz / d * step)
+				step = 0
+			end
+		end
+		if not w.pts[w.i] then
+			e.walk = nil
 		end
 		return
-	end
-	-- (a pet there, between NetHack's moves: what way it was going fades,
-	-- so the next square it's sent to carries on from it, not from a stop)
-	if e.vel then
-		e.vel = vector.multiply(e.vel, math.max(0, 1 - dturns * 4))
-		if vector.length(e.vel) < 0.01 then
-			e.vel = nil
-		end
 	end
 	if e.glide then
 		-- NetHack already put it there: slide straight in, quickly (at
