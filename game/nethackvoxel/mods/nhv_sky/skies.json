@@ -574,5 +574,34 @@
   "fakewiz2": "sky6",
   "sanctum": "sky6",
   "wizard2": "sky6"
+ },
+ "retro16": {
+  "on": false,
+  "times": [
+   {
+    "at": "05:00",
+    "sky": "#AA00AA",
+    "horizon": "#FF5555",
+    "fade": 60
+   },
+   {
+    "at": "07:00",
+    "sky": "#5555FF",
+    "horizon": "#55FFFF",
+    "fade": 60
+   },
+   {
+    "at": "18:00",
+    "sky": "#AA00AA",
+    "horizon": "#AA5500",
+    "fade": 60
+   },
+   {
+    "at": "20:00",
+    "sky": "#000000",
+    "horizon": "#0000AA",
+    "fade": 60
+   }
+  ]
  }
 }

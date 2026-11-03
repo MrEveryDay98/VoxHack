@@ -425,7 +425,7 @@
      "texture": {
       "builtin": "star"
      },
-     "color": "#C800FF",
+     "color": "#FF00FF",
      "amount": 30,
      "duration": 0.3,
      "spread": 0.4,

@@ -1,0 +1,52 @@
+{
+ "bigrm-1": {
+  "outside": false
+ },
+ "bigrm-10": {
+  "area": false,
+  "outside": false
+ },
+ "bigrm-12": {
+  "outside": false
+ },
+ "bigrm-2": {
+  "outside": false
+ },
+ "bigrm-3": {
+  "area": true,
+  "outside": true
+ },
+ "bigrm-4": {
+  "outside": false
+ },
+ "bigrm-6": {
+  "outside": false
+ },
+ "bigrm-7": {
+  "outside": false
+ },
+ "bigrm-8": {
+  "area": true
+ },
+ "bigrm-9": {
+  "outside": false
+ },
+ "medusa-1": {
+  "outside": false
+ },
+ "medusa-2": {
+  "outside": false
+ },
+ "medusa-3": {
+  "outside": false
+ },
+ "medusa-4": {
+  "outside": false
+ },
+ "minetn-1": {
+  "area": false
+ },
+ "minetn-2": {
+  "area": false
+ }
+}
