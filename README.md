@@ -70,6 +70,7 @@ settings and high scores stay inside that folder.
 | F3 | Find any command by name or what it does, and do it |
 | F4 | ASCII mode: the world drawn in NetHack's characters |
 | F7 | Retro mode on or off |
+| F8 | Sprites flat or extruded |
 | F11 / F12 | Fullscreen / screenshot |
 
 Look steeply down or up when zapping, digging or casting to aim down (`>`) or up (`<`).

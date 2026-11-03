@@ -2,6 +2,19 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.19.0 (alpha) - 2026-11-02
+
+- **Pets act like NetHack's pets again**, while still moving freely. They get hungry and eat, pick things up and drop them, and are reluctant to step onto cursed things (so they hint at curses as in NetHack). They go after the food or item NetHack says they want.
+- **Pets wander about near you**: to a spot a few squares away, sit there a while, then somewhere else. They come after you when you get away, and only go after hostiles they can actually reach (not ones through a wall).
+- **Monsters move smoothly**: no small skip forward as they set off, no slide back as they stop, and no flicker back into the last square as they step into the next.
+- **F8** turns sprites flat or extruded (as Options > Graphics > Sprites does). **F7** turns retro mode on and off, in the game and in the prefab editor.
+- **16-colour retro sky**: in 16-colour retro mode the sky uses NetHack's 16 colours, set by time of day and dithering from one to the next, instead of drifting through every shade. The colours can be changed in the VoxHack Editor's Sky tab.
+- **Special level ceilings**: a ceiling over each special level's hand-built parts, and over the rest of the level, can each be switched on or off per level in the VoxHack Editor.
+- **VoxHack Editor: a Special levels page** with a map of every special level: its hand-built parts, what NetHack makes around them, stairs, the regions stairs, branches and arrivals go in, and its flips.
+- Fixed: the prefab editor's special level templates were mostly stored flipped (some a row or column off as well). They match NetHack's levels now, and areas already built on them were converted.
+- The prefab editor is never in retro mode; your retro setting is put back afterwards.
+- Website and README: screenshots, and a rewritten introduction.
+
 ## v0.18.0 (alpha) - 2026-11-01
 
 - **Glowing hands and blades.** After reading a scroll of confuse monster, what's in your hands glows red, pulsing slowly, brighter the more hits are left. Sting and Orcrist glow light blue across the blade while they warn of orcs (Grimtooth red, for elves), pulsing faster the nearer the nearest one is. In retro mode the glow is a dithered overlay of its colour.
