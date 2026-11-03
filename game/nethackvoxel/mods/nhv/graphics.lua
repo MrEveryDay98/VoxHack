@@ -14,7 +14,9 @@
 --     into the window with sharp pixels (as big as fits, or by whole
 --     numbers), in 256 colours or the tiles' own 16 (dithered or not), the
 --     light in steps. Its HUD, menu, text and map sizes are fixed, made for
---     it (the window's are kept for coming back).
+--     it (the window's are kept for coming back). Its game view can be
+--     drawn smaller still, at 1/2..1/4 of that screen (the engine's
+--     nhv_retro_undersampling), the HUD and menus staying at its size.
 -- The list scrolls (where it was is kept as it's redrawn). It's the Game
 -- tab of the Options screen; NetHack's options are the other (nhopts.lua).
 -- All apply immediately and are remembered in the settings.
@@ -70,6 +72,8 @@ local RETRO_PALETTE = {{"vga", "256 colours"}, {"ega", "16 colours"}, {"full", "
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
 local RETRO_BANDS = {{0, "Smooth"}, {4, "4 steps"}, {6, "6 steps"}, {8, "8 steps"}, {12, "12 steps"}}
 local RETRO_SCALE = {"As big as fits", "Whole pixels"}
+-- its game view (not the HUD or menus) drawn at 1/N of its screen
+local RETRO_VIEW = {{1, "The screen's pixels"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4"}}
 -- the sizes retro mode fixes (the window's kept for coming back): HUD,
 -- menus, text (the pixel font as it is), map - for each of its screens
 local SIZES = {"hud_scaling", "gui_scaling", "nhv_text_scale", "nhv_map_scale"}
@@ -117,9 +121,9 @@ local function row(y, label, name, items, sel)
 end
 
 -- a row retro mode decides
-local function fixed(y, label)
+local function fixed(y, label, why)
 	return ("label[0.5,%s;%s]label[6.4,%s;%s]"):format(y + 0.4, E(label), y + 0.4,
-		theme.dim(E("Fixed in retro mode")))
+		theme.dim(E(why or "Fixed in retro mode")))
 end
 
 local function choice(list, setting, default)
@@ -180,7 +184,7 @@ function graphics.formspec()
 		core.settings:get_bool("nhv_flat_sprites", false) and 2 or 1))
 	add(row(y, "ASCII mode", "ascii", table.concat(ASCII, ","), core.settings:get_bool("nhv_ascii", false) and 2 or 1))
 	if retro then
-		add(fixed(y, "Render resolution"))
+		add(fixed(y, "Render resolution", "Retro mode's Game view, below"))
 	else
 		add(row(y, "Render resolution", "res", labels(RES), pick(RES, "undersampling", 1)))
 	end
@@ -214,6 +218,7 @@ function graphics.formspec()
 	add(row(y, "Light", "retro_bands", labels(RETRO_BANDS), pick(RETRO_BANDS, "nhv_retro_bands", 6)))
 	add(row(y, "Scaling", "retro_scale", names(RETRO_SCALE),
 		core.settings:get_bool("nhv_retro_whole", false) and 2 or 1))
+	add(row(y, "Game view", "retro_view", labels(RETRO_VIEW), pick(RETRO_VIEW, "nhv_retro_undersampling", 1)))
 	-- (scrollbar steps of a tenth of a unit)
 	local max = math.max(0, math.ceil((y - VIEW_H) * 10))
 	scroll = math.min(scroll, max)
@@ -450,6 +455,9 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	if set_num(RETRO_BANDS, fields.retro_bands, "nhv_retro_bands", 6) then
 		changed = true
+	end
+	if set_num(RETRO_VIEW, fields.retro_view, "nhv_retro_undersampling", 1) then
+		changed = true -- (the engine, at the next frame)
 	end
 	local tl = tonumber(fields.texel_light)
 	if tl and TEXEL_LIGHT[tl] and TEXEL_LIGHT[tl][1] ~= core.settings:get("nhv_texel_light") then
