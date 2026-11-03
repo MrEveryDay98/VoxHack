@@ -102,6 +102,37 @@ U.OCLASS = {
 	GEM = 13, ROCK = 14, BALL = 15, CHAIN = 16, VENOM = 17,
 }
 
+-- Where to aim something flying at `speed` (nodes a game turn) from `from`
+-- to meet the hero, at `target` now and going on as they are (U.hero_vel):
+-- a monster's missiles and rays go where you'll be, not where you were. Where
+-- it can't catch you, or not within `reach` nodes, at where you are.
+function U.lead(from, target, speed, reach)
+	local v = U.hero_vel or vector.zero()
+	local d = vector.subtract(target, from)
+	-- |d + v t| = speed t: (v.v - s^2) t^2 + 2 (d.v) t + d.d = 0
+	local a = vector.dot(v, v) - speed * speed
+	local b = 2 * vector.dot(d, v)
+	local c = vector.dot(d, d)
+	local t
+	if math.abs(a) < 1e-6 then
+		t = b < 0 and -c / b or nil
+	else
+		local disc = b * b - 4 * a * c
+		if disc >= 0 then
+			local r = math.sqrt(disc)
+			local t1, t2 = (-b - r) / (2 * a), (-b + r) / (2 * a)
+			t = math.min(t1, t2)
+			if t <= 0 then
+				t = math.max(t1, t2)
+			end
+		end
+	end
+	if not t or t <= 0 or (reach and t * speed > reach) then
+		return target
+	end
+	return vector.add(target, vector.multiply(v, t))
+end
+
 -- Is the view as if blind? Blind - or inside a worm's body (worms.lua),
 -- where there's nothing to see: the same black fog, unlit hands, no sky,
 -- but nothing said of it (not an ailment).

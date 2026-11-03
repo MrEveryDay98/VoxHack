@@ -2,8 +2,9 @@
 --
 -- When a monster throws or shoots something at you, NetHack hands the
 -- missile over instead of resolving it on the grid. It flies from the
--- thrower toward where you were, at game-time speed (so it crawls while
--- you stand still - step out of the way!). What it touches decides what
+-- thrower toward where you'll be - going on as you are (U.lead) - at
+-- game-time speed (so it crawls while you stand still - step out of the
+-- way, or change course!). What it touches decides what
 -- happens:
 --   * your body: NetHack rolls to hit; if that fails you dodged it after
 --     all ("Dodged!") and it flies on,
@@ -87,7 +88,8 @@ local function launch(info)
 	else
 		from = U.tile_center(info.x, info.y, U.STAND_Y + 1.2)
 	end
-	local target = vector.add(player:get_pos(), vector.new(0, 1.2, 0))
+	local range = (math.max(info.range, 1) + 1) * U.TILE
+	local target = U.lead(from, vector.add(player:get_pos(), vector.new(0, 1.2, 0)), missiles.SPEED, range)
 	local dir = vector.direction(from, target)
 	-- start just outside the thrower's body
 	local start = vector.add(from, vector.multiply(dir, body and (body.r + 0.2) or 0.5))
@@ -99,7 +101,7 @@ local function launch(info)
 	nhv.sound.hook("missile_launch", {pos = start})
 	missiles.list[info.pid] = {
 		pid = info.pid, obj = obj, pos = start, dir = dir, travelled = 0,
-		range = (math.max(info.range, 1) + 1) * U.TILE, thrower = info.mon_id,
+		range = range, thrower = info.mon_id,
 		passed = {}, waiting = false,
 	}
 end

@@ -1363,4 +1363,65 @@ core.register_on_joinplayer(function(player)
 	player:set_lighting({shadows = {intensity = 0}, saturation = 1})
 end)
 
+-- How you're going (U.hero_vel, U.lead): nodes a game turn, along the
+-- ground - over the last half a turn of game time at least (time can
+-- crawl while you walk, Superhot: a moment's worth would be wild), and
+-- never faster than you can walk
+local VEL_TURNS = 0.5
+local VEL_MAX = 2 * U.TILE  -- (nodes a turn: a very fast hero's)
+local vel_marks = {}
+core.register_globalstep(function()
+	local player = player_mod.get()
+	if not player or not nh.snap or not nh.snap.hero then
+		U.hero_vel, vel_marks = nil, {}
+		return
+	end
+	local p, g = player:get_pos(), nhv.clock.game
+	local last = vel_marks[#vel_marks]
+	if last and vector.distance(last.p, p) > 2 * U.TILE then
+		vel_marks = {} -- (put somewhere else: a teleport, a new level)
+		last = nil
+	end
+	-- (marked only as game time goes on: none piling up while it's still)
+	if not last or g > last.g then
+		vel_marks[#vel_marks + 1] = {p = p, g = g}
+	end
+	-- (the oldest kept: the last that's half a turn back)
+	while #vel_marks > 2 and g - vel_marks[2].g >= VEL_TURNS do
+		table.remove(vel_marks, 1)
+	end
+	local old = vel_marks[1]
+	local dg = g - old.g
+	if dg < 0.05 then
+		U.hero_vel = vector.zero() -- (time standing still: so are you)
+		return
+	end
+	local v = vector.divide(vector.new(p.x - old.p.x, 0, p.z - old.p.z), dg)
+	if vector.length(v) > VEL_MAX then
+		v = vector.multiply(vector.normalize(v), VEL_MAX)
+	end
+	U.hero_vel = v
+end)
+
+-- Blind, the world in greys: what you feel and remember, not see (Luanti's
+-- saturation, in the second stage shader - the HUD drawn after it keeps its
+-- colours). Eased in and out over a moment.
+local GREY_S = 0.6   -- (seconds to go grey, or back)
+local saturation = 1
+core.register_globalstep(function(dtime)
+	local snap = nh.snap
+	local h = snap and snap.hero
+	local want = h and U.has(h.flags, U.HERO.BLIND) and 0 or 1
+	if saturation == want then
+		return
+	end
+	local player = player_mod.get()
+	if not player then
+		return
+	end
+	local step = dtime / GREY_S
+	saturation = want < saturation and math.max(want, saturation - step) or math.min(want, saturation + step)
+	player:set_lighting({saturation = saturation})
+end)
+
 return player_mod

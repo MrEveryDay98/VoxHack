@@ -1,8 +1,9 @@
 -- Rays: wands, spells and breath weapons as projectiles.
 --
 -- NetHack hands every ray over instead of tracing it along the grid. Here
--- it flies in a straight line - where you aim for your own zaps, at you
--- for a monster's - at game-time speed (so you can sidestep it), reaching
+-- it flies in a straight line - where you aim for your own zaps, at where
+-- you'll be for a monster's (going on as you are: U.lead) - at game-time
+-- speed (so you can sidestep it, or change course), reaching
 -- up to its NetHack range in squares and bouncing off walls up to
 -- MAX_BOUNCES times. Bodies it passes through get NetHack's hit roll
 -- (rays carry on through, like in NetHack; a reflection turns it around),
@@ -65,7 +66,8 @@ local function launch(info)
 		else
 			from = U.tile_center(info.x, info.y, U.STAND_Y + HEIGHT)
 		end
-		local target = vector.add(player:get_pos(), vector.new(0, HEIGHT, 0))
+		local target = U.lead(from, vector.add(player:get_pos(), vector.new(0, HEIGHT, 0)), rays.SPEED,
+			math.max(1, info.range) * U.TILE * rays.RANGE_SCALE)
 		dir = vector.direction(from, target)
 		dir = vector.normalize(vector.new(dir.x, 0, dir.z))
 		from = vector.add(from, vector.multiply(dir, body and (body.r + 0.2) or 0.6))
