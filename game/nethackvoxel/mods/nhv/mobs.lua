@@ -52,6 +52,9 @@ end
 
 local function look_for(e, kind)
 	if e.ghost then
+		-- (turned here, not by the engine: a ghost isn't marked for it - left
+		-- marked as it was, it was turned by neither, standing edge-on)
+		e.turned_by = ""
 		local tex = nhv_tiles.texture(e.tile) .. ("^[opacity:%d"):format(GHOST_ALPHA)
 		return {visual = "upright_sprite", textures = {tex, tex .. "^[transformFX"},
 			visual_size = {x = e.h, y = e.h, z = e.h}, use_texture_alpha = true,
@@ -1720,7 +1723,8 @@ core.register_globalstep(function(dtime)
 				face(e)
 			elseif ppos then
 				local d = vector.subtract(ppos, pos)
-				local yaw = math.atan2(d.z, d.x) - math.pi / 2 + nhv_tiles.facing_turn()
+				-- (a ghost is a flat picture, extruded sprites or not)
+				local yaw = math.atan2(d.z, d.x) - math.pi / 2 + (e.ghost and 0 or nhv_tiles.facing_turn())
 				yaw = yaw + math.sin(clock_t * 5 + (e.x or 0)) * 0.35
 				local w = 1 + 0.18 * math.sin(clock_t * 9 + (e.y or 0))
 				obj:set_properties({visual_size = size_for(e, w)})
