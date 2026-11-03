@@ -253,6 +253,12 @@ local function retro_sizes(player)
 	nhv.hud.place_map(player)
 end
 
+-- sprites flat, or extruded (Options > Graphics > Sprites; F8)
+function graphics.set_flat(on)
+	core.settings:set_bool("nhv_flat_sprites", on)
+	nhv.mobs.refresh_sizes()
+end
+
 function graphics.set_retro(player, on)
 	if on then
 		local kept = {}
@@ -348,8 +354,7 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	end
 	local s = tonumber(fields.sprites)
 	if s and (s == 2) ~= core.settings:get_bool("nhv_flat_sprites", false) then
-		core.settings:set_bool("nhv_flat_sprites", s == 2)
-		nhv.mobs.refresh_sizes()
+		graphics.set_flat(s == 2)
 		changed = true
 	end
 	local a = tonumber(fields.ascii)

@@ -599,6 +599,13 @@ core.register_chatcommand("nhvkey", {
 			end
 			return true
 		end
+		if param == "sprites" then
+			-- (F8: sprites flat or extruded, as Options > Graphics does it)
+			if nhv.graphics then
+				nhv.graphics.set_flat(not core.settings:get_bool("nhv_flat_sprites", false))
+			end
+			return true
+		end
 		if nhv.cutscene and nhv.cutscene.active then
 			return true -- (a cutscene: keys do nothing, and aren't kept)
 		end
