@@ -74,6 +74,12 @@ uniform vec4 gen0; uniform vec4 gen1; uniform vec4 shade0; uniform vec4 shade1;
 uniform vec4 hz; uniform vec4 misc; uniform vec3 bg; uniform vec3 bgTop; uniform vec4 glow;
 uniform vec2 res; uniform float yaw; uniform float pitch; uniform float stars;
 uniform vec4 vortex; // twist (radians, in the middle), turned by now, size - as the game's
+// retro mode, as the game's second stage shader (second_stage/opengl_fragment
+// .glsl) has it: x 0 off, 1 VGA's 256 colours, 2 NetHack's 16; y the
+// 16-colour sky's time-of-day colours on; z how far into the next ones
+uniform vec4 retro;
+uniform vec3 rHorA; uniform vec3 rSkyA; uniform vec3 rHorB; uniform vec3 rSkyB;
+uniform vec3 vga[242]; uniform vec3 tiles[15]; uniform vec3 ega[15];
 vec2 swirl(vec2 p) {
   if (vortex.x == 0.0 && vortex.y == 0.0) return p;
   float k = exp(-length(p) / max(vortex.z, 0.01));
@@ -107,7 +113,7 @@ vec4 layer(sampler2D tex, vec2 p, vec4 L, vec4 tint, vec4 gen, vec4 shade) {
   if (tint.a > 0.5) a *= step(0.02, max(c.r, max(c.g, c.b)));
   return vec4(c.rgb * tint.rgb, a);
 }
-void main() {
+vec4 scene() {
   vec2 uv = (gl_FragCoord.xy / res) * 2.0 - 1.0;
   uv.x *= res.x / res.y;
   vec3 d = normalize(vec3(uv * 0.75, 1.0));
@@ -120,8 +126,8 @@ void main() {
     vec2 sp2 = floor(d.xz / (d.y + 0.3) * 180.0);
     if (hash(sp2) > 0.997) sky += vec3(stars);
   }
-  if (d.y < -0.02) { gl_FragColor = vec4(mix(bg, vec3(0.06), 0.85), 1.0); return; } // (the ground)
-  if (d.y <= 0.0) { gl_FragColor = vec4(sky, 1.0); return; }
+  if (d.y < -0.02) return vec4(mix(bg, vec3(0.06), 0.85), 0.0); // (the ground: a = 0)
+  if (d.y <= 0.0) return vec4(sky, 1.0);
   vec2 p = swirl(d.xz / d.y * 0.25);
   vec4 back = layer(t0, p, l0, tint0, gen0, shade0);
   vec4 front = layer(t1, p, l1, tint1, gen1, shade1);
@@ -131,10 +137,150 @@ void main() {
   col = mix(col, hz.rgb, low * hz.a);
   a *= smoothstep(0.04, 0.28, d.y);
   col *= mix(vec3(1.0), glow.rgb * 1.5, glow.a);
-  gl_FragColor = vec4(mix(sky, col * misc.y, a), 1.0);
+  return vec4(mix(sky, col * misc.y, a), 1.0);
+}
+float bayer(vec2 p) {
+  int x = int(mod(p.x, 4.0)), y = int(mod(p.y, 4.0)), i = y * 4 + x;
+  float v = 0.0;
+  for (int k = 0; k < 16; k++) {
+    if (k == i) v = k == 0 ? 0. : k == 1 ? 8. : k == 2 ? 2. : k == 3 ? 10. : k == 4 ? 12. : k == 5 ? 4. : k == 6 ? 14. : k == 7 ? 6.
+      : k == 8 ? 3. : k == 9 ? 11. : k == 10 ? 1. : k == 11 ? 9. : k == 12 ? 15. : k == 13 ? 7. : k == 14 ? 13. : 5.;
+  }
+  return (v + 0.5) / 16.0;
+}
+// (as the game's NHV_HUE: the nearest of 15 by hue, however bright; its brightness)
+vec4 hue15(vec3 c, bool egas) {
+  float m = max(c.r, max(c.g, c.b));
+  vec3 n = c / max(m, 0.0001), best = vec3(1.0);
+  float bd = 1e9, bm = 1.0;
+  for (int k = 0; k < 15; k++) {
+    vec3 p = egas ? ega[k] : tiles[k];
+    float pm = max(p.r, max(p.g, p.b));
+    vec3 dd = n - p / pm;
+    float e = dot(dd, dd) + 0.05 * (m - pm) * (m - pm);
+    if (e < bd) { bd = e; best = p; bm = pm; }
+  }
+  return vec4(best, bm);
+}
+vec3 sky16(vec3 c, float threshold) {
+  float m = max(c.r, max(c.g, c.b));
+  if (m < 0.02) return vec3(0.0);
+  vec4 b = hue15(c, true);
+  return threshold < clamp(m / b.w, 0.0, 1.0) ? b.rgb : vec3(0.0);
+}
+vec3 tiles16(vec3 c) {
+  float m = max(c.r, max(c.g, c.b));
+  vec4 b = hue15(c, false);
+  float t = m / b.w;
+  if (t >= 0.4) return b.rgb;
+  if (t >= 0.15 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 0.5) return b.rgb;
+  return vec3(0.0);
+}
+vec3 tiles256(vec3 c, float threshold) {
+  float m = max(c.r, max(c.g, c.b));
+  if (m < 0.01) return vec3(0.0);
+  vec4 b = hue15(c, false);
+  return b.rgb * clamp(floor(clamp(m / b.w, 0.0, 1.0) * 15.0 + threshold), 0.0, 15.0) / 15.0;
+}
+vec3 vga256(vec3 c) {
+  const vec3 w = vec3(0.30, 0.59, 0.11);
+  vec3 best = vec3(0.0);
+  float bd = 1e9;
+  for (int k = 0; k < 242; k++) {
+    vec3 dd = c - vga[k];
+    float e = dot(w, dd * dd);
+    if (e < bd) { bd = e; best = vga[k]; }
+  }
+  return best;
+}
+void main() {
+  vec4 s = scene();
+  if (retro.x < 0.5) { gl_FragColor = vec4(s.rgb, 1.0); return; }
+  float t = bayer(gl_FragCoord.xy); // (dithering at its usual amount)
+  vec3 c = s.rgb;
+  if (s.a < 0.5) {
+    c = retro.x > 1.5 ? tiles16(c) : tiles256(c, t); // (the ground: the world's colours)
+  } else if (retro.x > 1.5 && retro.y > 0.5) {
+    // (the colours for the time of day, where the sky's its own colour
+    // between its horizon and top - each pixel one or the other by how
+    // high it is, the next ones dithered in)
+    vec3 h = rHorA, dd = rSkyA - h;
+    float q = dot(dd, dd) > 0.0001 ? clamp(dot(c - h, dd) / dot(dd, dd), 0.0, 1.0) : 1.0;
+    if (length(c - (h + dd * q)) < 0.035) {
+      bool top = t < q;
+      bool next = bayer(gl_FragCoord.yx + vec2(1.0, 2.0)) < retro.z;
+      c = next ? (top ? rSkyB : rHorB) : (top ? rSkyA : rHorA);
+    } else {
+      c = sky16(c, t);
+    }
+  } else if (retro.x > 1.5) {
+    c = sky16(c, t);
+  } else {
+    c = vga256(clamp(c + (t - 0.5) * 0.12, 0.0, 1.0));
+  }
+  gl_FragColor = vec4(c, 1.0);
 }`;
 
-  const view = { yaw: 0, pitch: 0.45, drag: null, canvas: null, gl: null, prog: null, tex: {}, raf: 0, tod: 0.5 };
+  // (retro mode's colours, as the game's shader has them: VGA's 256 - less
+  // the 14 the same twice - NetHack's tiles' 15 and black, and EGA's 15 for
+  // the sky in 16-colour mode)
+  const VGA = [
+    0, 0, 0, 0.569, 0.278, 0, 0.424, 0.569, 0.714, 0.8, 0.31, 0, 0.843, 0.843, 0.843, 1, 0, 0,
+    1, 0.424, 0, 1, 1, 1, 0, 0, 1, 1, 0.714, 0.569, 0.282, 0.424, 0.424, 0, 0.714, 1,
+    0, 0.569, 0, 1, 1, 0, 1, 0, 1, 0.424, 1, 0, 0.079, 0.079, 0.079, 0.127, 0.127, 0.127,
+    0.175, 0.175, 0.175, 0.222, 0.222, 0.222, 0.27, 0.27, 0.27, 0.317, 0.317, 0.317, 0.381, 0.381, 0.381, 0.444, 0.444, 0.444,
+    0.508, 0.508, 0.508, 0.571, 0.571, 0.571, 0.635, 0.635, 0.635, 0.714, 0.714, 0.714, 0.794, 0.794, 0.794, 0.889, 0.889, 0.889,
+    0.254, 0, 1, 0.492, 0, 1, 0.746, 0, 1, 1, 0, 0.746, 1, 0, 0.492, 1, 0, 0.254,
+    1, 0.254, 0, 1, 0.492, 0, 1, 0.746, 0, 0.746, 1, 0, 0.492, 1, 0, 0.254, 1, 0,
+    0, 1, 0, 0, 1, 0.254, 0, 1, 0.492, 0, 1, 0.746, 0, 1, 1, 0, 0.746, 1,
+    0, 0.492, 1, 0, 0.254, 1, 0.492, 0.492, 1, 0.619, 0.492, 1, 0.746, 0.492, 1, 0.873, 0.492, 1,
+    1, 0.492, 1, 1, 0.492, 0.873, 1, 0.492, 0.746, 1, 0.492, 0.619, 1, 0.492, 0.492, 1, 0.619, 0.492,
+    1, 0.746, 0.492, 1, 0.873, 0.492, 1, 1, 0.492, 0.873, 1, 0.492, 0.746, 1, 0.492, 0.619, 1, 0.492,
+    0.492, 1, 0.492, 0.492, 1, 0.619, 0.492, 1, 0.746, 0.492, 1, 0.873, 0.492, 1, 1, 0.492, 0.873, 1,
+    0.492, 0.746, 1, 0.492, 0.619, 1, 0.714, 0.714, 1, 0.778, 0.714, 1, 0.857, 0.714, 1, 0.921, 0.714, 1,
+    1, 0.714, 1, 1, 0.714, 0.921, 1, 0.714, 0.857, 1, 0.714, 0.778, 1, 0.714, 0.714, 1, 0.778, 0.714,
+    1, 0.857, 0.714, 1, 0.921, 0.714, 1, 1, 0.714, 0.921, 1, 0.714, 0.857, 1, 0.714, 0.778, 1, 0.714,
+    0.714, 1, 0.714, 0.714, 1, 0.778, 0.714, 1, 0.857, 0.714, 1, 0.921, 0.714, 1, 1, 0.714, 0.921, 1,
+    0.714, 0.857, 1, 0.714, 0.778, 1, 0, 0, 0.444, 0.111, 0, 0.444, 0.222, 0, 0.444, 0.333, 0, 0.444,
+    0.444, 0, 0.444, 0.444, 0, 0.333, 0.444, 0, 0.222, 0.444, 0, 0.111, 0.444, 0, 0, 0.444, 0.111, 0,
+    0.444, 0.222, 0, 0.444, 0.333, 0, 0.444, 0.444, 0, 0.333, 0.444, 0, 0.222, 0.444, 0, 0.111, 0.444, 0,
+    0, 0.444, 0, 0, 0.444, 0.111, 0, 0.444, 0.222, 0, 0.444, 0.333, 0, 0.444, 0.444, 0, 0.333, 0.444,
+    0, 0.222, 0.444, 0, 0.111, 0.444, 0.222, 0.222, 0.444, 0.27, 0.222, 0.444, 0.333, 0.222, 0.444, 0.381, 0.222, 0.444,
+    0.444, 0.222, 0.444, 0.444, 0.222, 0.381, 0.444, 0.222, 0.333, 0.444, 0.222, 0.27, 0.444, 0.222, 0.222, 0.444, 0.27, 0.222,
+    0.444, 0.333, 0.222, 0.444, 0.381, 0.222, 0.444, 0.444, 0.222, 0.381, 0.444, 0.222, 0.333, 0.444, 0.222, 0.27, 0.444, 0.222,
+    0.222, 0.444, 0.222, 0.222, 0.444, 0.27, 0.222, 0.444, 0.333, 0.222, 0.444, 0.381, 0.222, 0.444, 0.444, 0.222, 0.381, 0.444,
+    0.222, 0.333, 0.444, 0.222, 0.27, 0.444, 0.317, 0.317, 0.444, 0.349, 0.317, 0.444, 0.381, 0.317, 0.444, 0.413, 0.317, 0.444,
+    0.444, 0.317, 0.444, 0.444, 0.317, 0.413, 0.444, 0.317, 0.381, 0.444, 0.317, 0.349, 0.444, 0.317, 0.317, 0.444, 0.349, 0.317,
+    0.444, 0.381, 0.317, 0.444, 0.413, 0.317, 0.444, 0.444, 0.317, 0.413, 0.444, 0.317, 0.381, 0.444, 0.317, 0.349, 0.444, 0.317,
+    0.317, 0.444, 0.317, 0.317, 0.444, 0.349, 0.317, 0.444, 0.381, 0.317, 0.444, 0.413, 0.317, 0.444, 0.444, 0.317, 0.413, 0.444,
+    0.317, 0.381, 0.444, 0.317, 0.349, 0.444, 0, 0, 0.254, 0.063, 0, 0.254, 0.127, 0, 0.254, 0.19, 0, 0.254,
+    0.254, 0, 0.254, 0.254, 0, 0.19, 0.254, 0, 0.127, 0.254, 0, 0.063, 0.254, 0, 0, 0.254, 0.063, 0,
+    0.254, 0.127, 0, 0.254, 0.19, 0, 0.254, 0.254, 0, 0.19, 0.254, 0, 0.127, 0.254, 0, 0.063, 0.254, 0,
+    0, 0.254, 0, 0, 0.254, 0.063, 0, 0.254, 0.127, 0, 0.254, 0.19, 0, 0.254, 0.254, 0, 0.19, 0.254,
+    0, 0.127, 0.254, 0, 0.063, 0.254, 0.127, 0.127, 0.254, 0.159, 0.127, 0.254, 0.19, 0.127, 0.254, 0.222, 0.127, 0.254,
+    0.254, 0.127, 0.254, 0.254, 0.127, 0.222, 0.254, 0.127, 0.19, 0.254, 0.127, 0.159, 0.254, 0.127, 0.127, 0.254, 0.159, 0.127,
+    0.254, 0.19, 0.127, 0.254, 0.222, 0.127, 0.254, 0.254, 0.127, 0.222, 0.254, 0.127, 0.19, 0.254, 0.127, 0.159, 0.254, 0.127,
+    0.127, 0.254, 0.127, 0.127, 0.254, 0.159, 0.127, 0.254, 0.19, 0.127, 0.254, 0.222, 0.127, 0.254, 0.254, 0.127, 0.222, 0.254,
+    0.127, 0.19, 0.254, 0.127, 0.159, 0.254, 0.175, 0.175, 0.254, 0.19, 0.175, 0.254, 0.206, 0.175, 0.254, 0.238, 0.175, 0.254,
+    0.254, 0.175, 0.254, 0.254, 0.175, 0.238, 0.254, 0.175, 0.206, 0.254, 0.175, 0.19, 0.254, 0.175, 0.175, 0.254, 0.19, 0.175,
+    0.254, 0.206, 0.175, 0.254, 0.238, 0.175, 0.254, 0.254, 0.175, 0.238, 0.254, 0.175, 0.206, 0.254, 0.175, 0.19, 0.254, 0.175,
+    0.175, 0.254, 0.175, 0.175, 0.254, 0.19, 0.175, 0.254, 0.206, 0.175, 0.254, 0.238, 0.175, 0.254, 0.254, 0.175, 0.238, 0.254,
+    0.175, 0.206, 0.254, 0.175, 0.19, 0.254,
+  ];
+  const TILES15 = [
+    0.569, 0.278, 0, 0.424, 0.569, 0.714, 0.8, 0.31, 0, 0.843, 0.843, 0.843, 1, 0, 0,
+    1, 0.424, 0, 1, 1, 1, 0, 0, 1, 1, 0.714, 0.569, 0.282, 0.424, 0.424,
+    0, 0.714, 1, 0, 0.569, 0, 1, 1, 0, 1, 0, 1, 0.424, 1, 0,
+  ];
+  const EGA15 = [
+    0, 0, 0.667, 0, 0.667, 0, 0, 0.667, 0.667, 0.667, 0, 0, 0.667, 0, 0.667,
+    0.667, 0.333, 0, 0.667, 0.667, 0.667, 0.333, 0.333, 0.333, 0.333, 0.333, 1, 0.333, 1, 0.333,
+    0.333, 1, 1, 1, 0.333, 0.333, 1, 0.333, 1, 1, 1, 0.333, 1, 1, 1,
+  ];
+  // retro mode's screen in the preview: this many pixels high
+  const RETRO_H = 180;
+
+  const view = { yaw: 0, pitch: 0.45, drag: null, canvas: null, gl: null, prog: null, tex: {}, raf: 0, tod: 0.5, retro: 0 };
 
   function rgb(hex) {
     const m = /^#([0-9a-f]{6})$/i.exec(hex || "");
@@ -189,6 +335,9 @@ void main() {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     Object.assign(view, { gl, prog, canvas, tex: {} });
+    gl.uniform3fv(gl.getUniformLocation(prog, "vga"), VGA);
+    gl.uniform3fv(gl.getUniformLocation(prog, "tiles"), TILES15);
+    gl.uniform3fv(gl.getUniformLocation(prog, "ega"), EGA15);
     return true;
   }
 
@@ -224,6 +373,10 @@ void main() {
     const hc = rgb(s.horizon.color);
     gl.uniform4f(u("hz"), hc[0], hc[1], hc[2], s.horizon.fade);
     let bg = rgb(s.fog_color), top = bg, light = 1, stars = 0, glow = [1, 1, 1, 0];
+    // (16-colour retro mode, a day and night sky: the colours for the time
+    // of day - the sky drawn in the ones it's in, as the game draws it)
+    const r = data.retro16;
+    const r16 = view.retro === 2 && s.daynight && r && r.on && r.times && retroAt(r.times, view.tod * 1440);
     if (s.daynight) {
       const dn = dayNight(view.tod);
       bg = dn.bg; top = dn.top; light = dn.light; stars = s.stars ? dn.stars : 0;
@@ -242,6 +395,17 @@ void main() {
     }
     if (s.stars_always) stars = 1;
     light *= s.cloud_brightness || 1;
+    if (r16) { bg = rgb(r16.from.horizon); top = rgb(r16.from.sky); }
+    gl.uniform4f(u("retro"), view.retro, r16 ? 1 : 0, r16 ? r16.f : 0, 0);
+    if (r16) {
+      gl.uniform3fv(u("rHorA"), rgb(r16.from.horizon));
+      gl.uniform3fv(u("rSkyA"), rgb(r16.from.sky));
+      gl.uniform3fv(u("rHorB"), rgb(r16.to.horizon));
+      gl.uniform3fv(u("rSkyB"), rgb(r16.to.sky));
+    }
+    // (retro mode: drawn small, shown big - its pixels)
+    const W = view.retro ? Math.round(RETRO_H * 16 / 9) : 640, H = view.retro ? RETRO_H : 360;
+    if (view.canvas.width !== W) { view.canvas.width = W; view.canvas.height = H; }
     gl.uniform3f(u("bg"), bg[0], bg[1], bg[2]);
     gl.uniform3f(u("bgTop"), top[0], top[1], top[2]);
     gl.uniform4f(u("glow"), glow[0], glow[1], glow[2], glow[3]);
@@ -341,7 +505,12 @@ void main() {
     const tod = s.daynight ? el("label", { class: "inline" }, "Preview at",
       el("input", { type: "range", min: 0, max: 1, step: 0.005, value: view.tod, "aria-label": "Preview time of day",
         oninput: (e) => { view.tod = +e.target.value; out.textContent = hours(view.tod); } }), out) : null;
-    return el("div", {}, el("div", { class: "sky-stack" }, canvas, view.overlay), tod);
+    // (retro mode, as Options > Graphics > Retro mode's colours have it)
+    const retro = el("label", { class: "inline" }, "Retro mode",
+      el("select", { "aria-label": "Preview in retro mode", onchange: (e) => { view.retro = +e.target.value; } },
+        ...[["Off", 0], ["256 colours (VGA)", 1], ["16 colours", 2]].map(([name, v]) =>
+          el("option", { value: v, selected: view.retro === v || null }, name))));
+    return el("div", {}, el("div", { class: "sky-stack" }, canvas, view.overlay), el("div", { class: "inline" }, tod, retro));
   }
 
   // ------------------------------------------------------------ editing
