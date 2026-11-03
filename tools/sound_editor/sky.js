@@ -19,6 +19,7 @@ const Sky = (() => {
     daynight: false, sun: true, moon: true, stars: true, stars_always: false, cloud_brightness: 1,
     lightning: { on: false, rate: 4, sound: true },
     vortex: { on: false, twist: 1.5, spin: 6, size: 0.6 },
+    daylight: { mode: "off", day: 1, night: 0 },
   };
   const LAYER_NAMES = ["Back layer", "Front layer"];
 
@@ -628,6 +629,22 @@ void main() {
       l.on ? check(l, "sound", "Thunder (the sound hook sky_thunder, a moment after each bolt)") : null);
   }
 
+  // daylight: the squares open to the sky lit by it (sky.lua's daylight)
+  function daylightEditor(s) {
+    const d = s.daylight;
+    const pct = (v) => Math.round(v * 100) + "%";
+    const pick = el("select", { onchange: (e) => { d.mode = e.target.value; touch(); render(); } },
+      ...[["off", "Off (VoxHack's lights only)"], ["time", "By the time of day"], ["fixed", "Always the same"]].map(([v, name]) =>
+        el("option", { value: v, selected: d.mode === v || null }, name)));
+    return el("div", {},
+      el("h4", {}, "Daylight"),
+      field("Squares open to this sky", pick,
+        "Lit by the sky as by the sun, under no ceiling or roof. Roofed squares stay as they are; NetHack's lit squares stay lit at night. Dark squares open to it show by day, though what's on them still only shows once NetHack lets you see it."),
+      d.mode === "time" ? field("By day", slider(d, "day", 0, 1, 0.05, pct), "Its brightest, at midday (the real clock, as the day and night sky).") : null,
+      d.mode === "time" ? field("By night", slider(d, "night", 0, 1, 0.05, pct), "Its darkest: moonlight, or none.") : null,
+      d.mode === "fixed" ? field("Brightness", slider(d, "day", 0, 1, 0.05, pct), "The whole time.") : null);
+  }
+
   function skyEditor(s) {
     const px = (v) => (+v ? v + " px" : "smooth");
     return el("div", { class: "blk-editor" },
@@ -651,6 +668,7 @@ void main() {
             "100% is as the clouds are drawn; more makes them glow brighter."),
           s.daynight ? null : field("Sky colour", color(s, "fog_color"),
             "Behind the clouds; distant walls also fade into it on levels open to the sky all over."),
+          daylightEditor(s),
           vortexEditor(s),
           lightningEditor(s)),
         el("div", { class: "blk-preview" }, preview(s), el("small", { class: "muted" }, "Drag to look around."))),

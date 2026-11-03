@@ -28,6 +28,10 @@
 --   lightning: {on, rate (bolts a minute, on average), sound (thunder:
 --            the hook sky_thunder, a moment after - longer the further off
 --            the bolt)}: bolts across the sky now and then, high over you
+--   daylight: {mode ("off": VoxHack's lights alone, as ever; "time": by the
+--            time of day, as Luanti's sun; "fixed": always the same), day
+--            (0..1: its brightest - "fixed", the whole time), night (0..1:
+--            its darkest)}: the squares open to it lit by it (daylight)
 --   levels: level -> sky id: a special level variant ("medusa-2"), or the
 --           name before its "-" ("medusa", "bigrm"), or "default"
 --   retro16: {on, times = {{at ("HH:MM"), sky, horizon (NetHack's tiles'
@@ -238,6 +242,51 @@ local function real_time_of_day()
 	return (t.hour * 3600 + t.min * 60 + t.sec) / 86400
 end
 
+-- Daylight: the squares open to the sky lit by it. Luanti's light has the
+-- sun's in it where nothing's over a square (a ceiling, a roof keeps it
+-- out) - shown as much as the day and night ratio says, which the game
+-- keeps at 0 (VoxHack's own lights alone: player.lua) unless the sky says
+-- otherwise. Roofed squares are as they were whatever it is; a lit square
+-- open to the sky stays lit at night.
+-- (how far into the day, 0 night .. 1 day: Luanti's own curve for its sun,
+-- daynightratio.h's)
+local DNR = {{4375, 175}, {4625, 175}, {4875, 250}, {5125, 350}, {5375, 500},
+	{5625, 675}, {5875, 875}, {6125, 1000}, {6375, 1000}}
+local function dayness(tod)
+	local t = (tod % 1) * 24000
+	if t > 12000 then
+		t = 24000 - t
+	end
+	local r = 1000
+	if t <= DNR[2][1] then
+		r = DNR[1][2]
+	elseif t < DNR[8][1] then
+		for i = 2, #DNR do
+			if DNR[i][1] > t then
+				local f = (t - DNR[i - 1][1]) / (DNR[i][1] - DNR[i - 1][1])
+				r = f * DNR[i][2] + (1 - f) * DNR[i - 1][2]
+				break
+			end
+		end
+	end
+	return (r - 175) / 825
+end
+
+-- the share of the sun's light shown now (0: none)
+local function daylight(s, tod)
+	local d = s and type(s.daylight) == "table" and s.daylight
+	if not d or (d.mode ~= "time" and d.mode ~= "fixed") then
+		return 0
+	end
+	local day = math.max(0, math.min(1, tonumber(d.day) or 1))
+	if d.mode == "fixed" then
+		return day
+	end
+	local night = math.max(0, math.min(1, tonumber(d.night) or 0))
+	-- (in steps of a hundredth: told again only when it's changed)
+	return math.floor((night + (day - night) * dayness(tod)) * 100 + 0.5) / 100
+end
+
 -- 16-colour retro mode: a day and night sky in the colours the Sky tab sets
 -- for the time of day (skies.json's retro16), not Luanti's own, which drift
 -- through every colour on the way and come out as different ones of the 16
@@ -318,6 +367,19 @@ function sky.update()
 	if retro ~= sky.retro_shown then
 		sky.retro_shown = retro
 		core.settings:set("nhv_sky_retro", retro)
+	end
+	-- (daylight: the game's - not a scene of its own, the opening's or the
+	-- new character screen's, which set theirs; not the editors' or the
+	-- atlas, always at midday)
+	if sky.scene or nhv.EDITOR or nhv.INTRO_EDITOR or nhv.ATLAS then
+		sky.ratio_shown = nil
+		return
+	end
+	local r = daylight(s, real_time_of_day())
+	local player = nhv.player and nhv.player.get() or core.get_connected_players()[1]
+	if player and r ~= sky.ratio_shown then
+		sky.ratio_shown = r
+		player:override_day_night_ratio(r)
 	end
 end
 

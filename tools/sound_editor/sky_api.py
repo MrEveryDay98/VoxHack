@@ -204,6 +204,7 @@ def clean_sky(s):
     lt = s.get("lightning") if isinstance(s.get("lightning"), dict) else {}
     dw = s.get("dawn") if isinstance(s.get("dawn"), dict) else {}
     vx = s.get("vortex") if isinstance(s.get("vortex"), dict) else {}
+    dl = s.get("daylight") if isinstance(s.get("daylight"), dict) else {}
     return {
         "id": sid,
         "name": str(s.get("name") or sid)[:60],
@@ -233,6 +234,12 @@ def clean_sky(s):
         "vortex": {"on": bool(vx.get("on", False)), "twist": round(_num(vx.get("twist"), -5, 5, 1.5), 2),
                    "spin": round(_num(vx.get("spin"), -90, 90, 6), 1),
                    "size": round(_num(vx.get("size"), 0.05, 3, 0.6), 2)},
+        # daylight: the squares open to the sky lit by it - off (VoxHack's
+        # lights alone), by the time of day (its brightest by day, darkest
+        # by night) or always the same (day)
+        "daylight": {"mode": dl.get("mode") if dl.get("mode") in ("off", "time", "fixed") else "off",
+                     "day": round(_num(dl.get("day"), 0, 1, 1), 2),
+                     "night": round(_num(dl.get("night"), 0, 1, 0), 2)},
     }
 
 
