@@ -294,12 +294,14 @@ end
 -- into its colours, over its fade; then they stay till the next time. For
 -- the engine ("nhv_sky_retro", sky.cpp): the horizon and top colours now,
 -- the ones dithering in, and how far - "" when it's not that mode.
--- (the editor's starting times: sky_api.py's RETRO16_DEFAULT)
+-- (the editor's starting times: sky_api.py's RETRO16_DEFAULT - when the
+-- full-colour sky goes through them, on Luanti's sun: dawn's colours by
+-- 04:45, day from 05:10, dusk's by 19:10, night by 19:30)
 local RETRO16_DEFAULT = {on = true, times = {
-	{at = "05:00", sky = "#FF00FF", horizon = "#FF6C00", fade = 60},
-	{at = "07:00", sky = "#00B6FF", horizon = "#6C91B6", fade = 60},
-	{at = "18:00", sky = "#FF00FF", horizon = "#CC4F00", fade = 60},
-	{at = "20:00", sky = "#000000", horizon = "#0000FF", fade = 60},
+	{at = "04:15", sky = "#FF00FF", horizon = "#FF6C00", fade = 30},
+	{at = "05:10", sky = "#00B6FF", horizon = "#6C91B6", fade = 30},
+	{at = "18:40", sky = "#FF00FF", horizon = "#CC4F00", fade = 30},
+	{at = "19:15", sky = "#000000", horizon = "#0000FF", fade = 15},
 }}
 local function retro16_colours(s, tod)
 	local r = sky.data.retro16

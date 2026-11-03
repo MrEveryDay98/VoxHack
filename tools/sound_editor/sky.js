@@ -748,6 +748,30 @@ void main() {
     return since < fade ? { from: prev.t, to: cur.t, f: since / fade } : { from: cur.t, to: cur.t, f: 0 };
   }
 
+  // The full-colour sky's day, on Luanti's sun (daynightratio.h and the
+  // sky's night / dawn / day brightness steps, at the game's light curve):
+  // night till 04:45, dawn's colours 04:55-05:10, full day 06:05-18:05
+  // (dimming either side), dusk's 18:50-19:10, night from 19:20
+  const SUN_PHASES = [["night", 0], ["dim", 285], ["dawn", 295], ["day", 310], ["dim", 1085],
+    ["dusk", 1130], ["dim", 1150], ["night", 1160]];
+  const PHASE_COLOUR = { night: "#000000", dim: "#486C6C", dawn: "#FF6C00", dusk: "#FF6C00", day: "#00B6FF" };
+  // (the times that match it, for four - dawn, day, dusk, night: the
+  // starting ones)
+  const SUN_TIMES = [["04:15", 30], ["05:10", 30], ["18:40", 30], ["19:15", 15]];
+  function sunStrip(W) {
+    const cv = el("canvas", { width: W, height: 6, class: "sky-retro-sun",
+      title: "The full-colour sky's day: night, dawn, day, dusk" });
+    const g = cv.getContext("2d");
+    for (let x = 0; x < W; x++) {
+      const m = (x / W) * 1440;
+      let ph = "night";
+      for (const [p, at] of SUN_PHASES) if (m >= at) ph = p;
+      g.fillStyle = PHASE_COLOUR[ph];
+      g.fillRect(x, 0, 1, 6);
+    }
+    return cv;
+  }
+
   // the day as a strip: each column a few minutes, the top half the sky's
   // top colour, the bottom its horizon - dithered as the game does
   function retroStrip(r) {
@@ -793,14 +817,22 @@ void main() {
       check(r, "on", "Use these colours in 16-colour mode", render),
       r.on ? el("div", {},
         retroStrip(r),
+        sunStrip(576),
         el("div", { class: "sky-retro-hours muted" }, ...[0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => el("span", {}, `${h}:00`))),
+        el("small", { class: "muted" }, "Under it, the full-colour sky's day (Luanti's sun): night, dawn, day, dusk."),
         ...rows,
         el("button", { class: "add", onclick: () => {
           const last = r.times[r.times.length - 1];
           r.times.push({ at: "12:00", sky: last ? last.sky : "#00B6FF", horizon: last ? last.horizon : "#6C91B6", fade: 60 });
           r.times.sort((a, b) => (minutes(a.at) || 0) - (minutes(b.at) || 0));
           touch(); render();
-        } }, "+ Add a time")) : null);
+        } }, "+ Add a time"),
+        r.times.length === 4 ? el("button", { class: "small", title: "Dawn's by 04:45, day from 05:10, dusk's by 19:10, night by 19:30 - keeping their colours",
+          onclick: () => {
+            r.times.sort((a, b) => (minutes(a.at) || 0) - (minutes(b.at) || 0));
+            r.times.forEach((t, i) => { t.at = SUN_TIMES[i][0]; t.fade = SUN_TIMES[i][1]; });
+            touch(); render();
+          } }, "Match the full-colour sky's times (dawn, day, dusk, night)") : null) : null);
   }
 
   function render() {

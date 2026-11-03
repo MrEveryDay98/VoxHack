@@ -333,6 +333,7 @@ button.link { background: none; border: none; padding: 0 2px; color: var(--accen
 /* Sky: 16-colour retro sky */
 .sky-retro { margin-top: 16px; }
 .sky-retro-strip { display: block; width: 100%; max-width: 864px; height: 64px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; }
+.sky-retro-sun { display: block; width: 100%; max-width: 864px; height: 6px; image-rendering: pixelated; margin-top: 3px; border-radius: 2px; }
 .sky-retro-hours { display: flex; justify-content: space-between; max-width: 864px; font-size: 11px; margin: 2px 0 12px; }
 .sky-retro-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 18px; padding: 10px 0; border-top: 1px solid var(--line); }
 .sky-ega { display: grid; grid-template-columns: repeat(8, 18px); gap: 3px; }
