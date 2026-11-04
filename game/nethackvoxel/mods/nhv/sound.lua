@@ -953,6 +953,32 @@ local function heard_tune(t, pos)
 	end
 end
 
+-- Eating. A monster's (NetHack's m_consume_obj: "mon_eat"; "mon_eat_corpse"
+-- a corpse; "mon_eat_heard" one you can't see) sounds as yours does
+-- (eat_done), higher the smaller it is, lower the bigger; a corpse bleeds.
+-- Yours: a corpse bleeds at your mouth, bite by bite ("hero_eat_corpse").
+local EAT_PITCH = {[0] = 1.5, 1.25, 1.0, 0.85, 0.72, 0.6, 0.6, 0.6} -- (by size: tiny .. gigantic)
+local EAT_HOOKS = {mon_eat = true, mon_eat_corpse = true, mon_eat_heard = true, hero_eat_corpse = true}
+local function eating(id, vol, pos, m_id)
+	if id == "hero_eat_corpse" then
+		local p = player()
+		if p and nhv.mobs then
+			local eye = vector.offset(p:get_pos(), 0, p:get_properties().eye_height or 1.6, 0)
+			local mouth = vector.offset(vector.add(eye, vector.multiply(p:get_look_dir(), 0.6)), 0, -0.35, 0)
+			nhv.mobs.blood_at(mouth, 0.6)
+		end
+		return
+	end
+	local body = m_id and m_id > 0 and nhv.sim and nhv.sim.body(m_id)
+	local heard = id == "mon_eat_heard"
+	sound.hook("eat_done", {volume = vol, pos = pos, pitch = EAT_PITCH[body and body.size or 2] or 1,
+		heard = heard, muffle = heard and HEARD_MUFFLE or nil})
+	if id == "mon_eat_corpse" and pos and nhv.mobs then
+		local h = body and nhv.scale.height(body.size, body.mndx) or 1.5
+		nhv.mobs.blood_at(pos, h * 0.5)
+	end
+end
+
 -- an effect only heard (or one with no sound of its own): its sound, or
 -- the one that stands in for it
 local function play_effect(id, opts)
@@ -1054,7 +1080,9 @@ nh.on_event(function(evs)
 				local pos = sound.where(tonumber(parts[4]), tonumber(parts[5]), tonumber(parts[6]))
 				local semi = squeak_semitone(id or "")
 				local entry = sound.cfg.hooks[id]
-				if semi and not (entry and entry.sounds and #entry.sounds > 0) then
+				if EAT_HOOKS[id] then
+					eating(id, vol, pos, tonumber(parts[6]))
+				elseif semi and not (entry and entry.sounds and #entry.sounds > 0) then
 					-- a squeaky board's own note (unless the editor gives the
 					-- hook a sound of its own)
 					if nhv.effects and not heard[i] then
