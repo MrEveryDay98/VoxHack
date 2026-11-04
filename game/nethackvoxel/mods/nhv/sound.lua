@@ -252,18 +252,20 @@ local FREE_PITCH = 0.82
 local FREE_ECHOES = {{0.09, 0.45}, {0.19, 0.22}, {0.30, 0.1}} -- (seconds later, gain)
 
 -- Play whatever is attached to a hook. opts: volume (0-100), pos, free
--- (a free action's: FREE_*).
+-- (a free action's: FREE_*), muffle (0..1: at least so muffled), heard
+-- (only heard, not seen: nothing shown with it).
 function sound.hook(id, opts)
+	local heard = opts and opts.heard
 	-- (particle effects attach to the same hooks: effects.lua)
-	if nhv.effects then
+	if nhv.effects and not heard then
 		nhv.effects.hook(id, opts)
 	end
 	-- (and lightning and a camera flash the screen: hud.lua)
-	if nhv.hud then
+	if nhv.hud and not heard then
 		nhv.hud.hook_flash(id)
 	end
 	-- (a lightning artifact's bolt: lightning.lua)
-	if nhv.lightning then
+	if nhv.lightning and not heard then
 		nhv.lightning.hook(id, opts)
 	end
 	local entry = sound.cfg.hooks[id]
@@ -289,6 +291,9 @@ function sound.hook(id, opts)
 		params.nhv_muffle = sound.muffle(opts.pos)
 	else
 		params.to_player = p:get_player_name()
+	end
+	if opts.muffle then
+		params.nhv_muffle = math.max(params.nhv_muffle or 0, opts.muffle)
 	end
 	-- (just the echoes of a sound already played: an extra move's blow,
 	-- clock.lua - known only once it's struck)
@@ -323,7 +328,7 @@ local BOARD_PROGRAM = 80 -- (ocarina: see make_note_midis.py)
 local SEMITONE = {C = 0, D = 2, E = 4, F = 5, G = 7, A = 9, B = 11}
 local NOTE_GAP = 0.32 -- seconds between the notes of a tune
 
-function sound.note(program, semi, gain, pos)
+function sound.note(program, semi, gain, pos, muffle)
 	local p = player()
 	local name = ("nhv_note_%d_%d"):format(program, semi % 12)
 	if not known[name] then
@@ -337,6 +342,9 @@ function sound.note(program, semi, gain, pos)
 		params.pos, params.max_hear_distance, params.nhv_muffle = pos, 48, sound.muffle(pos)
 	else
 		params.to_player = p:get_player_name()
+	end
+	if muffle then
+		params.nhv_muffle = math.max(params.nhv_muffle or 0, muffle)
 	end
 	core.sound_play(name, params)
 end
@@ -879,6 +887,91 @@ local function finish_sam_quest()
 	sam_quest = nil
 end
 
+-- ---------------------------------------------------------------- heard
+-- "You hear ...": something you only hear. NetHack mostly makes a sound
+-- for it just before the message (an effect, where it happens): played
+-- muffled, as heard and not seen - nothing shown with it. Effects that
+-- have no sound of their own in the editor play one that fits (HEARD_AS),
+-- or a few notes on their instrument (HEARD_TUNE: the MIDI player's); a
+-- message with no effect before it plays one by what it says (HEARD_TEXT),
+-- from nowhere in particular.
+local HEARD_MUFFLE = 0.7
+local HEARD_AS = {
+	angry_drone = "bees", low_buzzing = "bees",
+	angry_snakes = "hiss", snakes_hissing = "hiss",
+	boulder_drop = "kadoom_boulder_falls_in", crashing_boulder = "kadoom_boulder_falls_in",
+	clank = "klunk", clanging_sound = "klunk",
+	crash_something_broke = "glass_crashing",
+	crash_through_floor = "dig_hole", crashing_rock = "dig",
+	crashing_sound = "crash_door",
+	loud_splash = "splash", faint_sloshing = "faint_splashing",
+	item_tumble_downwards = "item_drop",
+	mon_chugging_potion = "quaff_potion",
+	rumbling = "boulder_push", someone_bowling = "boulder_push",
+	swoosh = "rushing_wind_noise",
+	thump = "thud",
+	zap_then_explosion = {"zap", "explosion"},
+}
+-- (program: General MIDI's, as NetHack's instruments are; notes a tune's)
+local HEARD_TUNE = {
+	horn_being_played = {program = 61, notes = "CCG", gap = 0.45},       -- (a horn: French horn)
+	bugle_playing_reveille = {program = 57, notes = "GCEGECG", gap = 0.22}, -- (reveille: trumpet)
+	shrill_whistle = {program = 79, notes = "BAB", gap = 0.12},           -- (a tin whistle)
+}
+-- (patterns: what follows "You hear ")
+local HEARD_TEXT = {
+	{"^a shattering noise", "glass_shattering"},
+	{"^a loud %*SPLASH%*", "splash"},
+	{"^a low buzzing", "bees"},
+	{"^drilling", "dig"},
+	{"explosion", "explosion"},
+	{"^a door crash open", "door_crash_open"},
+	{"^a loud snap", "whip_snap"},
+	{"with a thud", "thud"},
+	{"whoosh", "rushing_wind_noise"},
+	{"^drinking", "quaff_potion"},
+	{"^distant howling", "canine_howl"},
+	{"^a clank", "klunk"},
+	{"^a crumbling sound", "crumbling_sound"},
+	{"^crackling", "air_crackles"},
+	{"^hissing gas", "hiss"},
+	{"^the shrill sound of a guard's whistle", "shrill_whistle"},
+}
+
+-- what's heard in a "You hear ..." message (asleep, "You dream that you
+-- hear ..."), nil if it isn't one
+local function heard_text(text)
+	return text:match("^You hear (.*)") or text:match("^You dream that you hear (.*)")
+end
+
+local function heard_tune(t, pos)
+	for k = 1, #t.notes do
+		local semi = SEMITONE[t.notes:sub(k, k)]
+		if semi then
+			core.after((k - 1) * t.gap, sound.note, t.program, semi, 0.6, pos, HEARD_MUFFLE)
+		end
+	end
+end
+
+-- an effect only heard (or one with no sound of its own): its sound, or
+-- the one that stands in for it
+local function play_effect(id, opts)
+	local entry = sound.cfg.hooks[id]
+	if entry and entry.sounds and #entry.sounds > 0 then
+		sound.hook(id, opts)
+		return
+	end
+	local tune = HEARD_TUNE[id]
+	if tune then
+		heard_tune(tune, opts.pos)
+		return
+	end
+	local as = HEARD_AS[id] or id
+	for _, h in ipairs(type(as) == "table" and as or {as}) do
+		sound.hook(h, opts)
+	end
+end
+
 -- the Oracle's major consultation comes as a text window that opens with
 -- one of these: she reads the rest
 local ORACLE_INTRO = {
@@ -889,7 +982,33 @@ local window_first = false -- (a text window just opened: its first line next)
 
 nh.on_event(function(evs)
 	local free_action = false
-	for _, ev in ipairs(evs) do
+	-- (the effects just before a "You hear ..." message, back to the
+	-- message before it: heard; such a message with none: heard_alone)
+	local heard, heard_alone = {}, {}
+	for i, ev in ipairs(evs) do
+		if ev.kind == "message" and heard_text(ev.text) then
+			heard_alone[i] = true
+			for j = i - 1, 1, -1 do
+				local pj = evs[j]
+				if pj.kind == "message" then
+					break
+				end
+				if pj.kind == "sound" and pj.text:sub(1, 7) == "effect|" then
+					heard[j], heard_alone[i] = true, nil
+				end
+			end
+		end
+	end
+	for i, ev in ipairs(evs) do
+		if heard_alone[i] then
+			local what = heard_text(ev.text)
+			for _, t in ipairs(HEARD_TEXT) do
+				if what:find(t[1]) then
+					play_effect(t[2], {muffle = HEARD_MUFFLE, heard = true})
+					break
+				end
+			end
+		end
 		if ev.kind == "text_begin" then
 			window_first = true
 		elseif ev.kind == "text_line" and window_first then
@@ -938,10 +1057,14 @@ nh.on_event(function(evs)
 				if semi and not (entry and entry.sounds and #entry.sounds > 0) then
 					-- a squeaky board's own note (unless the editor gives the
 					-- hook a sound of its own)
-					if nhv.effects then
+					if nhv.effects and not heard[i] then
 						nhv.effects.hook(id, {volume = vol, pos = pos})
 					end
-					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100, pos)
+					sound.note(BOARD_PROGRAM, semi, 0.35 + 0.65 * math.min(100, vol) / 100, pos,
+						heard[i] and HEARD_MUFFLE or nil)
+				elseif heard[i] or not (entry and entry.sounds and #entry.sounds > 0) then
+					play_effect(id, {volume = vol, pos = pos, free = free_action,
+						muffle = heard[i] and HEARD_MUFFLE or nil, heard = heard[i]})
 				else
 					sound.hook(id, {volume = vol, pos = pos, free = free_action})
 				end
