@@ -264,30 +264,82 @@ function graphics.set_flat(on)
 	nhv.mobs.refresh_sizes()
 end
 
-function graphics.set_retro(player, on)
-	if on then
-		local kept = {}
-		for i, setting in ipairs(SIZES) do
-			kept[i] = core.settings:get(setting) or ""
-		end
-		core.settings:set("nhv_sizes_window", table.concat(kept, "|"))
-	else
-		local saved = (core.settings:get("nhv_sizes_window") or ""):split("|", true)
-		for i, setting in ipairs(SIZES) do
-			if saved[i] and saved[i] ~= "" then
-				core.settings:set(setting, saved[i])
-			end
+-- Your own sizes (HUD, menus, text, map) are kept while retro mode has its
+-- own: "nhv_sizes_window" holds yours, "nhv_sizes_are" which are in use
+-- ("retro" or "window"). Yours are saved whenever you set one outside
+-- retro mode, and as retro mode takes over - only from yours, never retro
+-- mode's own over them; leaving it, they're put back. However retro mode
+-- was turned on or off (the prefab editor's F7, a game started in it),
+-- joining puts the right ones in use (graphics.fit_sizes).
+local function sizes_in_use()
+	local are = core.settings:get("nhv_sizes_are")
+	if are ~= "retro" and are ~= "window" then
+		are = core.settings:get_bool("nhv_retro", false) and "retro" or "window"
+	end
+	return are
+end
+
+function graphics.keep_window_sizes()
+	if sizes_in_use() ~= "window" then
+		return
+	end
+	local kept = {}
+	for i, setting in ipairs(SIZES) do
+		kept[i] = core.settings:get(setting) or ""
+	end
+	core.settings:set("nhv_sizes_window", table.concat(kept, "|"))
+end
+
+local function window_sizes()
+	local saved = (core.settings:get("nhv_sizes_window") or ""):split("|", true)
+	for i, setting in ipairs(SIZES) do
+		if saved[i] and saved[i] ~= "" then
+			core.settings:set(setting, saved[i])
 		end
 	end
-	core.settings:set_bool("nhv_retro", on) -- (the engine switches at the next frame)
-	nhv.hud.place_compass(player)
-	if on then
+	core.settings:set("nhv_sizes_are", "window")
+end
+
+-- the sizes for the mode it's in (true if they had to change)
+function graphics.fit_sizes(player)
+	local retro = core.settings:get_bool("nhv_retro", false)
+	local are = sizes_in_use()
+	if retro and are ~= "retro" then
+		graphics.keep_window_sizes()
+		core.settings:set("nhv_sizes_are", "retro")
 		retro_sizes(player)
-	else
+		return true
+	elseif not retro and are == "retro" then
+		window_sizes()
 		theme.apply(player)
 		nhv.hud.place_map(player)
+		return true
+	end
+	core.settings:set("nhv_sizes_are", are)
+	return false
+end
+
+function graphics.set_retro(player, on)
+	core.settings:set_bool("nhv_retro", on) -- (the engine switches at the next frame)
+	nhv.hud.place_compass(player)
+	if not graphics.fit_sizes(player) then
+		-- (already right: laid out again anyway, for the screen it's on)
+		if on then
+			retro_sizes(player)
+		else
+			theme.apply(player)
+			nhv.hud.place_map(player)
+		end
 	end
 end
+
+core.register_on_joinplayer(function(player)
+	core.after(0.5, function()
+		if player:is_player() then
+			graphics.fit_sizes(player)
+		end
+	end)
+end)
 
 -- store a numeric choice; true if it changed
 local function set_num(list, idx, setting, default)
@@ -350,6 +402,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if set_num(MAP, fields.map, "nhv_map_scale", 3) then
 		nhv.hud.place_map(player)
 		changed = true
+	end
+	-- (your sizes, kept for coming back out of retro mode)
+	if changed then
+		graphics.keep_window_sizes()
 	end
 	local mi = tonumber(fields.map_icons)
 	if mi and (mi == 2) ~= nhv.hud.exact_icons() then
