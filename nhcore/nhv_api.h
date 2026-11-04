@@ -460,6 +460,7 @@ typedef struct nhv_missile {
     int x, y;           /* launch square */
     int range;          /* squares */
     int otyp, glyph, tile;
+    unsigned target;    /* m_id of the monster it's thrown at; 0: the hero */
 } nhv_missile;
 /* missiles launched since the last call */
 NHV_API int nhv_get_missiles(nhv_missile *buf, int max);
@@ -520,6 +521,8 @@ typedef struct nhv_ray {
     int range;          /* squares */
     int from_hero;
     unsigned caster;    /* m_id of the monster that fired it, or 0 */
+    unsigned target;    /* a monster's at another monster: its m_id; 0: the
+                           hero (or the hero's own) */
 } nhv_ray;
 NHV_API int nhv_get_rays(nhv_ray *buf, int max);
 NHV_API void nhv_clear_rays(void);

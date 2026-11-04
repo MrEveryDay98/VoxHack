@@ -222,17 +222,48 @@ local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = 
 	search = true, search_count = true}
 -- (zaps and spells fly straight where you look, not to a square; a wand of
 -- digging still digs along NetHack's 8 directions, whatever the aim)
+-- (a kick too: what's kicked flies on the way you look)
 local FREE_AIM = {zap = true, spell = true}
 local function free_aim(keys, info)
 	if info and FREE_AIM[info.kind] then
 		return true
 	end
 	local first = type(keys) == "string" and keys:sub(1, 1) or (keys[1] and keys[1].key)
-	return first == "z" or first == "Z"
+	if first == "z" or first == "Z" then
+		return true
+	end
+	if type(keys) == "table" then
+		for _, k in ipairs(keys) do
+			if k.key == "\4" then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 function clock.act(keys, info)
 	local player = nhv.player.get()
+	local kick
+	if type(keys) == "table" then
+		for i, k in ipairs(keys) do
+			if k.key == "\4" then
+				kick = i
+				break
+			end
+		end
+	end
+	if kick and player and not (info and NO_AIM[info.kind]) then
+		local aim = nhv.actions.aim_keys(player, true, true)
+		if aim then
+			keys = table.copy(keys)
+			for j = #aim, 1, -1 do
+				table.insert(keys, kick, aim[j])
+			end
+		end
+		nh.act(keys, info)
+		return
+	end
 	local aim = player and not (info and NO_AIM[info.kind])
 		and nhv.actions.aim_keys(player, free_aim(keys, info))
 	if aim then

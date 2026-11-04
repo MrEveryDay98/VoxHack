@@ -871,17 +871,23 @@ function actions.monster_beam(prompt)
 	return table.concat(parts, " ")
 end
 
--- the keys that set the aim (nil: no aim); free (zaps, spells): a beam's
--- line too
-function actions.aim_keys(player, free)
+-- the keys that set the aim (nil: no aim), with the line's squares and
+-- bodies: a beam, something thrown or kicked goes along it, hitting them
+-- (from_body: from the body's square - a kick's, NetHack's square caught
+-- up first)
+function actions.aim_keys(player, free, from_body)
 	local dx, dy = actions.aim(player, free)
 	if not dx then
 		return nil
 	end
 	local text = ("nhvaim %d %d"):format(math.floor(dx * 1000 + 0.5), math.floor(dy * 1000 + 0.5))
-	if free then
+	do
 		local h = hero()
-		local b = beam_line(player:get_pos(), vector.normalize(vector.new(dx, 0, -dy)), h.x, h.y)
+		local sx, sy = h.x, h.y
+		if from_body then
+			sx, sy = U.pos_to_tile(player:get_pos())
+		end
+		local b = beam_line(player:get_pos(), vector.normalize(vector.new(dx, 0, -dy)), sx, sy)
 		actions.last_beam = b
 		local parts = {text, b.steps ~= "" and b.steps or "-"}
 		for _, m in ipairs(b.mons) do

@@ -586,6 +586,7 @@ static struct nhv_flying {
     unsigned mon_id;
     coordxy lx, ly;     /* launch square */
     int range;
+    unsigned target;    /* thrown at this monster (0: the hero) */
     boolean fresh;      /* not yet reported to the host */
 } missiles[MAXMISSILES];
 static unsigned next_pid = 1;
@@ -603,6 +604,7 @@ nhv_missile_launch(
             missiles[i].mon_id = mon ? mon->m_id : 0;
             missiles[i].lx = x, missiles[i].ly = y;
             missiles[i].range = range;
+            missiles[i].target = gm.mtarget ? gm.mtarget->m_id : 0;
             missiles[i].fresh = TRUE;
             return;
         }
@@ -731,6 +733,7 @@ nhv_get_missiles(nhv_missile *buf, int max)
         buf[n].otyp = f->obj->otyp;
         buf[n].glyph = obj_to_glyph(f->obj, rn2_on_display_rng);
         buf[n].tile = glyphmap[buf[n].glyph].tileidx;
+        buf[n].target = f->target;
         n++;
     }
     return n;
@@ -966,9 +969,11 @@ static struct nhv_rayrec {
     coordxy sx, sy;
     int dx, dy, range;
     boolean sayhit, saymiss, forcemiss, shopdamage, fresh, used;
-    unsigned caster;
+    unsigned caster, target;
 } rays[MAXRAYS];
 static unsigned next_rid = 1;
+/* a monster's ray at another monster (breamm): its m_id, while it's fired */
+unsigned nhv_ray_target = 0;
 
 void
 nhv_ray_launch(int type, int nd, coordxy sx, coordxy sy, int dx, int dy,
@@ -988,6 +993,7 @@ nhv_ray_launch(int type, int nd, coordxy sx, coordxy sy, int dx, int dy,
             r->range = range;
             r->sayhit = sayhit, r->saymiss = saymiss, r->forcemiss = forcemiss;
             r->caster = caster;
+            r->target = nhv_ray_target;
             r->fresh = r->used = TRUE;
             return;
         }
@@ -1104,6 +1110,7 @@ nhv_get_rays(nhv_ray *buf, int max)
         buf[n].range = r->range;
         buf[n].from_hero = r->type >= 0 && r->type < 20; /* 20+: breath */
         buf[n].caster = r->caster;
+        buf[n].target = r->target;
         n++;
     }
     return n;

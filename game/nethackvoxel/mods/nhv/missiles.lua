@@ -89,7 +89,15 @@ local function launch(info)
 		from = U.tile_center(info.x, info.y, U.STAND_Y + 1.2)
 	end
 	local range = (math.max(info.range, 1) + 1) * U.TILE
-	local target = U.lead(from, vector.add(player:get_pos(), vector.new(0, 1.2, 0)), missiles.SPEED, range)
+	-- (thrown at another monster: at its body; at you, where you'll be)
+	local at = info.target and info.target > 0 and nhv.sim.body(info.target)
+	local target
+	if at then
+		local h = nhv.scale.height(at.size, at.mndx)
+		target = vector.new(at.pos.x, U.STAND_Y + h * 0.6, at.pos.z)
+	else
+		target = U.lead(from, vector.add(player:get_pos(), vector.new(0, 1.2, 0)), missiles.SPEED, range)
+	end
 	local dir = vector.direction(from, target)
 	-- start just outside the thrower's body
 	local start = vector.add(from, vector.multiply(dir, body and (body.r + 0.2) or 0.5))

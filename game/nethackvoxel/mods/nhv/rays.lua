@@ -66,8 +66,11 @@ local function launch(info)
 		else
 			from = U.tile_center(info.x, info.y, U.STAND_Y + HEIGHT)
 		end
-		local target = U.lead(from, vector.add(player:get_pos(), vector.new(0, HEIGHT, 0)), rays.SPEED,
-			math.max(1, info.range) * U.TILE * rays.RANGE_SCALE)
+		-- (fired at another monster: at its body; at you, where you'll be)
+		local at = info.target and info.target > 0 and nhv.sim.body(info.target)
+		local target = at and vector.new(at.pos.x, U.STAND_Y + HEIGHT, at.pos.z)
+			or U.lead(from, vector.add(player:get_pos(), vector.new(0, HEIGHT, 0)), rays.SPEED,
+				math.max(1, info.range) * U.TILE * rays.RANGE_SCALE)
 		dir = vector.direction(from, target)
 		dir = vector.normalize(vector.new(dir.x, 0, dir.z))
 		from = vector.add(from, vector.multiply(dir, body and (body.r + 0.2) or 0.6))
