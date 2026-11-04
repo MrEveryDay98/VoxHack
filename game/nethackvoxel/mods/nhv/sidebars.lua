@@ -482,38 +482,23 @@ local function buc_color(o)
 		or NOT_KNOWN
 end
 
--- "a" or "an" before a word, as NetHack's just_an() has it
-local A_BEFORE = {"one[ %-]", "one$", "eu", "uke", "ukulele", "unicorn", "uranium", "useful"}
-local function article(word)
-	local w = word:lower()
-	if not w:match("^[aeiou]") then
-		return "a"
-	end
-	for _, p in ipairs(A_BEFORE) do
-		if w:find("^" .. p) then
-			return "a"
+-- an item's name short, for the bar: without blessed / uncursed / cursed,
+-- or "a" / "an" before it ("a blessed +1 quarterstaff": "+1 quarterstaff";
+-- "an uncursed scroll of light": "scroll of light"; "2 uncursed potions":
+-- "2 potions"; "the Eye of the Aethiopica" stays)
+local function short_name(name)
+	for _, buc in ipairs({"blessed", "uncursed", "cursed"}) do
+		local lead, rest = name:match("^(%S+) " .. buc .. " (.+)$")
+		if lead then
+			name = lead .. " " .. rest
+			break
+		end
+		if name:sub(1, #buc + 1) == buc .. " " then
+			name = name:sub(#buc + 2)
+			break
 		end
 	end
-	return "an"
-end
-
--- an item's name without its blessed / uncursed / cursed ("a blessed +1
--- quarterstaff": "a +1 quarterstaff"; "an uncursed scroll": "a scroll")
-local function without_buc(name)
-	local lead, rest = name:match("^(%S+) blessed (.+)$")
-	if not lead then
-		lead, rest = name:match("^(%S+) uncursed (.+)$")
-	end
-	if not lead then
-		lead, rest = name:match("^(%S+) cursed (.+)$")
-	end
-	if not lead then
-		return (name:gsub("^blessed ", ""):gsub("^uncursed ", ""):gsub("^cursed ", ""))
-	end
-	if lead == "a" or lead == "an" then
-		lead = article(rest)
-	end
-	return lead .. " " .. rest
+	return (name:gsub("^an? ", ""))
 end
 
 -- what you carry, a line each (its picture, its letter and name), as the
@@ -540,7 +525,7 @@ function sidebars.render_inventory(player)
 	for r, row in ipairs(inv_rows) do
 		local o = inv[inv_scroll + r]
 		local icon = o and o.tile and nhv_tiles.texture(o.tile) or "blank.png"
-		local text = o and (o.kind or (o.invlet .. " - " .. without_buc(o.name))) or ""
+		local text = o and (o.kind or (o.invlet .. " - " .. short_name(o.name))) or ""
 		if #text > most then
 			text = text:sub(1, most - 2) .. ".."
 		end
