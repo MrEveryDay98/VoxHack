@@ -1105,9 +1105,17 @@ function actions.context(player)
 	local h = hero()
 	local p = actions.pointed(player)
 	local tx, ty = p.tx, p.ty
-	-- an object (a ladder...) in a stairs or ladder square: a tap climbs it,
-	-- stepping onto its square first if you're next to it
-	if p.kind == "prop" and math.abs(tx - h.x) <= 1 and math.abs(ty - h.y) <= 1 then
+	-- an object (a ladder...) in a stairs or ladder square - or a built
+	-- staircase you're next to, from any side (it faces one way, the most
+	-- open: from behind, its back is in the way) - a tap climbs it, stepping
+	-- onto its square first if you're next to it
+	-- (a staircase's block you point at: its square, not the one its face
+	-- is on the edge of)
+	if p.wx and (p.wx ~= h.x or p.wy ~= h.y) and U.in_map(p.wx, p.wy) and stair_key(square_info(p.wx, p.wy)) then
+		tx, ty = p.wx, p.wy
+	end
+	local beside_stairs = (tx ~= h.x or ty ~= h.y) and U.in_map(tx, ty) and stair_key(square_info(tx, ty))
+	if (p.kind == "prop" or beside_stairs) and math.abs(tx - h.x) <= 1 and math.abs(ty - h.y) <= 1 then
 		local key = stair_key(square_info(tx, ty))
 		if not key then
 			local slot = nhv.terrain.slot_at(tx, ty) or ""
