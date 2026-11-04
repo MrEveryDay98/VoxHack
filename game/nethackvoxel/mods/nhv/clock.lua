@@ -285,13 +285,33 @@ function clock.act(keys, info)
 end
 
 -- An action's result: charge the turns it really took (multi-turn ones,
--- eating, digging..., take their full time; refused ones nothing).
+-- eating, digging..., take their full time; refused ones nothing). One
+-- that NetHack asks about first ("In what direction?", "What do you want
+-- to throw?" - answered by you or for you) comes back as that question,
+-- no time passed yet: its time comes with the answer's result, which has
+-- no action of its own.
+local asked = nil
 nh.on_snapshot(function(snap, action)
 	if not snap then
+		asked = nil
 		return
 	end
+	-- (a redraw meanwhile is neither: still waiting for the answer)
+	local redraw = action and action.kind == "refresh"
+	if not redraw then
+		if not action and asked then
+			action = asked
+		end
+		asked = nil
+	end
+	local question = not (nh.req and nh.req.kind == "key" and nh.req.for_command)
 	local prev = clock.last_moves
 	clock.last_moves = snap.hero.moves
+	if prev and action and not redraw and action.kind ~= "tick" and action.kind ~= "hmove" and question
+			and snap.hero.moves == prev then
+		asked = action
+		return
+	end
 	-- (hurt while holding Search: it stops, until pressed again)
 	if clock.last_hp and snap.hero.hp < clock.last_hp then
 		clock.search_held = false
