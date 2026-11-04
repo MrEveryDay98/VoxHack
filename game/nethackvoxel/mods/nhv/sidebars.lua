@@ -749,9 +749,12 @@ core.register_globalstep(function(dtime)
 	local sig = info and info.size and (info.size.x .. "x" .. info.size.y .. "@" .. (info.real_hud_scaling or 0))
 	if sig and sig ~= size_seen then
 		size_seen = sig
-		-- (also the first time it's known: on joining it isn't yet)
+		-- (also the first time it's known: on joining it isn't yet; the
+		-- compass made its frame's size again, either way - hud.lua)
 		if sidebars.on() then
 			nhv.theme.apply(player)
+		elseif nhv.hud and nhv.hud.place_compass then
+			nhv.hud.place_compass(player)
 		end
 	end
 end)

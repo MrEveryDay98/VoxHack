@@ -1899,17 +1899,21 @@ function hud.place_compass(player)
 	end
 	local small = core.settings:get_bool("nhv_retro", false)
 	local f = 1
+	local info = core.get_player_window_information(player:get_player_name())
+	local real = info and info.real_hud_scaling and info.real_hud_scaling > 0 and info.real_hud_scaling or 1
 	local bar = nhv.sidebars and nhv.sidebars.bar_scale(player)
 	if bar then
-		local info = core.get_player_window_information(player:get_player_name())
-		if info and info.real_hud_scaling and info.real_hud_scaling > 0 then
-			small, f = true, bar / info.real_hud_scaling
-		end
+		small, f = true, bar / real
 	end
 	local c = small and COMPASS.small or COMPASS.big
+	-- (the engine draws the strip at its size in screen pixels, not HUD
+	-- units, and moves it by the HUD size without the screen's density:
+	-- made the frame's own size and place, which do grow with them)
+	local hud_size = tonumber(core.settings:get("hud_scaling")) or 1
+	local density = real / math.max(0.01, hud_size)
 	player:hud_change(hud.ids.compass, "text", c.strip)
-	player:hud_change(hud.ids.compass, "size", {x = c.size.x * f, y = c.size.y * f})
-	player:hud_change(hud.ids.compass, "offset", {x = 0, y = c.y * f})
+	player:hud_change(hud.ids.compass, "size", {x = c.size.x * f * real, y = c.size.y * f * real})
+	player:hud_change(hud.ids.compass, "offset", {x = 0, y = c.y * f * density})
 	player:hud_change(hud.ids.compass_frame, "text", c.frame)
 	player:hud_change(hud.ids.compass_frame, "offset", {x = 0, y = c.y * f})
 	player:hud_change(hud.ids.compass_frame, "scale", {x = f, y = f})
