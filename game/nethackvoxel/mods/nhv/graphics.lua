@@ -181,6 +181,11 @@ function graphics.formspec()
 		add(row(y, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)))
 		add(row(y, "Text size", "text", labels(text_list()), pick(text_list(), "nhv_text_scale", 1)))
 		add(row(y, "Map size", "map", labels(MAP), pick(MAP, "nhv_map_scale", 3)))
+		-- (the side bars have a size of their own: sidebars.bar_scale)
+		if nhv.sidebars and nhv.sidebars.on() then
+			add(row(y, "Side bar width", "sidebar_width", labels(SIDEBAR_WIDTH),
+				pick(SIDEBAR_WIDTH, "nhv_sidebar_width", 1)))
+		end
 	end
 	add(row(y, "Map icons", "map_icons", table.concat(MAP_ICONS, ","), nhv.hud.exact_icons() and 2 or 1))
 	add(row(y, "Sprites", "sprites", table.concat(SPRITES, ","),
@@ -199,10 +204,6 @@ function graphics.formspec()
 	add(row(y, "Light dithering", "texel_pattern", names(TEXEL_PATTERN),
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
 	add(row(y, "HUD layout", "hud_layout", names(HUD_LAYOUT), choice(HUD_LAYOUT, "nhv_hud_layout", "overlay")))
-	if nhv.sidebars and nhv.sidebars.on() and not retro then
-		add(row(y, "Side bar width", "sidebar_width", labels(SIDEBAR_WIDTH),
-			pick(SIDEBAR_WIDTH, "nhv_sidebar_width", 1)))
-	end
 	add(row(y, "Raytraced light", "raytrace", table.concat(RAYTRACE, ","),
 		core.settings:get_bool("nhv_raytrace", false) and 2 or 1))
 	local square = core.settings:get("nhv_square_light") or "off"
