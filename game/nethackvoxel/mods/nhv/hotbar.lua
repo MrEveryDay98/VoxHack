@@ -406,9 +406,11 @@ local function refresh(player, inv)
 			glove = nhv_tiles.glove_color(o.tile)
 		end
 	end
-	if not wep and glove then
+	-- (polymorphed: fists in the colours of what you've become)
+	local poly = h and U.has(h.flags, U.HERO.POLY) and nhv_tiles.poly_colors(h.tile) or nil
+	if not wep and (glove or poly) then
 		st = ItemStack("nhv:fist")
-		st:get_meta():set_string("wield_image", nhv_tiles.fist(false, glove))
+		st:get_meta():set_string("wield_image", nhv_tiles.fist(false, glove, poly))
 	end
 	if wep then
 		st = ItemStack(nhv_tiles.item(wep.tile))
@@ -431,7 +433,7 @@ local function refresh(player, inv)
 		left:get_meta():set_string("wield_image", nhv_tiles.texture(alt.tile) .. "^[transformFX")
 	elseif h and U.has(h.flags, U.HERO.TWOFISTS) then
 		left = ItemStack("nhv:fist")
-		left:get_meta():set_string("wield_image", nhv_tiles.fist(true, glove))
+		left:get_meta():set_string("wield_image", nhv_tiles.fist(true, glove, poly))
 	end
 	pinv:set_size("nhv_offhand", 1)
 	pinv:set_list("nhv_offhand", {left})

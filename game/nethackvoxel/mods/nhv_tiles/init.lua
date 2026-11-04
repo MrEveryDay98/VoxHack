@@ -355,11 +355,25 @@ function nhv_tiles.glove_color(tile)
 	return GLOVES[tile]
 end
 
--- a fist's picture: the left hand's mirrored; in gloves, their colour over
--- the hand (where textures/nhv_glove_mask.png is white: to the wrist), the
--- fist's shading kept (grey, then tinted), the arm bare
-function nhv_tiles.fist(left, color)
+-- a polymorphed hero's fist: a monster tile's two main colours
+-- (tools/make_poly_colors.py): {skin, shading}, or nil
+local POLY = dofile(core.get_modpath("nhv_tiles") .. "/poly_colors.lua")
+function nhv_tiles.poly_colors(tile)
+	return tile and POLY[tile]
+end
+
+-- a fist's picture: the left hand's mirrored; polymorphed (poly: {skin,
+-- shading}), palette-swapped to what you've become - its skin pixels the
+-- first colour, its shading the second (textures/nhv_fist_mask_skin.png,
+-- _shade.png); in gloves, their colour over the hand (where
+-- textures/nhv_glove_mask.png is white: to the wrist), the fist's shading
+-- kept (grey, then tinted), the arm bare
+function nhv_tiles.fist(left, color, poly)
 	local tex = "nhv_weapon_Fist.png"
+	if poly then
+		tex = tex .. "^([fill:16x16:" .. poly[1] .. "^[mask:nhv_fist_mask_skin.png)"
+			.. "^([fill:16x16:" .. poly[2] .. "^[mask:nhv_fist_mask_shade.png)"
+	end
 	if color then
 		tex = tex .. "^(nhv_weapon_Fist.png^[hsl:0:-100:15^[multiply:" .. color
 			.. "^[mask:nhv_glove_mask.png)"
