@@ -397,6 +397,10 @@ NHV_API int nhv_mon_info(int mndx, nhv_moninfo *out);
  * with "#nhvmove x y" (no time), time passes with "#nhvtick", and melee
  * attacks with "#nhvattack <m_id>". */
 NHV_API void nhv_set_freemove(int on);
+/* would monster a (not a pet) go for monster d next to it - a grudge
+   (mm_aggression: a purple worm and a shrieker, a zombie and the living):
+   1 / 0 */
+NHV_API int nhv_mm_grudge_ids(unsigned a, unsigned d);
 
 typedef struct nhv_monstate {
     unsigned id;

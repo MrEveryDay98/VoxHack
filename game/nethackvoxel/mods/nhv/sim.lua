@@ -497,7 +497,7 @@ local function climb(e, map, dist, hp, hero)
 end
 
 -- one monster's movement for this step
-local function think(e, map, dturns, hp, hero)
+local function move(e, map, dturns, hp, hero)
 	e.target = nil
 	if e.glide then
 		-- NetHack already put it there: slide straight in, quickly (at
@@ -587,6 +587,41 @@ local function think(e, map, dturns, hp, hero)
 		end
 	end
 	wander(e, map, dist, hp)
+end
+
+-- A monster (not a pet) with a grudge against one its body's reached - a
+-- purple worm and a shrieker, a zombie and the living (NetHack's
+-- mm_aggression: core.nh_mm_grudge) - goes for it when it's in its way:
+-- ahead of where it's going this step, or it's got nowhere (NetHack's
+-- monster goes for one in the square it moves to). step: how far it went
+local function grudge(e, map, step)
+	if not core.nh_mm_grudge or has(e.flags, MF.TAME) or has(e.flags, MF.GRID) or e.glide
+			or not has(e.flags, MF.CANMOVE) or has(e.flags, MF.HIDDEN) then
+		return nil
+	end
+	local sl = math.sqrt(step.x * step.x + step.z * step.z)
+	local best, bd
+	for _, o in pairs(sim.mons) do
+		if o ~= e then
+			local d = flat_dist(e.pos, o.pos)
+			if d <= e.r + o.r + sim.REACH and (not bd or d < bd) then
+				local ahead = sl < 0.02 * TILE
+					or ((o.pos.x - e.pos.x) * step.x + (o.pos.z - e.pos.z) * step.z) / (sl * math.max(d, 1e-3)) > 0.5
+				if ahead and clear_line(map, e.pos, o.pos) and core.nh_mm_grudge(e.id, o.id) then
+					best, bd = o, d
+				end
+			end
+		end
+	end
+	return best and best.id
+end
+
+local function think(e, map, dturns, hp, hero)
+	local before = e.pos
+	move(e, map, dturns, hp, hero)
+	if not e.target then
+		e.target = grudge(e, map, vector.subtract(e.pos, before))
+	end
 end
 
 -- Bodies in each other - one glided in through anything (NetHack moved

@@ -56,6 +56,16 @@ nhv_mon_melee_target(struct monst *mtmp)
 
 static unsigned mm_reach[2];
 
+static struct monst *mon_by_id(unsigned);
+
+int
+nhv_mm_grudge_ids(unsigned a, unsigned d)
+{
+    struct monst *ma = mon_by_id(a), *md = mon_by_id(d);
+
+    return (ma && md && nhv_mm_grudge(ma, md)) ? 1 : 0;
+}
+
 void
 nhv_mm_set_reach(struct monst *a, struct monst *d)
 {
