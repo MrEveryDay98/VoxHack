@@ -886,6 +886,8 @@ fill_obj(struct obj *otmp, nhv_obj *o)
         o->flags |= NHV_OBJ_CURSED_KNOWN;
     if (otmp->bknown && otmp->blessed)
         o->flags |= NHV_OBJ_BLESSED_KNOWN;
+    if (otmp->bknown && !otmp->blessed && !otmp->cursed)
+        o->flags |= NHV_OBJ_UNCURSED_KNOWN;
     /* (after its name: naming it is what marks it seen up close, which
        its picture depends on - else a gem looked at for the first time,
        in a box say, shows as the generic gem) */

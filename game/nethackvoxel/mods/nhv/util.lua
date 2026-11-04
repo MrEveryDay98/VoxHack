@@ -93,6 +93,7 @@ U.OBJ = {
 	WORN = 0x01, WIELDED = 0x02, QUIVERED = 0x04, CURSED_KNOWN = 0x08,
 	BLESSED_KNOWN = 0x10, ALTWEP = 0x20, CONTAINER = 0x40, LIT = 0x80,
 	INVOKE = 0x100, -- (#invoke does something with it: an artifact's power, a crystal ball)
+	UNCURSED_KNOWN = 0x200, -- (known to be neither)
 }
 
 -- object classes (include/objclass.h)

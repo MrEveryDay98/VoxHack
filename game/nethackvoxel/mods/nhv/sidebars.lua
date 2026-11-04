@@ -469,6 +469,53 @@ function sidebars.set_stats(player, lines)
 end
 
 -- ---------------------------------------------------------------- inventory
+-- An item's line says nothing of blessed, uncursed or cursed: its colour
+-- does, once you know (BUC_COLOR; not known yet, NOT_KNOWN).
+local BUC_COLOR = {cursed = 0xFF4848, blessed = 0x80C8FF, uncursed = 0xFFFFFF}
+local NOT_KNOWN = 0xA8A8A8
+
+local function buc_color(o)
+	local f = o.flags or 0
+	return U.has(f, U.OBJ.CURSED_KNOWN) and BUC_COLOR.cursed
+		or U.has(f, U.OBJ.BLESSED_KNOWN) and BUC_COLOR.blessed
+		or U.has(f, U.OBJ.UNCURSED_KNOWN) and BUC_COLOR.uncursed
+		or NOT_KNOWN
+end
+
+-- "a" or "an" before a word, as NetHack's just_an() has it
+local A_BEFORE = {"one[ %-]", "one$", "eu", "uke", "ukulele", "unicorn", "uranium", "useful"}
+local function article(word)
+	local w = word:lower()
+	if not w:match("^[aeiou]") then
+		return "a"
+	end
+	for _, p in ipairs(A_BEFORE) do
+		if w:find("^" .. p) then
+			return "a"
+		end
+	end
+	return "an"
+end
+
+-- an item's name without its blessed / uncursed / cursed ("a blessed +1
+-- quarterstaff": "a +1 quarterstaff"; "an uncursed scroll": "a scroll")
+local function without_buc(name)
+	local lead, rest = name:match("^(%S+) blessed (.+)$")
+	if not lead then
+		lead, rest = name:match("^(%S+) uncursed (.+)$")
+	end
+	if not lead then
+		lead, rest = name:match("^(%S+) cursed (.+)$")
+	end
+	if not lead then
+		return (name:gsub("^blessed ", ""):gsub("^uncursed ", ""):gsub("^cursed ", ""))
+	end
+	if lead == "a" or lead == "an" then
+		lead = article(rest)
+	end
+	return lead .. " " .. rest
+end
+
 -- what you carry, a line each (its picture, its letter and name), as the
 -- full inventory has it (ui.lua): grouped by kind in NetHack's order, the
 -- kind's name over each group (KIND: the full inventory's colour) - from
@@ -493,11 +540,11 @@ function sidebars.render_inventory(player)
 	for r, row in ipairs(inv_rows) do
 		local o = inv[inv_scroll + r]
 		local icon = o and o.tile and nhv_tiles.texture(o.tile) or "blank.png"
-		local text = o and (o.kind or (o.invlet .. " - " .. o.name)) or ""
+		local text = o and (o.kind or (o.invlet .. " - " .. without_buc(o.name))) or ""
 		if #text > most then
 			text = text:sub(1, most - 2) .. ".."
 		end
-		local color = o and o.kind and KIND or 0xFFFFFF
+		local color = o and (o.kind and KIND or buc_color(o)) or 0xFFFFFF
 		if row.shown_color ~= color then
 			row.shown_color = color
 			player:hud_change(row.text, "number", color)

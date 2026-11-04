@@ -316,6 +316,7 @@ NHV_API void nhv_get_hero(nhv_hero *out);
 #define NHV_OBJ_CONTAINER 0x40
 #define NHV_OBJ_LIT      0x80
 #define NHV_OBJ_INVOKE   0x100 /* carried, and #invoke does something with it */
+#define NHV_OBJ_UNCURSED_KNOWN 0x200 /* known to be neither blessed nor cursed */
 
 typedef struct nhv_obj {
     unsigned id;    /* o_id */
