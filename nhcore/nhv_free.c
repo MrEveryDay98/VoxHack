@@ -669,16 +669,19 @@ donhvmhit(void)
         struct monst *thrower = mon_by_id(f->mon_id);
         boolean back = f->tethered && thrower && !DEADMONSTER(thrower);
 
+        boolean snapped = FALSE;
+
         r = nhv_missile_hits_hero(thrower, f->obj, f->lx, f->ly, back);
-        /* (an aklys that hit you: back to its thrower) */
+        /* (an aklys that hit you: back to its thrower - or snapped off,
+           there at your feet) */
         if (r == 1 && back)
-            nhv_missile_returns(thrower, f->obj, u.ux, u.uy);
+            snapped = !nhv_missile_returns(thrower, f->obj, u.ux, u.uy);
         monster_acting(FALSE);
         if (r == 0) {
             missile_event("miss", f->pid); /* dodged: it flies on */
         } else {
-            missile_event(r == 1 && back ? "backhit" : r == 1 ? "hit" : "stop",
-                          f->pid);
+            missile_event((r == 1 && back && !snapped) ? "backhit"
+                          : r == 1 ? "hit" : "stop", f->pid);
             f->obj = 0;
         }
     }
@@ -719,15 +722,17 @@ donhvmland(void)
     monster_acting(TRUE);
     {
         struct monst *thrower = f->tethered ? mon_by_id(f->mon_id) : 0;
+        boolean back = FALSE;
 
-        /* (an aklys: back to its thrower, if it's still about) */
+        /* (an aklys: back to its thrower, if it's still about - unless it
+           snaps off, staying there) */
         if (thrower && !DEADMONSTER(thrower))
-            nhv_missile_returns(thrower, f->obj, x, y);
+            back = nhv_missile_returns(thrower, f->obj, x, y);
         else
             nhv_missile_lands(f->obj, x, y);
         monster_acting(FALSE);
         f->obj = 0;
-        missile_event(thrower ? "back" : "land", f->pid);
+        missile_event(back ? "back" : "land", f->pid);
     }
     return nhv_ok();
 }
@@ -754,6 +759,7 @@ nhv_get_missiles(nhv_missile *buf, int max)
         buf[n].glyph = obj_to_glyph(f->obj, rn2_on_display_rng);
         buf[n].tile = glyphmap[buf[n].glyph].tileidx;
         buf[n].target = f->target;
+        buf[n].tethered = f->tethered;
         n++;
     }
     return n;

@@ -461,6 +461,7 @@ typedef struct nhv_missile {
     int range;          /* squares */
     int otyp, glyph, tile;
     unsigned target;    /* m_id of the monster it's thrown at; 0: the hero */
+    int tethered;       /* an aklys: on its tether, back to the thrower after */
 } nhv_missile;
 /* missiles launched since the last call */
 NHV_API int nhv_get_missiles(nhv_missile *buf, int max);

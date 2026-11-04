@@ -41,9 +41,60 @@ local function command(text)
 	table.insert(missiles.queue, {{key = "#"}, {text = text}})
 end
 
+-- An aklys's tether: a white line a texture pixel wide (a sixteenth of a
+-- node), from the thrower's hand to the club, stretched each step as it
+-- flies out and back (a block stretched between them, as the ball's chain)
+local TETHER_W = 1 / 16
+core.register_entity("nhv:tether", {
+	initial_properties = {
+		visual = "cube", visual_size = {x = TETHER_W, y = TETHER_W, z = 1},
+		textures = {"[fill:1x1:#FFFFFF", "[fill:1x1:#FFFFFF", "[fill:1x1:#FFFFFF",
+			"[fill:1x1:#FFFFFF", "[fill:1x1:#FFFFFF", "[fill:1x1:#FFFFFF"},
+		physical = false, pointable = false, static_save = false,
+		collisionbox = {0, 0, 0, 0, 0, 0}, glow = 14, shaded = false,
+	},
+})
+
+-- (the thrower's hand: where it threw from - its body now)
+local function hand_of(m)
+	local body = m.thrower and nhv.sim.body(m.thrower)
+	if not body then
+		return nil
+	end
+	local h = nhv.scale.height(body.size, body.mndx)
+	return vector.new(body.pos.x, U.STAND_Y + h * 0.6, body.pos.z)
+end
+
+local function update_tether(m)
+	if not m.tethered or missiles.list[m.pid] ~= m then
+		return
+	end
+	local a, z = hand_of(m), m.pos
+	local d = a and vector.subtract(z, a)
+	if not d or vector.length(d) < 0.05 then
+		if m.tether and m.tether:get_pos() then
+			m.tether:set_properties({is_visible = false})
+		end
+		return
+	end
+	if not (m.tether and m.tether:get_pos()) then
+		m.tether = core.add_entity(a, "nhv:tether")
+		if not m.tether then
+			return
+		end
+	end
+	m.tether:move_to(vector.multiply(vector.add(a, z), 0.5), true)
+	m.tether:set_rotation(vector.dir_to_rotation(d))
+	m.tether:set_properties({is_visible = true,
+		visual_size = {x = TETHER_W, y = TETHER_W, z = vector.length(d)}})
+end
+
 local function remove(m)
 	if m.obj and m.obj:get_pos() then
 		m.obj:remove()
+	end
+	if m.tether and m.tether:get_pos() then
+		m.tether:remove()
 	end
 	missiles.list[m.pid] = nil
 end
@@ -109,9 +160,10 @@ local function launch(info)
 	nhv.sound.hook("missile_launch", {pos = start})
 	missiles.list[info.pid] = {
 		pid = info.pid, obj = obj, pos = start, dir = dir, travelled = 0,
-		range = range, thrower = info.mon_id,
+		range = range, thrower = info.mon_id, tethered = info.tethered,
 		passed = {}, waiting = false,
 	}
+	update_tether(missiles.list[info.pid])
 end
 
 -- ---------------------------------------------------------------- rolling boulders
@@ -322,6 +374,8 @@ function missiles.update(dturns)
 				m.obj:move_to(m.pos, true)
 			end
 		end
+		-- (its tether, if it has one: the thrower may have moved too)
+		update_tether(m)
 	end
 	for _, r in pairs(missiles.rolls) do
 		roll(r, missiles.ROLL_SPEED * dturns, hp)
