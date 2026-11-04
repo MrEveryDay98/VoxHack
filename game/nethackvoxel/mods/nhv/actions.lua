@@ -1454,13 +1454,17 @@ core.register_globalstep(function()
 	elseif not ctl.dig then
 		attack_down_since = nil
 	end
-	if pressed("jump") and actions.climb_out(player) then -- luacheck: ignore 542
+	if pressed("jump") and nh.repeating then
+		nh.answer_key(27) -- (searching for a number of turns: Space stops it, as X does)
+	elseif pressed("jump") and actions.climb_out(player) then -- luacheck: ignore 542
 		-- in a pit: Space climbs out at its edge
 	elseif pressed("jump") and nh.ready() and not nhv.clock.busy() then
 		nhv.jump.press() -- (a tap waits a turn; held, it aims a jump: jump.lua)
 	end
 	nhv.jump.update(player, ctl.jump)
-	if pressed("zoom") then
+	if pressed("zoom") and ctl.sneak then
+		nhv.hud.toggle_near_map() -- (Shift+Z: the corner map zoomed in, tiled)
+	elseif pressed("zoom") then
 		nhv.hud.toggle_map()
 	end
 	-- holding the attack button keeps attacking, as fast as your actions

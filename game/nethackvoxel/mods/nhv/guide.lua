@@ -26,6 +26,7 @@ Mouse: look around
 Space: wait a turn; in a pit, climb out (facing its edge)
 Hold Space: jump (Knights, jumping boots) - green squares show where you can land; look at one and let go
 Z: the big map (Z again to close it)
+Shift + Z: the corner map zoomed in, with the tiles (again: the whole level)
 Right click a door: open or close it
 Walk into stairs or a ladder (or right click it): take it
 Walk straight into a boulder: push it]]},

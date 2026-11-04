@@ -1046,6 +1046,89 @@ local function corner_offset(player)
 end
 hud.hud_px, hud.corner_scale = hud_px, corner_scale
 
+-- the corner map's box: a square's size (pixels a square of the pixel
+-- map), its right edge and its top - or the side bars' place for it
+local function corner_box(player)
+	local s, off = corner_scale(player), corner_offset(player)
+	local ox, oy = -off, off
+	local g = nhv.sidebars and nhv.sidebars.geometry(player)
+	if g then
+		s, ox, oy = g.map_s, g.map.x, g.map.y
+	end
+	return s, ox, oy
+end
+
+-- Shift+Z: the corner map (or the side bar's) shows the squares round you
+-- with the tiles, as the big map does - zoomed in, cropped to the corner
+-- map's box: as many whole squares as fit, every pixel the same size (16
+-- pixels a square, 8 on a small screen), you in the middle. Again, the
+-- pixel map. (Kept through restarts: nhv_map_near.) One HUD picture a
+-- square of the box, changed only when what's shown there changes.
+function hud.near_map()
+	return core.settings:get_bool("nhv_map_near", false)
+end
+local near = {ids = {}, shown = {}, key = nil}
+local function clear_near(player)
+	for _, id in pairs(near.ids) do
+		player:hud_remove(id)
+	end
+	near.ids, near.shown, near.key = {}, {}, nil
+end
+
+local function update_near(player, snap)
+	local info = core.get_player_window_information(player:get_player_name())
+	local k = info and info.real_hud_scaling
+	local s, ox, oy = corner_box(player)
+	local h = snap and snap.hero
+	if hud.big_map or not hud.near_map() or not (snap and snap.map and h and h.x) or not k or k <= 0
+			or s <= 0 then
+		if next(near.ids) then
+			clear_near(player)
+		end
+		return
+	end
+	local w, ht = U.COLNO * s, U.ROWNO * s
+	local px = math.floor(ht * k / 16) >= 5 and 16 or 8
+	local t = (px + 0.001) / k -- (a square; a hair over: the engine rounds down)
+	local cols, rows = math.floor(w / t), math.floor(ht / t)
+	-- (odd: you in the very middle)
+	cols, rows = cols - (cols + 1) % 2, rows - (rows + 1) % 2
+	local key = table.concat({cols, rows, t, ox, oy}, ",")
+	if key ~= near.key then
+		clear_near(player) -- (the box moved or changed size: placed again)
+		near.key = key
+	end
+	local left = ox - w + (w - cols * t) / 2
+	local top = oy + (ht - rows * t) / 2
+	local map = snap.map
+	local x0, y0 = h.x - (cols - 1) / 2, h.y - (rows - 1) / 2
+	local rolling = rolling_seen(map)
+	for r = 0, rows - 1 do
+		for c = 0, cols - 1 do
+			local x, y = x0 + c, y0 + r
+			local tex = x >= 1 and x < U.COLNO and y >= 0 and y < U.ROWNO
+				and hud.square_tex(map, h, x, y, false, rolling) or nil
+			local i = r * cols + c
+			if tex ~= near.shown[i] then
+				near.shown[i] = tex
+				local id = near.ids[i]
+				if not tex then
+					player:hud_remove(id)
+					near.ids[i] = nil
+				elseif id then
+					player:hud_change(id, "text", tex)
+				else
+					near.ids[i] = player:hud_add({
+						type = "image", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
+						offset = {x = left + c * t, y = top + r * t},
+						scale = {x = t / TILE_PX, y = t / TILE_PX}, text = tex, z_index = 1,
+					})
+				end
+			end
+		end
+	end
+end
+
 -- under the corner map: the dungeon level ("Dlvl:3"), and the branch when
 -- it isn't the main dungeon
 function hud.level_text(h)
@@ -1100,27 +1183,32 @@ local function place_map(player)
 		player:hud_change(hud.ids.map_border, "scale", {x = s * U.COLNO + 2 * b, y = s * U.ROWNO + 2 * b})
 		player:hud_change(hud.ids.map_border, "text", "[fill:1x1:#FFFFFF")
 		update_tiles(player, nh.snap)
+		update_near(player, nh.snap) -- (the zoomed corner map's squares: gone meanwhile)
 		player:hud_set_flags({nhv_big_map = true})
 	else
-		local s, off = corner_scale(player), corner_offset(player)
-		local ox, oy = -off, off
 		-- (the side bars: at the top of the right one, as big as fits)
-		local g = nhv.sidebars and nhv.sidebars.geometry(player)
-		if g then
-			s, ox, oy = g.map_s, g.map.x, g.map.y
-		end
+		local s, ox, oy = corner_box(player)
+		local zoomed = hud.near_map()
 		player:hud_change(hud.ids.map, "position", {x = 1, y = 0})
 		player:hud_change(hud.ids.map, "alignment", {x = -1, y = 1})
-		-- (a hidden map is scaled to nothing)
-		player:hud_change(hud.ids.map, "scale", {x = s, y = s})
+		-- (a hidden map is scaled to nothing; zoomed in, it's the squares'
+		-- black backdrop - a 16x16 fill the size of the box)
+		if zoomed then
+			player:hud_change(hud.ids.map, "scale", {x = s * U.COLNO / 16, y = s * U.ROWNO / 16})
+		else
+			player:hud_change(hud.ids.map, "scale", {x = s, y = s})
+		end
 		player:hud_change(hud.ids.map, "offset", {x = ox, y = oy})
 		player:hud_change(hud.ids.map, "style", 0)
 		player:hud_change(hud.ids.map, "z_index", 0)
 		player:hud_change(hud.ids.map_border, "text", "blank.png")
 		player:hud_set_flags({nhv_big_map = false}) -- (its squares hidden, kept)
-		if nh.snap and nh.snap.map then
+		if zoomed then
+			player:hud_change(hud.ids.map, "text", BACKDROP_SOLID)
+		elseif nh.snap and nh.snap.map then
 			player:hud_change(hud.ids.map, "text", map_png(nh.snap))
 		end
+		update_near(player, nh.snap)
 	end
 end
 hud.place_map = place_map
@@ -1134,6 +1222,8 @@ function hud.redraw_map()
 	end
 	if hud.big_map then
 		update_tiles(player, nh.snap)
+	elseif hud.near_map() then
+		update_near(player, nh.snap)
 	else
 		player:hud_change(hud.ids.map, "text", map_png(nh.snap))
 	end
@@ -1223,6 +1313,19 @@ function hud.toggle_map()
 		-- (opened: wider than the screen, you in the middle of it - at once)
 		hud.follow_map(player, true)
 		place_map(player)
+	end
+end
+
+-- (Shift+Z: the corner map zoomed in, or not - the big map closed, to show it)
+function hud.toggle_near_map()
+	core.settings:set_bool("nhv_map_near", not hud.near_map())
+	if hud.big_map then
+		hud.toggle_map()
+	else
+		local player = nhv.player.get()
+		if player then
+			place_map(player)
+		end
 	end
 end
 
@@ -2195,6 +2298,8 @@ nh.on_snapshot(function(snap)
 	update_here(player, snap)
 	if hud.big_map then
 		update_tiles(player, snap)
+	elseif hud.near_map() then
+		update_near(player, snap)
 	else
 		player:hud_change(hud.ids.map, "text", map_png(snap))
 	end

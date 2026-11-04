@@ -19,6 +19,7 @@ help.SECTIONS = {
 		{"Mouse", "Look around"},
 		{"Space", "Wait a turn; hold to jump (Knights, jumping boots): the green squares are where you can land - look at one and let go; in a pit, climb out (face its edge)"},
 		{"Z", "The big map (Z again closes it)"},
+		{"Shift + Z", "The corner map zoomed in, with the tiles, round you (Shift + Z again: the whole level)"},
 		{"Middle click", "Look at what's under the crosshair (what NetHack calls it)"},
 	}},
 	{"Fighting", {
@@ -40,7 +41,7 @@ help.SECTIONS = {
 	}},
 	{"Items and other keys", {
 		{"F", "Pick up what's under you (shown as \"F  Pick up\" when something is; a right click tap does it too, when nothing else is there)"},
-		{"X", "Search (hold to keep searching; Ctrl + X: search for a number of turns)"},
+		{"X", "Search (hold to keep searching; Ctrl + X: search for a number of turns - X or Space stops it)"},
 		{"P", "Pay the shopkeeper, in a shop"},
 		{"G", "Advance a skill (shown when you can)"},
 		{"Q", "Monster ability while polymorphed (breathe, spit, hide...), otherwise invoke what you wield; shown as \"Q  ...\" when there is one"},
