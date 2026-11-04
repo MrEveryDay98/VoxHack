@@ -219,7 +219,7 @@ function nhv.new_game(player, name)
 	with_area(function()
 		local ok, err = nh.start(name or nhv.nhopts.character_name(player:get_player_name()))
 		if not ok then
-			core.chat_send_all("Could not start NetHack: " .. tostring(err))
+			core.chat_send_all("Could not start VoxHack: " .. tostring(err))
 		end
 	end)
 end

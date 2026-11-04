@@ -350,7 +350,7 @@ core.register_on_joinplayer(function(player)
 			"OPTIONS=role:valkyrie,race:human,gender:female,align:neutral",
 		}, "\n"))
 		if not ok then
-			say("Could not start NetHack for the atlas: " .. tostring(err))
+			say("Could not start VoxHack for the atlas: " .. tostring(err))
 			run = nil
 		end
 	end)
