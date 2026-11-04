@@ -2,6 +2,25 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.21.0 (alpha) - 2026-11-04
+
+- **Shift+Z zooms the corner map in:** the squares around you in tiles, pixel perfect, as the full map draws them, sliding smoothly as you walk. It fits the corner map's box or the side bar's, in retro mode too. Press it again for the pixel map; your choice is kept.
+- **Unseen monsters have bodies.** One you can't see (invisible, in the dark, behind you, or while you're blind) blocks you as one you can see does, and so does one seen only as a black shape in the dark. Pets, monsters hiding under things or on the ceiling, and a monster that has swallowed you don't.
+- **Pets fight by the reach of their bodies**, not by squares, and what they hit hits back. Their breath, spit, gazes and missiles go in any line at the body they aim at.
+- **Monsters with a grudge go for each other** when one's in the other's way (a purple worm and a shrieker, a zombie and the living).
+- **Fixed: firing and throwing took no time**, so monsters stood still while you kept shooting and only moved when you walked.
+- **Side bars have their own size and font outside retro mode:** laid out as on retro mode's small screen and scaled with the window, set by Side bar width. Your HUD, menu, text and map sizes are left alone, and now survive switching retro mode on and off.
+- **Fountains' water moves**, flipping from side to side.
+- **Polymorphed, your bare fists take the colours** of what you've become. Your breath now goes where you aim.
+- The weapon or hand you hold faces you more; its swing and stab move as before.
+- Space stops a counted search (Ctrl+X), as X does.
+- Speech stays over the speaker's head if they're near enough, and goes to the dialogue box only after they've been out of view for 1.5 seconds.
+- Long worms' bodies are no bigger than their heads.
+- **The play log** (`/playlog on`, `/playlog off`) writes what you do and what the game does to the world's `playlogs` folder, for tracking down what went wrong in a game.
+- **Intro editor:** fixed a crash on startup and another at the end of a preview. F7 now toggles retro mode. A new Light block gives off bright light; only the light shows in the opening, not its box.
+- Removed the "Shadows drawn on sprites" option: sprites always keep their drawn shadows for now.
+- Fixed: the compass's letters sat off centre at some HUD sizes and the compass could grow too big; pause menu tips overlapped the buttons at bigger text sizes; only the top item of a pile was redrawn when sprites changed. Side bar width moved up with the other sizes in Options > Graphics.
+
 ## v0.20.1 (alpha) - 2026-11-03
 
 - **Throwing and firing aim along your crosshair**, as zaps do, not at the middle of the square you point at. What you throw is drawn flying along that line to the monster it hits, or to where it comes down.
