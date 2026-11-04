@@ -8,7 +8,9 @@
 -- An item's slot is set from its menu ("Quick slot": ui.lua), and goes on
 -- to another of the same kind (the same picture) when the one you had is
 -- used up; a spell's from the spell menu ("Quick": spells.lua), by its
--- name. Both are kept with the game (mod storage, by the hero's name).
+-- name. Both are kept with the game (mod storage, by the hero's name and
+-- the game's id - when it was started: a new hero of the same name starts
+-- with none).
 
 local nh = nhv.nh
 local E = core.formspec_escape
@@ -21,7 +23,19 @@ local store = core.get_mod_storage()
 
 local function key(what)
 	local h = nh.snap and nh.snap.hero
-	return (what or "quick_items") .. ":" .. (h and h.name or "")
+	local gid = core.nh_game_id and ("%d"):format(core.nh_game_id()) or ""
+	return (what or "quick_items") .. ":" .. (h and h.name or "") .. ":" .. gid
+end
+
+-- (saving: the hero's slots from other games - same name, or kept by name
+-- alone, from before - dropped, not piling up)
+local function forget_others(k)
+	local what_name = k:match("^(.*):[^:]*$")
+	for _, other in ipairs(store:get_keys()) do
+		if other ~= k and (other == what_name or other:sub(1, #what_name + 1) == what_name .. ":") then
+			store:set_string(other, "")
+		end
+	end
 end
 
 -- the item slots: n -> {tile=, invlet=, name=, action=}
@@ -31,7 +45,9 @@ function quick.items()
 end
 
 local function save(t)
-	store:set_string(key(), core.serialize(t))
+	local k = key()
+	store:set_string(k, core.serialize(t))
+	forget_others(k)
 end
 
 -- the spell slots: n -> {name=, self=} (self: cast at yourself)
@@ -41,7 +57,9 @@ function quick.spell_slots()
 end
 
 local function save_spells(t)
-	store:set_string(key("quick_spells"), core.serialize(t))
+	local k = key("quick_spells")
+	store:set_string(k, core.serialize(t))
+	forget_others(k)
 end
 
 -- (an item's name without how many: "potions of healing", for messages)
