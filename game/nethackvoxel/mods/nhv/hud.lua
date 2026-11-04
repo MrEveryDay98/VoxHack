@@ -993,6 +993,8 @@ local function update_map_arrow(player)
 	end
 	if hud.big_map then
 		hud.follow_map(player) -- (and the map kept on you as you go)
+	else
+		hud.follow_near(player) -- (the zoomed corner map too)
 	end
 	local h = nh.snap and nh.snap.hero
 	local tex, offset, sc = "", nil, nil
@@ -1058,82 +1060,123 @@ local function corner_box(player)
 	return s, ox, oy
 end
 
--- Shift+Z: the corner map (or the side bar's) shows the squares round you
--- with the tiles, as the big map does - zoomed in, cropped to the corner
--- map's box: as many whole squares as fit, every pixel of a tile the same
--- whole number of screen pixels (ZOOM_ROWS squares down the box, or as
--- near as that comes), you in the middle. Again, the
--- pixel map. (Kept through restarts: nhv_map_near.) One HUD picture a
--- square of the box, changed only when what's shown there changes.
+-- Shift+Z: the corner map's box (or the side bar's) shows the map round
+-- you with the tiles, as the big map does - zoomed in, every pixel of a
+-- tile the same whole number of screen pixels: about ZOOM_ROWS squares
+-- down the box (retro mode's small screen, at half the tiles' size, the
+-- same) - and follows you as the big map does: from where you really are,
+-- you in the middle of the box, the engine easing it there every frame
+-- (core.nhv_near_map: HUD style NEAR_MAP), the squares cut off at the
+-- box's edges. Again, the pixel map. (Kept through restarts:
+-- nhv_map_near.) Each square's picture is placed once, where it is on the
+-- map, and changed only when what's shown there changes; only the squares
+-- near you are kept.
 function hud.near_map()
 	return core.settings:get_bool("nhv_map_near", false)
 end
-local near = {ids = {}, shown = {}, key = nil}
-local ZOOM_ROWS = 5 -- (squares down the box: as big as that makes them, or a few more rows)
+local NEAR_MAP = 2048 -- (HUD style: moved with the zoomed map, cut off at its box)
+local ZOOM_ROWS = 7
+local near = {ids = {}, shown = {}, key = nil, lay = nil, sent = nil}
 local function clear_near(player)
 	for _, id in pairs(near.ids) do
 		player:hud_remove(id)
 	end
-	near.ids, near.shown, near.key = {}, {}, nil
+	near.ids, near.shown, near.key, near.lay, near.sent = {}, {}, nil, nil, nil
 end
 
-local function update_near(player, snap)
+-- where it goes, in whole screen pixels (from the screen's top right
+-- corner): a square's size, the box, its middle; nil: not shown
+local function near_layout(player, snap)
 	local info = core.get_player_window_information(player:get_player_name())
 	local k = info and info.real_hud_scaling
 	local s, ox, oy = corner_box(player)
 	local h = snap and snap.hero
 	if hud.big_map or not hud.near_map() or not (snap and snap.map and h and h.x) or not k or k <= 0
 			or s <= 0 then
-		if next(near.ids) then
+		return nil
+	end
+	local wp, hp = math.floor(U.COLNO * s * k + 0.5), math.floor(U.ROWNO * s * k + 0.5)
+	local px = math.floor(hp / ZOOM_ROWS / TILE_PX) * TILE_PX
+	if px == 0 then
+		px = core.settings:get_bool("nhv_retro", false) and TILE_PX / 2 or TILE_PX
+	end
+	local right, top = math.floor(ox * k + 0.5), math.floor(oy * k + 0.5)
+	return {k = k, px = px, left = right - wp, top = top, right = right, bottom = top + hp,
+		cx = right - math.floor(wp / 2), cy = top + math.floor(hp / 2),
+		reach_x = math.ceil(wp / px / 2) + 2, reach_y = math.ceil(hp / px / 2) + 2}
+end
+
+-- the map moved under the box: where you really are in its middle (eased
+-- there by the engine; instant: at once)
+local function follow_near(player, instant)
+	local lay = near.lay
+	if not (lay and core.nhv_near_map) then
+		return
+	end
+	local fx, fy = map_pos(player:get_pos())
+	local sx, sy = fx * lay.px, fy * lay.px
+	local was = near.sent
+	if was and not instant and math.abs(sx - was.x) < 0.01 and math.abs(sy - was.y) < 0.01 then
+		return
+	end
+	-- (a jump - a level's start, a teleport - not glided across)
+	instant = instant or not was or math.abs(sx - was.x) + math.abs(sy - was.y) > 4 * lay.px
+	near.sent = {x = sx, y = sy}
+	core.nhv_near_map(sx, sy, instant, lay.left, lay.top, lay.right, lay.bottom)
+end
+hud.follow_near = function(player)
+	follow_near(player, false)
+end
+
+local function update_near(player, snap)
+	local lay = near_layout(player, snap)
+	if not lay then
+		if next(near.ids) or near.lay then
 			clear_near(player)
 		end
 		return
 	end
-	-- (all in whole screen pixels: the box, a square - a whole number of
-	-- times the tiles' 16, ZOOM_ROWS of them down the box if it's tall
-	-- enough, else 16 - and where each one goes)
-	local wp, hp = math.floor(U.COLNO * s * k + 0.5), math.floor(U.ROWNO * s * k + 0.5)
-	local px = math.max(1, math.floor(hp / ZOOM_ROWS / TILE_PX)) * TILE_PX
-	local cols, rows = math.floor(wp / px), math.floor(hp / px)
-	-- (odd: you in the very middle)
-	cols, rows = cols - (cols + 1) % 2, rows - (rows + 1) % 2
-	local key = table.concat({cols, rows, px, ox, oy, k}, ",")
-	if key ~= near.key then
+	local key = table.concat({lay.px, lay.left, lay.top, lay.right, lay.bottom, lay.k}, ",")
+	local fresh = key ~= near.key
+	if fresh then
 		clear_near(player) -- (the box moved or changed size: placed again)
-		near.key = key
+		near.key, near.lay = key, lay
 	end
-	local rightp, topp = math.floor(ox * k + 0.5), math.floor(oy * k + 0.5)
-	local left = rightp - wp + math.floor((wp - cols * px) / 2)
-	local top = topp + math.floor((hp - rows * px) / 2)
-	local t = (px + 0.001) / k -- (a square, in HUD units; a hair over: the engine rounds down)
-	local map = snap.map
-	local x0, y0 = h.x - (cols - 1) / 2, h.y - (rows - 1) / 2
+	local map, h = snap.map, snap.hero
 	local rolling = rolling_seen(map)
-	for r = 0, rows - 1 do
-		for c = 0, cols - 1 do
-			local x, y = x0 + c, y0 + r
-			local tex = x >= 1 and x < U.COLNO and y >= 0 and y < U.ROWNO
-				and hud.square_tex(map, h, x, y, false, rolling) or nil
-			local i = r * cols + c
-			if tex ~= near.shown[i] then
-				near.shown[i] = tex
-				local id = near.ids[i]
-				if not tex then
-					player:hud_remove(id)
-					near.ids[i] = nil
-				elseif id then
-					player:hud_change(id, "text", tex)
-				else
-					near.ids[i] = player:hud_add({
-						type = "image", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
-						-- (a quarter pixel in: however the engine rounds, the same way each)
-						offset = {x = (left + c * px + 0.25) / k, y = (top + r * px + 0.25) / k},
-						scale = {x = t / TILE_PX, y = t / TILE_PX}, text = tex, z_index = 1,
-					})
+	local t = (lay.px + 0.001) / lay.k -- (a square, in HUD units; a hair over: the engine rounds down)
+	local want = {}
+	for y = math.max(0, h.y - lay.reach_y), math.min(U.ROWNO - 1, h.y + lay.reach_y) do
+		for x = math.max(1, h.x - lay.reach_x), math.min(U.COLNO - 1, h.x + lay.reach_x) do
+			local i = U.idx(x, y)
+			local tex = hud.square_tex(map, h, x, y, false, rolling)
+			if tex then
+				want[i] = true
+				if tex ~= near.shown[i] then
+					near.shown[i] = tex
+					local id = near.ids[i]
+					if id then
+						player:hud_change(id, "text", tex)
+					else
+						-- (its place on the map; the engine moves them all)
+						near.ids[i] = player:hud_add({
+							type = "image", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
+							offset = {x = (lay.cx + x * lay.px) / lay.k, y = (lay.cy + y * lay.px) / lay.k},
+							scale = {x = t / TILE_PX, y = t / TILE_PX}, text = tex, z_index = 1,
+							style = NEAR_MAP,
+						})
+					end
 				end
 			end
 		end
 	end
+	for i, id in pairs(near.ids) do
+		if not want[i] then
+			player:hud_remove(id)
+			near.ids[i], near.shown[i] = nil, nil
+		end
+	end
+	follow_near(player, fresh)
 end
 
 -- under the corner map: the dungeon level ("Dlvl:3"), and the branch when
