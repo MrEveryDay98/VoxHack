@@ -32,7 +32,11 @@ for tile, look in pairs(BODIES.tails) do
 	end
 end
 TAIL_LOOK = TAIL_LOOK and TAIL_LOOK.look or {tile = 0}
-local WIDTH = 0.9      -- a segment's picture next to the head, for the head's height
+-- (how tall a worm's picture is, for its body's: by its tile or its tail's)
+local function fill_of(tile)
+	return BODIES.fill and BODIES.fill[tile] or 1
+end
+local WIDTH = 0.9      -- a segment's picture next to the head, for the head's picture's height
 local TIP = 0.13       -- at the very end of the tail, for that
 local BEHIND = 0.18    -- where it comes out: behind the head's middle, for its height
 local LENGTH = 1.1     -- a body with no tail (only to look at): how long, for the head's height
@@ -196,6 +200,7 @@ local function bodies(mons, eye, inside, hero_pos)
 				w.segs[k] = {p = flat(U.tile_center(e.x, e.y)), k = k, key = key, x = e.x, y = e.y}
 				w.last = math.max(w.last, k)
 				w.look, w.h = BODIES.tails[e.tile] or w.look or TAIL_LOOK, e.h
+				w.fill = w.fill or fill_of(e.tile)
 			end
 		end
 	end
@@ -206,6 +211,7 @@ local function bodies(mons, eye, inside, hero_pos)
 			cur = {{p = anchor(head, eye), k = 0, key = "id" .. id}}
 			w.pieces[1] = cur
 			w.h, w.head, w.head_e = head.h or w.h, flat(head.obj:get_pos()), head
+			w.fill = fill_of(head.tile)
 		end
 		for k = 1, w.last do
 			local s = w.segs[k]
@@ -238,7 +244,8 @@ local function bodies(mons, eye, inside, hero_pos)
 					piece[#piece + 1] = {p = p, k = 4 * d / t.len, key = key}
 				end
 			end
-			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, head = flat(e.obj:get_pos()),
+			out[e.id] = {pieces = {piece}, last = 4, look = look, h = e.h, fill = fill_of(e.tile),
+				head = flat(e.obj:get_pos()),
 				only_looks = true, side = side_of(e.mon.flags), x = e.x, y = e.y, head_e = e}
 		end
 	end
@@ -249,7 +256,7 @@ local function bodies(mons, eye, inside, hero_pos)
 		local h = nhv.scale.height(m.size, m.mndx)
 		local len = h * LENGTH
 		-- (you: where it's about your size - that far back from its head)
-		local f = math.max(0.15, math.min(0.85, (WIDTH - HERO_W / h) / (WIDTH - TIP)))
+		local f = math.max(0.15, math.min(0.85, (WIDTH - HERO_W / (h * fill_of(m.tile))) / (WIDTH - TIP)))
 		local hp = flat(hero_pos)
 		local t = trail_of(m.id, hp, len * (1 - f), eye)
 		-- its head ahead of you, the way it last went (not into a wall)
@@ -278,7 +285,8 @@ local function bodies(mons, eye, inside, hero_pos)
 			piece[#piece + 1] = {p = t.pts[i], k = 4 * math.min(1, f + (1 - f) * (d - d0) / math.max(0.1, len * (1 - f))),
 				key = key}
 		end
-		out[m.id] = {pieces = {piece}, last = 4, look = BODIES.bodies[m.tile], h = h, head = hp,
+		out[m.id] = {pieces = {piece}, last = 4, look = BODIES.bodies[m.tile], h = h, fill = fill_of(m.tile),
+			head = hp,
 			bulge = d0, inside_head = {pos = head, tile = m.tile, mndx = m.mndx, h = h},
 			only_looks = true, side = side_of(m.flags), x = m.x, y = m.y}
 	end
@@ -347,7 +355,8 @@ end
 -- where each segment of a worm goes now: {pos, w, key}
 local function targets(w, phase)
 	local out = {}
-	local h = w.h or 2
+	-- (the head's picture's height, not its sprite's)
+	local h = (w.h or 2) * (w.fill or 1)
 	for _, piece in ipairs(w.pieces) do
 		local c = curve(piece)
 		local len = c[#c].d
