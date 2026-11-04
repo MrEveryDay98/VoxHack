@@ -1134,7 +1134,7 @@ nhv_get_rays(nhv_ray *buf, int max)
         buf[n].x = r->sx, buf[n].y = r->sy;
         buf[n].dx = r->dx, buf[n].dy = r->dy;
         buf[n].range = r->range;
-        buf[n].from_hero = r->type >= 0 && r->type < 20; /* 20+: breath */
+        buf[n].from_hero = r->type >= 0; /* (wands, spells, your breath; a monster's: < 0) */
         buf[n].caster = r->caster;
         buf[n].target = r->target;
         n++;
