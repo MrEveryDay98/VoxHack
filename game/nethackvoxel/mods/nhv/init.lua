@@ -182,6 +182,7 @@ dofile(path .. "steam.lua")
 dofile(path .. "cutscene.lua")
 dofile(path .. "death.lua")
 dofile(path .. "loop.lua")
+dofile(path .. "playlog.lua")
 
 -- The whole dungeon level fits in a small box; make sure it exists
 -- before NetHack starts drawing into it.
