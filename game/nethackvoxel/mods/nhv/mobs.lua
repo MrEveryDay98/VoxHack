@@ -488,6 +488,12 @@ function mobs.refresh_sizes()
 			e.tile = nil
 		end
 	end
+	-- (and the rest of each pile, under its top one)
+	for _, pile in pairs(mobs.piles or {}) do
+		for _, e in pairs(pile.extras) do
+			e.tile = nil
+		end
+	end
 	nhv.sim.sync()
 	if nhv.nh.snap then
 		mobs.update(nhv.nh.snap, false)
