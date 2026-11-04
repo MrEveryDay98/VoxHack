@@ -125,8 +125,10 @@ end
 
 -- whether the messages are in the small font: retro mode, the retro
 -- interface (Luanti's "mono" font is it then: hud.lua's text styles)
+-- (and with the side bars outside it: they look as they do in it)
 function theme.small_messages()
-	return theme.retro() and core.settings:get_bool("nhv_retro", false)
+	return theme.retro() and (core.settings:get_bool("nhv_retro", false)
+		or core.settings:get("nhv_hud_layout") == "sidebars")
 end
 
 local function font_settings()

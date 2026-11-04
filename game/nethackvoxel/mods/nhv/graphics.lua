@@ -72,6 +72,9 @@ local RETRO_PALETTE = {{"vga", "256 colours"}, {"ega", "16 colours"}, {"full", "
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
 local RETRO_BANDS = {{0, "Smooth"}, {4, "4 steps"}, {6, "6 steps"}, {8, "8 steps"}, {12, "12 steps"}}
 local RETRO_SCALE = {"As big as fits", "Whole pixels"}
+-- the side bars (outside retro mode they look as they do in it, sized to the
+-- window): how wide, everything in them with them
+local SIDEBAR_WIDTH = {{0.85, "Narrow"}, {1, "Normal"}, {1.15, "Wide"}, {1.3, "Wider"}}
 -- its game view (not the HUD or menus) drawn at 1/N of its screen
 local RETRO_VIEW = {{1, "The screen's pixels"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4"}}
 -- the sizes retro mode fixes (the window's kept for coming back): HUD,
@@ -173,6 +176,14 @@ function graphics.formspec()
 		add(fixed(y, "Menu size"))
 		add(fixed(y, "Text size"))
 		add(fixed(y, "Map size"))
+	elseif nhv.sidebars and nhv.sidebars.on() then
+		-- (the side bars: as in retro mode, by their width)
+		add(row(y, "Side bar width", "sidebar_width", labels(SIDEBAR_WIDTH),
+			pick(SIDEBAR_WIDTH, "nhv_sidebar_width", 1)))
+		add(fixed(y, "HUD size", "Set by the side bars' width"))
+		add(fixed(y, "Menu size", "Set by the side bars' width"))
+		add(fixed(y, "Text size", "Set by the side bars' width"))
+		add(fixed(y, "Map size", "Set by the side bars' width"))
 	else
 		add(row(y, "HUD size", "hud", labels(HUD), pick(HUD, "hud_scaling", 1)))
 		add(row(y, "Menu size", "menu", labels(MENU), pick(MENU, "gui_scaling", 1)))
@@ -264,20 +275,93 @@ function graphics.set_flat(on)
 	nhv.mobs.refresh_sizes()
 end
 
--- Your own sizes (HUD, menus, text, map) are kept while retro mode has its
--- own: "nhv_sizes_window" holds yours, "nhv_sizes_are" which are in use
--- ("retro" or "window"). Yours are saved whenever you set one outside
--- retro mode, and as retro mode takes over - only from yours, never retro
--- mode's own over them; leaving it, they're put back. However retro mode
--- was turned on or off (the prefab editor's F7, a game started in it),
--- joining puts the right ones in use (graphics.fit_sizes).
+-- Your own sizes (HUD, menus, text, map) are kept while retro mode, or the
+-- side bars, have their own: "nhv_sizes_window" holds yours,
+-- "nhv_sizes_are" which are in use ("retro", "sidebars" or "window").
+-- Yours are saved whenever you set one with the HUD over the view, outside
+-- retro mode, and as another takes over - only from yours, never the
+-- others' over them; back to the HUD over the view, they're put back.
+-- However the mode changed (the prefab editor's F7, a game started in
+-- retro mode), joining puts the right ones in use (graphics.fit_sizes).
+-- The side bars outside retro mode look as they do in it: its sizes, made
+-- as much bigger as its small screen is scaled up to your window (by its
+-- height), times Side bar width - worked out from the window once it's
+-- known (and again when it changes: sidebars.lua).
 local function sizes_in_use()
 	local are = core.settings:get("nhv_sizes_are")
-	if are ~= "retro" and are ~= "window" then
+	if are ~= "retro" and are ~= "window" and are ~= "sidebars" then
 		are = core.settings:get_bool("nhv_retro", false) and "retro" or "window"
 	end
 	return are
 end
+
+local function sizes_wanted()
+	if core.settings:get_bool("nhv_retro", false) then
+		return "retro"
+	end
+	return nhv.sidebars and nhv.sidebars.on() and "sidebars" or "window"
+end
+
+-- the side bars' sizes for the window (false: the window isn't known, or
+-- the engine's still on retro mode's screen)
+local function sidebar_sizes(player)
+	local info = core.get_player_window_information(player:get_player_name())
+	if not (info and info.size and info.real_hud_scaling and info.real_gui_scaling) then
+		return false
+	end
+	local res = core.settings:get("nhv_retro_res") or "800x600"
+	local vw, vh = res:match("^(%d+)x(%d+)$")
+	vw, vh = tonumber(vw) or 800, tonumber(vh) or 600
+	if info.size.x == vw and info.size.y == vh then
+		return false
+	end
+	local scale = info.size.y / vh * (tonumber(core.settings:get("nhv_sidebar_width")) or 1)
+	local sizes = RETRO_SIZES[res] or RETRO_SIZES["800x600"]
+	local hud_now = tonumber(core.settings:get("hud_scaling")) or 1
+	local gui_now = tonumber(core.settings:get("gui_scaling")) or 1
+	local density = info.real_hud_scaling / math.max(0.01, hud_now)
+	local gui_density = info.real_gui_scaling / math.max(0.01, gui_now)
+	local function step(v, by)
+		return math.max(by, math.floor(v / by + 0.5) * by)
+	end
+	local want = {
+		step(sizes[1] * scale / density, 0.05),
+		step(sizes[2] * scale / gui_density, 0.05),
+		-- (the pixel font only has whole steps)
+		theme.retro() and math.min(4, step(sizes[3] * scale / density, 1)) or step(sizes[3] * scale / density, 0.05),
+		sizes[4], -- (the map grows with the HUD)
+	}
+	local changed = false
+	for i, setting in ipairs(SIZES) do
+		if tonumber(core.settings:get(setting)) ~= want[i] then
+			core.settings:set(setting, tostring(want[i]))
+			changed = true
+		end
+	end
+	return true, changed
+end
+
+-- (the side bars' sizes waiting for the window: a moment after a switch)
+local sidebars_pending = nil
+core.register_globalstep(function()
+	local p = sidebars_pending
+	if not p then
+		return
+	end
+	local player = core.get_player_by_name(p.name)
+	if not player or core.get_us_time() > p.until_t or sizes_in_use() ~= "sidebars" then
+		sidebars_pending = nil
+		return
+	end
+	local known, changed = sidebar_sizes(player)
+	if known then
+		sidebars_pending = nil
+		if changed then
+			theme.apply(player)
+			nhv.hud.place_map(player)
+		end
+	end
+end)
 
 function graphics.keep_window_sizes()
 	if sizes_in_use() ~= "window" then
@@ -300,23 +384,37 @@ local function window_sizes()
 	core.settings:set("nhv_sizes_are", "window")
 end
 
--- the sizes for the mode it's in (true if they had to change)
-function graphics.fit_sizes(player)
-	local retro = core.settings:get_bool("nhv_retro", false)
-	local are = sizes_in_use()
-	if retro and are ~= "retro" then
+-- the sizes for the mode it's in (true if they had to change); again: the
+-- side bars' worked out again for the window as it is now
+function graphics.fit_sizes(player, again)
+	local want, are = sizes_wanted(), sizes_in_use()
+	if want == are and not (want == "sidebars" and again) then
+		core.settings:set("nhv_sizes_are", are)
+		return false
+	end
+	if are == "window" then
 		graphics.keep_window_sizes()
+	end
+	if want == "retro" then
 		core.settings:set("nhv_sizes_are", "retro")
 		retro_sizes(player)
-		return true
-	elseif not retro and are == "retro" then
+	elseif want == "window" then
 		window_sizes()
 		theme.apply(player)
 		nhv.hud.place_map(player)
-		return true
+	else
+		core.settings:set("nhv_sizes_are", "sidebars")
+		local known, changed = sidebar_sizes(player)
+		if not known then
+			sidebars_pending = {name = player:get_player_name(), until_t = core.get_us_time() + 3e6}
+		elseif changed or want ~= are then
+			theme.apply(player)
+			nhv.hud.place_map(player)
+		else
+			return false
+		end
 	end
-	core.settings:set("nhv_sizes_are", are)
-	return false
+	return true
 end
 
 function graphics.set_retro(player, on)
@@ -402,6 +500,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if set_num(MAP, fields.map, "nhv_map_scale", 3) then
 		nhv.hud.place_map(player)
 		changed = true
+	end
+	if set_num(SIDEBAR_WIDTH, fields.sidebar_width, "nhv_sidebar_width", 1) then
+		graphics.fit_sizes(player, true)
+		changed, reshow = true, true
 	end
 	-- (your sizes, kept for coming back out of retro mode)
 	if changed then
@@ -536,8 +638,11 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	local hl = tonumber(fields.hud_layout)
 	if hl and HUD_LAYOUT[hl] and HUD_LAYOUT[hl][1] ~= (core.settings:get("nhv_hud_layout") or "overlay") then
 		core.settings:set("nhv_hud_layout", HUD_LAYOUT[hl][1])
-		theme.apply(player) -- (everything placed again)
-		changed = true
+		-- (the side bars have their own sizes: yours back without them)
+		if not graphics.fit_sizes(player) then
+			theme.apply(player) -- (everything placed again)
+		end
+		changed, reshow = true, true
 	end
 	local rt = tonumber(fields.raytrace)
 	if rt and (rt == 2) ~= core.settings:get_bool("nhv_raytrace", false) then

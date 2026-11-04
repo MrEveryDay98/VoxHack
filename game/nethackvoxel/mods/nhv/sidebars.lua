@@ -677,8 +677,9 @@ core.register_globalstep(function(dtime)
 	local sig = info and info.size and (info.size.x .. "x" .. info.size.y .. "@" .. (info.real_hud_scaling or 0))
 	if sig and sig ~= size_seen then
 		size_seen = sig
-		-- (also the first time it's known: on joining it isn't yet)
-		if sidebars.on() then
+		-- (also the first time it's known: on joining it isn't yet; the
+		-- side bars' sizes made for the window as it is now)
+		if sidebars.on() and not (nhv.graphics and nhv.graphics.fit_sizes(player, true)) then
 			nhv.theme.apply(player)
 		end
 	end
