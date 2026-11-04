@@ -243,6 +243,7 @@ local function show_status(player, h)
 				cond_ids[i] = player:hud_add({
 					type = "text", position = {x = 0, y = 0}, alignment = {x = 1, y = 1},
 					offset = base, number = 0xFFFFFF, text = "", style = hud.status_style(),
+					size = hud.status_size(),
 				})
 			end
 			if cond_ids[i] then
@@ -419,6 +420,13 @@ function hud.status_style()
 	end
 	return nhv.theme.small_messages() and 0 or MONO
 end
+-- (and its size: the side bars' own)
+function hud.status_size()
+	if nhv.sidebars and nhv.sidebars.on() then
+		return nhv.sidebars.text_size()
+	end
+	return {x = 0, y = 0}
+end
 function hud.message_style()
 	return nhv.theme.small_messages() and MONO or 0
 end
@@ -428,9 +436,11 @@ function hud.text_styles(player)
 	end
 	if hud.ids.status then
 		player:hud_change(hud.ids.status, "style", hud.status_style())
+		player:hud_change(hud.ids.status, "size", hud.status_size())
 	end
 	for _, id in pairs(cond_ids) do
 		player:hud_change(id, "style", hud.status_style())
+		player:hud_change(id, "size", hud.status_size())
 	end
 end
 
@@ -1062,11 +1072,13 @@ local function place_level(player)
 	if g then
 		player:hud_change(hud.ids.level, "offset", {x = g.level_x, y = g.level_y})
 		player:hud_change(hud.ids.level, "style", nhv.sidebars.text_style())
+		player:hud_change(hud.ids.level, "size", nhv.sidebars.text_size(player))
 		return
 	end
 	local off = corner_offset(player)
 	player:hud_change(hud.ids.level, "offset", {x = -off, y = off + U.ROWNO * corner_scale(player) + 6})
 	player:hud_change(hud.ids.level, "style", 0)
+	player:hud_change(hud.ids.level, "size", {x = 0, y = 0})
 end
 
 local function place_map(player)
@@ -1223,11 +1235,13 @@ function hud.place_here(player)
 	end
 	local g = nhv.sidebars and nhv.sidebars.geometry(player)
 	local style = g and nhv.sidebars.text_style() or 0 -- (the side bars' words)
+	local size = g and nhv.sidebars.text_size(player) or {x = 0, y = 0}
 	local function put(id, pos, align, off)
 		player:hud_change(id, "position", pos)
 		player:hud_change(id, "alignment", align)
 		player:hud_change(id, "offset", off)
 		player:hud_change(id, "style", style)
+		player:hud_change(id, "size", size)
 	end
 	if g then
 		-- (the list at the top of its box, "F  Pick up" at the bottom; "Q
@@ -1821,6 +1835,7 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 		meter_ids[m.key .. "_text"] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 0, y = 0},
 			offset = {x = g.bars.x + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
+			size = nhv.sidebars.text_size(player),
 		})
 	end
 	-- your name under the portrait, in gold (a black shadow: it's on the
@@ -1828,18 +1843,19 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 	meter_ids.name_shadow = player:hud_add({
 		type = "text", position = base.position, alignment = {x = 0, y = 0},
 		offset = {x = g.name.x + 2, y = g.name.y + 2}, number = 0x000000, z_index = 41, text = "",
-		style = nhv.sidebars.text_style(),
+		style = nhv.sidebars.text_style(), size = nhv.sidebars.text_size(player),
 	})
 	meter_ids.name = player:hud_add({
 		type = "text", position = base.position, alignment = {x = 0, y = 0},
 		offset = {x = g.name.x, y = g.name.y}, number = GOLD_FLASH, z_index = 42, text = "",
-		style = nhv.sidebars.text_style(),
+		style = nhv.sidebars.text_style(), size = nhv.sidebars.text_size(player),
 	})
 	for _, key in ipairs({"info", "info_flash"}) do
 		meter_ids[key] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 1, y = 0},
 			offset = {x = g.stats_x, y = g.info_y}, number = key == "info" and 0xFFFFFF or GOLD_FLASH,
 			z_index = key == "info" and 42 or 43, text = "", style = nhv.sidebars.text_style(),
+			size = nhv.sidebars.text_size(player),
 		})
 	end
 	info_shown = nil

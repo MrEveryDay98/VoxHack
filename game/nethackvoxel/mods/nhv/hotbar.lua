@@ -164,6 +164,7 @@ local function build(player)
 			player:hud_change(hud[key], "alignment", {x = 1, y = 1})
 			player:hud_change(hud[key], "offset", {x = g.hints_x, y = g.hints_y + (i - 1) * g.line_h})
 			player:hud_change(hud[key], "style", nhv.sidebars.text_style())
+			player:hud_change(hud[key], "size", nhv.sidebars.text_size(player))
 		end
 	end
 	-- the line saying what the keys and the mouse do (refresh_layer)

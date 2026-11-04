@@ -65,6 +65,42 @@ function sidebars.text_style()
 	return nhv.theme.small_messages() and 4 or 0
 end
 
+-- Outside retro mode the bars look as they do in it, whatever the HUD, menu
+-- and text sizes (those are for the rest): laid out as in retro mode's
+-- small screen, then made as much bigger as it would be scaled up to the
+-- window (by its height), times Side bar width. The bars' scale: screen
+-- pixels a retro pixel (nil in retro mode, or without the bars).
+function sidebars.bar_scale(player)
+	if not sidebars.on() or core.settings:get_bool("nhv_retro", false) then
+		return nil
+	end
+	local info = player and core.get_player_window_information(player:get_player_name())
+	if not (info and info.size) then
+		return nil
+	end
+	local vh = tonumber((core.settings:get("nhv_retro_res") or "800x600"):match("x(%d+)$")) or 600
+	return info.size.y / vh * (tonumber(core.settings:get("nhv_sidebar_width")) or 1)
+end
+
+-- the bars' words' size (a HUD text element's "size"): as big as retro
+-- mode's, scaled with the bars - not by the text size ({x = 0}: as ever)
+function sidebars.text_size(player)
+	player = player or nhv.player.get()
+	local bar = sidebars.bar_scale(player)
+	local info = bar and core.get_player_window_information(player:get_player_name())
+	if not (info and info.real_hud_scaling) then
+		return {x = 0, y = 0}
+	end
+	local k = nhv.theme.text_scale()
+	if nhv.theme.retro() then
+		-- (a pixel font: its size times the screen's density, in steps)
+		local hud = tonumber(core.settings:get("hud_scaling")) or 1
+		local density = info.real_hud_scaling / math.max(0.01, hud)
+		return {x = bar / (k * density), y = 0}
+	end
+	return {x = bar / (k * info.real_hud_scaling), y = 0}
+end
+
 -- a line of HUD text: its height, and a character's width (the pixel
 -- fonts' letters are all one width, 8 - the small one's too; the other's
 -- about the same)
@@ -78,6 +114,18 @@ end
 sidebars.text_metrics = text_metrics
 
 -- The bars' layout, in HUD units (nil: not on, or the window not known yet)
+-- (the numbers in the layout that aren't sizes or places)
+local COUNTS = {k = true, here_max = true, inv_rows = true, log_rows = true, box_chars = true}
+local function scaled(t, f)
+	for key, v in pairs(t) do
+		if type(v) == "number" and not COUNTS[key] then
+			t[key] = v * f
+		elseif type(v) == "table" then
+			scaled(v, f)
+		end
+	end
+end
+
 function sidebars.geometry(player)
 	if not sidebars.on() then
 		return nil
@@ -86,16 +134,30 @@ function sidebars.geometry(player)
 	if not (info and info.size and info.real_hud_scaling and info.real_hud_scaling > 0) then
 		return nil
 	end
-	local k = info.real_hud_scaling
+	local real_k = info.real_hud_scaling
+	-- (outside retro mode: laid out in retro mode's pixels, at its sizes -
+	-- then made the bars' size: sidebars.bar_scale)
+	local bar = sidebars.bar_scale(player)
+	local k = bar or real_k
 	local sw, sh = info.size.x / k, info.size.y / k
 	local line_h, char_w = text_metrics()
+	if bar then
+		if nhv.theme.retro() then
+			line_h, char_w = 11, 8 -- (the small pixel font, as in retro mode)
+		else
+			line_h, char_w = 18, 8.6
+		end
+	end
 	local hud = nhv.hud
 	-- (the map: as big as Map size makes it, at most what a quarter of the
-	-- screen holds - whole screen pixels a square)
-	local s = hud.corner_scale(player)
+	-- screen holds - whole screen pixels a square; the bars: retro mode's 3)
+	local function whole(units)
+		return (math.max(1, math.floor(units * k + 0.5)) + 0.001) / k
+	end
+	local s = bar and whole(3) or hud.corner_scale(player)
 	local most = math.floor((sw * 0.25 - 2 * PAD - 2 * IN) / U.COLNO * k) / k
 	if s > most then
-		s = hud.hud_px(player, math.max(1 / k, most))
+		s = bar and whole(math.max(1 / k, most)) or hud.hud_px(player, math.max(1 / k, most))
 	end
 	local w = math.floor(math.max(U.COLNO * s + 2 * PAD + 2 * IN, 3 * 40 + 2 * PAD + 20, sw * 0.12))
 	local g = {w = w, sw = sw, sh = sh, pad = PAD, inset = IN, map_s = s, line_h = line_h, char_w = char_w}
@@ -109,7 +171,7 @@ function sidebars.geometry(player)
 	-- (your name, then the bars, a little apart)
 	g.name = {x = PAD + inner / 2, y = y + line_h / 2}
 	y = y + line_h + 4
-	local bh = math.floor(14 * nhv.theme.box_scale() + 6)
+	local bh = math.floor(14 * (bar and 1 or nhv.theme.box_scale()) + 6)
 	g.bars = {x = PAD, y = {y, y + bh + 2}, w = inner, h = bh}
 	y = y + 2 * bh + 2 + 6
 	-- (the gold/AC/experience line, then the stats in STAT_LINES lines,
@@ -182,7 +244,10 @@ function sidebars.geometry(player)
 	g.log_rows = math.max(1, math.floor((g.log.h - 2 * IN - g.title) / line_h))
 	-- (characters a line in a box)
 	g.box_chars = math.max(8, math.floor((inner - 2 * IN) / char_w))
-	g.k = k
+	if bar then
+		scaled(g, bar / real_k) -- (retro pixels to HUD units)
+	end
+	g.k = real_k
 	return g
 end
 
@@ -216,6 +281,9 @@ end
 
 local function add(player, def)
 	def.scale = def.scale or {x = 1, y = 1}
+	if def.type == "text" and not def.size then
+		def.size = sidebars.text_size(player) -- (the bars' own size)
+	end
 	return player:hud_add(def)
 end
 

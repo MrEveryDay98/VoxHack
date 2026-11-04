@@ -72,6 +72,9 @@ local RETRO_PALETTE = {{"vga", "256 colours"}, {"ega", "16 colours"}, {"full", "
 local RETRO_DITHER = {{0, "Off"}, {0.5, "Light"}, {1, "Normal"}, {1.6, "Strong"}}
 local RETRO_BANDS = {{0, "Smooth"}, {4, "4 steps"}, {6, "6 steps"}, {8, "8 steps"}, {12, "12 steps"}}
 local RETRO_SCALE = {"As big as fits", "Whole pixels"}
+-- the side bars outside retro mode: they look as they do in it, sized to the
+-- window by its height - this much of that (sidebars.bar_scale)
+local SIDEBAR_WIDTH = {{0.85, "Narrow"}, {1, "Normal"}, {1.15, "Wide"}, {1.3, "Wider"}}
 -- its game view (not the HUD or menus) drawn at 1/N of its screen
 local RETRO_VIEW = {{1, "The screen's pixels"}, {2, "1/2"}, {3, "1/3"}, {4, "1/4"}}
 -- the sizes retro mode fixes (the window's kept for coming back): HUD,
@@ -196,6 +199,10 @@ function graphics.formspec()
 	add(row(y, "Light dithering", "texel_pattern", names(TEXEL_PATTERN),
 		choice(TEXEL_PATTERN, "nhv_texel_pattern", "bayer4")))
 	add(row(y, "HUD layout", "hud_layout", names(HUD_LAYOUT), choice(HUD_LAYOUT, "nhv_hud_layout", "overlay")))
+	if nhv.sidebars and nhv.sidebars.on() and not retro then
+		add(row(y, "Side bar width", "sidebar_width", labels(SIDEBAR_WIDTH),
+			pick(SIDEBAR_WIDTH, "nhv_sidebar_width", 1)))
+	end
 	add(row(y, "Raytraced light", "raytrace", table.concat(RAYTRACE, ","),
 		core.settings:get_bool("nhv_raytrace", false) and 2 or 1))
 	local square = core.settings:get("nhv_square_light") or "off"
@@ -537,6 +544,10 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	if hl and HUD_LAYOUT[hl] and HUD_LAYOUT[hl][1] ~= (core.settings:get("nhv_hud_layout") or "overlay") then
 		core.settings:set("nhv_hud_layout", HUD_LAYOUT[hl][1])
 		theme.apply(player) -- (everything placed again)
+		changed, reshow = true, true -- (Side bar width shown or not)
+	end
+	if set_num(SIDEBAR_WIDTH, fields.sidebar_width, "nhv_sidebar_width", 1) then
+		theme.apply(player) -- (the bars laid out again)
 		changed = true
 	end
 	local rt = tonumber(fields.raytrace)
