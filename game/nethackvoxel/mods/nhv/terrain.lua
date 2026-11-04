@@ -340,6 +340,135 @@ local function entrance_rot(map, tx, ty)
 	return best
 end
 
+-- A staircase's own shape decides too (a spiral round a column, say): for
+-- each turn, at the height a body walks in - the two layers over the floor
+-- - which of its blocks are free, then whether its first step (the lowest
+-- nhv:mpath block) can be got onto from an open side, and how many of the
+-- open sides join up through it (so a staircase in a passage doesn't block
+-- it). A turn that leaves the first step out of reach loses to one that
+-- doesn't; then the most open sides joined; then entrance_rot's rule. One
+-- with no mpath blocks: entrance_rot alone.
+local SIDES = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}} -- map dx, dy: north, east, south, west
+local function stair_layout(slot, rot)
+	local nodes = prefabs.get(slot).nodes
+	local W = U.TILE
+	local blocked, entry = {}, nil
+	local function solid(name)
+		local def = name and core.registered_nodes[name]
+		return def ~= nil and def.walkable == true
+	end
+	for i, nd in pairs(nodes) do
+		local lx, ly, lz = prefabs.unindex(i)
+		local rx, rz = prefabs.rot_xz(lx, lz, rot)
+		if (ly == prefabs.FLOOR + 1 or ly == prefabs.FLOOR + 2) and solid(nd.n) then
+			blocked[rz * W + rx] = true
+		end
+		if nd.n == "nhv:mpath" and (not entry or ly < entry.y) then
+			entry = {x = rx, z = rz, y = ly}
+		end
+	end
+	return blocked, entry
+end
+
+-- (the nodes on a side's edge of the cell: x across, z north-up)
+local function edge_nodes(side, W)
+	local out = {}
+	for k = 0, W - 1 do
+		if side == 1 then out[#out + 1] = {k, W - 1}     -- north
+		elseif side == 2 then out[#out + 1] = {W - 1, k} -- east
+		elseif side == 3 then out[#out + 1] = {k, 0}     -- south
+		else out[#out + 1] = {0, k} end                  -- west
+	end
+	return out
+end
+
+local function stair_rot(map, tx, ty, slot)
+	if not prefabs.custom(slot) then
+		return entrance_rot(map, tx, ty)
+	end
+	local W = U.TILE
+	local open = {}
+	for s, d in ipairs(SIDES) do
+		open[s] = walkable(map, tx + d[1], ty + d[2])
+	end
+	local pref = entrance_rot(map, tx, ty)
+	local best, best_score
+	for rot = 0, 3 do
+		local blocked, entry = stair_layout(slot, rot)
+		if not entry then
+			return pref
+		end
+		-- (the free nodes each open side reaches: flood from its edge)
+		local comp, ncomp = {}, 0
+		local side_comp = {}
+		for s = 1, 4 do
+			if open[s] then
+				for _, e in ipairs(edge_nodes(s, W)) do
+					local k = e[2] * W + e[1]
+					if not blocked[k] and not comp[k] then
+						ncomp = ncomp + 1
+						local stack = {e}
+						comp[k] = ncomp
+						while #stack > 0 do
+							local c = table.remove(stack)
+							for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+								local nx, nz = c[1] + d[1], c[2] + d[2]
+								local nk = nz * W + nx
+								if nx >= 0 and nx < W and nz >= 0 and nz < W and not blocked[nk] and not comp[nk] then
+									comp[nk] = ncomp
+									stack[#stack + 1] = {nx, nz}
+								end
+							end
+						end
+					end
+					if comp[k] then
+						side_comp[s] = side_comp[s] or {}
+						side_comp[s][comp[k]] = true
+					end
+				end
+			end
+		end
+		-- the first step: got onto from a free node beside it that an open
+		-- side reaches, or straight from outside on its edge
+		local reach = {}
+		for _, d in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+			local nx, nz = entry.x + d[1], entry.z + d[2]
+			local nk = nz * W + nx
+			if nx >= 0 and nx < W and nz >= 0 and nz < W and comp[nk] then
+				reach[comp[nk]] = true
+			end
+		end
+		local direct = false
+		for s = 1, 4 do
+			if open[s] then
+				for _, e in ipairs(edge_nodes(s, W)) do
+					if e[1] == entry.x and e[2] == entry.z then
+						direct = true
+					end
+				end
+			end
+		end
+		-- (the open sides that join the way to the first step)
+		local joined = 0
+		for s = 1, 4 do
+			if side_comp[s] then
+				for c in pairs(side_comp[s]) do
+					if reach[c] then
+						joined = joined + 1
+						break
+					end
+				end
+			end
+		end
+		local ok = direct or next(reach) ~= nil
+		local score = (ok and 1000 or 0) + joined * 10 + (rot == pref and 1 or 0)
+		if not best_score or score > best_score then
+			best, best_score = rot, score
+		end
+	end
+	return best
+end
+
 -- slot, rotation for a seen square
 local function base_slot(map, i, tx, ty, memcmap)
 	local typ = map.typ[i]
@@ -385,7 +514,7 @@ local function base_slot(map, i, tx, ty, memcmap)
 	elseif typ == T.CORR then
 		return "corridor", 0
 	elseif (typ == T.STAIRS or typ == T.LADDER) and STAIR_SLOTS[memcmap] then
-		return STAIR_SLOTS[memcmap], entrance_rot(map, tx, ty)
+		return STAIR_SLOTS[memcmap], stair_rot(map, tx, ty, STAIR_SLOTS[memcmap])
 	elseif FEATURE_SLOTS[memcmap] then
 		return FEATURE_SLOTS[memcmap], 0
 	elseif typ == T.FOUNTAIN then
