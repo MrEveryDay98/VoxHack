@@ -1835,7 +1835,7 @@ function hud.build_side_meters(player, g, w, h, frame, base)
 		meter_ids[m.key .. "_text"] = player:hud_add({
 			type = "text", position = base.position, alignment = {x = 0, y = 0},
 			offset = {x = g.bars.x + w / 2, y = y + h / 2}, number = 0xFFFFFF, z_index = 42, text = "",
-			size = nhv.sidebars.text_size(player),
+			size = nhv.sidebars.text_size(player, true), -- (the regular font)
 		})
 	end
 	-- your name under the portrait, in gold (a black shadow: it's on the
@@ -1891,18 +1891,31 @@ local COMPASS = {
 	small = {strip = "nhv_compass_small.png", frame = "nhv_compass_small_frame.png",
 		mark = "nhv_compass_small_mark.png", size = {x = 160, y = 24}, y = 4, mark_y = 1},
 }
+-- (with the side bars outside retro mode: as it is in retro mode, at the
+-- bars' scale - not grown with the HUD size)
 function hud.place_compass(player)
 	if not hud.ids.compass then
 		return
 	end
-	local c = core.settings:get_bool("nhv_retro", false) and COMPASS.small or COMPASS.big
+	local small = core.settings:get_bool("nhv_retro", false)
+	local f = 1
+	local bar = nhv.sidebars and nhv.sidebars.bar_scale(player)
+	if bar then
+		local info = core.get_player_window_information(player:get_player_name())
+		if info and info.real_hud_scaling and info.real_hud_scaling > 0 then
+			small, f = true, bar / info.real_hud_scaling
+		end
+	end
+	local c = small and COMPASS.small or COMPASS.big
 	player:hud_change(hud.ids.compass, "text", c.strip)
-	player:hud_change(hud.ids.compass, "size", c.size)
-	player:hud_change(hud.ids.compass, "offset", {x = 0, y = c.y})
+	player:hud_change(hud.ids.compass, "size", {x = c.size.x * f, y = c.size.y * f})
+	player:hud_change(hud.ids.compass, "offset", {x = 0, y = c.y * f})
 	player:hud_change(hud.ids.compass_frame, "text", c.frame)
-	player:hud_change(hud.ids.compass_frame, "offset", {x = 0, y = c.y})
+	player:hud_change(hud.ids.compass_frame, "offset", {x = 0, y = c.y * f})
+	player:hud_change(hud.ids.compass_frame, "scale", {x = f, y = f})
 	player:hud_change(hud.ids.compass_mark, "text", c.mark)
-	player:hud_change(hud.ids.compass_mark, "offset", {x = 0, y = c.mark_y})
+	player:hud_change(hud.ids.compass_mark, "offset", {x = 0, y = c.mark_y * f})
+	player:hud_change(hud.ids.compass_mark, "scale", {x = f, y = f})
 end
 
 local fade = {from = 0, to = 0, t0 = 0, dur = 0, c0 = {0, 0, 0}, c1 = {0, 0, 0}}

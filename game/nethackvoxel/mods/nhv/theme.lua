@@ -124,11 +124,9 @@ function theme.box_scale()
 end
 
 -- whether the messages are in the small font: retro mode, the retro
--- interface (Luanti's "mono" font is it then: hud.lua's text styles) - and
--- the side bars outside it, whose words are in it as in retro mode
+-- interface (Luanti's "mono" font is it then: hud.lua's text styles)
 function theme.small_messages()
-	return theme.retro() and (core.settings:get_bool("nhv_retro", false)
-		or core.settings:get("nhv_hud_layout") == "sidebars")
+	return theme.retro() and core.settings:get_bool("nhv_retro", false)
 end
 
 local function font_settings()
@@ -139,15 +137,20 @@ local function font_settings()
 		if theme.small_messages() then
 			mono, mono_px = SMALL_FONT, SMALL_PX
 		end
+		-- (the side bars' own font - the VoxHack engine's: the small one,
+		-- its own size, whatever the text size; sidebars.lua scales it)
 		return {
 			font_path = FONT, mono_font_path = mono, font_size = px, mono_font_size = tostring(mono_px * k),
 			font_size_divisible_by = tostring(FONT_PX), mono_font_size_divisible_by = tostring(mono_px),
+			nhv_bar_font_path = SMALL_FONT, nhv_bar_font_size = tostring(SMALL_PX),
+			nhv_bar_font_size_divisible_by = tostring(SMALL_PX),
 		}
 	end
 	local px = k ~= 1 and tostring(math.floor(MODERN_PX * k + 0.5)) or nil
 	return {font_size = px, mono_font_size = px} -- (nil: Luanti's default)
 end
-local FONT_KEYS = {"font_path", "mono_font_path", "font_size", "mono_font_size",
+local FONT_KEYS = {"nhv_bar_font_path", "nhv_bar_font_size", "nhv_bar_font_size_divisible_by",
+	"font_path", "mono_font_path", "font_size", "mono_font_size",
 	"font_size_divisible_by", "mono_font_size_divisible_by"}
 
 function theme.apply_font()
@@ -175,6 +178,9 @@ function theme.apply(player)
 	-- (the side bars first: the rest is placed in them - sidebars.lua)
 	if nhv.sidebars then
 		nhv.sidebars.rebuild(player)
+	end
+	if nhv.hud and nhv.hud.place_compass then
+		nhv.hud.place_compass(player) -- (with the bars: at their scale)
 	end
 	if nhv.hotbar and nhv.hotbar.rebuild then
 		nhv.hotbar.rebuild(player) -- (slots sized for the text)

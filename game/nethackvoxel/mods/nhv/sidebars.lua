@@ -59,10 +59,13 @@ function sidebars.on()
 	return core.settings:get("nhv_hud_layout") == "sidebars"
 end
 
--- The bars' words are in the small pixel font in retro mode (the messages'
--- one: Luanti's "mono" then, theme.lua) - the HUD text style for them
+-- The bars' words are in the small pixel font (the retro interface): the
+-- VoxHack engine's font of their own for them (HUD_STYLE_NHV_BAR; theme.lua
+-- sets it), the messages' and the rest's left as they are - the HUD text
+-- style for them
+local BAR_FONT = 1024
 function sidebars.text_style()
-	return nhv.theme.small_messages() and 4 or 0
+	return nhv.theme.retro() and BAR_FONT or 0
 end
 
 -- Outside retro mode the bars look as they do in it, whatever the HUD, menu
@@ -83,22 +86,23 @@ function sidebars.bar_scale(player)
 end
 
 -- the bars' words' size (a HUD text element's "size"): as big as retro
--- mode's, scaled with the bars - not by the text size ({x = 0}: as ever)
-function sidebars.text_size(player)
+-- mode's, scaled with the bars - not by the text size ({x = 0}: as ever).
+-- regular: in the regular font (the bars' HP and Pw), not the bars' own
+function sidebars.text_size(player, regular)
 	player = player or nhv.player.get()
 	local bar = sidebars.bar_scale(player)
 	local info = bar and core.get_player_window_information(player:get_player_name())
 	if not (info and info.real_hud_scaling) then
 		return {x = 0, y = 0}
 	end
-	local k = nhv.theme.text_scale()
 	if nhv.theme.retro() then
-		-- (a pixel font: its size times the screen's density, in steps)
+		-- (a pixel font: its size times the screen's density, in steps; the
+		-- bars' own one size whatever the text size)
 		local hud = tonumber(core.settings:get("hud_scaling")) or 1
 		local density = info.real_hud_scaling / math.max(0.01, hud)
-		return {x = bar / (k * density), y = 0}
+		return {x = bar / ((regular and nhv.theme.text_scale() or 1) * density), y = 0}
 	end
-	return {x = bar / (k * info.real_hud_scaling), y = 0}
+	return {x = bar / (nhv.theme.text_scale() * info.real_hud_scaling), y = 0}
 end
 
 -- a line of HUD text: its height, and a character's width (the pixel
@@ -143,7 +147,7 @@ function sidebars.geometry(player)
 	local line_h, char_w = text_metrics()
 	if bar then
 		if nhv.theme.retro() then
-			line_h, char_w = 11, 8 -- (the small pixel font, as in retro mode)
+			line_h, char_w = 11, 8 -- (the bars' own font, the small one)
 		else
 			line_h, char_w = 18, 8.6
 		end
