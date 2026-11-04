@@ -9,7 +9,6 @@ nhv_shadows (Shadows) bool false
 nhv_shadow_opacity (Shadow opacity) int 60 0 100
 
 # The shadows drawn on the monster and object pictures (off: a copy without them; after a restart)
-nhv_sprite_shadows (Shadows drawn on sprites) bool true
 
 # Interface style: retro (NetHack's IBM PC pixel font, old PC style boxes)
 # or modern (Luanti's own look). (Also in the game: Inventory > Graphics.)

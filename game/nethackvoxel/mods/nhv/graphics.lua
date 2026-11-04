@@ -33,7 +33,6 @@ local ASCII = {"Off", "On (F4)"}
 local DISTANT = {"Sharp", "Smoothed (blurry)"}
 local SHADOWS = {"On", "Off"}
 local SHADOW_OPACITY = {{20, "20%"}, {40, "40%"}, {60, "60%"}, {80, "80%"}, {100, "100% (solid)"}}
-local DRAWN = {"Kept", "Removed (after a restart)"}
 -- recording demos (the VoxHack engine's nhv_demo: each session from its
 -- start, to engine/demos; played from the title's Demos, demos.lua - where
 -- this is too - or with engine/demos/Play Demo.bat)
@@ -212,8 +211,6 @@ function graphics.formspec()
 		core.settings:get_bool("mip_map", false) and 2 or 1))
 	add(row(y, "Shadows", "shadows", table.concat(SHADOWS, ","), core.settings:get_bool("nhv_shadows", false) and 1 or 2))
 	add(row(y, "Shadow opacity", "shadow_opacity", labels(SHADOW_OPACITY), pick(SHADOW_OPACITY, "nhv_shadow_opacity", 60)))
-	add(row(y, "Shadows drawn on sprites", "drawn", table.concat(DRAWN, ","),
-		core.settings:get_bool("nhv_sprite_shadows", true) and 1 or 2))
 	add(row(y, "Record demos", "demos", table.concat(DEMOS, ","),
 		core.settings:get_bool("nhv_demo_record", false) and 2 or 1))
 	add("label[0.5," .. (y + 0.5) .. ";" .. theme.dim("Retro mode: a small old screen, scaled up") .. "]", 1.0)
@@ -444,12 +441,6 @@ core.register_on_player_receive_fields(function(player, formname, fields)
 	local sh = tonumber(fields.shadows)
 	if sh and (sh == 1) ~= core.settings:get_bool("nhv_shadows", false) then
 		core.settings:set_bool("nhv_shadows", sh == 1) -- (shadows.lua, at once)
-		changed = true
-	end
-	local dr = tonumber(fields.drawn)
-	if dr and (dr == 1) ~= core.settings:get_bool("nhv_sprite_shadows", true) then
-		-- (the sprites' sheet: nhv_tiles reads it when the game starts)
-		core.settings:set_bool("nhv_sprite_shadows", dr == 1)
 		changed = true
 	end
 	local vc = VOICES[tonumber(fields.voices) or 0]

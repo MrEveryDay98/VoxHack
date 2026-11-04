@@ -46,13 +46,10 @@ function nhv_tiles.sheet_texture(s)
 		s % meta.cols, math.floor(s / meta.cols))
 end
 
--- The sprites' own sheet: nhv_tiles.png, or with the setting
--- nhv_sprite_shadows off (Options > Drawn shadows), nhv_tiles_noshadow.png -
--- the same without the shadows drawn on the monsters and objects
--- (tools/make_noshadow_tiles.py makes it; the game's shadows are real:
--- nhv/shadows.lua). Read when the game starts.
-nhv_tiles.SPRITES = core.settings:get_bool("nhv_sprite_shadows", true) and "nhv_tiles.png"
-	or "nhv_tiles_noshadow.png"
+-- The sprites' own sheet. (nhv_tiles_noshadow.png, the same without the
+-- shadows drawn on them - tools/make_noshadow_tiles.py - is set aside for
+-- now: not up to date, and no option to choose it.)
+nhv_tiles.SPRITES = "nhv_tiles.png"
 
 -- ASCII mode (nhv/ascii.lua): while it's on, this is a function giving a
 -- tile's NetHack character and colour (code 0-255, NetHack colour 0-15),
