@@ -343,16 +343,18 @@ end
 -- A staircase's own shape decides too (a spiral round a column, say): for
 -- each turn, at the height a body walks in - the two layers over the floor
 -- - which of its blocks are free, then whether its first step (the lowest
--- nhv:mpath block) can be got onto from an open side, and how many of the
--- open sides join up through it (so a staircase in a passage doesn't block
--- it). A turn that leaves the first step out of reach loses to one that
--- doesn't; then the most open sides joined; then entrance_rot's rule. One
--- with no mpath blocks: entrance_rot alone.
+-- nhv:mpath block) can be walked up onto - from in front of it, the way
+-- the steps go (from the next one back past it): free there, or an open
+-- side - and how many of the open sides join up through it (so a
+-- staircase in a passage doesn't block it). A turn with the first step
+-- facing a wall loses to one that doesn't (one only got onto from beside
+-- it is better than neither); then the most open sides joined; then
+-- entrance_rot's rule. One with no mpath blocks: entrance_rot alone.
 local SIDES = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}} -- map dx, dy: north, east, south, west
 local function stair_layout(slot, rot)
 	local nodes = prefabs.get(slot).nodes
 	local W = U.TILE
-	local blocked, entry = {}, nil
+	local blocked, entry, paths = {}, nil, {}
 	local function solid(name)
 		local def = name and core.registered_nodes[name]
 		return def ~= nil and def.walkable == true
@@ -363,8 +365,26 @@ local function stair_layout(slot, rot)
 		if (ly == prefabs.FLOOR + 1 or ly == prefabs.FLOOR + 2) and solid(nd.n) then
 			blocked[rz * W + rx] = true
 		end
-		if nd.n == "nhv:mpath" and (not entry or ly < entry.y) then
-			entry = {x = rx, z = rz, y = ly}
+		if nd.n == "nhv:mpath" then
+			paths[#paths + 1] = {x = rx, z = rz, y = ly}
+			if not entry or ly < entry.y then
+				entry = paths[#paths]
+			end
+		end
+	end
+	-- (the way the steps go from the first: to the next one up beside it)
+	if entry then
+		local nxt
+		for _, b in ipairs(paths) do
+			if b ~= entry and b.y >= entry.y and b.y <= entry.y + 1
+					and math.abs(b.x - entry.x) <= 1 and math.abs(b.z - entry.z) <= 1
+					and (b.x ~= entry.x or b.z ~= entry.z)
+					and (not nxt or b.y < nxt.y) then
+				nxt = b
+			end
+		end
+		if nxt then
+			entry.ax, entry.az = entry.x - (nxt.x - entry.x), entry.z - (nxt.z - entry.z)
 		end
 	end
 	return blocked, entry
@@ -461,7 +481,19 @@ local function stair_rot(map, tx, ty, slot)
 			end
 		end
 		local ok = direct or next(reach) ~= nil
-		local score = (ok and 1000 or 0) + joined * 10 + (rot == pref and 1 or 0)
+		-- (from in front of it: the square before it free and reached, or
+		-- off the cell's edge on an open side)
+		local front = false
+		if entry.ax then
+			local ax, az = entry.ax, entry.az
+			if ax >= 0 and ax < W and az >= 0 and az < W then
+				front = comp[az * W + ax] ~= nil
+			else
+				front = (az >= W and open[1]) or (ax >= W and open[2]) or (az < 0 and open[3])
+					or (ax < 0 and open[4]) or false
+			end
+		end
+		local score = (front and 2000 or ok and 1000 or 0) + joined * 10 + (rot == pref and 1 or 0)
 		if not best_score or score > best_score then
 			best, best_score = rot, score
 		end
