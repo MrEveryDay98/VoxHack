@@ -323,23 +323,9 @@
    "volume": 100,
    "pitch_var": 0.05
   },
-  "bolt_of_lightning": {
-   "sounds": [
-    "yh_lightning"
-   ],
-   "volume": 100,
-   "pitch_var": 0.05
-  },
   "door_locked": {
    "sounds": [
     "yh_lock"
-   ],
-   "volume": 100,
-   "pitch_var": 0.05
-  },
-  "spell_cast": {
-   "sounds": [
-    "yh_magic1"
    ],
    "volume": 100,
    "pitch_var": 0.05
@@ -960,6 +946,251 @@
    "volume": 85,
    "pitch_var": 0,
    "loop": true
+  },
+  "item_pickup": {
+   "sounds": [
+    "nhv_sound_itempickup"
+   ],
+   "volume": 105,
+   "pitch_var": 0.05
+  },
+  "item_drop": {
+   "sounds": [
+    "nhv_sound_itemdrop"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "alarm": {
+   "sounds": [
+    "nhv_sound_alarm"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "blast": {
+   "sounds": [
+    "yh_explosion"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "kaboom_door_explodes": {
+   "sounds": [
+    "yh_explosion"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "stone_breaking": {
+   "sounds": [
+    "yh_rockl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "camera_flash": {
+   "sounds": [
+    "yh_camera"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "zap": {
+   "sounds": [
+    "nhv_sound_magiceffect15"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "monster_teleport": {
+   "sounds": [
+    "nhv_sound_magiceffect5"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "boing": {
+   "sounds": [
+    "nhv_sound_magiceffect12"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "ray_fire": {
+   "sounds": [
+    "nhv_sound_magiceffect5"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "lightning_flash": {
+   "sounds": [
+    "thunders_sfx_01"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "bolt_of_lightning": {
+   "sounds": [
+    "thunders_sfx_03"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "rustling_paper": {
+   "sounds": [
+    "yh_book"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "spell_cast": {
+   "sounds": [
+    "nhv_sound_magiceffect22"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_bark": {
+   "sounds": [
+    "nhv_sound_dogbark"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_whine": {
+   "sounds": [
+    "nhv_sound_dogwhine"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_yelp": {
+   "sounds": [
+    "nhv_sound_dogyelp"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_yip": {
+   "sounds": [
+    "nhv_sound_dogyip"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "canine_yowl": {
+   "sounds": [
+    "nhv_sound_dingoyowl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "cockatrice_hiss": {
+   "sounds": [
+    "nhv_sound_hiss"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "glass_crashing": {
+   "sounds": [
+    "yh_shatter"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "growl": {
+   "sounds": [
+    "yh_growl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "hiss": {
+   "sounds": [
+    "nhv_sound_hiss"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "egg_splatting": {
+   "sounds": [
+    "yh_cream"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "splat_egg": {
+   "sounds": [
+    "yh_cream"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "splat_from_engulf": {
+   "sounds": [
+    "yh_cream"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "feline_meow": {
+   "sounds": [
+    "nhv_feline_meow"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "feline_purr": {
+   "sounds": [
+    "nhv_feline_purr"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "feline_yelp": {
+   "sounds": [
+    "nhv_feline_whine"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "feline_yip": {
+   "sounds": [
+    "nhv_feline_yip"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "feline_yowl": {
+   "sounds": [
+    "nhv_feline_yowl"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "deafening_roar_atmospheric": {
+   "sounds": [
+    "nhv_sound_deafeningroar"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "roar": {
+   "sounds": [
+    "nhv_sound_roar"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
+  },
+  "trap_level_teleporter": {
+   "sounds": [
+    "nhv_sound_magiceffect6"
+   ],
+   "volume": 100,
+   "pitch_var": 0.05
   }
  },
  "voices": {},

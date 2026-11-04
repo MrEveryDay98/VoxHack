@@ -65,9 +65,14 @@
    },
    "vortex": {
     "on": false,
-    "twist": 1.5,
+    "twist": 0.3,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "time",
+    "day": 1,
+    "night": 0.25
    }
   },
   {
@@ -137,6 +142,11 @@
     "twist": 1.5,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -206,6 +216,11 @@
     "twist": 1.5,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -275,6 +290,11 @@
     "twist": 1.5,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -344,6 +364,11 @@
     "twist": 2.0,
     "spin": 0.0,
     "size": 3
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -413,6 +438,11 @@
     "twist": 1.5,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -482,6 +512,11 @@
     "twist": 1.5,
     "spin": 6.0,
     "size": 0.6
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   },
   {
@@ -551,6 +586,11 @@
     "twist": 1.0,
     "spin": 27.0,
     "size": 0.15
+   },
+   "daylight": {
+    "mode": "off",
+    "day": 1,
+    "night": 0
    }
   }
  ],
@@ -576,30 +616,30 @@
   "wizard2": "sky6"
  },
  "retro16": {
-  "on": false,
+  "on": true,
   "times": [
    {
     "at": "05:00",
-    "sky": "#AA00AA",
-    "horizon": "#FF5555",
+    "sky": "#0000FF",
+    "horizon": "#FF6C00",
     "fade": 60
    },
    {
     "at": "07:00",
-    "sky": "#5555FF",
-    "horizon": "#55FFFF",
+    "sky": "#00B6FF",
+    "horizon": "#6C91B6",
     "fade": 60
    },
    {
     "at": "18:00",
-    "sky": "#AA00AA",
-    "horizon": "#AA5500",
+    "sky": "#0000FF",
+    "horizon": "#914700",
     "fade": 60
    },
    {
     "at": "20:00",
     "sky": "#000000",
-    "horizon": "#0000AA",
+    "horizon": "#0000FF",
     "fade": 60
    }
   ]
