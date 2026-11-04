@@ -26,6 +26,7 @@ local BOX_LINES = 3      -- spoken lines kept in the box
 local BOX_WRAP = 36      -- characters a line in the box
 local HEAD_WRAP = 28     -- characters a line over a head
 local HEAD_SEEN = 24     -- nodes: farther, it's said into the box
+local HEAD_LOST = 1.5    -- seconds out of view before a line over a head goes into the box
 local LETTER_S = 0.075   -- a letter of Animalese at its own pace (sam_voice.h)
 
 -- Options (graphics.lua)
@@ -111,8 +112,10 @@ function speech.times(text, unit, spell_digits)
 end
 
 -- the speaker's body, if you can see it now - in plain view, near enough,
--- in front of you - else nil
-local function seen_body(id)
+-- in front of you - else nil. seen: NetHack says you saw them say it -
+-- then only near enough will do (in front of you, its line comes up as
+-- you turn to it; nor a wall's corner or a door's frame between you)
+local function seen_body(id, seen)
 	local e = id and id > 0 and nhv.mobs and nhv.mobs.mons["id" .. id]
 	local player = nhv.player.get()
 	if not (e and e.obj and player) or e.ghost or e.silhouette or e.occluded or (e.mon and e.mon.noclip_only) then
@@ -126,7 +129,12 @@ local function seen_body(id)
 	local head = vector.add(p, vector.new(0, (e.h or 1) / 2, 0))
 	local to = vector.subtract(head, eye)
 	local d = vector.length(to)
-	if d > HEAD_SEEN or (d > 1.5 and vector.dot(vector.divide(to, d), player:get_look_dir()) < 0.55) then
+	if d > HEAD_SEEN then
+		return nil
+	elseif seen then
+		return e.obj
+	end
+	if d > 1.5 and vector.dot(vector.divide(to, d), player:get_look_dir()) < 0.55 then
 		return nil
 	end
 	if nhv.mobs.wall_between and nhv.mobs.wall_between(eye, head) then
@@ -177,7 +185,7 @@ function speech.add(id, who, seen, name, text)
 		speech.known[id] = name
 	end
 	local label = (who == "deity" and "A god") or (who == "artifact" and "An artifact") or speech.known[id]
-	local obj = speech.heads_on() and seen_body(id)
+	local obj = speech.heads_on() and seen_body(id, seen)
 	if not obj and not speech.box_on() then
 		return false
 	end
@@ -339,8 +347,18 @@ function speech.refresh()
 			drop(ln)
 			table.remove(lines, k)
 		elseif ln.head then
-			-- (out of sight: on into the box - or stays up, unseen, if there's no box)
+			-- (out of sight a while - not a moment's turning away, a door's
+			-- frame passed - on into the box; or stays up, unseen, if
+			-- there's no box)
 			local obj = seen_body(ln.id)
+			if obj or not (ln.obj and ln.obj:get_pos()) then
+				ln.lost = nil
+			elseif not ln.lost then
+				ln.lost = now
+			end
+			if ln.lost and now - ln.lost < HEAD_LOST then
+				obj = ln.obj
+			end
 			if obj ~= ln.obj then
 				drop(ln)
 				if obj then
