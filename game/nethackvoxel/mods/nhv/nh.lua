@@ -275,6 +275,13 @@ function nh.pump(wait_ms)
 			return
 		end
 		nh.req = core.nh_request()
+		-- (a monster zapping a beam: where it goes, by the bodies in the 3D
+		-- world - answered at once, mid-turn: actions.monster_beam)
+		if nh.req and nh.req.kind == "beam" then
+			local answer = nhv.actions and nhv.actions.monster_beam(nh.req.prompt) or "-"
+			nh.answer_text(answer)
+			return
+		end
 		-- (a counted search - Ctrl+X - waiting for its next turn: until
 		-- something else is asked, it's still going)
 		nh.repeating = nh.req and nh.req.kind == "turn" and nh.req.prompt == "repeat" or false

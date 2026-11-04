@@ -37,5 +37,8 @@ void nhv_push_event(int kind, int attr, const char *text);
 int nhv_win_menu_item(int index, nhv_menu_item *out);
 /* last message line, used as the prompt for bare key requests */
 const char *nhv_win_last_message(void);
+/* ask the host something it answers at once with text (out: "" if what
+   came wasn't text) */
+void nhv_win_ask_text(int kind, const char *prompt, char *out, int outsz);
 
 #endif /* NHV_INTERNAL_H */

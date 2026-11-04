@@ -514,12 +514,45 @@ local function beam_from_hero(otyp, x1, y1)
 	draw_beam(from, U.tile_center(x1, y1, U.STAND_Y + 1.1), color)
 end
 
+-- a monster's beam: from its body along the line it went (actions.mbeams)
+-- to the far edge of the square it ended on
+local function beam_from_monster(otyp, id, x1, y1)
+	local b = nhv.actions.mbeams[id]
+	nhv.actions.mbeams[id] = nil
+	if not b or core.get_us_time() - b.at > 3e6 then
+		return
+	end
+	local stop
+	for k, sq in ipairs(b.squares) do
+		if sq.x == x1 and sq.y == y1 then
+			local nxt = b.squares[k + 1]
+			stop = nxt and nxt.t or (sq.t + U.TILE)
+		end
+	end
+	if not stop then
+		return
+	end
+	local up = vector.new(0, 1.2, 0)
+	local from = vector.add(vector.add(b.from, up), vector.multiply(b.dir, 0.5))
+	local hits = {}
+	for _, m in ipairs(b.mons) do
+		if m.t <= stop then
+			hits[#hits + 1] = vector.add(vector.add(b.from, up), vector.multiply(b.dir, m.t))
+		end
+	end
+	draw_beam(from, vector.add(vector.add(b.from, up), vector.multiply(b.dir, stop)), bolt_color(otyp), hits)
+end
+
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
 		if ev.kind == "combat" then
 			local otyp, x1, y1 = ev.text:match("^beam (%d+) %d+ %d+ (%d+) (%d+)")
 			if otyp then
 				beam_from_hero(tonumber(otyp), tonumber(x1), tonumber(y1))
+			end
+			local motyp, mid, mx1, my1 = ev.text:match("^mbeam (%d+) (%d+) (%d+) (%d+)")
+			if motyp then
+				beam_from_monster(tonumber(motyp), tonumber(mid), tonumber(mx1), tonumber(my1))
 			end
 			local tile, tx0, ty0, tx1, ty1 = ev.text:match("^thrown (%d+) (%d+) (%d+) (%d+) (%d+)")
 			if tile then

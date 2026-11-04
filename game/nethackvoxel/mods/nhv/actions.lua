@@ -797,40 +797,78 @@ function actions.aim(player, free)
 	return dx / m, dy / m, p
 end
 
--- A zapped beam (force bolt, striking, polymorph...) goes where you aim
--- as rays do, and hits the bodies it passes through: its line from your
--- body, the squares it crosses (for NetHack's walls, doors, things on the
--- floor and range) and where along them it reaches each body, as "#nhvaim"
--- tells NetHack. Kept (actions.last_beam) for the beam to be drawn on.
+-- A zapped beam (force bolt, striking, polymorph...) goes where it's aimed
+-- as rays do, and hits the bodies it passes through - yours, from a
+-- monster's: its line from the zapper's body, the squares it crosses (for
+-- NetHack's walls, doors, things on the floor and range; from the
+-- zapper's square in NetHack, sx, sy) and where along them it reaches
+-- each body - the hero's id 0 - as "#nhvaim" tells NetHack for yours, and
+-- the answer to NetHack's asking for a monster's (actions.monster_beam).
+-- Kept (actions.last_beam, actions.mbeams) for the beam to be drawn on.
 local BEAM_STEP = 0.25   -- (nodes: how finely the line is followed)
 local BEAM_SQUARES = 40  -- (as many as it could cross: NetHack's range is 13 at most)
 local BEAM_MONS = 16
-local function beam_line(player, dx, dy)
-	local p = player:get_pos()
-	local dir = vector.normalize(vector.new(dx, 0, -dy))
-	local px, py = U.pos_to_tile(p)
+local function beam_line(p, dir, sx0, sy0, zapper, hero_pos)
+	local px, py = sx0, sy0
 	local steps, squares, mons, hit = {}, {}, {}, {}
-	local t = 0
-	while #steps < BEAM_SQUARES and t < BEAM_SQUARES * U.TILE do
-		t = t + BEAM_STEP
-		local q = vector.add(p, vector.multiply(dir, t))
-		local qx, qy = U.pos_to_tile(q)
-		if qx ~= px or qy ~= py then
+	local function step_to(qx, qy, t)
+		while qx ~= px or qy ~= py do
 			local sx, sy = math.max(-1, math.min(1, qx - px)), math.max(-1, math.min(1, qy - py))
 			px, py = px + sx, py + sy
 			steps[#steps + 1] = tostring((sx + 1) * 3 + (sy + 1))
 			squares[#squares + 1] = {x = px, y = py, t = t}
 		end
+	end
+	local t = 0
+	while #steps < BEAM_SQUARES and t < BEAM_SQUARES * U.TILE do
+		t = t + BEAM_STEP
+		local q = vector.add(p, vector.multiply(dir, t))
+		local qx, qy = U.pos_to_tile(q)
+		step_to(qx, qy, t)
 		for id, b in pairs(nhv.sim.mons) do
-			if not hit[id] and #mons < BEAM_MONS and b.pos
+			if not hit[id] and id ~= zapper and #mons < BEAM_MONS and b.pos
 					and (q.x - b.pos.x) ^ 2 + (q.z - b.pos.z) ^ 2 < (b.r + 0.2) ^ 2 then
 				hit[id] = true
 				mons[#mons + 1] = {id = id, step = math.max(1, #steps), t = t}
 			end
 		end
+		if hero_pos and not hit[0] and #mons < BEAM_MONS
+				and (q.x - hero_pos.x) ^ 2 + (q.z - hero_pos.z) ^ 2 < (nhv.sim.HERO_R + 0.2) ^ 2 then
+			hit[0] = true
+			mons[#mons + 1] = {id = 0, step = math.max(1, #steps), t = t}
+		end
 	end
 	return {from = p, dir = dir, squares = squares, mons = mons, steps = table.concat(steps),
 		at = core.get_us_time()}
+end
+
+-- NetHack asking where a monster's beam goes ("<m_id> <x> <y>": the
+-- square it aims at - where it thinks you are): "beam: ..." (or nothing
+-- known of it: "-", NetHack's grid then)
+actions.mbeams = {}
+function actions.monster_beam(prompt)
+	local id, tx, ty = (prompt or ""):match("^(%d+) (%-?%d+) (%-?%d+)")
+	id, tx, ty = tonumber(id), tonumber(tx), tonumber(ty)
+	local b = id and nhv.sim.mons[id]
+	local player = nhv.player.get()
+	local h = hero()
+	if not (b and b.pos and b.x and player and h) then
+		return "-"
+	end
+	-- (at you where it aims at your square; else at where it thinks you are)
+	local hp = player:get_pos()
+	local target = (tx == h.x and ty == h.y) and hp or U.tile_center(tx, ty)
+	local d = vector.new(target.x - b.pos.x, 0, target.z - b.pos.z)
+	if vector.length(d) < 1e-3 then
+		return "-"
+	end
+	local line = beam_line(vector.new(b.pos.x, 0, b.pos.z), vector.normalize(d), b.x, b.y, id, hp)
+	actions.mbeams[id] = line
+	local parts = {"beam:", line.steps ~= "" and line.steps or "-"}
+	for _, m in ipairs(line.mons) do
+		parts[#parts + 1] = m.id .. ":" .. m.step
+	end
+	return table.concat(parts, " ")
 end
 
 -- the keys that set the aim (nil: no aim); free (zaps, spells): a beam's
@@ -842,7 +880,8 @@ function actions.aim_keys(player, free)
 	end
 	local text = ("nhvaim %d %d"):format(math.floor(dx * 1000 + 0.5), math.floor(dy * 1000 + 0.5))
 	if free then
-		local b = beam_line(player, dx, dy)
+		local h = hero()
+		local b = beam_line(player:get_pos(), vector.normalize(vector.new(dx, 0, -dy)), h.x, h.y)
 		actions.last_beam = b
 		local parts = {text, b.steps ~= "" and b.steps or "-"}
 		for _, m in ipairs(b.mons) do

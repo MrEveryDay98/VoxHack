@@ -71,12 +71,18 @@ enum nhv_req_kind {
     NHV_REQ_POS,    /* a place on the map (getpos: where to teleport, what
                        to look at...): answer with nhv_send_text("@x,y"),
                        or a key (Esc: cancel) */
-    NHV_REQ_TURN    /* the hero is helpless (asleep, paralysed, fainted...):
+    NHV_REQ_TURN,   /* the hero is helpless (asleep, paralysed, fainted...):
                        answer (any key) when a turn of time has passed - the
                        host's clock, so it lasts as long as it should;
                        prompt "repeat": a counted search or wait (20s)
                        waiting for its next turn, the same way (Esc stops
                        it) */
+    NHV_REQ_BEAM    /* a monster zaps a beam (free movement): prompt
+                       "<m_id> <x> <y>", the square it aims at; answer at
+                       once with nhv_send_text("beam: <steps> <id>:<step>
+                       ...") - the squares its line crosses from the
+                       monster's (a digit each, (dx+1)*3 + (dy+1)) and the
+                       bodies on it, where it reaches them (id 0: the hero) */
 };
 
 enum nhv_menu_how { NHV_PICK_NONE = 0, NHV_PICK_ONE = 1, NHV_PICK_ANY = 2 };

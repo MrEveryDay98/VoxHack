@@ -114,6 +114,19 @@ nhv_win_last_message(void)
     return last_msg;
 }
 
+void
+nhv_win_ask_text(int kind, const char *prompt, char *out, int outsz)
+{
+    nhv_qitem in;
+    char keep[BUFSZ];
+
+    /* (asked mid-turn: what was said so far still the prompt after) */
+    Snprintf(keep, sizeof keep, "%s", last_msg);
+    wait_for(kind, prompt, "", 0, &in);
+    Snprintf(last_msg, sizeof last_msg, "%s", keep);
+    Snprintf(out, outsz, "%s", in.type == NHV_Q_TEXT ? in.str : "");
+}
+
 int
 nhv_win_menu_item(int index, nhv_menu_item *out)
 {
