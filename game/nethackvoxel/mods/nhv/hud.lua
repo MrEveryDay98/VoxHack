@@ -905,15 +905,9 @@ local function clear_icons(player)
 	end
 end
 
-local function update_map_icons(player)
-	local h = nh.snap and nh.snap.hero
-	if not (hud.big_map and h and h.x) then
-		if next(icons) then
-			clear_icons(player)
-		end
-		return
-	end
-	local s = big_map_scale(player)
+-- the icons a map shows over its squares: key -> {tile or tex, p = where
+-- it really is, z, size}
+local function icons_wanted(player, h)
 	local want = {}
 	if hud.exact_icons() then
 		for key, e in pairs(nhv.mobs.mons) do
@@ -939,6 +933,19 @@ local function update_map_icons(player)
 	for _, hd in ipairs(nhv.worms and nhv.worms.heads or {}) do
 		want[hd.key] = {tile = hd.tile, p = hd.pos, z = 3}
 	end
+	return want
+end
+
+local function update_map_icons(player)
+	local h = nh.snap and nh.snap.hero
+	if not (hud.big_map and h and h.x) then
+		if next(icons) then
+			clear_icons(player)
+		end
+		return
+	end
+	local s = big_map_scale(player)
+	local want = icons_wanted(player, h)
 	for key, w in pairs(want) do
 		local fx, fy = map_pos(w.p)
 		-- (the picture's own middle where they are, not its cell's: most
@@ -1077,11 +1084,21 @@ end
 local NEAR_MAP = 2048 -- (HUD style: moved with the zoomed map, cut off at its box)
 local ZOOM_ROWS = 7
 local near = {ids = {}, shown = {}, key = nil, lay = nil, sent = nil}
+local near_icons = {} -- key -> {id, tex, x, y, s}: as the big map's (icons)
+local near_arrow = nil -- {id, tex, x, y}
 local function clear_near(player)
 	for _, id in pairs(near.ids) do
 		player:hud_remove(id)
 	end
 	near.ids, near.shown, near.key, near.lay, near.sent = {}, {}, nil, nil, nil
+	for key, ic in pairs(near_icons) do
+		player:hud_remove(ic.id)
+		near_icons[key] = nil
+	end
+	if near_arrow then
+		player:hud_remove(near_arrow.id)
+		near_arrow = nil
+	end
 end
 
 -- where it goes, in whole screen pixels (from the screen's top right
@@ -1128,6 +1145,70 @@ hud.follow_near = function(player)
 	follow_near(player, false)
 end
 
+-- (a picture on the zoomed map: placed in whole pixels on the map, the
+-- engine moving it with the rest)
+local function near_put(player, ic, tex, xp, yp, size_px, z)
+	local lay = near.lay
+	local x, y, sc = xp / lay.k, yp / lay.k, (size_px + 0.001) / lay.k / TILE_PX
+	if not ic then
+		return {id = player:hud_add({
+			type = "image", position = {x = 1, y = 0}, alignment = {x = 0, y = 0},
+			offset = {x = x, y = y}, scale = {x = sc, y = sc}, text = tex, z_index = z, style = NEAR_MAP,
+		}), tex = tex, x = x, y = y, s = sc}
+	end
+	if tex ~= ic.tex then
+		ic.tex = tex
+		player:hud_change(ic.id, "text", tex)
+	end
+	if x ~= ic.x or y ~= ic.y then
+		ic.x, ic.y = x, y
+		player:hud_change(ic.id, "offset", {x = x, y = y})
+	end
+	if sc ~= ic.s then
+		ic.s = sc
+		player:hud_change(ic.id, "scale", {x = sc, y = sc})
+	end
+	return ic
+end
+
+-- the zoomed map's icons (you and the monsters where they really are,
+-- worms' bodies...) and the arrow the way you look, as the big map has
+-- them (update_map_icons, update_map_arrow)
+function hud.update_near_icons(player)
+	local h = nh.snap and nh.snap.hero
+	local lay = near.lay
+	if not (lay and h and h.x) then
+		return
+	end
+	local px = lay.px
+	local want = icons_wanted(player, h)
+	for key, w in pairs(want) do
+		local fx, fy = map_pos(w.p)
+		local cx, cy = 0, 0
+		if w.tile then
+			cx, cy = nhv_tiles.picture_center(w.tile)
+		end
+		local k = px * (w.size or 1)
+		local xp = math.floor(lay.cx + fx * px - cx * k / TILE_PX + 0.5)
+		local yp = math.floor(lay.cy + fy * px - cy * k / TILE_PX + 0.5)
+		near_icons[key] = near_put(player, near_icons[key], w.tex or map_texture(w.tile), xp, yp, k, 1 + w.z)
+	end
+	for key, ic in pairs(near_icons) do
+		if not want[key] then
+			player:hud_remove(ic.id)
+			near_icons[key] = nil
+		end
+	end
+	local fx, fy = map_pos(player:get_pos())
+	local a = (-player:get_look_horizontal()) % (2 * math.pi)
+	local n = math.floor(a / (2 * math.pi) * ARROW_STEPS + 0.5) % ARROW_STEPS
+	local tex = ("nhv_map_arrow_%02d.png"):format(n)
+	local xp = math.floor(lay.cx + (fx + math.sin(a) * ARROW_OUT) * px + 0.5)
+	local yp = math.floor(lay.cy + (fy - math.cos(a) * ARROW_OUT) * px + 0.5)
+	-- (its pictures are 24 pixels: a 16's size of it)
+	near_arrow = near_put(player, near_arrow, tex, xp, yp, px * ARROW_SIZE * TILE_PX / 24, 6)
+end
+
 local function update_near(player, snap)
 	local lay = near_layout(player, snap)
 	if not lay then
@@ -1143,13 +1224,25 @@ local function update_near(player, snap)
 		near.key, near.lay = key, lay
 	end
 	local map, h = snap.map, snap.hero
-	local rolling = rolling_seen(map)
+	-- (with the icons where they really are, as on the big map: the
+	-- squares they're drawn for - yours, the monsters' you see - left
+	-- bare, and boulders rolling icons of their own)
+	local bare = {}
+	local rolling = not hud.exact_icons() and rolling_seen(map) or nil
+	if hud.exact_icons() then
+		bare[U.idx(h.x, h.y)] = true
+		for _, e in pairs(nhv.mobs.mons) do
+			if e.x and e.tile and not e.silhouette then
+				bare[U.idx(e.x, e.y)] = true
+			end
+		end
+	end
 	local t = (lay.px + 0.001) / lay.k -- (a square, in HUD units; a hair over: the engine rounds down)
 	local want = {}
 	for y = math.max(0, h.y - lay.reach_y), math.min(U.ROWNO - 1, h.y + lay.reach_y) do
 		for x = math.max(1, h.x - lay.reach_x), math.min(U.COLNO - 1, h.x + lay.reach_x) do
 			local i = U.idx(x, y)
-			local tex = hud.square_tex(map, h, x, y, false, rolling)
+			local tex = hud.square_tex(map, h, x, y, bare[i], rolling)
 			if tex then
 				want[i] = true
 				if tex ~= near.shown[i] then
@@ -2167,6 +2260,7 @@ core.register_globalstep(function(dtime)
 	shake_conditions(player, dtime)
 	update_map_arrow(player)
 	update_map_icons(player)
+	hud.update_near_icons(player)
 	hud.update_fade(player)
 	if flash then
 		local t = (core.get_us_time() - flash.t0) / 1e6 / (flash.seconds or FLASH_S)
