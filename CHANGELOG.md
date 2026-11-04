@@ -2,6 +2,23 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.20.0 (alpha) - 2026-11-03
+
+- **Fixed: up staircases you couldn't climb.** A staircase could be turned with its first step against a wall, or block a passage, leaving no way back up (in the Gnomish Mines especially). Stairs are now turned so the first step faces open floor and a passage stays passable, and you can also right-click a staircase from any square next to it to step on and climb it.
+- **Aiming in 3D, not on the grid.** Beams (force bolt, striking, slow, polymorph, teleport, knock...) go exactly where you aim and hit the monsters they pass through, as rays already did. So do things you throw, fire or kick. Monsters' beams aim at your body too, and monsters fighting each other fire along any clear line, at each other's bodies. Digging still goes by NetHack's 8 directions.
+- **Beams are drawn all at once**: a bright core in a glow of the spell's colour, sparks, and bursts on what they hit.
+- **Monsters lead their shots**: their missiles and rays aim where you'll be if you keep moving, not where you were. Change course to dodge.
+- **What you only hear, you hear muffled.** "You hear..." sounds play muffled from where they happened; many that were silent now play a fitting sound, and a horn, a bugle and a guard's whistle play notes on their instruments.
+- **Blind, the world goes grey** (the HUD keeps its colours).
+- **Side bars inventory:** items no longer say blessed, uncursed or cursed; their colour does (light blue blessed, white uncursed, red cursed, grey not known yet).
+- **Daylight, sky by sky:** squares open to a sky can be lit by it, by the time of day or always the same (VoxHack Editor, Sky tab).
+- **Retro mode: Game view** (Options > Graphics) draws the world at 1/2, 1/3 or 1/4 of the retro screen for chunkier pixels, the HUD and menus staying sharp.
+- The 16-colour retro sky's default times match the full-colour sky's dawn, day, dusk and night; the Sky tab shows the full-colour sky's day under its strip and can move your times to match. Its preview can show retro mode.
+- Messages that named the game say VoxHack ("welcome to VoxHack!").
+- Engravings lie flat on the floor even with sprites extruded.
+- New animal and item sounds: cats, dogs, hissing, roars, picking things up and dropping them.
+- Fixed: sensed monsters behind walls stood edge-on instead of facing you; a new hero with a previous one's name started with that hero's quick slots; retro mode's dithering rippled across the screen while dizzy or stunned; a monster's breath at your pet flew at you instead.
+
 ## v0.19.0 (alpha) - 2026-11-02
 
 - **Pets act like NetHack's pets again**, while still moving freely. They get hungry and eat, pick things up and drop them, and are reluctant to step onto cursed things (so they hint at curses as in NetHack). They go after the food or item NetHack says they want.
