@@ -54,6 +54,23 @@ nhv_mon_melee_target(struct monst *mtmp)
     return (struct monst *) 0;
 }
 
+static unsigned mm_reach[2];
+
+void
+nhv_mm_set_reach(struct monst *a, struct monst *d)
+{
+    mm_reach[0] = (a && d) ? a->m_id : 0;
+    mm_reach[1] = (a && d) ? d->m_id : 0;
+}
+
+boolean
+nhv_mm_in_reach(struct monst *a, struct monst *d)
+{
+    return (nhv_freemove && mm_reach[0] && a && d
+            && ((a->m_id == mm_reach[0] && d->m_id == mm_reach[1])
+                || (a->m_id == mm_reach[1] && d->m_id == mm_reach[0])));
+}
+
 boolean
 nhv_grid_mover(struct monst *mtmp)
 {
