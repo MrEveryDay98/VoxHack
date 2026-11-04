@@ -306,10 +306,39 @@ function nhv_tiles.facing_turn()
 	return nhv_tiles.flat() and 0 or math.pi
 end
 
-function nhv_tiles.look(tile, height, kind, flat)
+-- Animated tiles: a fountain's water flips from side to side. Frame 1 is
+-- the water mirrored behind the rest of the picture (the masks:
+-- tools/make_anim_frames.py, anim_frames.lua), put together from the sheet
+-- in use; frame 0 the picture as it is
+local ANIM = dofile(core.get_modpath("nhv_tiles") .. "/anim_frames.lua")
+local ANIM_RATE = 2.5 -- (flips a second)
+
+function nhv_tiles.animated(tile)
+	return ANIM[tile] ~= nil
+end
+
+function nhv_tiles.anim_frame()
+	return math.floor(core.get_us_time() / 1e6 * ANIM_RATE) % 2
+end
+
+local function frame_texture(tile, frame)
+	local a = frame == 1 and not nhv_tiles.ascii and ANIM[tile]
+	local tex = nhv_tiles.texture(tile)
+	if not a then
+		return tex
+	end
+	return ("(%s^[mask:%s^[transformFX)^(%s^[mask:%s)^%s"):format(tex, a.water, tex, a.rest, a.fix)
+end
+
+local function frame_item(tile, frame)
+	return nhv_tiles.item(tile) .. (frame == 1 and ANIM[tile] and "_f1" or "")
+end
+
+-- (frame: an animated tile's, 0 or 1 - nil, 0)
+function nhv_tiles.look(tile, height, kind, flat, frame)
 	-- (flat: a flat picture whatever the setting - writing on the floor)
 	if flat or nhv_tiles.flat() then
-		local tex = darkened(nhv_tiles.texture(tile), kind)
+		local tex = darkened(frame_texture(tile, frame), kind)
 		-- (a character is narrower than it's tall, as on a text screen)
 		local w = nhv_tiles.ascii and height * nhv_tiles.ASCII_ASPECT or height
 		return {
@@ -321,7 +350,7 @@ function nhv_tiles.look(tile, height, kind, flat)
 	local s = height / 2
 	return {
 		visual = "wielditem",
-		wield_item = kind and nhv_tiles.flash_item(tile, kind) or nhv_tiles.item(tile),
+		wield_item = kind and nhv_tiles.flash_item(tile, kind) or frame_item(tile, frame),
 		visual_size = {x = s, y = s, z = s},
 	}
 end
@@ -390,6 +419,13 @@ for i = 0, meta.count - 1 do
 		stack_max = 65535,
 		groups = {not_in_creative_inventory = 1},
 	})
+	if ANIM[i] then
+		core.register_craftitem(frame_item(i, 1), {
+			description = meta.names[i] or ("tile " .. i),
+			inventory_image = frame_texture(i, 1),
+			groups = {not_in_creative_inventory = 1},
+		})
+	end
 	if i < meta.monsters or DARKENS[i] then
 		for kind, mod in pairs(nhv_tiles.FLASH) do
 			core.register_craftitem(nhv_tiles.flash_item(i, kind), {

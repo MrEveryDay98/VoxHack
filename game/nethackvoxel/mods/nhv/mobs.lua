@@ -82,9 +82,9 @@ local function size_for(e, w)
 	return nhv_tiles.size(e.h, w)
 end
 
-local function sprite_props(tile, height, kind, flat)
+local function sprite_props(tile, height, kind, flat, frame)
 	local s = height / 2
-	local props = nhv_tiles.look(tile, height, kind, flat)
+	local props = nhv_tiles.look(tile, height, kind, flat, frame)
 	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
 	return props
 end
@@ -1042,7 +1042,9 @@ local function update_features(snap)
 					end
 					if e and (e.tile ~= tile or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
 						e.pos = pos
-						local props = sprite_props(tile, h, nil, WRITING[name])
+						-- (a fountain's water flips from side to side: below)
+						e.frame = nhv_tiles.animated(tile) and nhv_tiles.anim_frame() or nil
+						local props = sprite_props(tile, h, nil, WRITING[name], e.frame)
 						props.pointable = false
 						e.obj:set_properties(props)
 						e.obj:set_pos(pos)
@@ -1765,8 +1767,13 @@ core.register_globalstep(function(dtime)
 			turn_obj(e)
 		end
 	end
+	local frame = nhv_tiles.anim_frame()
 	for _, e in pairs(mobs.feats) do
 		turn_obj(e)
+		if e.frame and e.frame ~= frame and e.obj:get_pos() then
+			e.frame = frame
+			e.obj:set_properties(nhv_tiles.look(e.tile, e.h, nil, nil, frame))
+		end
 	end
 end)
 
