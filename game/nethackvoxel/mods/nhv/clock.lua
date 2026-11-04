@@ -223,13 +223,16 @@ local NO_AIM = {tick = true, wait = true, attack = true, swing = true, escape = 
 -- (zaps and spells fly straight where you look, not to a square; a wand of
 -- digging still digs along NetHack's 8 directions, whatever the aim)
 -- (a kick too: what's kicked flies on the way you look)
-local FREE_AIM = {zap = true, spell = true}
+-- (throwing and firing too: what's thrown goes along your crosshair's line,
+-- hitting the first body on it - not at the middle of a square)
+local FREE_AIM = {zap = true, spell = true, fire = true, throw = true}
+local FREE_KEYS = {z = true, Z = true, f = true, t = true}
 local function free_aim(keys, info)
 	if info and FREE_AIM[info.kind] then
 		return true
 	end
 	local first = type(keys) == "string" and keys:sub(1, 1) or (keys[1] and keys[1].key)
-	if first == "z" or first == "Z" then
+	if FREE_KEYS[first] then
 		return true
 	end
 	if type(keys) == "table" then

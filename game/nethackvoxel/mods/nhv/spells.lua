@@ -394,8 +394,9 @@ core.register_entity("nhv:bolt", {
 	end,
 })
 
--- (texture: an object's picture instead of a glowing bolt)
-local function fly_bolt(otyp, x0, y0, x1, y1, texture)
+-- (texture: an object's picture instead of a glowing bolt; to: where it
+-- ends, if not the middle of square x1,y1)
+local function fly_bolt(otyp, x0, y0, x1, y1, texture, to)
 	local player = nhv.player.get()
 	local color = texture and "#C0C0C0" or bolt_color(otyp)
 	local from
@@ -410,7 +411,7 @@ local function fly_bolt(otyp, x0, y0, x1, y1, texture)
 	else
 		from = U.tile_center(x0, y0, U.STAND_Y + 1.25)
 	end
-	local to = U.tile_center(x1, y1, U.STAND_Y + 1.1)
+	to = to or U.tile_center(x1, y1, U.STAND_Y + 1.1)
 	local dist = vector.distance(from, to)
 	local obj = core.add_entity(from, "nhv:bolt")
 	if not obj or dist < 0.1 then
@@ -514,6 +515,30 @@ local function beam_from_hero(otyp, x1, y1)
 	draw_beam(from, U.tile_center(x1, y1, U.STAND_Y + 1.1), color)
 end
 
+-- Something you threw, along the line it was aimed on (actions.last_beam),
+-- to square x1,y1 where it stopped: on the body it hit there, or half way
+-- across the square (it comes down in it); nil if it wasn't aimed so
+local function thrown_to(x1, y1)
+	local b = nhv.actions.last_beam
+	if not b or core.get_us_time() - b.at > 3e6 then
+		return nil
+	end
+	local up = vector.new(0, 1.1, 0)
+	for k, sq in ipairs(b.squares) do
+		if sq.x == x1 and sq.y == y1 then
+			for _, m in ipairs(b.mons) do
+				if m.step == k then
+					return vector.add(vector.add(b.from, up), vector.multiply(b.dir, m.t))
+				end
+			end
+			local nxt = b.squares[k + 1]
+			local t = (sq.t + (nxt and nxt.t or sq.t + U.TILE)) / 2
+			return vector.add(vector.add(b.from, up), vector.multiply(b.dir, t))
+		end
+	end
+	return nil
+end
+
 -- a monster's beam: from its body along the line it went (actions.mbeams)
 -- to the far edge of the square it ended on
 local function beam_from_monster(otyp, id, x1, y1)
@@ -557,7 +582,7 @@ nh.on_event(function(evs)
 			local tile, tx0, ty0, tx1, ty1 = ev.text:match("^thrown (%d+) (%d+) (%d+) (%d+) (%d+)")
 			if tile then
 				fly_bolt(0, tonumber(tx0), tonumber(ty0), tonumber(tx1), tonumber(ty1),
-					nhv_tiles.texture(tonumber(tile)))
+					nhv_tiles.texture(tonumber(tile)), thrown_to(tonumber(tx1), tonumber(ty1)))
 			end
 		end
 	end
