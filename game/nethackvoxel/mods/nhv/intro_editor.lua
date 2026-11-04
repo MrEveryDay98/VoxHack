@@ -15,6 +15,8 @@
 --     as you're looking now; "Look through it" puts you there to see.
 --     Points go in the order of their numbers.
 --   Sign: on a wall - right-click it for its words, a line each.
+--   Light: gives off the brightest light there is; in the opening only its
+--     light shows, not its box.
 --   Monsters and items: the palette's Monsters, Statues, Items and Dungeon
 --     (fountains, altars, thrones, doors, traps...) tabs have every NetHack
 --     sprite - pick one, put it down: it stands there turned to you
@@ -35,6 +37,7 @@
 --                          the prefab editor's tools (editor_tools.lua)
 --   /intro_light [0-14]    the light that goes with the camera: how bright
 --                          (a light level; 0 none) - round you here too
+--   F7                     retro mode on or off
 --   /intro_save [ymin ymax]  save it for the game (the forest from ymin to
 --                          ymax: -8 to 56 if not given) - mod_data/nhv/intro
 
@@ -134,8 +137,8 @@ core.register_on_joinplayer(function(player)
 	player:hud_set_hotbar_itemcount(10)
 	local inv = player:get_inventory()
 	inv:set_size("main", 32)
-	for _, item in ipairs({"nhv:intro_cam 99", "nhv:intro_sign 99", "nhv:intro_figure 99", "nhv:intro_tree 99",
-			"nhv:intro_grass 99", "nhv:intro_dirt 99"}) do
+	for _, item in ipairs({"nhv:intro_cam 99", "nhv:intro_sign 99", "nhv:intro_lamp 99", "nhv:intro_figure 99",
+			"nhv:intro_tree 99", "nhv:intro_grass 99", "nhv:intro_dirt 99"}) do
 		if not inv:contains_item("main", ItemStack(item):get_name()) then
 			inv:add_item("main", item)
 		end
@@ -858,9 +861,9 @@ core.register_chatcommand("intro_light", {
 })
 
 -- ---------------------------------------------------------------- markers out of the way
--- The camera points' boxes and the signs' blocks are only the editor's: a
--- preview takes them away (the signs' pictures stay) and puts them back
--- after - kept in storage meanwhile, so a preview cut short (the game
+-- The camera points' boxes, the signs' blocks and the lights' boxes are only
+-- the editor's: a preview takes them away (the signs' pictures stay, and the
+-- lights' light) and puts them back after - kept in storage meanwhile, so a preview cut short (the game
 -- closed) gets them back next time.
 function intro_editor.hide_markers()
 	local hidden = load_list("hidden")
@@ -886,6 +889,13 @@ function intro_editor.hide_markers()
 			core.swap_node(pos, {name = "air"})
 		end
 	end
+	-- (anywhere in the forest, however they got there: /paste too)
+	local p1, p2 = intro_editor.bounds(-8, 56)
+	core.load_area(p1, p2)
+	for _, pos in ipairs(core.find_nodes_in_area(p1, p2, {"nhv:intro_lamp"})) do
+		hidden[key(pos)] = {name = "nhv:intro_lamp", param2 = 0}
+		core.swap_node(pos, {name = "nhv:intro_lamp_hidden"})
+	end
 	save_list("hidden", hidden)
 end
 function intro_editor.show_markers()
@@ -895,7 +905,7 @@ function intro_editor.show_markers()
 	for k, n in pairs(hidden) do
 		local pos = core.string_to_pos("(" .. k .. ")")
 		local here = node_at(pos).name
-		if here == "air" then
+		if here == "air" or here == "nhv:intro_lamp_hidden" then
 			core.swap_node(pos, {name = n.name, param2 = n.param2})
 			if n.name == "nhv:intro_cam" and list[k] then
 				core.get_meta(pos):set_string("infotext", "Camera point " .. list[k].index)
@@ -911,6 +921,18 @@ function intro_editor.show_markers()
 		core.after(2, intro_editor.show_markers)
 	end
 end
+
+-- (the game's keys: here only F7, retro mode on or off - the engine switches
+-- at the next frame)
+core.register_chatcommand("nhvkey", {
+	description = "(VoxHack) a game key; in the intro editor, F7 is retro mode",
+	func = function(_, param)
+		if param == "retro" then
+			core.settings:set_bool("nhv_retro", not core.settings:get_bool("nhv_retro", false))
+		end
+		return true
+	end,
+})
 
 core.register_chatcommand("intro_save", {
 	params = "[ymin ymax]",

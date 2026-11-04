@@ -659,7 +659,8 @@ function intro_play.start_game(player, done)
 			return
 		end
 		if storage:get_string("opening_version") ~= version then
-			core.place_schematic(p1, SCHEMATIC, "0", {["nhv:intro_cam"] = "air", ["nhv:intro_sign"] = "air"}, true)
+			core.place_schematic(p1, SCHEMATIC, "0", {["nhv:intro_cam"] = "air", ["nhv:intro_sign"] = "air",
+				["nhv:intro_lamp"] = "nhv:intro_lamp_hidden"}, true)
 			core.fix_light(p1, p2)
 			storage:set_string("opening_version", version)
 		end

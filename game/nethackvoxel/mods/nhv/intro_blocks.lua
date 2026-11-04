@@ -108,6 +108,20 @@ core.register_node(":nhv:intro_sign", {
 	groups = {dig_immediate = 3}, is_ground_content = false,
 })
 
+-- a light: a small bright box in the editor; its light without the box in a
+-- preview and the game (intro_editor.hide_markers, intro_play.lua)
+core.register_node(":nhv:intro_lamp", {
+	description = "Light (only its light shows in the opening)", drawtype = "nodebox", paramtype = "light",
+	tiles = {"[fill:16x16:#FFF2B0"}, light_source = core.LIGHT_MAX, walkable = false, sunlight_propagates = true,
+	node_box = {type = "fixed", fixed = {-0.15, -0.15, -0.15, 0.15, 0.15, 0.15}},
+	groups = {dig_immediate = 3}, is_ground_content = false,
+})
+core.register_node(":nhv:intro_lamp_hidden", {
+	description = "Light", drawtype = "airlike", paramtype = "light", walkable = false,
+	pointable = false, buildable_to = true, sunlight_propagates = true,
+	light_source = core.LIGHT_MAX, groups = {not_in_creative_inventory = 1}, drop = "", is_ground_content = false,
+})
+
 -- a sign's picture, three blocks wide, on the wall a sign block was put on
 -- (pos: the sign block; dir: from it to the wall)
 core.register_entity(":nhv:intro_sign_board", {
@@ -147,7 +161,7 @@ function intro_blocks.furniture(node, pos)
 end
 
 -- what the palette's Opening tab has (intro_editor.lua)
-intro_blocks.PALETTE = {"nhv:intro_cam", "nhv:intro_sign", "nhv:intro_figure", "nhv:intro_tree",
+intro_blocks.PALETTE = {"nhv:intro_cam", "nhv:intro_sign", "nhv:intro_lamp", "nhv:intro_figure", "nhv:intro_tree",
 	"nhv:intro_grass", "nhv:intro_grass2", "nhv:intro_grass3", "nhv:intro_dirt", "nhv:intro_bricks",
 	"nhv:intro_fireplace", "nhv:intro_curtains", "nhv:intro_planks", "nhv:intro_chair",
 	"nhv:intro_table", "nhv:intro_bed"}
