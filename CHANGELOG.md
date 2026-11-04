@@ -2,6 +2,13 @@
 
 Downloads: [GitHub releases](https://github.com/MrEveryDay98/VoxHack/releases) · [itch.io](https://mreveryday.itch.io/voxhack)
 
+## v0.20.1 (alpha) - 2026-11-03
+
+- **Throwing and firing aim along your crosshair**, as zaps do, not at the middle of the square you point at. What you throw is drawn flying along that line to the monster it hits, or to where it comes down.
+- **Thonged clubs (aklyses) are dodgeable** when monsters throw them, like other missiles. A white tether runs from the thrower's hand to the club, out and back; one that snaps stays where it fell. Your own aklys trails its tether too, and flies back to your hand on it.
+- **Monsters eating sound like you eating**, higher for small monsters and lower for big ones (muffled when you can't see them). A corpse being eaten bleeds, whether a monster or you is eating it.
+- Side bars inventory: no "a" or "an" before item names ("+1 quarterstaff", "scroll of light").
+
 ## v0.20.0 (alpha) - 2026-11-03
 
 - **Fixed: up staircases you couldn't climb.** A staircase could be turned with its first step against a wall, or block a passage, leaving no way back up (in the Gnomish Mines especially). Stairs are now turned so the first step faces open floor and a passage stays passable, and you can also right-click a staircase from any square next to it to step on and climb it.
