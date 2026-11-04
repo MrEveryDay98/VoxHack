@@ -289,11 +289,34 @@ local function roll(r, dist, hp)
 end
 
 -- called by the game loop with the game time that passed
+-- (an aklys going back to its thrower: its picture flies back to it, fast)
+local BACK_SPEED = 2.5 -- (times a missile's)
+local function fly_back(m, dist)
+	local body = m.thrower and nhv.sim.body(m.thrower)
+	if not body then
+		remove(m)
+		return
+	end
+	local h = nhv.scale.height(body.size, body.mndx)
+	local to = vector.new(body.pos.x, U.STAND_Y + h * 0.6, body.pos.z)
+	local d = vector.distance(m.pos, to)
+	if d <= dist or d < 0.3 then
+		remove(m)
+		return
+	end
+	m.pos = vector.add(m.pos, vector.multiply(vector.direction(m.pos, to), dist))
+end
+
 function missiles.update(dturns)
 	local player = nhv.player.get()
 	local hp = player and player:get_pos()
 	for _, m in pairs(missiles.list) do
-		if not m.waiting then
+		if m.back then
+			fly_back(m, missiles.SPEED * BACK_SPEED * dturns)
+			if m.obj and m.obj:get_pos() then
+				m.obj:move_to(m.pos, true)
+			end
+		elseif not m.waiting then
 			fly(m, missiles.SPEED * dturns, hp)
 			if m.obj and m.obj:get_pos() then
 				m.obj:move_to(m.pos, true)
@@ -396,6 +419,12 @@ nh.on_event(function(evs)
 					m.waiting = false
 				elseif what == "pass" then
 					m.waiting = false
+				elseif what == "back" or what == "backhit" then
+					-- (an aklys: it hit you, or came down - back to its thrower)
+					if what == "backhit" then
+						nhv.sound.hook("missile_hit")
+					end
+					m.back, m.waiting = true, true
 				else -- hit, stop, land
 					if what == "hit" then
 						nhv.sound.hook("missile_hit")

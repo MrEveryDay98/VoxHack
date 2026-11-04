@@ -587,13 +587,15 @@ static struct nhv_flying {
     coordxy lx, ly;     /* launch square */
     int range;
     unsigned target;    /* thrown at this monster (0: the hero) */
+    boolean tethered;   /* an aklys: back to its thrower after */
     boolean fresh;      /* not yet reported to the host */
 } missiles[MAXMISSILES];
 static unsigned next_pid = 1;
 
 void
 nhv_missile_launch(
-    struct monst *mon, struct obj *obj, coordxy x, coordxy y, int range)
+    struct monst *mon, struct obj *obj, coordxy x, coordxy y, int range,
+    boolean tethered)
 {
     int i;
 
@@ -605,6 +607,7 @@ nhv_missile_launch(
             missiles[i].lx = x, missiles[i].ly = y;
             missiles[i].range = range;
             missiles[i].target = gm.mtarget ? gm.mtarget->m_id : 0;
+            missiles[i].tethered = tethered && mon;
             missiles[i].fresh = TRUE;
             return;
         }
@@ -662,13 +665,22 @@ donhvmhit(void)
     if (!f)
         return nhv_ok();
     monster_acting(TRUE);
-    r = nhv_missile_hits_hero(mon_by_id(f->mon_id), f->obj, f->lx, f->ly);
-    monster_acting(FALSE);
-    if (r == 0) {
-        missile_event("miss", f->pid); /* dodged: it flies on */
-    } else {
-        missile_event(r == 1 ? "hit" : "stop", f->pid);
-        f->obj = 0;
+    {
+        struct monst *thrower = mon_by_id(f->mon_id);
+        boolean back = f->tethered && thrower && !DEADMONSTER(thrower);
+
+        r = nhv_missile_hits_hero(thrower, f->obj, f->lx, f->ly, back);
+        /* (an aklys that hit you: back to its thrower) */
+        if (r == 1 && back)
+            nhv_missile_returns(thrower, f->obj, u.ux, u.uy);
+        monster_acting(FALSE);
+        if (r == 0) {
+            missile_event("miss", f->pid); /* dodged: it flies on */
+        } else {
+            missile_event(r == 1 && back ? "backhit" : r == 1 ? "hit" : "stop",
+                          f->pid);
+            f->obj = 0;
+        }
     }
     return nhv_ok();
 }
@@ -705,10 +717,18 @@ donhvmland(void)
     if (!isok(x, y))
         x = f->lx, y = f->ly;
     monster_acting(TRUE);
-    nhv_missile_lands(f->obj, x, y);
-    monster_acting(FALSE);
-    f->obj = 0;
-    missile_event("land", f->pid);
+    {
+        struct monst *thrower = f->tethered ? mon_by_id(f->mon_id) : 0;
+
+        /* (an aklys: back to its thrower, if it's still about) */
+        if (thrower && !DEADMONSTER(thrower))
+            nhv_missile_returns(thrower, f->obj, x, y);
+        else
+            nhv_missile_lands(f->obj, x, y);
+        monster_acting(FALSE);
+        f->obj = 0;
+        missile_event(thrower ? "back" : "land", f->pid);
+    }
     return nhv_ok();
 }
 
