@@ -376,6 +376,46 @@ local function burst(pos, color, amount)
 	})
 end
 
+-- (your hand: a little ahead, right and below your eyes)
+local function hand_now()
+	local player = nhv.player.get()
+	if not player then
+		return nil
+	end
+	local p = player:get_pos()
+	local yaw = player:get_look_horizontal()
+	local fwd = vector.new(-math.sin(yaw), 0, math.cos(yaw))
+	local right = vector.new(math.cos(yaw), 0, math.sin(yaw))
+	return vector.add(vector.add(p, vector.new(0, 1.25, 0)),
+		vector.add(vector.multiply(fwd, 0.6), vector.multiply(right, 0.3)))
+end
+
+-- An aklys you throw trails its tether (missiles.lua's nhv:tether: a white
+-- line a pixel wide) from your hand; when it comes back ("tether back") it
+-- flies back to your hand, the tether shrinking with it - failing to
+-- return, it stays where it came down.
+local TETHER_W = 1 / 16
+local function stretch(self)
+	local a, z = hand_now(), self.object:get_pos()
+	local d = a and z and vector.subtract(z, a)
+	if not d or vector.length(d) < 0.05 then
+		if self.tether and self.tether:get_pos() then
+			self.tether:set_properties({is_visible = false})
+		end
+		return
+	end
+	if not (self.tether and self.tether:get_pos()) then
+		self.tether = core.add_entity(a, "nhv:tether")
+		if not self.tether then
+			return
+		end
+	end
+	self.tether:move_to(vector.multiply(vector.add(a, z), 0.5), true)
+	self.tether:set_rotation(vector.dir_to_rotation(d))
+	self.tether:set_properties({is_visible = true,
+		visual_size = {x = TETHER_W, y = TETHER_W, z = vector.length(d)}})
+end
+
 core.register_entity("nhv:bolt", {
 	initial_properties = {
 		visual = "sprite", visual_size = {x = 0.45, y = 0.45},
@@ -384,10 +424,34 @@ core.register_entity("nhv:bolt", {
 	},
 	on_step = function(self, dtime)
 		self.left = (self.left or 0) - dtime
+		if self.returning then
+			-- (back to your hand, wherever it is now)
+			local hand, pos = hand_now(), self.object:get_pos()
+			if not hand or not pos or vector.distance(hand, pos) < 0.3 or self.left <= -1 then
+				if self.tether and self.tether:get_pos() then
+					self.tether:remove()
+				end
+				self.object:remove()
+				return
+			end
+			self.object:set_velocity(vector.multiply(vector.direction(pos, hand), BOLT_SPEED))
+			stretch(self)
+			return
+		end
+		if self.tethered then
+			stretch(self)
+		end
 		if self.left <= 0 then
 			if self.target then
 				self.object:set_pos(self.target)
 				burst(self.target, self.color or "#90C8FF", 18)
+			end
+			if self.back then
+				self.returning = true
+				return
+			end
+			if self.tether and self.tether:get_pos() then
+				self.tether:remove()
 			end
 			self.object:remove()
 		end
@@ -435,6 +499,7 @@ local function fly_bolt(otyp, x0, y0, x1, y1, texture, to)
 		texture = "[fill:2x2:" .. color, glow = 14,
 	})
 	burst(from, color, 6)
+	return ent
 end
 
 -- your hand: a little ahead, right and below your eyes
@@ -539,6 +604,9 @@ local function thrown_to(x1, y1)
 	return nil
 end
 
+-- (your next throw is on its tether; the aklys flying on it now)
+local tether_next, tethered_bolt = false, nil
+
 -- a monster's beam: from its body along the line it went (actions.mbeams)
 -- to the far edge of the square it ended on
 local function beam_from_monster(otyp, id, x1, y1)
@@ -579,10 +647,23 @@ nh.on_event(function(evs)
 			if motyp then
 				beam_from_monster(tonumber(motyp), tonumber(mid), tonumber(mx1), tonumber(my1))
 			end
+			-- (your aklys: on its tether - and back again)
+			if ev.text == "tether out" then
+				tether_next = true
+			elseif ev.text == "tether back" then
+				if tethered_bolt and tethered_bolt.object:get_pos() then
+					tethered_bolt.back = true
+				end
+				tethered_bolt = nil
+			end
 			local tile, tx0, ty0, tx1, ty1 = ev.text:match("^thrown (%d+) (%d+) (%d+) (%d+) (%d+)")
 			if tile then
-				fly_bolt(0, tonumber(tx0), tonumber(ty0), tonumber(tx1), tonumber(ty1),
+				local ent = fly_bolt(0, tonumber(tx0), tonumber(ty0), tonumber(tx1), tonumber(ty1),
 					nhv_tiles.texture(tonumber(tile)), thrown_to(tonumber(tx1), tonumber(ty1)))
+				if tether_next and ent then
+					ent.tethered, tethered_bolt = true, ent
+				end
+				tether_next = false
 			end
 		end
 	end

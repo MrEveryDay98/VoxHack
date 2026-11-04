@@ -1723,6 +1723,15 @@ nhv_throw_event(int glyph, int x0, int y0, int x1, int y1)
     nhv_push_event(NHV_EV_COMBAT, 0, buf);
 }
 
+/* "tether out" / "tether back" (sent as combat events): the hero's next
+   throw is on its tether (an aklys); it came back to the hero (to hand,
+   or to the hero's feet) - not sent if it failed to return */
+void
+nhv_tether_event(int back)
+{
+    nhv_push_event(NHV_EV_COMBAT, 0, back ? "tether back" : "tether out");
+}
+
 /* "roll <tile> <x0> <y0> <x1> <y1> <gone>" (sent as a combat event): a
    boulder rolled from x0,y0 to x1,y1 (gone: it fell in somewhere there) */
 void
