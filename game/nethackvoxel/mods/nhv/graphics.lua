@@ -264,73 +264,28 @@ function graphics.set_flat(on)
 	nhv.mobs.refresh_sizes()
 end
 
--- Out of retro mode, the HUD stays the size it was on the screen: retro
--- mode's small screen is scaled up to the window, its sizes with it; back
--- to the window's own pixels, its HUD, menus and text are set that much
--- bigger (over the screen's own density). That's known once the engine has
--- switched - a frame or so later, the window's size no longer the retro
--- screen's (match_retro, below).
-local match_retro = nil -- {player name, retro screen w, h, until}
-local function retro_match_sizes(player, vw, vh)
-	local info = core.get_player_window_information(player:get_player_name())
-	if not (info and info.size and info.real_hud_scaling and info.real_gui_scaling) then
-		return false
-	end
-	local w, h = info.size.x, info.size.y
-	if w == vw and h == vh then
-		return false -- (not switched yet)
-	end
-	local scale = core.settings:get_bool("nhv_retro_wide", false) and h / vh or math.min(w / vw, h / vh)
-	if core.settings:get_bool("nhv_retro_whole", false) then
-		scale = math.max(1, math.floor(scale))
-	end
-	local sizes = RETRO_SIZES[vw .. "x" .. vh] or RETRO_SIZES["800x600"]
-	local hud_now = tonumber(core.settings:get("hud_scaling")) or 1
-	local gui_now = tonumber(core.settings:get("gui_scaling")) or 1
-	local density = info.real_hud_scaling / math.max(0.01, hud_now)
-	local gui_density = info.real_gui_scaling / math.max(0.01, gui_now)
-	local function step(v, by)
-		return math.max(by, math.floor(v / by + 0.5) * by)
-	end
-	core.settings:set("hud_scaling", tostring(step(sizes[1] * scale / density, 0.05)))
-	core.settings:set("gui_scaling", tostring(step(sizes[2] * scale / gui_density, 0.05)))
-	-- (the pixel font only has whole steps)
-	local text = sizes[3] * scale / density
-	core.settings:set("nhv_text_scale", tostring(theme.retro() and math.min(4, step(text, 1)) or step(text, 0.05)))
-	core.settings:set("nhv_map_scale", tostring(sizes[4])) -- (the map scales with the HUD)
-	theme.apply(player)
-	nhv.hud.place_map(player)
-	nhv.hud.place_compass(player)
-	return true
-end
-
-core.register_globalstep(function()
-	local m = match_retro
-	if not m then
-		return
-	end
-	local player = core.get_player_by_name(m.name)
-	if not player or core.get_us_time() > m.until_t or core.settings:get_bool("nhv_retro", false) then
-		match_retro = nil
-		return
-	end
-	if retro_match_sizes(player, m.w, m.h) then
-		match_retro = nil
-	end
-end)
-
 function graphics.set_retro(player, on)
+	if on then
+		local kept = {}
+		for i, setting in ipairs(SIZES) do
+			kept[i] = core.settings:get(setting) or ""
+		end
+		core.settings:set("nhv_sizes_window", table.concat(kept, "|"))
+	else
+		local saved = (core.settings:get("nhv_sizes_window") or ""):split("|", true)
+		for i, setting in ipairs(SIZES) do
+			if saved[i] and saved[i] ~= "" then
+				core.settings:set(setting, saved[i])
+			end
+		end
+	end
 	core.settings:set_bool("nhv_retro", on) -- (the engine switches at the next frame)
 	nhv.hud.place_compass(player)
 	if on then
-		match_retro = nil
 		retro_sizes(player)
 	else
 		theme.apply(player)
 		nhv.hud.place_map(player)
-		local vw, vh = (core.settings:get("nhv_retro_res") or "800x600"):match("^(%d+)x(%d+)$")
-		match_retro = {name = player:get_player_name(), w = tonumber(vw) or 800, h = tonumber(vh) or 600,
-			until_t = core.get_us_time() + 3e6}
 	end
 end
 
