@@ -1060,14 +1060,16 @@ end
 
 -- Shift+Z: the corner map (or the side bar's) shows the squares round you
 -- with the tiles, as the big map does - zoomed in, cropped to the corner
--- map's box: as many whole squares as fit, every pixel the same size (16
--- pixels a square, 8 on a small screen), you in the middle. Again, the
+-- map's box: as many whole squares as fit, every pixel of a tile the same
+-- whole number of screen pixels (ZOOM_ROWS squares down the box, or as
+-- near as that comes), you in the middle. Again, the
 -- pixel map. (Kept through restarts: nhv_map_near.) One HUD picture a
 -- square of the box, changed only when what's shown there changes.
 function hud.near_map()
 	return core.settings:get_bool("nhv_map_near", false)
 end
 local near = {ids = {}, shown = {}, key = nil}
+local ZOOM_ROWS = 5 -- (squares down the box: as big as that makes them, or a few more rows)
 local function clear_near(player)
 	for _, id in pairs(near.ids) do
 		player:hud_remove(id)
@@ -1087,19 +1089,23 @@ local function update_near(player, snap)
 		end
 		return
 	end
-	local w, ht = U.COLNO * s, U.ROWNO * s
-	local px = math.floor(ht * k / 16) >= 5 and 16 or 8
-	local t = (px + 0.001) / k -- (a square; a hair over: the engine rounds down)
-	local cols, rows = math.floor(w / t), math.floor(ht / t)
+	-- (all in whole screen pixels: the box, a square - a whole number of
+	-- times the tiles' 16, ZOOM_ROWS of them down the box if it's tall
+	-- enough, else 16 - and where each one goes)
+	local wp, hp = math.floor(U.COLNO * s * k + 0.5), math.floor(U.ROWNO * s * k + 0.5)
+	local px = math.max(1, math.floor(hp / ZOOM_ROWS / TILE_PX)) * TILE_PX
+	local cols, rows = math.floor(wp / px), math.floor(hp / px)
 	-- (odd: you in the very middle)
 	cols, rows = cols - (cols + 1) % 2, rows - (rows + 1) % 2
-	local key = table.concat({cols, rows, t, ox, oy}, ",")
+	local key = table.concat({cols, rows, px, ox, oy, k}, ",")
 	if key ~= near.key then
 		clear_near(player) -- (the box moved or changed size: placed again)
 		near.key = key
 	end
-	local left = ox - w + (w - cols * t) / 2
-	local top = oy + (ht - rows * t) / 2
+	local rightp, topp = math.floor(ox * k + 0.5), math.floor(oy * k + 0.5)
+	local left = rightp - wp + math.floor((wp - cols * px) / 2)
+	local top = topp + math.floor((hp - rows * px) / 2)
+	local t = (px + 0.001) / k -- (a square, in HUD units; a hair over: the engine rounds down)
 	local map = snap.map
 	local x0, y0 = h.x - (cols - 1) / 2, h.y - (rows - 1) / 2
 	local rolling = rolling_seen(map)
@@ -1120,7 +1126,8 @@ local function update_near(player, snap)
 				else
 					near.ids[i] = player:hud_add({
 						type = "image", position = {x = 1, y = 0}, alignment = {x = 1, y = 1},
-						offset = {x = left + c * t, y = top + r * t},
+						-- (a quarter pixel in: however the engine rounds, the same way each)
+						offset = {x = (left + c * px + 0.25) / k, y = (top + r * px + 0.25) / k},
 						scale = {x = t / TILE_PX, y = t / TILE_PX}, text = tex, z_index = 1,
 					})
 				end
