@@ -340,11 +340,12 @@ nh.on_snapshot(function(snap)
 end)
 
 -- ---------------------------------------------------------------- bolts
--- Beams that NetHack only works out square by square (force bolt,
--- striking, slow / speed monster, healing someone, knock, dig, polymorph,
--- teleport away...) fly as a quick glowing bolt from your hand to where
--- the beam ended, with a burst there. (Rays like magic missile and sleep
--- have their own; see rays.lua.)
+-- Beams (force bolt, striking, slow / speed monster, healing someone, knock,
+-- dig, polymorph, teleport away...) are instant: drawn all at once, from
+-- your hand along where you aimed to where the beam ended - a bright core
+-- in a glow, sparks thrown off it, a flash at your hand, a burst on each
+-- body it reached and where it stopped - fading quickly. (Thrown things
+-- still fly; rays like magic missile and sleep have their own: rays.lua.)
 local BOLT_SPEED = 25 -- nodes per second
 
 -- colour by what was zapped (the spell's or wand's name contains...)
@@ -435,12 +436,90 @@ local function fly_bolt(otyp, x0, y0, x1, y1, texture)
 	burst(from, color, 6)
 end
 
+-- your hand: a little ahead, right and below your eyes
+local function hand_pos(player)
+	local p = player:get_pos()
+	local yaw = player:get_look_horizontal()
+	local fwd = vector.new(-math.sin(yaw), 0, math.cos(yaw))
+	local right = vector.new(math.cos(yaw), 0, math.sin(yaw))
+	return vector.add(vector.add(p, vector.new(0, 1.25, 0)),
+		vector.add(vector.multiply(fwd, 0.6), vector.multiply(right, 0.3)))
+end
+
+local BEAM_LIFE = 0.28   -- (seconds the beam shows)
+local function draw_beam(from, to, color, hits)
+	local d = vector.distance(from, to)
+	if d < 0.1 then
+		return
+	end
+	local dir = vector.direction(from, to)
+	local core_tex = "[fill:2x2:#FFFFFF"
+	local glow_tex = "[fill:2x2:" .. color .. "^[opacity:150"
+	-- (the core, white, and the glow round it, its colour)
+	for t = 0, d, 0.15 do
+		local p = vector.add(from, vector.multiply(dir, t))
+		core.add_particle({pos = p, velocity = vector.zero(), expirationtime = BEAM_LIFE * (0.7 + math.random() * 0.3),
+			size = 1.1, glow = 14, texture = core_tex})
+		if t % 0.3 < 0.15 then
+			core.add_particle({pos = p, velocity = vector.zero(), expirationtime = BEAM_LIFE,
+				size = 2.6, glow = 14, texture = glow_tex})
+		end
+	end
+	-- (sparks thrown off it)
+	for t = 0, d, 0.6 do
+		local p = vector.add(from, vector.multiply(dir, t + math.random() * 0.6))
+		core.add_particle({pos = p,
+			velocity = vector.new((math.random() - 0.5) * 2.4, (math.random() - 0.3) * 2, (math.random() - 0.5) * 2.4),
+			expirationtime = 0.3 + math.random() * 0.3, size = 0.5 + math.random() * 0.5, glow = 14,
+			texture = "[fill:2x2:" .. color})
+	end
+	burst(from, color, 10)
+	burst(to, color, 22)
+	for _, h in ipairs(hits or {}) do
+		burst(h, color, 16)
+	end
+end
+
+-- a beam from you: along the line it was aimed on (actions.last_beam), to
+-- the far edge of the square it ended on - or, aimed otherwise (digging,
+-- your own square), straight to that square
+local function beam_from_hero(otyp, x1, y1)
+	local player = nhv.player.get()
+	if not player then
+		return
+	end
+	local color = bolt_color(otyp)
+	local from = hand_pos(player)
+	local b = nhv.actions.last_beam
+	if b and core.get_us_time() - b.at < 3e6 then
+		local stop
+		for k, sq in ipairs(b.squares) do
+			if sq.x == x1 and sq.y == y1 then
+				local nxt = b.squares[k + 1]
+				stop = nxt and nxt.t or (sq.t + U.TILE)
+			end
+		end
+		if stop then
+			local to = vector.add(vector.add(b.from, vector.new(0, 1.15, 0)), vector.multiply(b.dir, stop))
+			local hits = {}
+			for _, m in ipairs(b.mons) do
+				if m.t <= stop then
+					hits[#hits + 1] = vector.add(vector.add(b.from, vector.new(0, 1.15, 0)), vector.multiply(b.dir, m.t))
+				end
+			end
+			draw_beam(from, to, color, hits)
+			return
+		end
+	end
+	draw_beam(from, U.tile_center(x1, y1, U.STAND_Y + 1.1), color)
+end
+
 nh.on_event(function(evs)
 	for _, ev in ipairs(evs) do
 		if ev.kind == "combat" then
-			local otyp, x0, y0, x1, y1 = ev.text:match("^beam (%d+) (%d+) (%d+) (%d+) (%d+)")
+			local otyp, x1, y1 = ev.text:match("^beam (%d+) %d+ %d+ (%d+) (%d+)")
 			if otyp then
-				fly_bolt(tonumber(otyp), tonumber(x0), tonumber(y0), tonumber(x1), tonumber(y1))
+				beam_from_hero(tonumber(otyp), tonumber(x1), tonumber(y1))
 			end
 			local tile, tx0, ty0, tx1, ty1 = ev.text:match("^thrown (%d+) (%d+) (%d+) (%d+) (%d+)")
 			if tile then

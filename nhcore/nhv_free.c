@@ -1471,20 +1471,103 @@ static struct {
     int ttl;    /* commands left (rhack calls) */
 } aim;
 
-/* #nhvaim dx dy: the next command aims along this line */
+/* A zapped beam's own path (the host's, by the 3D world): the squares the
+   aimed line crosses, as steps from the hero's, and the monsters whose
+   bodies it passes through, each at the step (1..n) where it reaches them -
+   bhit goes by these, not by who's on each square. */
+#define NHV_BEAM_STEPS 64
+#define NHV_BEAM_MONS 16
+static struct {
+    int n, nmon;
+    schar dx[NHV_BEAM_STEPS], dy[NHV_BEAM_STEPS];
+    unsigned mid[NHV_BEAM_MONS];
+    int mstep[NHV_BEAM_MONS];
+} beam;
+
+/* #nhvaim dx dy [steps id:step ...]: the next command aims along this line
+   (steps: a digit a square, (dx+1)*3 + (dy+1); "-" none) */
 int
 donhvaim(void)
 {
+    const char *p = nhv_cmd_text;
+    int field = 0;
+
     aim.dx = nhv_cmd_args[0], aim.dy = nhv_cmd_args[1];
     aim.ttl = 2; /* (this command, then the one it's for) */
+    beam.n = beam.nmon = 0;
+    while (*p) {
+        while (*p == ' ')
+            p++;
+        if (!*p)
+            break;
+        if (field == 2) {
+            for (; *p >= '0' && *p <= '8' && beam.n < NHV_BEAM_STEPS; p++) {
+                int d = *p - '0';
+
+                beam.dx[beam.n] = (schar) (d / 3 - 1);
+                beam.dy[beam.n] = (schar) (d % 3 - 1);
+                beam.n++;
+            }
+        } else if (field > 2 && beam.nmon < NHV_BEAM_MONS) {
+            const char *c = strchr(p, ':');
+
+            if (c) {
+                beam.mid[beam.nmon] = (unsigned) atol(p);
+                beam.mstep[beam.nmon] = atoi(c + 1);
+                beam.nmon++;
+            }
+        }
+        while (*p && *p != ' ')
+            p++;
+        field++;
+    }
     return nhv_ok();
 }
 
 void
 nhv_aim_tick(void)
 {
-    if (aim.ttl > 0 && --aim.ttl == 0)
+    if (aim.ttl > 0 && --aim.ttl == 0) {
         aim.dx = aim.dy = 0;
+        beam.n = beam.nmon = 0;
+    }
+}
+
+/* The beam's own path from <x0,y0> (not included), up to maxn squares; 0
+   if there's none (not aimed so, or not the way ddx,ddy goes) */
+int
+nhv_beam_path(coordxy x0, coordxy y0, int ddx, int ddy, coordxy *px,
+              coordxy *py, int maxn)
+{
+    int k;
+
+    if (!beam.n || (long) ddx * aim.dx + (long) ddy * aim.dy <= 0)
+        return 0;
+    for (k = 0; k < beam.n && k < maxn; k++) {
+        x0 += beam.dx[k], y0 += beam.dy[k];
+        px[k] = x0, py[k] = y0;
+    }
+    return k;
+}
+
+/* the monsters the beam reaches at its step-th square (1..), one a call
+   (*it: where the last call got to, 0 to start); NULL when there are no
+   more */
+struct monst *
+nhv_beam_mon(int step, int *it)
+{
+    while (*it < beam.nmon) {
+        int i = (*it)++;
+        struct monst *mtmp;
+
+        if (beam.mstep[i] != step)
+            continue;
+        for (mtmp = fmon; mtmp; mtmp = mtmp->nmon)
+            if (mtmp->m_id == beam.mid[i] && !DEADMONSTER(mtmp)
+                && mtmp != u.usteed)
+                return mtmp;
+    }
+    return (struct monst *) 0;
 }
 
 /* The squares along the aimed line from <x0,y0> (not included), up to max
