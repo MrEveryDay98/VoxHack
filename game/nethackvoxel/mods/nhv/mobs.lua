@@ -14,6 +14,7 @@ local mobs = {
 	mons = {},      -- key -> {obj=, tile=, h=, x=, y=, mon=, id=}
 	objs = {},      -- square index -> {obj=, tile=}
 	feats = {},     -- square index -> {obj=, tile=}
+	bodies = {},    -- monster id -> {obj=, mndx=, size=, h=, ground_y=}: unseen ones' (below)
 }
 nhv.mobs = mobs
 
@@ -220,6 +221,7 @@ function mobs.clear()
 	end
 	mobs.piles = {}
 	remove_all(mobs.feats)
+	remove_all(mobs.bodies)
 	if nhv.worms then
 		nhv.worms.clear()
 	end
@@ -228,7 +230,8 @@ function mobs.clear()
 			vector.new(U.COLNO * U.TILE + 10, U.CEIL_Y + 10, U.ROWNO * U.TILE + 10))) do
 		local ent = obj:get_luaentity()
 		if ent and (ent.name == "nhv:mon" or ent.name == "nhv:obj" or ent.name == "nhv:feat"
-				or ent.name == "nhv:chainlink" or ent.name == "nhv:ball" or ent.name == "nhv:wormseg") then
+				or ent.name == "nhv:chainlink" or ent.name == "nhv:ball" or ent.name == "nhv:wormseg"
+				or ent.name == "nhv:monbody") then
 			obj:remove()
 		end
 	end
@@ -308,8 +311,6 @@ local function apply_sprite(e, m)
 	-- a solid body the size of the sprite (Luanti only collides with
 	-- "physical" objects); pets stay passable, as you swap places with them
 	local solid = m.id > 0 and not U.has(m.flags, U.MON_PET)
-	-- (one seen only noclipping: nothing to bump into)
-	solid = solid and not m.noclip_only
 	-- a shopkeeper in its shop fills its whole square, so standing inside
 	-- the door it really blocks the way out, as in NetHack
 	local shk = solid and U.has(m.flags, U.MON_SHOPKEEPER)
@@ -481,6 +482,10 @@ function mobs.refresh_sizes()
 			e.tile = nil
 			apply_sprite(e, e.mon)
 		end
+	end
+	-- (unseen ones' bodies: sized again, below)
+	for _, r in pairs(mobs.bodies) do
+		r.mndx = nil
 	end
 	-- objects and features are redrawn too (e.g. after switching flat sprites)
 	for _, tbl in ipairs({mobs.objs, mobs.feats}) do
@@ -1700,9 +1705,75 @@ local function update_dark(dtime)
 	end
 end
 
+-- A monster you can't see - invisible, in the dark out of plain view,
+-- behind you round a corner, you're blind - is still there in its body:
+-- you bump into it as into one you see (the same box, solid as a drawn
+-- one is), with nothing to see. Not a pet (passable, seen or not), nor one
+-- hiding under something, on the ceiling or in the water (NetHack's
+-- undetected: not in the way till found), nor while you're inside one.
+core.register_entity("nhv:monbody", {
+	initial_properties = {
+		physical = true, collide_with_objects = true, pointable = false, static_save = false,
+		is_visible = false, visual = "sprite", textures = {"blank.png"},
+		collisionbox = {0, 0, 0, 0, 0, 0},
+	},
+})
+
+local function update_bodies(dtime)
+	local snap = nhv.nh.snap
+	local inside = not snap or U.has(snap.hero.flags, U.HERO.SWALLOWED)
+	local drawn = {}
+	for _, e in pairs(mobs.mons) do
+		if e.id and e.solid and e.obj:get_pos() then
+			drawn[e.id] = true
+		end
+	end
+	local MF = nhv.sim.MF
+	for id, b in pairs(nhv.sim.mons) do
+		local want = not inside and not drawn[id] and b.pos and b.mndx
+			and not U.has(b.flags or 0, MF.TAME) and not U.has(b.flags or 0, MF.HIDDEN)
+		local r = mobs.bodies[id]
+		if r and not r.obj:get_pos() then
+			mobs.bodies[id], r = nil, nil
+		end
+		if want and not r then
+			local obj = core.add_entity(b.pos, "nhv:monbody")
+			if obj then
+				r = {obj = obj}
+				mobs.bodies[id] = r
+			end
+		elseif r and not want then
+			r.obj:remove()
+			mobs.bodies[id], r = nil, nil
+		end
+		if r then
+			if r.mndx ~= b.mndx or r.size ~= b.size then
+				r.mndx, r.size = b.mndx, b.size
+				r.h = scale.height(b.size, b.mndx)
+				local w = scale.radius(b.size, b.mndx)
+				r.obj:set_properties({collisionbox = {-w, -r.h / 2, -w, w, r.h / 2, w}})
+			end
+			-- (on the ground under it, up built steps, as a drawn one: above)
+			local g = ground_at(b.pos.x, b.pos.z, r.ground_y or U.STAND_Y) or U.STAND_Y
+			r.ground_y = r.ground_y and (r.ground_y + (g - r.ground_y) * math.min(1, dtime * 10)) or g
+			local y = scale.mon_center_y(b.mndx, r.h, r.ground_y, U.CEIL_Y - 0.5)
+			r.obj:set_pos(vector.new(b.pos.x, y, b.pos.z))
+		end
+	end
+	for id, r in pairs(mobs.bodies) do
+		if not nhv.sim.mons[id] then
+			if r.obj:get_pos() then
+				r.obj:remove()
+			end
+			mobs.bodies[id] = nil
+		end
+	end
+end
+
 core.register_globalstep(function(dtime)
 	clock_t = clock_t + dtime
 	update_fades()
+	update_bodies(dtime)
 	update_noclip(dtime)
 	update_dark(dtime)
 	do
