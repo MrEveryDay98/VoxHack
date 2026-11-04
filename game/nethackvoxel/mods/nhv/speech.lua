@@ -433,7 +433,8 @@ function speech.clear()
 		end
 	end
 	lines = {}
-	local player = nhv.player.get()
+	-- (the intro editor has no player module: theme.apply calls this as you join)
+	local player = nhv.player and nhv.player.get()
 	if player then
 		remove_box(player)
 	end

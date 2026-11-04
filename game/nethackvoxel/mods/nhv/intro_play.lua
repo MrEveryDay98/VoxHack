@@ -428,7 +428,12 @@ local function finish()
 		for id, pos in pairs(run.huds) do
 			local def = player:hud_get(id)
 			if def and def.position and def.position.x == 9 then
-				nhv.showroom.put_back(player, id, pos)
+				-- (the intro editor has no showroom)
+				if nhv.showroom then
+					nhv.showroom.put_back(player, id, pos)
+				else
+					player:hud_change(id, "position", pos)
+				end
 			end
 		end
 	end
