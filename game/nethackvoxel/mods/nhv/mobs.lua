@@ -82,9 +82,9 @@ local function size_for(e, w)
 	return nhv_tiles.size(e.h, w)
 end
 
-local function sprite_props(tile, height, kind)
+local function sprite_props(tile, height, kind, flat)
 	local s = height / 2
-	local props = nhv_tiles.look(tile, height, kind)
+	local props = nhv_tiles.look(tile, height, kind, flat)
 	props.selectionbox = {-s * 0.6, -s, -s * 0.6, s * 0.6, s, s * 0.6}
 	return props
 end
@@ -939,6 +939,9 @@ local FEATURES = {
 	S_altar = false, S_grave = false, S_throne = false, S_sink = false,
 	S_fountain = false, S_tree = false, S_engroom = true, S_engrcorr = true,
 }
+-- (writing on the floor: a flat picture, even with sprites extruded - not a
+-- slab of letters)
+local WRITING = {S_engroom = true, S_engrcorr = true}
 -- traps are the '^' cmap symbols (plus webs)
 local function is_trap(name, gi)
 	return gi.sym == 94 or name == "S_web"
@@ -1033,7 +1036,7 @@ local function update_features(snap)
 					end
 					if e and (e.tile ~= tile or e.h ~= h or not vector.equals(e.pos or pos, pos)) then
 						e.pos = pos
-						local props = sprite_props(tile, h)
+						local props = sprite_props(tile, h, nil, WRITING[name])
 						props.pointable = false
 						e.obj:set_properties(props)
 						e.obj:set_pos(pos)

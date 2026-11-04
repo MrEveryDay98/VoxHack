@@ -306,8 +306,9 @@ function nhv_tiles.facing_turn()
 	return nhv_tiles.flat() and 0 or math.pi
 end
 
-function nhv_tiles.look(tile, height, kind)
-	if nhv_tiles.flat() then
+function nhv_tiles.look(tile, height, kind, flat)
+	-- (flat: a flat picture whatever the setting - writing on the floor)
+	if flat or nhv_tiles.flat() then
 		local tex = darkened(nhv_tiles.texture(tile), kind)
 		-- (a character is narrower than it's tall, as on a text screen)
 		local w = nhv_tiles.ascii and height * nhv_tiles.ASCII_ASPECT or height
